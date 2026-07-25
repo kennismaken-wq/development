@@ -30,3 +30,5 @@ Runs on `:5001`.
 - Linux user: `develop`
 - systemd service: `develop-tool.service`
 - nginx: proxies `develop.handigerai.nl` → `127.0.0.1:5001`
+
+_Last verified deploy: trigger test._
