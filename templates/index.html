@@ -3,13 +3,14 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>HandigerAI — develop</title>
+<title>HandigerAI — Uren</title>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,600;0,700;1,600;1,700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
   :root {
     --accent: #5B8FA8;
     --warm: #E07B5F;
     --ink: #1A1A18;
+    --row-h: 24px;
   }
   * { box-sizing: border-box; }
   html, body { height: 100%; }
@@ -22,8 +23,8 @@
     background-attachment: fixed;
     color: #FFFFFF;
     min-height: 100vh;
+    padding: 2.2rem;
     display: flex; align-items: center; justify-content: center;
-    padding: 1.5rem;
   }
   .glass {
     background: rgba(255,255,255,0.10);
@@ -32,21 +33,354 @@
     border: 1px solid rgba(255,255,255,0.20);
     box-shadow: 0 24px 70px rgba(0,0,0,0.30), inset 0 1px 0 rgba(255,255,255,0.15);
   }
-  .stub-card {
-    border-radius: 28px; padding: 3rem 2.6rem; max-width: 420px; width: 100%;
-    text-align: center;
+
+  .week-card { border-radius: 28px; padding: 2rem 2.2rem 2.4rem; width: 100%; max-width: 1080px; }
+
+  .week-header { display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin-bottom: 1.6rem; flex-wrap: wrap; }
+  .week-title { font-family: 'Fraunces', serif; font-style: italic; font-weight: 600; font-size: 1.5rem; margin: 0; }
+  .week-nav { display: flex; align-items: center; gap: .6rem; }
+  .btn-ghost {
+    background: rgba(255,255,255,0.10); color: #FFFFFF; border: 1px solid rgba(255,255,255,0.24);
+    border-radius: 999px; padding: .6rem 1.1rem; font-size: 12.5px; font-weight: 500; font-family: 'Inter', sans-serif;
+    cursor: pointer; backdrop-filter: blur(6px); transition: background .12s;
   }
-  .stub-card .brand {
-    font-family: 'Fraunces', serif; font-style: italic; font-weight: 600;
-    font-size: 1.8rem; margin: 0 0 .6rem;
+  .btn-ghost:hover { background: rgba(255,255,255,0.18); }
+
+  .total-chip {
+    border-radius: 999px; padding: .55rem 1.1rem; display: flex; align-items: baseline; gap: .4rem;
+    background: linear-gradient(135deg, rgba(91,143,168,0.42), rgba(91,143,168,0.14)); border: 1px solid rgba(91,143,168,0.4);
   }
-  .stub-card p { color: rgba(255,255,255,0.65); font-size: 13.5px; line-height: 1.6; margin: 0; }
+  .total-chip .n { font-family: 'Fraunces', serif; font-style: italic; font-weight: 600; font-size: 1.15rem; color: #CFE6F2; }
+  .total-chip .l { font-size: 11px; color: rgba(255,255,255,0.75); }
+
+  .hint { font-size: 11.5px; color: rgba(255,255,255,0.5); margin: 0 0 1.1rem; }
+
+  .grid-wrap { display: grid; grid-template-columns: 46px repeat(7, 1fr); }
+  .col-head { font-size: 11px; text-align: center; padding-bottom: .6rem; color: rgba(255,255,255,0.7); }
+  .col-head .dag { font-weight: 600; }
+  .col-head .datum { color: rgba(255,255,255,0.5); font-size: 10px; }
+  .col-head.vandaag .dag { color: #CFE6F2; }
+
+  .gutter { position: relative; }
+  .gutter-lbl {
+    position: absolute; right: .5rem; transform: translateY(-50%);
+    font-size: 9.5px; color: rgba(255,255,255,0.45);
+  }
+
+  .day-col {
+    position: relative; border-left: 1px solid rgba(255,255,255,0.08);
+    background: rgba(255,255,255,0.03);
+  }
+  .day-col:hover { background: rgba(255,255,255,0.05); }
+  .slot { height: var(--row-h); border-top: 1px solid rgba(255,255,255,0.06); cursor: pointer; }
+  .slot.hour-line { border-top: 1px solid rgba(255,255,255,0.14); }
+  .slot.selecting { background: rgba(91,143,168,0.35); }
+
+  .entry {
+    position: absolute; left: 3px; right: 3px; border-radius: 8px; padding: .25rem .5rem;
+    background: linear-gradient(150deg, rgba(91,143,168,0.55), rgba(91,143,168,0.28));
+    border: 1px solid rgba(91,143,168,0.55); overflow: hidden; cursor: pointer;
+    font-size: 10.5px; line-height: 1.35;
+  }
+  .entry:hover { border-color: rgba(255,255,255,0.7); }
+  .entry .tijd { font-weight: 600; }
+  .entry .lbl { color: rgba(255,255,255,0.8); white-space: nowrap; text-overflow: ellipsis; overflow: hidden; }
+
+  .modal-overlay {
+    position: fixed; inset: 0; background: rgba(10,16,20,0.55); display: none;
+    align-items: center; justify-content: center; padding: 1.5rem; z-index: 100;
+    backdrop-filter: blur(3px);
+  }
+  .modal-overlay.open { display: flex; }
+  .modal-kaart { border-radius: 22px; padding: 1.6rem; max-width: 360px; width: 100%; }
+  .modal-titel { font-family: 'Fraunces', serif; font-weight: 600; font-style: italic; font-size: 16px; margin: 0 0 .3rem; }
+  .modal-sub { font-size: 11.5px; color: rgba(255,255,255,0.6); margin: 0 0 1rem; }
+  .glass-input {
+    width: 100%; background: rgba(255,255,255,0.10); border: 1px solid rgba(255,255,255,0.22);
+    border-radius: 13px; padding: .8rem 1rem; font-family: 'Inter', sans-serif; font-size: 13px;
+    color: #FFFFFF; margin-bottom: 1rem; backdrop-filter: blur(6px);
+  }
+  .glass-input::placeholder { color: rgba(255,255,255,0.5); }
+  .glass-input:focus { outline: none; border-color: rgba(255,255,255,0.55); }
+  .modal-acties { display: flex; gap: .6rem; justify-content: flex-end; }
+  .btn-white {
+    background: #FFFFFF; color: var(--ink); border: none; border-radius: 999px;
+    padding: .7rem 1.3rem; font-size: 12.5px; font-weight: 600; font-family: 'Inter', sans-serif; cursor: pointer;
+  }
+  .btn-danger {
+    background: rgba(224,123,95,0.85); color: #fff; border: none; border-radius: 999px;
+    padding: .7rem 1.3rem; font-size: 12.5px; font-weight: 600; font-family: 'Inter', sans-serif; cursor: pointer;
+  }
 </style>
 </head>
 <body>
-  <div class="stub-card glass">
-    <p class="brand">HandigerAI — develop</p>
-    <p>Deze omgeving staat klaar. Zie <code>CONTEXT.md</code> in deze repo voor de lay-out-regels.</p>
+  <div class="week-card glass">
+    <div class="week-header">
+      <p class="week-title" id="week-title">—</p>
+      <div class="week-nav">
+        <button class="btn-ghost" id="prev-week">← Vorige week</button>
+        <button class="btn-ghost" id="today-week">Deze week</button>
+        <button class="btn-ghost" id="next-week">Volgende week →</button>
+      </div>
+      <div class="total-chip">
+        <span class="n" id="total-hours">0</span>
+        <span class="l">uur deze week</span>
+      </div>
+    </div>
+    <p class="hint">Klik en sleep in een dag-kolom om uren te loggen. Klik op een blok om 'm te verwijderen.</p>
+    <div class="grid-wrap" id="grid-wrap"></div>
   </div>
+
+  <div class="modal-overlay" id="label-modal">
+    <div class="modal-kaart glass">
+      <p class="modal-titel">Waar heb je aan gewerkt?</p>
+      <p class="modal-sub" id="label-modal-sub"></p>
+      <input class="glass-input" id="label-input" type="text" placeholder="Omschrijving (optioneel)" maxlength="80">
+      <div class="modal-acties">
+        <button class="btn-white" id="label-save">Opslaan</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="delete-modal">
+    <div class="modal-kaart glass">
+      <p class="modal-titel">Blok verwijderen?</p>
+      <p class="modal-sub" id="delete-modal-sub"></p>
+      <div class="modal-acties">
+        <button class="btn-ghost" id="delete-cancel">Annuleren</button>
+        <button class="btn-danger" id="delete-confirm">Verwijderen</button>
+      </div>
+    </div>
+  </div>
+
+<script>
+const GRID_START_MIN = 6 * 60;   // 06:00
+const GRID_END_MIN = 22 * 60;    // 22:00
+const SLOT_MIN = 30;
+const SLOT_COUNT = (GRID_END_MIN - GRID_START_MIN) / SLOT_MIN;
+const ROW_H = 24;
+const DAG_NAMEN = ['ma', 'di', 'wo', 'do', 'vr', 'za', 'zo'];
+
+let weekStart = mondayOf(new Date());
+let entries = [];
+let pendingEntry = null;
+let pendingDeleteId = null;
+
+function mondayOf(d) {
+  const day = (d.getDay() + 6) % 7;
+  const m = new Date(d);
+  m.setDate(d.getDate() - day);
+  m.setHours(0, 0, 0, 0);
+  return m;
+}
+function isoDate(d) {
+  const y = d.getFullYear();
+  const m = (d.getMonth() + 1).toString().padStart(2, '0');
+  const day = d.getDate().toString().padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+function fmtTime(min) {
+  const h = Math.floor(min / 60).toString().padStart(2, '0');
+  const m = (min % 60).toString().padStart(2, '0');
+  return `${h}:${m}`;
+}
+function fmtWeekLabel(start) {
+  const end = new Date(start); end.setDate(start.getDate() + 6);
+  const opts = { day: 'numeric', month: 'long' };
+  return `${start.toLocaleDateString('nl-NL', { day: 'numeric' })} – ${end.toLocaleDateString('nl-NL', opts)}`;
+}
+
+function buildGrid() {
+  const wrap = document.getElementById('grid-wrap');
+  wrap.innerHTML = '';
+
+  const gutterHead = document.createElement('div');
+  wrap.appendChild(gutterHead);
+
+  const today = isoDate(new Date());
+  const dayCols = [];
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(weekStart); d.setDate(weekStart.getDate() + i);
+    const head = document.createElement('div');
+    head.className = 'col-head' + (isoDate(d) === today ? ' vandaag' : '');
+    head.innerHTML = `<div class="dag">${DAG_NAMEN[i]}</div><div class="datum">${d.toLocaleDateString('nl-NL', { day: 'numeric', month: 'short' })}</div>`;
+    wrap.appendChild(head);
+  }
+
+  const gutter = document.createElement('div');
+  gutter.className = 'gutter';
+  gutter.style.height = (SLOT_COUNT * ROW_H) + 'px';
+  for (let s = 0; s <= SLOT_COUNT; s += 2) {
+    const lbl = document.createElement('div');
+    lbl.className = 'gutter-lbl';
+    lbl.style.top = (s * ROW_H) + 'px';
+    lbl.textContent = fmtTime(GRID_START_MIN + s * SLOT_MIN);
+    gutter.appendChild(lbl);
+  }
+  wrap.appendChild(gutter);
+
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(weekStart); d.setDate(weekStart.getDate() + i);
+    const dayIso = isoDate(d);
+    const col = document.createElement('div');
+    col.className = 'day-col';
+    col.dataset.day = dayIso;
+    col.style.height = (SLOT_COUNT * ROW_H) + 'px';
+
+    for (let s = 0; s < SLOT_COUNT; s++) {
+      const slot = document.createElement('div');
+      slot.className = 'slot' + (s % 2 === 0 ? ' hour-line' : '');
+      slot.dataset.slot = s;
+      col.appendChild(slot);
+    }
+    attachDrag(col);
+    dayCols.push(col);
+    wrap.appendChild(col);
+  }
+  renderEntries(dayCols);
+}
+
+function renderEntries(dayCols) {
+  dayCols.forEach(col => {
+    col.querySelectorAll('.entry').forEach(e => e.remove());
+    const dayEntries = entries.filter(e => e.day === col.dataset.day);
+    dayEntries.forEach(e => {
+      const top = ((e.start_min - GRID_START_MIN) / SLOT_MIN) * ROW_H;
+      const height = ((e.end_min - e.start_min) / SLOT_MIN) * ROW_H;
+      const div = document.createElement('div');
+      div.className = 'entry';
+      div.style.top = top + 'px';
+      div.style.height = Math.max(height, 16) + 'px';
+      div.innerHTML = `<div class="tijd">${fmtTime(e.start_min)}–${fmtTime(e.end_min)}</div>` +
+        (e.label ? `<div class="lbl">${escapeHtml(e.label)}</div>` : '');
+      div.addEventListener('click', ev => {
+        ev.stopPropagation();
+        openDeleteModal(e);
+      });
+      col.appendChild(div);
+    });
+  });
+  updateTotal();
+}
+
+function escapeHtml(s) {
+  const d = document.createElement('div');
+  d.textContent = s;
+  return d.innerHTML;
+}
+
+function updateTotal() {
+  const totalMin = entries.reduce((sum, e) => sum + (e.end_min - e.start_min), 0);
+  document.getElementById('total-hours').textContent = (totalMin / 60).toFixed(1).replace(/\.0$/, '');
+}
+
+function attachDrag(col) {
+  let dragStartSlot = null;
+  let dragEndSlot = null;
+
+  function slotsInRange() {
+    const lo = Math.min(dragStartSlot, dragEndSlot);
+    const hi = Math.max(dragStartSlot, dragEndSlot);
+    return [lo, hi];
+  }
+  function paint() {
+    col.querySelectorAll('.slot').forEach(s => s.classList.remove('selecting'));
+    if (dragStartSlot === null) return;
+    const [lo, hi] = slotsInRange();
+    col.querySelectorAll('.slot').forEach(s => {
+      const idx = Number(s.dataset.slot);
+      if (idx >= lo && idx <= hi) s.classList.add('selecting');
+    });
+  }
+
+  col.addEventListener('mousedown', ev => {
+    const slot = ev.target.closest('.slot');
+    if (!slot) return;
+    dragStartSlot = dragEndSlot = Number(slot.dataset.slot);
+    paint();
+  });
+  col.addEventListener('mousemove', ev => {
+    if (dragStartSlot === null) return;
+    const slot = ev.target.closest('.slot');
+    if (!slot) return;
+    dragEndSlot = Number(slot.dataset.slot);
+    paint();
+  });
+  document.addEventListener('mouseup', () => {
+    if (dragStartSlot === null) return;
+    const [lo, hi] = slotsInRange();
+    col.querySelectorAll('.slot').forEach(s => s.classList.remove('selecting'));
+    const startMin = GRID_START_MIN + lo * SLOT_MIN;
+    const endMin = GRID_START_MIN + (hi + 1) * SLOT_MIN;
+    dragStartSlot = dragEndSlot = null;
+    openLabelModal(col.dataset.day, startMin, endMin);
+  });
+}
+
+function openLabelModal(day, startMin, endMin) {
+  pendingEntry = { day, start_min: startMin, end_min: endMin };
+  document.getElementById('label-modal-sub').textContent =
+    `${new Date(day).toLocaleDateString('nl-NL', { weekday: 'long', day: 'numeric', month: 'long' })}, ${fmtTime(startMin)}–${fmtTime(endMin)}`;
+  document.getElementById('label-input').value = '';
+  document.getElementById('label-modal').classList.add('open');
+  document.getElementById('label-input').focus();
+}
+
+function openDeleteModal(entry) {
+  pendingDeleteId = entry.id;
+  document.getElementById('delete-modal-sub').textContent =
+    `${new Date(entry.day).toLocaleDateString('nl-NL', { weekday: 'long', day: 'numeric', month: 'long' })}, ${fmtTime(entry.start_min)}–${fmtTime(entry.end_min)}` +
+    (entry.label ? ` — ${entry.label}` : '');
+  document.getElementById('delete-modal').classList.add('open');
+}
+
+async function loadEntries() {
+  const res = await fetch(`/api/entries?week_start=${isoDate(weekStart)}`);
+  entries = await res.json();
+  document.getElementById('week-title').textContent = fmtWeekLabel(weekStart);
+  buildGrid();
+}
+
+document.getElementById('label-save').addEventListener('click', async () => {
+  const label = document.getElementById('label-input').value.trim();
+  await fetch('/api/entries', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ ...pendingEntry, label }),
+  });
+  document.getElementById('label-modal').classList.remove('open');
+  pendingEntry = null;
+  loadEntries();
+});
+document.getElementById('label-input').addEventListener('keydown', ev => {
+  if (ev.key === 'Enter') document.getElementById('label-save').click();
+});
+
+document.getElementById('delete-cancel').addEventListener('click', () => {
+  document.getElementById('delete-modal').classList.remove('open');
+  pendingDeleteId = null;
+});
+document.getElementById('delete-confirm').addEventListener('click', async () => {
+  await fetch(`/api/entries/${pendingDeleteId}`, { method: 'DELETE' });
+  document.getElementById('delete-modal').classList.remove('open');
+  pendingDeleteId = null;
+  loadEntries();
+});
+
+document.getElementById('prev-week').addEventListener('click', () => {
+  weekStart.setDate(weekStart.getDate() - 7);
+  loadEntries();
+});
+document.getElementById('next-week').addEventListener('click', () => {
+  weekStart.setDate(weekStart.getDate() + 7);
+  loadEntries();
+});
+document.getElementById('today-week').addEventListener('click', () => {
+  weekStart = mondayOf(new Date());
+  loadEntries();
+});
+
+loadEntries();
+</script>
 </body>
 </html>
