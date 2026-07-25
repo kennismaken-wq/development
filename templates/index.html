@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>HandigerAI — develop</title>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,600;0,700;1,600;1,700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --accent: #5B8FA8;
+    --warm: #E07B5F;
+    --ink: #1A1A18;
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    margin: 0; font-family: 'Inter', sans-serif;
+    background:
+      radial-gradient(ellipse 60% 50% at 15% 10%, rgba(91,143,168,0.55), transparent 60%),
+      radial-gradient(ellipse 55% 55% at 90% 95%, rgba(224,123,95,0.5), transparent 60%),
+      linear-gradient(150deg, #1E3540 0%, #3B6376 30%, #6E8798 52%, #A5806A 76%, #C98B5E 100%);
+    background-attachment: fixed;
+    color: #FFFFFF;
+    min-height: 100vh;
+    display: flex; align-items: center; justify-content: center;
+    padding: 1.5rem;
+  }
+  .glass {
+    background: rgba(255,255,255,0.10);
+    backdrop-filter: blur(28px) saturate(150%);
+    -webkit-backdrop-filter: blur(28px) saturate(150%);
+    border: 1px solid rgba(255,255,255,0.20);
+    box-shadow: 0 24px 70px rgba(0,0,0,0.30), inset 0 1px 0 rgba(255,255,255,0.15);
+  }
+  .stub-card {
+    border-radius: 28px; padding: 3rem 2.6rem; max-width: 420px; width: 100%;
+    text-align: center;
+  }
+  .stub-card .brand {
+    font-family: 'Fraunces', serif; font-style: italic; font-weight: 600;
+    font-size: 1.8rem; margin: 0 0 .6rem;
+  }
+  .stub-card p { color: rgba(255,255,255,0.65); font-size: 13.5px; line-height: 1.6; margin: 0; }
+</style>
+</head>
+<body>
+  <div class="stub-card glass">
+    <p class="brand">HandigerAI — develop</p>
+    <p>Deze omgeving staat klaar. Zie <code>CONTEXT.md</code> in deze repo voor de lay-out-regels.</p>
+  </div>
+</body>
+</html>

@@ -1,0 +1,35 @@
+name: Deploy to VPS
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Pull latest on VPS
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.DEVELOP_VPS_HOST }}
+          username: ${{ secrets.DEVELOP_VPS_USER }}
+          key: ${{ secrets.DEVELOP_VPS_SSH_KEY }}
+          script: |
+            set -e
+            cd /srv/handigerai/develop-tool
+            git fetch origin
+            git reset --hard origin/main
+            [ -d .venv ] || python3 -m venv .venv
+            ./.venv/bin/pip install -q -r requirements.txt
+            sudo /usr/bin/systemctl restart develop-tool.service
+            sleep 2
+            sudo /usr/bin/systemctl is-active develop-tool.service
+            for i in 1 2 3 4 5; do
+              if curl -sf -o /dev/null http://127.0.0.1:5001/; then
+                echo "Healthcheck OK"
+                exit 0
+              fi
+              sleep 2
+            done
+            echo "Healthcheck FAILED: / gaf geen 200 terug na restart"
+            exit 1
