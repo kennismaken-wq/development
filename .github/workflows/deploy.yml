@@ -8,13 +8,16 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
-      - name: Pull latest on VPS
-        uses: appleboy/ssh-action@v1.0.3
-        with:
-          host: ${{ secrets.DEVELOP_VPS_HOST }}
-          username: ${{ secrets.DEVELOP_VPS_USER }}
-          key: ${{ secrets.DEVELOP_VPS_SSH_KEY }}
-          script: |
+      - name: Set up SSH
+        run: |
+          mkdir -p ~/.ssh
+          printf '%s\n' "${{ secrets.DEVELOP_VPS_SSH_KEY }}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -H "${{ secrets.DEVELOP_VPS_HOST }}" >> ~/.ssh/known_hosts
+
+      - name: Deploy over SSH
+        run: |
+          ssh -i ~/.ssh/deploy_key -o BatchMode=yes "${{ secrets.DEVELOP_VPS_USER }}@${{ secrets.DEVELOP_VPS_HOST }}" '
             set -e
             cd /srv/handigerai/develop-tool
             git fetch origin
@@ -33,3 +36,4 @@ jobs:
             done
             echo "Healthcheck FAILED: / gaf geen 200 terug na restart"
             exit 1
+          '
