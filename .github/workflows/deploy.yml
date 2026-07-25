@@ -9,10 +9,17 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Set up SSH
+        env:
+          DEPLOY_KEY: ${{ secrets.DEVELOP_VPS_SSH_KEY }}
         run: |
           mkdir -p ~/.ssh
-          printf '%s\n' "${{ secrets.DEVELOP_VPS_SSH_KEY }}" > ~/.ssh/deploy_key
+          # tr strips any CR that a web-form paste may have introduced -- OpenSSH's
+          # PEM parser rejects CRLF line endings, which silently breaks auth client-side
+          # (no "Failed publickey" ever gets logged server-side, just a dropped connection).
+          printf '%s\n' "$DEPLOY_KEY" | tr -d '\r' > ~/.ssh/deploy_key
           chmod 600 ~/.ssh/deploy_key
+          echo "Deploy key fingerprint (safe to log, not the key itself):"
+          ssh-keygen -lf ~/.ssh/deploy_key
           ssh-keyscan -H "${{ secrets.DEVELOP_VPS_HOST }}" >> ~/.ssh/known_hosts
 
       - name: Deploy over SSH
