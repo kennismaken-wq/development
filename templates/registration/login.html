@@ -1,16 +1,17 @@
 {% extends "basis.html" %}
 {% block titel %}Inloggen{% endblock %}
+{% block kop %}De Groene M{% endblock %}
+{% block sub %}Uren en klussen{% endblock %}
 {% block inhoud %}
-  <form method="post" class="kaart">
+  <form method="post">
     {% csrf_token %}
-    <h1 style="margin-top:0">Inloggen</h1>
-    <label for="id_username">Gebruikersnaam</label>
+    <label for="{{ form.username.id_for_label }}">Gebruikersnaam</label>
     {{ form.username }}
-    <label for="id_password">Wachtwoord</label>
+    <label for="{{ form.password.id_for_label }}">Wachtwoord</label>
     {{ form.password }}
     {% if form.errors %}
       <p class="fout">Gebruikersnaam of wachtwoord klopt niet.</p>
     {% endif %}
-    <p style="margin-top:20px"><button type="submit" class="knop">Inloggen</button></p>
+    <p style="margin-top:1.6rem"><button type="submit" class="knop">Inloggen</button></p>
   </form>
 {% endblock %}

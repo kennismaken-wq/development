@@ -1,7 +1,8 @@
 {% extends "basis.html" %}
 {% block titel %}Start{% endblock %}
+{% block kop %}Hallo {{ user.first_name|default:user.username }}{% endblock %}
+{% block sub %}{{ vandaag|date:"l j F Y"|capfirst }}{% endblock %}
 {% block inhoud %}
-  <h1>Hallo {{ user.first_name|default:user.username }}</h1>
   <div class="tegels">
     {% for tegel in tegels %}
       {% if tegel.url %}

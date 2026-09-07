@@ -1,5 +1,7 @@
 {% extends "basis.html" %}
 {% block titel %}Uren{% endblock %}
+{% block kop %}Mijn uren{% endblock %}
+{% block sub %}<a href="{% url 'start' %}" style="color:rgba(255,255,255,0.6)">‹ Terug</a>{% endblock %}
 {% block inhoud %}
   <div class="dagbalk">
     <a class="pijl" href="?dag={{ vorige|date:'Y-m-d' }}" aria-label="Vorige dag">‹</a>
@@ -11,8 +13,8 @@
   </div>
 
   <div class="totalen">
-    <span><strong>{{ dagtotaal }}</strong> vandaag</span>
-    <span><strong>{{ weektotaal }}</strong> deze week</span>
+    <div><span class="n">{{ dagtotaal }}</span><span class="l">deze dag</span></div>
+    <div><span class="n">{{ weektotaal }}</span><span class="l">deze week</span></div>
   </div>
 
   {% for blok in blokken %}
@@ -25,7 +27,7 @@
     <p class="leeg">Nog geen uren op deze dag.</p>
   {% endfor %}
 
-  <p style="margin-top:20px">
+  <p style="margin-top:1.4rem">
     <a class="knop" href="{% url 'uurblok_nieuw' %}?dag={{ dag|date:'Y-m-d' }}">Uren toevoegen</a>
   </p>
 {% endblock %}

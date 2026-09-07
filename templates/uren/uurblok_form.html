@@ -1,19 +1,16 @@
 {% extends "basis.html" %}
 {% block titel %}{% if nieuw %}Uren toevoegen{% else %}Uren aanpassen{% endif %}{% endblock %}
+{% block kop %}{% if nieuw %}Uren toevoegen{% else %}Uren aanpassen{% endif %}{% endblock %}
+{% block sub %}<a href="{% url 'mijn_uren' %}?dag={{ dag|date:'Y-m-d' }}" style="color:rgba(255,255,255,0.6)">‹ Terug</a>{% endblock %}
 {% block inhoud %}
-  <h1>{% if nieuw %}Uren toevoegen{% else %}Uren aanpassen{% endif %}</h1>
-
-  <form method="post" class="kaart" style="margin-top:0">
+  <form method="post">
     {% csrf_token %}
     {% for veld in formulier %}
       <label for="{{ veld.id_for_label }}">{{ veld.label }}</label>
       {{ veld }}
       {% for fout in veld.errors %}<p class="fout">{{ fout }}</p>{% endfor %}
     {% endfor %}
-    <p style="margin-top:22px"><button type="submit" class="knop">Opslaan</button></p>
-    <p class="onderaan">
-      <a href="{% url 'mijn_uren' %}?dag={{ dag|date:'Y-m-d' }}">Annuleren</a>
-    </p>
+    <p style="margin-top:1.8rem"><button type="submit" class="knop">Opslaan</button></p>
   </form>
 
   {% if not nieuw %}

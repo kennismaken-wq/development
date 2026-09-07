@@ -1,3 +1,5 @@
+from datetime import date
+
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import render
 from django.urls import reverse
@@ -29,4 +31,4 @@ def start(request):
         if "url_naam" in tegel:
             tegel["url"] = reverse(tegel["url_naam"])
         tegels.append(tegel)
-    return render(request, "start.html", {"tegels": tegels})
+    return render(request, "start.html", {"tegels": tegels, "vandaag": date.today()})
