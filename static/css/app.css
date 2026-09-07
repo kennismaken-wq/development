@@ -1,0 +1,75 @@
+/* Huisstijl De Groene M: #1d1d1b en #95bf1d.
+   Alles is eerst voor de telefoon ontworpen; breder scherm is de uitzondering. */
+:root{
+  --inkt:#1d1d1b;
+  --groen:#95bf1d;
+  --groen-donker:#7ba117;
+  --papier:#f6f6f3;
+  --vlak:#ffffff;
+  --rand:#e4e4de;
+  --stil:#6b6b64;
+  --rood:#c0392b;
+  --rond:14px;
+}
+
+*{ box-sizing:border-box; }
+html,body{ margin:0; padding:0; }
+body{
+  background:var(--papier);
+  color:var(--inkt);
+  font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  font-size:16px;              /* niet kleiner: iOS zoomt anders in op invoervelden */
+  line-height:1.5;
+  -webkit-text-size-adjust:100%;
+}
+
+.balk{
+  background:var(--inkt); color:#fff;
+  display:flex; align-items:center; justify-content:space-between;
+  gap:12px; padding:12px 16px;
+  padding-top:calc(12px + env(safe-area-inset-top));
+}
+.balk a{ color:#fff; text-decoration:none; }
+.balk .naam{ font-weight:600; }
+.balk .uit{ font-size:14px; opacity:.75; }
+
+.inhoud{ max-width:900px; margin:0 auto; padding:16px 16px 40px; }
+
+h1{ font-size:22px; margin:4px 0 16px; }
+
+.tegels{ display:grid; grid-template-columns:repeat(2,1fr); gap:12px; }
+@media (min-width:620px){ .tegels{ grid-template-columns:repeat(3,1fr); } }
+
+.tegel{
+  background:var(--vlak); border:1px solid var(--rand); border-radius:var(--rond);
+  padding:18px 14px; text-decoration:none; color:inherit;
+  display:flex; flex-direction:column; align-items:center; gap:10px;
+  min-height:104px; justify-content:center; text-align:center;
+}
+.tegel .teken{
+  width:44px; height:44px; border-radius:50%;
+  background:var(--groen); color:#fff;
+  display:flex; align-items:center; justify-content:center; font-size:20px;
+}
+.tegel .titel{ font-weight:600; font-size:14px; }
+.tegel.nog-niet{ opacity:.45; }
+
+.knop{
+  display:inline-flex; align-items:center; justify-content:center;
+  background:var(--groen); color:#fff; border:0; border-radius:10px;
+  padding:13px 18px; font-size:16px; font-weight:600; cursor:pointer;
+  min-height:48px;             /* groot genoeg voor een duim */
+  text-decoration:none; width:100%;
+}
+.knop:active{ background:var(--groen-donker); }
+
+.kaart{
+  background:var(--vlak); border:1px solid var(--rand); border-radius:var(--rond);
+  padding:20px; max-width:380px; margin:40px auto;
+}
+label{ display:block; font-size:14px; color:var(--stil); margin:14px 0 4px; }
+input[type=text],input[type=password],input[type=date],input[type=time],select,textarea{
+  width:100%; padding:12px; font-size:16px;
+  border:1px solid var(--rand); border-radius:10px; background:#fff; color:inherit;
+}
+.fout{ color:var(--rood); font-size:14px; margin-top:10px; }

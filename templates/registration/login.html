@@ -1,0 +1,16 @@
+{% extends "basis.html" %}
+{% block titel %}Inloggen{% endblock %}
+{% block inhoud %}
+  <form method="post" class="kaart">
+    {% csrf_token %}
+    <h1 style="margin-top:0">Inloggen</h1>
+    <label for="id_username">Gebruikersnaam</label>
+    {{ form.username }}
+    <label for="id_password">Wachtwoord</label>
+    {{ form.password }}
+    {% if form.errors %}
+      <p class="fout">Gebruikersnaam of wachtwoord klopt niet.</p>
+    {% endif %}
+    <p style="margin-top:20px"><button type="submit" class="knop">Inloggen</button></p>
+  </form>
+{% endblock %}

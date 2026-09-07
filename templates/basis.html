@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="nl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#1d1d1b">
+  <title>{% block titel %}Klusapp{% endblock %} · De Groene M</title>
+  {% load static %}
+  <link rel="stylesheet" href="{% static 'css/app.css' %}">
+</head>
+<body>
+  {% if user.is_authenticated %}
+    <div class="balk">
+      <a href="{% url 'start' %}" class="naam">De Groene M</a>
+      <form method="post" action="{% url 'uitloggen' %}">
+        {% csrf_token %}
+        <button type="submit" class="uit" style="background:none;border:0;color:#fff;cursor:pointer;">Uitloggen</button>
+      </form>
+    </div>
+  {% endif %}
+  <div class="inhoud">
+    {% block inhoud %}{% endblock %}
+  </div>
+</body>
+</html>
