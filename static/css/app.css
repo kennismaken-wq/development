@@ -73,3 +73,47 @@ input[type=text],input[type=password],input[type=date],input[type=time],select,t
   border:1px solid var(--rand); border-radius:10px; background:#fff; color:inherit;
 }
 .fout{ color:var(--rood); font-size:14px; margin-top:10px; }
+
+/* --- uren schrijven --- */
+.dagbalk{ display:flex; align-items:center; gap:8px; margin:4px 0 14px; }
+.dagbalk .pijl{
+  width:44px; height:44px; flex:0 0 44px;
+  display:flex; align-items:center; justify-content:center;
+  background:var(--vlak); border:1px solid var(--rand); border-radius:12px;
+  color:inherit; text-decoration:none; font-size:22px; line-height:1;
+}
+.dagtitel{ flex:1; text-align:center; display:flex; flex-direction:column; }
+.dagtitel strong{ font-size:18px; text-transform:capitalize; }
+.dagtitel span{ font-size:13px; color:var(--stil); }
+
+.totalen{
+  display:flex; gap:10px; margin-bottom:14px;
+  font-size:13px; color:var(--stil);
+}
+.totalen span{
+  flex:1; background:var(--vlak); border:1px solid var(--rand);
+  border-radius:12px; padding:10px 12px; text-align:center;
+}
+.totalen strong{ color:var(--inkt); font-size:16px; display:block; }
+
+.blok{
+  display:block; text-decoration:none; color:inherit;
+  background:var(--vlak); border:1px solid var(--rand);
+  border-left:4px solid var(--groen); border-radius:12px;
+  padding:12px 14px; margin-bottom:10px;
+}
+.blok .tijd{ font-variant-numeric:tabular-nums; font-weight:600; margin-right:8px; }
+.blok .klus{ color:var(--stil); }
+.blok .toelichting{
+  display:block; margin-top:4px; font-size:14px;
+  overflow-wrap:anywhere;   /* lange woorden mogen breken, niet uitsteken */
+}
+
+.leeg{ color:var(--stil); text-align:center; padding:24px 0; }
+.onderaan{ text-align:center; margin:14px 0 0; font-size:14px; }
+.onderaan a{ color:var(--stil); }
+.verwijder{ text-align:center; margin-top:18px; }
+.verwijder button{
+  background:none; border:0; color:var(--rood);
+  font-size:14px; cursor:pointer; padding:10px;
+}
