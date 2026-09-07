@@ -1,4 +1,4 @@
-from datetime import date, time
+from datetime import date, time, timedelta
 
 from django.core.exceptions import ValidationError
 from django.db import IntegrityError, transaction
@@ -118,13 +118,45 @@ class UrenSchrijvenTest(TestCase):
         self.assertIn(self.klus, keuzes)
         self.assertNotIn(self.oude_klus, keuzes)
 
-    def test_dagtotaal_telt_alle_blokken(self):
+    def test_week_en_dagtotalen(self):
         for begin, eind in [(time(8, 0), time(9, 30)), (time(10, 0), time(12, 15))]:
             Uurblok.objects.create(
                 medewerker=self.sam, klus=self.klus, datum=self.dag, begintijd=begin, eindtijd=eind
             )
+        # een dag verderop in dezelfde week telt mee in het weektotaal
+        Uurblok.objects.create(
+            medewerker=self.sam, klus=self.klus, datum=self.dag + timedelta(days=1),
+            begintijd=time(8, 0), eindtijd=time(9, 0),
+        )
         antwoord = self.client.get("/uren/?dag=2026-09-07")
-        self.assertEqual(antwoord.context["dagtotaal"], "3:45")
+        self.assertEqual(antwoord.context["weektotaal"], "4:45")
+        maandag = antwoord.context["dagen"][0]
+        self.assertEqual(maandag["datum"], self.dag)
+        self.assertEqual(maandag["totaal"], "3:45")
+
+    def test_week_toont_zeven_dagen_vanaf_maandag(self):
+        antwoord = self.client.get("/uren/?dag=2026-09-10")   # een donderdag
+        dagen = antwoord.context["dagen"]
+        self.assertEqual(len(dagen), 7)
+        self.assertEqual(dagen[0]["datum"], date(2026, 9, 7))
+        self.assertEqual(dagen[6]["datum"], date(2026, 9, 13))
+
+    def test_slepen_vult_begin_en_eindtijd_in(self):
+        antwoord = self.client.get("/uren/nieuw/?dag=2026-09-07&van=08:30&tot=11:00")
+        beginwaarden = antwoord.context["formulier"].initial
+        self.assertEqual(beginwaarden["begintijd"], time(8, 30))
+        self.assertEqual(beginwaarden["eindtijd"], time(11, 0))
+
+    def test_blok_krijgt_plek_in_het_raster(self):
+        Uurblok.objects.create(
+            medewerker=self.sam, klus=self.klus, datum=self.dag,
+            begintijd=time(8, 0), eindtijd=time(9, 0),
+        )
+        antwoord = self.client.get("/uren/?dag=2026-09-07")
+        getekend = antwoord.context["dagen"][0]["getekend"][0]
+        # 08:00 is vier halve uren na 06:00, elk 26px hoog
+        self.assertEqual(getekend["top"], 4 * 26)
+        self.assertEqual(getekend["hoogte"], 2 * 26 - 2)
 
     def test_bestaand_blok_vult_datum_en_tijden_in(self):
         # Een HTML-datumveld toont alleen jjjj-mm-dd; met het Nederlandse

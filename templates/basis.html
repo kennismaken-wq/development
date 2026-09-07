@@ -9,7 +9,7 @@
   <link rel="stylesheet" href="{% static 'css/app.css' %}">
 </head>
 <body>
-  <div class="kaart glas">
+  <div class="kaart glas {% block kaartklasse %}{% endblock %}">
     <div class="kop">
       <div>
         <h1>{% block kop %}De Groene M{% endblock %}</h1>

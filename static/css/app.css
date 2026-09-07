@@ -49,6 +49,8 @@ body{
   border-radius:28px; padding:1.8rem 2rem 2.2rem;
   width:100%; max-width:640px;
 }
+/* de weekkalender is 700px breed; die krijgt een ruimere kaart */
+.kaart.breed{ max-width:1180px; }
 @media (max-width:700px){ .kaart{ border-radius:22px; padding:1.2rem 1rem 1.6rem; } }
 
 /* ══════════ KOP ══════════ */
@@ -102,6 +104,16 @@ a.tegel:hover{ background:rgba(255,255,255,0.14); transform:translateY(-1px); }
 }
 .knop:active{ filter:brightness(.94); }
 
+/* tweede knop: doorschijnend, voor navigatie naast de hoofdactie */
+.knop-stil{
+  display:inline-flex; align-items:center; justify-content:center;
+  min-width:40px; min-height:40px; padding:.5rem .9rem;
+  background:rgba(255,255,255,0.10); color:#fff; border:1px solid rgba(255,255,255,0.24);
+  border-radius:999px; font-family:'Inter',sans-serif; font-size:13px; font-weight:500;
+  text-decoration:none; cursor:pointer; line-height:1;
+}
+.knop-stil:hover{ background:rgba(255,255,255,0.18); }
+
 /* ══════════ FORMULIEREN ══════════ */
 label{
   display:block; font-size:10.5px; font-weight:600; letter-spacing:.07em;
@@ -131,47 +143,67 @@ input[type=time]::-webkit-calendar-picker-indicator{ filter:invert(1); opacity:.
   text-decoration:underline;
 }
 
-/* ══════════ UREN SCHRIJVEN ══════════ */
-.dagbalk{ display:flex; align-items:center; gap:.5rem; margin-bottom:1rem; }
-.dagbalk .pijl{
-  width:44px; height:44px; flex:0 0 44px;
-  display:flex; align-items:center; justify-content:center;
-  background:rgba(255,255,255,0.10); border:1px solid rgba(255,255,255,0.24);
-  border-radius:999px; color:#fff; text-decoration:none; font-size:20px; line-height:1;
+/* ══════════ UREN SCHRIJVEN: WEEKKALENDER ══════════
+   Maten uit de demo: van 06:00 tot 20:00 in vakken van een half uur van
+   26px. Zeven dagen naast elkaar passen niet op een telefoon, dus het
+   raster scrollt horizontaal binnen zijn eigen kader. */
+.navbalk{
+  display:flex; align-items:center; justify-content:space-between;
+  gap:.8rem; flex-wrap:wrap; margin-bottom:1rem;
 }
-.dagbalk .pijl:hover{ background:rgba(255,255,255,0.18); }
-.dagtitel{ flex:1; text-align:center; }
-.dagtitel strong{
-  display:block; font-family:'Fraunces',serif; font-style:italic; font-weight:600;
-  font-size:1.15rem; text-transform:capitalize;
+.navlinks{ display:flex; align-items:center; gap:.4rem; flex-wrap:wrap; }
+.periodetitel{
+  font-family:'Fraunces',serif; font-style:italic; font-weight:600;
+  font-size:1.05rem; margin-left:.3rem;
 }
-.dagtitel span{ font-size:11.5px; color:rgba(255,255,255,0.55); }
-
-.totalen{ display:flex; gap:.6rem; margin-bottom:1.2rem; }
-.totalen div{
-  flex:1; border-radius:999px; padding:.55rem 1rem; text-align:center;
+.totaal-chip{
+  border-radius:999px; padding:.45rem 1rem; display:flex; align-items:baseline; gap:.4rem;
   background:linear-gradient(135deg, rgba(var(--accent-rgb),0.42), rgba(var(--accent-rgb),0.14));
   border:1px solid rgba(var(--accent-rgb),0.4);
 }
-.totalen .n{
+.totaal-chip .n{
   font-family:'Fraunces',serif; font-style:italic; font-weight:600;
-  font-size:1.1rem; color:var(--hi); display:block;
+  font-size:1.1rem; color:var(--hi);
 }
-.totalen .l{ font-size:10.5px; color:rgba(255,255,255,0.7); }
+.totaal-chip .l{ font-size:11px; color:rgba(255,255,255,0.75); }
+
+.raster-scroll{ overflow-x:auto; padding-bottom:.4rem; }
+.raster-scroll::-webkit-scrollbar{ height:6px; }
+.raster-scroll::-webkit-scrollbar-thumb{ background:rgba(255,255,255,0.2); border-radius:999px; }
+.raster{ display:grid; grid-template-columns:48px repeat(7, minmax(92px,1fr)); min-width:700px; }
+
+.kolomkop{ font-size:11px; text-align:center; padding-bottom:.5rem; color:rgba(255,255,255,0.7); }
+.kolomkop .dag{ font-weight:600; text-transform:capitalize; }
+.kolomkop .datum{ color:rgba(255,255,255,0.5); font-size:10px; }
+.kolomkop .dagtotaal{
+  font-size:10px; color:var(--hi); font-variant-numeric:tabular-nums; min-height:13px;
+}
+.kolomkop.vandaag .dag{ color:var(--hi); }
+
+.gutter{ position:relative; }
+.gutter-lbl{
+  position:absolute; right:.5rem; transform:translateY(-50%);
+  font-size:9.5px; color:rgba(255,255,255,0.45);
+}
+
+.dagkolom{
+  position:relative; border-left:1px solid rgba(255,255,255,0.08);
+  background:rgba(255,255,255,0.03); touch-action:pan-y;
+}
+.dagkolom:hover{ background:rgba(255,255,255,0.05); }
+.vak{ height:26px; border-top:1px solid rgba(255,255,255,0.06); cursor:pointer; }
+.vak.uurlijn{ border-top:1px solid rgba(255,255,255,0.14); }
+.vak.kiezen{ background:rgba(var(--accent-rgb),0.35); }
 
 .blok{
-  display:block; text-decoration:none; color:#fff;
-  border-radius:14px; padding:.75rem .9rem; margin-bottom:.6rem;
-  background:linear-gradient(135deg, rgba(var(--accent-rgb),0.30), rgba(var(--accent-rgb),0.12));
-  border:1px solid rgba(var(--accent-rgb),0.38);
-  transition:border-color .12s, transform .1s;
+  position:absolute; border-radius:9px; padding:.28rem .5rem;
+  overflow:hidden; cursor:pointer; font-size:10.5px; line-height:1.35;
+  border:1px solid; color:#fff; text-decoration:none;
+  transition:transform .1s;
 }
-.blok:hover{ border-color:rgba(255,255,255,0.6); transform:translateY(-1px); }
-.blok .tijd{ font-weight:600; font-variant-numeric:tabular-nums; margin-right:.5rem; }
-.blok .klus{ color:rgba(255,255,255,0.75); font-size:14px; }
-.blok .toelichting{
-  display:block; margin-top:.25rem; font-size:13px; color:rgba(255,255,255,0.8);
-  overflow-wrap:anywhere;      /* lange woorden mogen breken, niet uitsteken */
+.blok:hover{ transform:scale(1.015); border-color:rgba(255,255,255,0.75); z-index:5; }
+.blok .tijd{ display:block; font-weight:600; font-variant-numeric:tabular-nums; }
+.blok .onder{
+  display:block; opacity:.85; margin-top:.1rem;
+  overflow-wrap:break-word; word-break:break-word;
 }
-
-.leeg{ color:rgba(255,255,255,0.5); text-align:center; padding:1.6rem 0; font-size:13.5px; }
