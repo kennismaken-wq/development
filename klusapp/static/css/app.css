@@ -1,0 +1,209 @@
+/* Stijl van de app. Overgenomen uit de demo: donkere verloopachtergrond in de
+   huisstijlkleuren (#1d1d1b en #95bf1d), glaspanelen daarboven, Fraunces
+   cursief voor koppen en Inter voor de rest.
+
+   Puur #1d1d1b als vlak vlak wordt dof, dus de achtergrond loopt van
+   bijna-zwart naar een heel donkere olijftint, met een lime gloed linksboven.
+   Het glas-effect komt op donker beter uit dan op een lichte ondergrond. */
+
+@import url("fonts.css");
+
+:root{
+  --accent:#95BF1D;
+  --accent-rgb:149,191,29;
+  --hi:#D6EC9B;                 /* lichte accenttekst: getallen, "vandaag" */
+  --ink:#1A1A18;
+  --rood:#E07B5F;
+  --achtergrond:
+    radial-gradient(ellipse 70% 60% at 12% 6%, rgba(149,191,29,0.20), transparent 62%),
+    radial-gradient(ellipse 60% 60% at 90% 94%, rgba(149,191,29,0.09), transparent 60%),
+    linear-gradient(160deg, #1D1D1B 0%, #212220 32%, #262B20 62%, #2E3522 100%);
+}
+
+*{ box-sizing:border-box; }
+html,body{ height:100%; }
+body{
+  margin:0;
+  font-family:'Inter',system-ui,-apple-system,sans-serif;
+  font-size:16px;                /* niet kleiner: iOS zoomt anders in op invoervelden */
+  background:var(--achtergrond);
+  background-attachment:fixed;
+  color:#FFFFFF;
+  min-height:100vh;
+  padding:1.6rem;
+  padding-top:calc(1.6rem + env(safe-area-inset-top));
+  display:flex; flex-direction:column; align-items:center;
+  -webkit-text-size-adjust:100%;
+}
+@media (max-width:700px){ body{ padding:.7rem; padding-top:calc(.7rem + env(safe-area-inset-top)); } }
+
+.glas{
+  background:rgba(255,255,255,0.10);
+  backdrop-filter:blur(28px) saturate(150%);
+  -webkit-backdrop-filter:blur(28px) saturate(150%);
+  border:1px solid rgba(255,255,255,0.20);
+  box-shadow:0 24px 70px rgba(0,0,0,0.30), inset 0 1px 0 rgba(255,255,255,0.15);
+}
+
+.kaart{
+  border-radius:28px; padding:1.8rem 2rem 2.2rem;
+  width:100%; max-width:640px;
+}
+/* de weekkalender is 700px breed; die krijgt een ruimere kaart */
+.kaart.breed{ max-width:1180px; }
+@media (max-width:700px){ .kaart{ border-radius:22px; padding:1.2rem 1rem 1.6rem; } }
+
+/* ══════════ KOP ══════════ */
+.kop{
+  display:flex; align-items:flex-start; justify-content:space-between;
+  gap:1rem; margin-bottom:1.4rem;
+}
+h1{
+  font-family:'Fraunces',serif; font-style:italic; font-weight:600;
+  font-size:1.6rem; margin:0; line-height:1.15;
+}
+.kop .sub{ font-size:11.5px; color:rgba(255,255,255,0.6); margin:.25rem 0 0; }
+.uitlogknop{
+  background:none; border:0; color:rgba(255,255,255,0.6);
+  font-family:'Inter',sans-serif; font-size:11.5px; cursor:pointer;
+  padding:.4rem 0; text-decoration:underline; white-space:nowrap;
+}
+.uitlogknop:hover{ color:#fff; }
+
+/* ══════════ TEGELS OP HET BEGINSCHERM ══════════ */
+.tegels{ display:grid; grid-template-columns:repeat(2,1fr); gap:.75rem; }
+@media (min-width:620px){ .tegels{ grid-template-columns:repeat(3,1fr); } }
+
+.tegel{
+  border-radius:18px; padding:1.1rem .8rem;
+  background:rgba(255,255,255,0.07); border:1px solid rgba(255,255,255,0.14);
+  color:#fff; text-decoration:none;
+  display:flex; flex-direction:column; align-items:center; justify-content:center;
+  gap:.6rem; min-height:106px; text-align:center;
+  transition:background .12s, transform .1s;
+}
+a.tegel:hover{ background:rgba(255,255,255,0.14); transform:translateY(-1px); }
+.tegel .teken{
+  width:42px; height:42px; border-radius:50%;
+  display:flex; align-items:center; justify-content:center; font-size:19px;
+  background:linear-gradient(135deg, rgba(var(--accent-rgb),0.55), rgba(var(--accent-rgb),0.18));
+  border:1px solid rgba(var(--accent-rgb),0.45);
+  color:var(--hi);
+}
+.tegel .titel{ font-size:12.5px; font-weight:500; }
+.tegel.nog-niet{ opacity:.4; }
+
+/* ══════════ KNOPPEN ══════════ */
+.knop{
+  display:flex; align-items:center; justify-content:center; width:100%;
+  min-height:50px; padding:.85rem 1.2rem;
+  border:1px solid rgba(var(--accent-rgb),0.5); border-radius:999px;
+  background:linear-gradient(135deg, rgba(var(--accent-rgb),0.95), rgba(var(--accent-rgb),0.72));
+  color:var(--ink); font-family:'Inter',sans-serif; font-size:15px; font-weight:600;
+  text-decoration:none; cursor:pointer;
+}
+.knop:active{ filter:brightness(.94); }
+
+/* tweede knop: doorschijnend, voor navigatie naast de hoofdactie */
+.knop-stil{
+  display:inline-flex; align-items:center; justify-content:center;
+  min-width:40px; min-height:40px; padding:.5rem .9rem;
+  background:rgba(255,255,255,0.10); color:#fff; border:1px solid rgba(255,255,255,0.24);
+  border-radius:999px; font-family:'Inter',sans-serif; font-size:13px; font-weight:500;
+  text-decoration:none; cursor:pointer; line-height:1;
+}
+.knop-stil:hover{ background:rgba(255,255,255,0.18); }
+
+/* ══════════ FORMULIEREN ══════════ */
+label{
+  display:block; font-size:10.5px; font-weight:600; letter-spacing:.07em;
+  text-transform:uppercase; color:rgba(255,255,255,0.5);
+  margin:1.1rem 0 .35rem;
+}
+input[type=text],input[type=password],input[type=date],input[type=time],select,textarea{
+  width:100%; padding:.8rem .9rem; font-size:16px;
+  font-family:'Inter',sans-serif; color:#fff;
+  background:rgba(255,255,255,0.10); border:1px solid rgba(255,255,255,0.20);
+  border-radius:14px; appearance:none;
+}
+input:focus,select:focus,textarea:focus{ outline:none; border-color:rgba(var(--accent-rgb),0.7); }
+select option{ background:#24291E; color:#fff; }
+textarea{ resize:vertical; }
+/* de klok- en kalendericonen van de browser zijn zwart op donker; omkeren */
+input[type=date]::-webkit-calendar-picker-indicator,
+input[type=time]::-webkit-calendar-picker-indicator{ filter:invert(1); opacity:.6; }
+
+.fout{ color:var(--rood); font-size:12.5px; margin:.4rem 0 0; }
+.onderaan{ text-align:center; margin:1rem 0 0; font-size:12px; }
+.onderaan a{ color:rgba(255,255,255,0.6); }
+.verwijder{ text-align:center; margin-top:1.2rem; }
+.verwijder button{
+  background:none; border:0; color:var(--rood);
+  font-family:'Inter',sans-serif; font-size:12.5px; cursor:pointer; padding:.6rem;
+  text-decoration:underline;
+}
+
+/* ══════════ UREN SCHRIJVEN: WEEKKALENDER ══════════
+   Maten uit de demo: van 06:00 tot 20:00 in vakken van een half uur van
+   26px. Zeven dagen naast elkaar passen niet op een telefoon, dus het
+   raster scrollt horizontaal binnen zijn eigen kader. */
+.navbalk{
+  display:flex; align-items:center; justify-content:space-between;
+  gap:.8rem; flex-wrap:wrap; margin-bottom:1rem;
+}
+.navlinks{ display:flex; align-items:center; gap:.4rem; flex-wrap:wrap; }
+.periodetitel{
+  font-family:'Fraunces',serif; font-style:italic; font-weight:600;
+  font-size:1.05rem; margin-left:.3rem;
+}
+.totaal-chip{
+  border-radius:999px; padding:.45rem 1rem; display:flex; align-items:baseline; gap:.4rem;
+  background:linear-gradient(135deg, rgba(var(--accent-rgb),0.42), rgba(var(--accent-rgb),0.14));
+  border:1px solid rgba(var(--accent-rgb),0.4);
+}
+.totaal-chip .n{
+  font-family:'Fraunces',serif; font-style:italic; font-weight:600;
+  font-size:1.1rem; color:var(--hi);
+}
+.totaal-chip .l{ font-size:11px; color:rgba(255,255,255,0.75); }
+
+.raster-scroll{ overflow-x:auto; padding-bottom:.4rem; }
+.raster-scroll::-webkit-scrollbar{ height:6px; }
+.raster-scroll::-webkit-scrollbar-thumb{ background:rgba(255,255,255,0.2); border-radius:999px; }
+.raster{ display:grid; grid-template-columns:48px repeat(7, minmax(92px,1fr)); min-width:700px; }
+
+.kolomkop{ font-size:11px; text-align:center; padding-bottom:.5rem; color:rgba(255,255,255,0.7); }
+.kolomkop .dag{ font-weight:600; text-transform:capitalize; }
+.kolomkop .datum{ color:rgba(255,255,255,0.5); font-size:10px; }
+.kolomkop .dagtotaal{
+  font-size:10px; color:var(--hi); font-variant-numeric:tabular-nums; min-height:13px;
+}
+.kolomkop.vandaag .dag{ color:var(--hi); }
+
+.gutter{ position:relative; }
+.gutter-lbl{
+  position:absolute; right:.5rem; transform:translateY(-50%);
+  font-size:9.5px; color:rgba(255,255,255,0.45);
+}
+
+.dagkolom{
+  position:relative; border-left:1px solid rgba(255,255,255,0.08);
+  background:rgba(255,255,255,0.03); touch-action:pan-y;
+}
+.dagkolom:hover{ background:rgba(255,255,255,0.05); }
+.vak{ height:26px; border-top:1px solid rgba(255,255,255,0.06); cursor:pointer; }
+.vak.uurlijn{ border-top:1px solid rgba(255,255,255,0.14); }
+.vak.kiezen{ background:rgba(var(--accent-rgb),0.35); }
+
+.blok{
+  position:absolute; border-radius:9px; padding:.28rem .5rem;
+  overflow:hidden; cursor:pointer; font-size:10.5px; line-height:1.35;
+  border:1px solid; color:#fff; text-decoration:none;
+  transition:transform .1s;
+}
+.blok:hover{ transform:scale(1.015); border-color:rgba(255,255,255,0.75); z-index:5; }
+.blok .tijd{ display:block; font-weight:600; font-variant-numeric:tabular-nums; }
+.blok .onder{
+  display:block; opacity:.85; margin-top:.1rem;
+  overflow-wrap:break-word; word-break:break-word;
+}

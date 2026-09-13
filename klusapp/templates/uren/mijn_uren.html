@@ -1,0 +1,63 @@
+{% extends "basis.html" %}
+{% load static %}
+{% block titel %}Uren{% endblock %}
+{% block kaartklasse %}breed{% endblock %}
+{% block kop %}Mijn uren{% endblock %}
+{% block sub %}<a href="{% url 'start' %}" style="color:rgba(255,255,255,0.6)">‹ Terug</a>{% endblock %}
+{% block inhoud %}
+  <div class="navbalk">
+    <div class="navlinks">
+      <a class="knop-stil" href="?dag={{ vorige_week|date:'Y-m-d' }}">‹</a>
+      <a class="knop-stil" href="?dag={{ volgende_week|date:'Y-m-d' }}">›</a>
+      {% if not is_deze_week %}
+        <a class="knop-stil" href="{% url 'mijn_uren' %}">Deze week</a>
+      {% endif %}
+      <span class="periodetitel">{{ maandag|date:"j M" }} – {{ zondag|date:"j M" }}</span>
+    </div>
+    <div class="totaal-chip"><span class="n">{{ weektotaal }}</span><span class="l">deze week</span></div>
+  </div>
+
+  <div class="raster-scroll">
+    <div class="raster">
+      <div></div>
+      {% for dag in dagen %}
+        <div class="kolomkop {% if dag.is_vandaag %}vandaag{% endif %}">
+          <div class="dag">{{ dag.datum|date:"D" }}</div>
+          <div class="datum">{{ dag.datum|date:"j M" }}</div>
+          <div class="dagtotaal">{% if dag.heeft_uren %}{{ dag.totaal }}{% endif %}</div>
+        </div>
+      {% endfor %}
+
+      <div class="gutter" style="height:{{ rasterhoogte }}px">
+        {% for label in uurlabels %}
+          <div class="gutter-lbl" style="top:{{ label.top }}px">{{ label.tekst }}</div>
+        {% endfor %}
+      </div>
+
+      {% for dag in dagen %}
+        <div class="dagkolom" data-dag="{{ dag.datum|date:'Y-m-d' }}" style="height:{{ rasterhoogte }}px">
+          {% for vak in vakken %}
+            <div class="vak{% if vak.uurlijn %} uurlijn{% endif %}" data-vak="{{ vak.index }}"></div>
+          {% endfor %}
+          {% for getekend in dag.getekend %}
+            <a class="blok" href="{% url 'uurblok_bewerken' getekend.blok.pk %}"
+               style="top:{{ getekend.top }}px; height:{{ getekend.hoogte }}px;
+                      left:calc({{ getekend.links }}% + 3px); width:calc({{ getekend.breedte }}% - 6px);
+                      background:linear-gradient(150deg, {{ getekend.kleur }}D9, {{ getekend.kleur }}73);
+                      border-color:{{ getekend.kleur }}">
+              <span class="tijd">{{ getekend.blok.begintijd|time:"H:i" }}–{{ getekend.blok.eindtijd|time:"H:i" }}</span>
+              <span class="onder">{{ getekend.blok.toelichting|default:getekend.blok.klus.naam }}</span>
+            </a>
+          {% endfor %}
+        </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  <p style="margin-top:1.2rem">
+    <a class="knop" href="{% url 'uurblok_nieuw' %}?dag={{ vandaag|date:'Y-m-d' }}">Uren toevoegen</a>
+  </p>
+
+  <script src="{% static 'js/kalender.js' %}"
+          data-nieuw-url="{% url 'uurblok_nieuw' %}"></script>
+{% endblock %}
