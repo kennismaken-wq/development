@@ -22,6 +22,10 @@ De stack ligt nog niet vast. Dat is het eerste gesprek dat gevoerd moet worden.
 - De app maakt **geen facturen**. Alleen urenoverzichten die de boekhouder verwerkt.
 - Alles moet werken op een telefoon. De medewerker vult zijn uren 's avonds in de
   bus in, niet achter een bureau.
+- Het Django-beheerscherm op `/beheer/` is voor HandigerAI, niet voor de klant.
+  De rol "eigenaar" geeft er geen toegang toe; daar is `is_staff` voor, en die
+  twee zijn bewust niet aan elkaar geknoopt. Wat Maarten dagelijks moet kunnen
+  krijgt een eigen scherm in de stijl van de app.
 
 ## Lokaal draaien
 

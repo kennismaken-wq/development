@@ -30,7 +30,6 @@ class StartschermTest(TestCase):
         titels = tegeltitels(self.client.get(reverse("start")).content.decode())
         self.assertIn("Planbord", titels)
         self.assertIn("Aanwezigheid", titels)
-        self.assertIn("Beheer", titels)
         self.assertNotIn("Mijn overzicht", titels)
 
     def test_medewerker_ziet_geen_beheerderstegels(self):
@@ -84,3 +83,14 @@ class StartschermTest(TestCase):
         antwoord = self.client.get(reverse("loonstrook"))
         self.assertEqual(antwoord.status_code, 302)
         self.assertIn(reverse("inloggen"), antwoord.headers["Location"])
+
+    def test_eigenaar_zonder_beheerrecht_ziet_geen_beheertegel(self):
+        # De klant is eigenaar in de app, maar beheert het systeem niet.
+        self.client.force_login(self.eigenaar)
+        self.assertNotIn("Beheer", tegeltitels(self.client.get(reverse("start")).content.decode()))
+
+    def test_systeembeheerder_ziet_de_beheertegel_wel(self):
+        self.eigenaar.is_staff = True
+        self.eigenaar.save()
+        self.client.force_login(self.eigenaar)
+        self.assertIn("Beheer", tegeltitels(self.client.get(reverse("start")).content.decode()))

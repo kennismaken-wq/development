@@ -18,7 +18,10 @@ def zorg_voor(username, voornaam, achternaam, rol, wachtwoord, staff=False):
     mw.save()
     print(("aangemaakt" if nieuw else "bijgewerkt"), username, rol)
 
-zorg_voor("maarten", "Maarten", "Morée", Medewerker.Rol.EIGENAAR, "test1234", staff=True)
+# Maarten is eigenaar in de app, maar geen systeembeheerder: het
+# Django-beheerscherm is voor ons, niet voor de klant. Een eigen
+# beheeraccount maak je met `manage.py createsuperuser`.
+zorg_voor("maarten", "Maarten", "Morée", Medewerker.Rol.EIGENAAR, "test1234")
 zorg_voor("sam", "Sam", "de Wit", Medewerker.Rol.MEDEWERKER, "test1234")
 
 from klussen.models import Klus  # noqa: E402

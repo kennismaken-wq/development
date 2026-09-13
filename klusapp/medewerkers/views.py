@@ -25,7 +25,10 @@ TEGELS = [
     {"titel": "Aanwezigheid", "teken": "●", "url": None, "rollen": ["eigenaar"]},
     {"titel": "Foto's", "teken": "▣", "url": None, "rollen": ["medewerker", "eigenaar"]},
     {"titel": "Loonstrook", "teken": "€", "url_naam": "loonstrook", "rollen": ["medewerker", "eigenaar"]},
-    {"titel": "Beheer", "teken": "⚙", "url": "/beheer/", "rollen": ["eigenaar"]},
+    # Het Django-beheerscherm is geen scherm voor de klant: het toont alle
+    # velden en verwijdert zonder vangnet. Alleen wie het systeem beheert
+    # (is_staff) ziet deze tegel — de rol "eigenaar" geeft er geen toegang toe.
+    {"titel": "Beheer", "teken": "⚙", "url": "/beheer/", "rollen": ["eigenaar"], "alleen_beheerder": True},
 ]
 
 
@@ -35,6 +38,8 @@ def start(request):
     tegels = []
     for tegel in TEGELS:
         if rol not in tegel["rollen"]:
+            continue
+        if tegel.get("alleen_beheerder") and not request.user.is_staff:
             continue
         tegel = dict(tegel)
         if "url_naam" in tegel:
