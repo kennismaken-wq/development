@@ -41,9 +41,46 @@ class StartschermTest(TestCase):
         for verboden in ("Planbord", "Aanwezigheid", "Beheer", "Overzichten"):
             self.assertNotIn(verboden, titels)
 
-    def test_loonstrook_wijst_naar_het_aanmeldscherm(self):
+    def test_loonstrooktegel_gaat_via_de_app_zelf(self):
+        # De tegel wijst naar ons eigen adres; daar wordt pas bepaald of
+        # iemand naar de app of naar de website moet.
         self.client.force_login(self.medewerker)
         html = self.client.get(reverse("start")).content.decode()
-        self.assertIn('href="https://mijn.loondossier.nl/Aanmelden"', html)
-        # een andere site hoort in een eigen tabblad te openen
-        self.assertIn('target="_blank" rel="noopener"', html)
+        self.assertIn(f'href="{reverse("loonstrook")}"', html)
+        self.assertNotIn("mijn.loondossier.nl", html)
+
+    def test_loonstrook_op_android_direct_naar_loondossier(self):
+        self.client.force_login(self.medewerker)
+        antwoord = self.client.get(
+            reverse("loonstrook"),
+            headers={"user-agent": "Mozilla/5.0 (Linux; Android 14; Pixel 8) Chrome/120 Mobile"},
+        )
+        # Android opent de app zelf bij elk adres van mijn.loondossier.nl
+        self.assertEqual(antwoord.status_code, 302)
+        self.assertEqual(antwoord.headers["Location"], "https://mijn.loondossier.nl/Aanmelden")
+
+    def test_loonstrook_op_een_computer_direct_naar_de_website(self):
+        self.client.force_login(self.medewerker)
+        antwoord = self.client.get(
+            reverse("loonstrook"),
+            headers={"user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120"},
+        )
+        self.assertEqual(antwoord.status_code, 302)
+        self.assertEqual(antwoord.headers["Location"], "https://mijn.loondossier.nl/Aanmelden")
+
+    def test_loonstrook_op_iphone_laat_kiezen(self):
+        self.client.force_login(self.medewerker)
+        antwoord = self.client.get(
+            reverse("loonstrook"),
+            headers={"user-agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) Safari/604.1"},
+        )
+        # iOS opent de app alleen als iemand zelf op de link tikt, en alleen
+        # voor het pad /open-app/
+        self.assertEqual(antwoord.status_code, 200)
+        self.assertContains(antwoord, "https://mijn.loondossier.nl/open-app/")
+        self.assertContains(antwoord, "https://mijn.loondossier.nl/Aanmelden")
+
+    def test_loonstrook_vereist_inloggen(self):
+        antwoord = self.client.get(reverse("loonstrook"))
+        self.assertEqual(antwoord.status_code, 302)
+        self.assertIn(reverse("inloggen"), antwoord.headers["Location"])
