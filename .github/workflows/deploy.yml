@@ -16,14 +16,13 @@ jobs:
         env:
           DEPLOY_KEY: ${{ secrets.DEVELOP_VPS_SSH_KEY }}
         run: |
-          printf '%s
-' "$DEPLOY_KEY" | tr -d '' > /tmp/vorm
+          printf '%s\n' "$DEPLOY_KEY" | tr -d '\r' > /tmp/vorm
           echo "regels:  $(wc -l < /tmp/vorm)"
           echo "tekens:  $(wc -c < /tmp/vorm)"
-          if grep -q -- "-----BEGIN" /tmp/vorm; then echo "PEM-kop aanwezig:      ja"; else echo "PEM-kop aanwezig:      nee"; fi
-          if grep -q "PRIVATE KEY" /tmp/vorm;  then echo "zegt PRIVATE KEY:      ja"; else echo "zegt PRIVATE KEY:      nee"; fi
-          if grep -qE "^(ssh-ed25519|ssh-rsa|ecdsa-)" /tmp/vorm; then echo "is een PUBLIEKE sleutel: ja"; else echo "is een publieke sleutel: nee"; fi
-          if grep -q "PuTTY-User-Key-File" /tmp/vorm; then echo "PuTTY-formaat (.ppk):  ja"; else echo "PuTTY-formaat (.ppk):  nee"; fi
+          if grep -q -- "-----BEGIN" /tmp/vorm; then echo "PEM-kop aanwezig:        ja"; else echo "PEM-kop aanwezig:        nee"; fi
+          if grep -q "PRIVATE KEY" /tmp/vorm; then echo "zegt PRIVATE KEY:        ja"; else echo "zegt PRIVATE KEY:        nee"; fi
+          if grep -qE "^(ssh-ed25519|ssh-rsa|ecdsa-)" /tmp/vorm; then echo "is een PUBLIEKE sleutel: ja"; else echo "is een PUBLIEKE sleutel: nee"; fi
+          if grep -q "PuTTY-User-Key-File" /tmp/vorm; then echo "PuTTY-formaat (.ppk):    ja"; else echo "PuTTY-formaat (.ppk):    nee"; fi
           rm -f /tmp/vorm
 
       - name: Set up SSH
