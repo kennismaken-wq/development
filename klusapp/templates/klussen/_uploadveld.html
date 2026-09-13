@@ -1,0 +1,21 @@
+{% comment %} Uploadveld. Werkt bij een klus, bij een uurblok en in de fotodropbox.
+
+   Verwacht:  formulier   BijlageForm
+              upload_url  waar het formulier heen post
+              terug       pad waar je na het uploaden weer belandt
+   Optioneel: klus_pk / uurblok_pk  waar de bijlage aan hangt; zonder beide
+                                    komt hij in de fotodropbox terecht {% endcomment %}
+<form class="uploadveld glas" method="post" action="{{ upload_url }}" enctype="multipart/form-data">
+  {% csrf_token %}
+  {% if klus_pk %}<input type="hidden" name="klus" value="{{ klus_pk }}">{% endif %}
+  {% if uurblok_pk %}<input type="hidden" name="uurblok" value="{{ uurblok_pk }}">{% endif %}
+  <input type="hidden" name="terug" value="{{ terug }}">
+
+  <label for="{{ formulier.bestanden.id_for_label }}">Foto's of documenten</label>
+  {{ formulier.bestanden }}
+
+  <label for="{{ formulier.toelichting.id_for_label }}">Toelichting</label>
+  {{ formulier.toelichting }}
+
+  <button type="submit" class="knop" style="margin-top:1.1rem">Toevoegen</button>
+</form>

@@ -23,6 +23,14 @@
       {% endif %}
     </div>
 
+    {% if messages %}
+      <ul class="meldingen">
+        {% for melding in messages %}
+          <li class="melding {{ melding.tags }}">{{ melding }}</li>
+        {% endfor %}
+      </ul>
+    {% endif %}
+
     {% block inhoud %}{% endblock %}
   </div>
 </body>

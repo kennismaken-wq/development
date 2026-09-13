@@ -1,0 +1,18 @@
+{% extends "basis.html" %}
+{% block titel %}Foto's{% endblock %}
+{% block kop %}Foto's{% endblock %}
+{% block sub %}<a href="{% url 'start' %}" style="color:rgba(255,255,255,0.6)">‹ Terug</a>{% endblock %}
+{% block inhoud %}
+  {% comment %} Bewust kaal: filters, maandindeling en "koppel alsnog aan een klus" zijn
+     taak T1. Dit scherm bestaat nu vooral om het bijlagen-fundament te kunnen
+     gebruiken en te testen. {% endcomment %}
+  {% include "klussen/_uploadveld.html" %}
+
+  <h2 class="sectiekop">Losse foto's</h2>
+  {% include "klussen/_fotoraster.html" %}
+
+  {% if document_bijlagen %}
+    <h2 class="sectiekop">Losse documenten</h2>
+    {% include "klussen/_documentenlijst.html" %}
+  {% endif %}
+{% endblock %}

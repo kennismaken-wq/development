@@ -109,6 +109,17 @@ STATICFILES_DIRS = [BASE_DIR / "static"]
 MEDIA_URL = "media/"
 MEDIA_ROOT = Path(os.environ.get("MEDIA_ROOT", BASE_DIR / "media"))
 
+# Geüploade bestanden worden niet als statische map opengezet: klusfoto's en
+# klusdossiers staan niet op een openbaar adres. Ze gaan langs een view die
+# controleert of iemand is ingelogd (klussen.views.media_bestand).
+#
+# Dat kost Django-tijd per bestand. Voor zes medewerkers is dat prima. Zodra
+# nginx ervoor staat neemt die het uitleveren over: zet GEBRUIK_X_ACCEL aan en
+# geef nginx een interne location op MEDIA_INTERN_PAD die naar MEDIA_ROOT wijst.
+# Django doet dan alleen nog de rechtencontrole. Dat is taak T2 in CONTEXT.md.
+GEBRUIK_X_ACCEL = os.environ.get("GEBRUIK_X_ACCEL", "0") == "1"
+MEDIA_INTERN_PAD = "/intern-media/"
+
 # De manifest-variant hasht bestandsnamen zodat browsers oude CSS niet
 # vasthouden. Die vraagt om een collectstatic, dus lokaal draaien we zonder.
 STATIC_BACKEND = (

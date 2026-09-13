@@ -1,0 +1,22 @@
+{# Tekeningen, offertes, pdf's. Verwacht `document_bijlagen` en `terug`. #}
+{% load bijlagen %}
+{% if document_bijlagen %}
+  <ul class="doclijst">
+    {% for bijlage in document_bijlagen %}
+      <li>
+        <a href="{% url 'media_bestand' bijlage.bestand.name %}">{{ bijlage.toonnaam }}</a>
+        {% if bijlage.toelichting %}<span class="wat">{{ bijlage.toelichting }}</span>{% endif %}
+        <span class="wie">{{ bijlage.toegevoegd_door.naam|default:"onbekend" }} · {{ bijlage.toegevoegd_op|date:"j M Y" }}</span>
+        {% if bijlage|mag_weg:user %}
+          <form method="post" action="{% url 'bijlage_verwijderen' bijlage.pk %}" class="weg">
+            {% csrf_token %}
+            <input type="hidden" name="terug" value="{{ terug }}">
+            <button type="submit" title="Verwijderen" aria-label="Verwijderen">×</button>
+          </form>
+        {% endif %}
+      </li>
+    {% endfor %}
+  </ul>
+{% else %}
+  <p class="leeg">Nog geen documenten.</p>
+{% endif %}
