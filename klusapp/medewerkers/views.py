@@ -23,7 +23,7 @@ LOONDOSSIER_APP = "https://mijn.loondossier.nl/open-app/"
 # eigen urls.py. Zo hoeft niemand anders deze lijst aan te raken.
 TEGELS = [
     {"titel": "Uren schrijven", "teken": "⏱", "url_naam": "mijn_uren", "rollen": ["medewerker", "eigenaar"]},
-    {"titel": "Klussen", "teken": "◰", "url_naam": "klussen", "rollen": ["medewerker", "eigenaar"], "in_aanbouw": True},
+    {"titel": "Klussen", "teken": "◰", "url_naam": "klussen", "rollen": ["medewerker", "eigenaar"]},
     {"titel": "Mijn overzicht", "teken": "≡", "url_naam": "mijn_overzicht", "rollen": ["medewerker"], "in_aanbouw": True},
     {"titel": "Planbord", "teken": "⊞", "url_naam": "planbord", "rollen": ["eigenaar"], "in_aanbouw": True},
     {"titel": "Overzichten", "teken": "≡", "url_naam": "urenexport", "rollen": ["eigenaar"], "in_aanbouw": True},

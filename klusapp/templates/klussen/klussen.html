@@ -1,0 +1,31 @@
+{% extends "basis.html" %}
+{% block titel %}Klussen{% endblock %}
+{% block kop %}Klussen{% endblock %}
+{% block sub %}<a href="{% url 'start' %}" style="color:rgba(255,255,255,0.6)">‹ Terug</a>{% endblock %}
+{% block inhoud %}
+  {% if klussen %}
+    <ul class="klussenlijst">
+      {% for klus in klussen %}
+        <li>
+          <a href="{{ klus.get_absolute_url }}" class="klusregel{% if not klus.actief %} afgerond{% endif %}">
+            <span class="soort-badge">{{ klus.get_soort_display }}</span>
+            <span class="naam">{{ klus.naam }}</span>
+            {% if klus.adres or klus.plaats %}
+              <span class="adres">{{ klus.adres }}{% if klus.adres and klus.plaats %}, {% endif %}{{ klus.plaats }}</span>
+            {% endif %}
+          </a>
+        </li>
+      {% endfor %}
+    </ul>
+  {% else %}
+    <p class="leeg">Nog geen klussen.</p>
+  {% endif %}
+
+  <p style="margin-top:1.2rem">
+    {% if toon_alles %}
+      <a class="knop-stil" href="{% url 'klussen' %}">Alleen actieve klussen</a>
+    {% else %}
+      <a class="knop-stil" href="?alles=1">Ook afgeronde klussen tonen</a>
+    {% endif %}
+  </p>
+{% endblock %}

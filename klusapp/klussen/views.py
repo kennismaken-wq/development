@@ -164,3 +164,36 @@ def fotos(request):
             "terug": request.get_full_path(),
         },
     )
+
+
+@login_required
+def klus_lijst(request):
+    """Overzicht van klussen. Standaard alleen actief, ?alles=1 toont ook afgeronde.
+
+    Iedereen die inlogt ziet alle klussen: er is geen "toegewezen aan"-veld op
+    Klus (dat loopt via Uurblok, per werkdag), dus een medewerker moet elke
+    klus kunnen openen om er een foto aan te hangen, ook eentje waar hij
+    vandaag niet op staat.
+    """
+    toon_alles = request.GET.get("alles") == "1"
+    klussen = Klus.objects.all() if toon_alles else Klus.objects.filter(actief=True)
+    return render(request, "klussen/klussen.html", {"klussen": klussen, "toon_alles": toon_alles})
+
+
+@login_required
+def klus_detail(request, pk):
+    """Klusdossier: kerngegevens plus de foto's en documenten die eraan hangen."""
+    klus = get_object_or_404(Klus, pk=pk)
+    bijlagen = klus.bijlagen.select_related("toegevoegd_door").order_by("-toegevoegd_op")
+    return render(
+        request,
+        "klussen/klus_detail.html",
+        {
+            "klus": klus,
+            "foto_bijlagen": [los for los in bijlagen if los.is_foto],
+            "document_bijlagen": [los for los in bijlagen if not los.is_foto],
+            "formulier": BijlageForm(),
+            "upload_url": reverse("bijlage_toevoegen"),
+            "terug": request.get_full_path(),
+        },
+    )

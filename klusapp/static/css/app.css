@@ -288,3 +288,33 @@ input[type=time]::-webkit-calendar-picker-indicator{ filter:invert(1); opacity:.
 .doclijst .wat{ font-size:12px; color:rgba(255,255,255,0.7); }
 .doclijst .wie{ font-size:10.5px; color:rgba(255,255,255,0.5); }
 .doclijst .weg{ top:50%; transform:translateY(-50%); right:.7rem; }
+
+/* ══════════ KLUSSENLIJST EN KLUSDETAIL ══════════ */
+.klussenlijst{ list-style:none; margin:0; padding:0; display:grid; gap:.5rem; }
+.klusregel{
+  display:grid; gap:.3rem; border-radius:16px; padding:.85rem 1rem;
+  background:rgba(255,255,255,0.07); border:1px solid rgba(255,255,255,0.14);
+  color:#fff; text-decoration:none; transition:background .12s;
+}
+.klusregel:hover{ background:rgba(255,255,255,0.13); }
+.klusregel.afgerond{ opacity:.55; }
+.klusregel .naam{ font-family:'Fraunces',serif; font-style:italic; font-weight:600; font-size:1rem; }
+.klusregel .adres{ font-size:12px; color:rgba(255,255,255,0.6); }
+
+.soort-badge{
+  display:inline-flex; align-items:center; width:fit-content;
+  padding:.25rem .7rem; border-radius:999px; font-size:10.5px; font-weight:600;
+  letter-spacing:.03em; background:rgba(var(--accent-rgb),0.22); color:var(--hi);
+  border:1px solid rgba(var(--accent-rgb),0.4);
+}
+.soort-badge.afgerond-badge{
+  background:rgba(255,255,255,0.10); color:rgba(255,255,255,0.6);
+  border-color:rgba(255,255,255,0.2); margin-left:.4rem;
+}
+
+.klusinfo{ display:grid; gap:.3rem; margin-bottom:1.5rem; }
+.klusinfo .regel{ margin:.15rem 0; font-size:13.5px; }
+.klusinfo .lbl{
+  display:inline-block; min-width:110px; font-size:10.5px; font-weight:600;
+  letter-spacing:.05em; text-transform:uppercase; color:rgba(255,255,255,0.45);
+}

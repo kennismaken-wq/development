@@ -1,0 +1,28 @@
+{% extends "basis.html" %}
+{% block titel %}{{ klus.naam }}{% endblock %}
+{% block kop %}{{ klus.naam }}{% endblock %}
+{% block sub %}<a href="{% url 'klussen' %}" style="color:rgba(255,255,255,0.6)">‹ Klussen</a>{% endblock %}
+{% block inhoud %}
+  <div class="klusinfo">
+    <div>
+      <span class="soort-badge">{{ klus.get_soort_display }}</span>
+      {% if not klus.actief %}<span class="soort-badge afgerond-badge">Afgerond</span>{% endif %}
+    </div>
+    {% if klus.opdrachtgever %}
+      <p class="regel"><span class="lbl">Opdrachtgever</span>{{ klus.opdrachtgever }}</p>
+    {% endif %}
+    {% if klus.adres or klus.plaats %}
+      <p class="regel"><span class="lbl">Adres</span>{{ klus.adres }}{% if klus.adres and klus.plaats %}, {% endif %}{{ klus.plaats }}</p>
+    {% endif %}
+  </div>
+
+  {% include "klussen/_uploadveld.html" with klus_pk=klus.pk %}
+
+  <h2 class="sectiekop">Foto's</h2>
+  {% include "klussen/_fotoraster.html" %}
+
+  {% if document_bijlagen %}
+    <h2 class="sectiekop">Documenten</h2>
+    {% include "klussen/_documentenlijst.html" %}
+  {% endif %}
+{% endblock %}

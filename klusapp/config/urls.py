@@ -10,8 +10,6 @@ from medewerkers import views as medewerkers_views
 # in de urls.py van je eigen app — en haal "in_aanbouw" uit de tegel in
 # medewerkers/views.py. Zie klusapp/CONTEXT.md voor wie wat doet.
 nog_te_bouwen = [
-    path("klussen/", medewerkers_views.in_aanbouw, name="klussen"),
-    path("klussen/<int:pk>/", medewerkers_views.in_aanbouw, name="klus_detail"),
     path("overzicht/", medewerkers_views.in_aanbouw, name="mijn_overzicht"),
     path("planbord/", medewerkers_views.in_aanbouw, name="planbord"),
     path("aanwezigheid/", medewerkers_views.in_aanbouw, name="aanwezigheid"),
