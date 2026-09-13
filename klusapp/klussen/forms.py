@@ -1,4 +1,5 @@
 from django import forms
+from django.utils import timezone
 
 
 class MeerdereBestandenInvoer(forms.ClearableFileInput):
@@ -33,6 +34,18 @@ class BijlageForm(forms.Form):
     in de fotodropbox — het verschil zit in de view, niet hier."""
 
     bestanden = MeerdereBestandenVeld(label="Bestanden")
+    # Standaard vandaag, maar aanpasbaar: een foto wordt vaak pas 's avonds
+    # of een dag later geupload, en moet dan bij de werkdag blijven horen
+    # waar hij op slaat, niet bij de uploaddag. Niet verplicht: de widget
+    # vult 'm altijd vooraf in zodra iemand het scherm opent, maar wie dit
+    # veld zonder waarde post (geen browser, of een oud script) krijgt in de
+    # view alsnog vandaag als datum in plaats van een foutmelding.
+    datum = forms.DateField(
+        label="Datum",
+        required=False,
+        initial=timezone.localdate,
+        widget=forms.DateInput(attrs={"type": "date"}),
+    )
     # De toelichting geldt voor alles wat je in één keer selecteert. Wie per
     # foto iets kwijt wil, uploadt ze los.
     toelichting = forms.CharField(

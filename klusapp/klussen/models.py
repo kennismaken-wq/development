@@ -78,6 +78,13 @@ class Bijlage(models.Model):
     # tekening in de documentenlijst "a3f2c1...pdf".
     originele_naam = models.CharField(max_length=255, blank=True)
     soort = models.CharField(max_length=20, choices=Soort.choices, default=Soort.FOTO)
+    # De dag waar de foto/het document over gaat — niet per se de dag van
+    # uploaden. Iemand fotografeert een klus vaak pas 's avonds thuis, of
+    # haalt een tekening pas een dag later van de mail; toegevoegd_op
+    # (hieronder) blijft de echte uploadtijd voor de audit trail, datum is
+    # wat er in het dossier en het overzicht wordt getoond en wordt
+    # gesorteerd op.
+    datum = models.DateField(default=timezone.localdate)
     toelichting = models.TextField(blank=True)
     klus = models.ForeignKey(
         Klus,
@@ -104,7 +111,7 @@ class Bijlage(models.Model):
     class Meta:
         verbose_name = "bijlage"
         verbose_name_plural = "bijlagen"
-        ordering = ["-toegevoegd_op"]
+        ordering = ["-datum", "-toegevoegd_op"]
 
     def __str__(self):
         return f"{self.get_soort_display()} van {self.toegevoegd_door or 'onbekend'}"

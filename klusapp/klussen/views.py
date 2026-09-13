@@ -7,6 +7,7 @@ from django.core.files.base import ContentFile
 from django.http import FileResponse, Http404, HttpResponse, HttpResponseNotAllowed
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
+from django.utils import timezone
 from django.utils.http import url_has_allowed_host_and_scheme
 
 from . import afbeeldingen
@@ -47,13 +48,14 @@ def _doel_van(request):
     return klus, uurblok
 
 
-def _bewaar(bestand, toelichting, klus, uurblok, gebruiker):
+def _bewaar(bestand, datum, toelichting, klus, uurblok, gebruiker):
     """Eén geüpload bestand wegschrijven. Foto's verkleind, documenten zoals ze zijn."""
     naam = bestand.name
     hoofd, thumbnail = afbeeldingen.versies_van(bestand, naam)
 
     bijlage = Bijlage(
         soort=Bijlage.Soort.FOTO if hoofd else Bijlage.Soort.DOCUMENT,
+        datum=datum,
         toelichting=toelichting,
         originele_naam=Path(naam).name[:255],
         klus=klus,
@@ -80,14 +82,18 @@ def bijlage_toevoegen(request):
 
     formulier = BijlageForm(request.POST, request.FILES)
     if not formulier.is_valid():
-        messages.error(request, "Kies eerst een bestand.")
+        if formulier.errors.get("datum"):
+            messages.error(request, "Vul een geldige datum in.")
+        else:
+            messages.error(request, "Kies eerst een bestand.")
         return _terug_naar(request, standaard)
 
+    datum = formulier.cleaned_data["datum"] or timezone.localdate()
     toelichting = formulier.cleaned_data["toelichting"]
     gelukt = 0
     for bestand in formulier.cleaned_data["bestanden"]:
         try:
-            _bewaar(bestand, toelichting, klus, uurblok, request.user)
+            _bewaar(bestand, datum, toelichting, klus, uurblok, request.user)
         except afbeeldingen.BestandNietLeesbaar as probleem:
             # De rest van de selectie wel doorzetten: wie acht foto's uploadt
             # wil niet alles opnieuw doen omdat er één niet deugt.

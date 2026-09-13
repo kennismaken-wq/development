@@ -12,5 +12,6 @@ class KlusAdmin(admin.ModelAdmin):
 
 @admin.register(Bijlage)
 class BijlageAdmin(admin.ModelAdmin):
-    list_display = ["__str__", "soort", "klus", "toegevoegd_op"]
+    list_display = ["__str__", "soort", "klus", "datum", "toegevoegd_op"]
     list_filter = ["soort"]
+    date_hierarchy = "datum"

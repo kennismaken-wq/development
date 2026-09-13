@@ -6,7 +6,7 @@
       <li>
         <a href="{% url 'media_bestand' bijlage.bestand.name %}">{{ bijlage.toonnaam }}</a>
         {% if bijlage.toelichting %}<span class="wat">{{ bijlage.toelichting }}</span>{% endif %}
-        <span class="wie">{{ bijlage.toegevoegd_door.naam|default:"onbekend" }} · {{ bijlage.toegevoegd_op|date:"j M Y" }}</span>
+        <span class="wie">{{ bijlage.toegevoegd_door.naam|default:"onbekend" }} · {{ bijlage.datum|date:"j M Y" }}</span>
         {% if bijlage|mag_weg:user %}
           <form method="post" action="{% url 'bijlage_verwijderen' bijlage.pk %}" class="weg">
             {% csrf_token %}

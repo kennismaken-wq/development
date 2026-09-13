@@ -14,6 +14,10 @@
   <label for="{{ formulier.bestanden.id_for_label }}">Foto's of documenten</label>
   {{ formulier.bestanden }}
 
+  <label for="{{ formulier.datum.id_for_label }}">Datum</label>
+  {{ formulier.datum }}
+  {% for fout in formulier.datum.errors %}<p class="fout">{{ fout }}</p>{% endfor %}
+
   <label for="{{ formulier.toelichting.id_for_label }}">Toelichting</label>
   {{ formulier.toelichting }}
 
