@@ -44,7 +44,12 @@ class BijlageForm(forms.Form):
         label="Datum",
         required=False,
         initial=timezone.localdate,
-        widget=forms.DateInput(attrs={"type": "date"}),
+        # format="%Y-%m-%d" is verplicht: zonder expliciet formaat rendert
+        # Django de beginwaarde in het Nederlandse datumformaat (bv.
+        # "13-09-2026"), en een HTML5 <input type="date"> accepteert alleen
+        # ISO (YYYY-MM-DD) — bij een mismatch verwerpt de browser de waarde
+        # stilletjes en toont hij een leeg veld in plaats van vandaag.
+        widget=forms.DateInput(attrs={"type": "date"}, format="%Y-%m-%d"),
     )
     # De toelichting geldt voor alles wat je in één keer selecteert. Wie per
     # foto iets kwijt wil, uploadt ze los.
