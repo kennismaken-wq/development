@@ -15,7 +15,7 @@ TEGELS = [
     {"titel": "Overzichten", "teken": "≡", "url": None, "rollen": ["eigenaar"]},
     {"titel": "Aanwezigheid", "teken": "●", "url": None, "rollen": ["eigenaar"]},
     {"titel": "Foto's", "teken": "▣", "url": None, "rollen": ["medewerker", "eigenaar"]},
-    {"titel": "Loonstrook", "teken": "€", "url": "https://www.loondossier.nl", "rollen": ["medewerker", "eigenaar"]},
+    {"titel": "Loonstrook", "teken": "€", "url": "https://mijn.loondossier.nl/Aanmelden", "rollen": ["medewerker", "eigenaar"]},
     {"titel": "Beheer", "teken": "⚙", "url": "/beheer/", "rollen": ["eigenaar"]},
 ]
 
@@ -30,5 +30,8 @@ def start(request):
         tegel = dict(tegel)
         if "url_naam" in tegel:
             tegel["url"] = reverse(tegel["url_naam"])
+        # het loonstrookportaal is een andere site; die opent in een eigen
+        # tabblad zodat je je uren niet kwijtraakt
+        tegel["extern"] = str(tegel.get("url") or "").startswith("http")
         tegels.append(tegel)
     return render(request, "start.html", {"tegels": tegels, "vandaag": date.today()})
