@@ -28,7 +28,9 @@ TEGELS = [
     # Het Django-beheerscherm is geen scherm voor de klant: het toont alle
     # velden en verwijdert zonder vangnet. Alleen wie het systeem beheert
     # (is_staff) ziet deze tegel — de rol "eigenaar" geeft er geen toegang toe.
-    {"titel": "Beheer", "teken": "⚙", "url": "/beheer/", "rollen": ["eigenaar"], "alleen_beheerder": True},
+    # Hangt aan is_staff, niet aan een rol: wie het systeem beheert hoeft in
+    # de app geen eigenaar te zijn.
+    {"titel": "Beheer", "teken": "⚙", "url": "/beheer/", "rollen": ["medewerker", "eigenaar"], "alleen_beheerder": True},
 ]
 
 

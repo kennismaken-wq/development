@@ -94,3 +94,10 @@ class StartschermTest(TestCase):
         self.eigenaar.save()
         self.client.force_login(self.eigenaar)
         self.assertIn("Beheer", tegeltitels(self.client.get(reverse("start")).content.decode()))
+
+    def test_beheerder_met_rol_medewerker_ziet_de_tegel_ook(self):
+        # createsuperuser geeft geen rol mee; die staat dan op medewerker.
+        self.medewerker.is_staff = True
+        self.medewerker.save()
+        self.client.force_login(self.medewerker)
+        self.assertIn("Beheer", tegeltitels(self.client.get(reverse("start")).content.decode()))
