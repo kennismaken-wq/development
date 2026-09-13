@@ -1,5 +1,29 @@
 # develop-tool
 
+Deze repository bevat twee dingen:
+
+- **`/`** — de huisstijl-tool zelf (Flask, `app.py`, `glass.html`). Zie hieronder.
+- **`klusapp/`** — de urenregistratie-app voor hoveniersbedrijf De Groene M.
+  Django-project, eigen README en spec in `klusapp/CLAUDE.md` en
+  `klusapp/docs/SPEC.md`. Draait los van de tool hierboven en deelt er
+  niets mee.
+
+## Klusapp draaien
+
+```
+cd klusapp
+python -m venv .venv
+.venv\Scripts\python -m pip install -r requirements.txt
+.venv\Scripts\python manage.py migrate
+.venv\Scripts\python maak_testdata.py     # testgebruikers en drie klussen
+.venv\Scripts\python manage.py runserver 8010
+```
+
+Inloggen met `maarten` / `test1234` (eigenaar) of `sam` / `test1234`
+(medewerker). Tests: `.venv\Scripts\python manage.py test`.
+
+## De huisstijl-tool
+
 Floris's new HandigerAI tool. Isolated dev environment, deploys independently
 from the Outreach dashboard — see `CONTEXT.md` for the required "glassy"
 lay-out before building any UI.
