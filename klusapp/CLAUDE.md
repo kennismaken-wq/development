@@ -6,17 +6,30 @@ gebouwd door HandigerAI. Contactpersoon bij de klant: Maarten (M. Morée).
 **Lees eerst [docs/SPEC.md](docs/SPEC.md).** Daar staat wat er gebouwd moet worden,
 welke ontwerpkeuzes al vastliggen en wat nog open is.
 
+**Daarna [CONTEXT.md](CONTEXT.md)** voor de aanpak van fase 1: wat er al af is, in welke
+volgorde we bouwen, wie welk spoor doet en wat er per taak aan tijd staat.
+
 ## Status
 
 Contract is opgesteld (fase 1 verplicht, fase 2 en twee uitbreidingen optioneel).
-Er is een klikbare demo geweest — die heeft zijn werk gedaan en wordt niet meer
-aangepast. Dit is de echte bouw. Er staat nog geen regel productiecode.
+De klikbare demo heeft zijn werk gedaan en wordt niet meer aangepast; dit is de
+echte bouw, en die draait live op develop.handigerai.nl.
 
-De stack ligt nog niet vast. Dat is het eerste gesprek dat gevoerd moet worden.
+Af: inloggen met rollen, startscherm, uren schrijven als weekkalender, de
+loonstrook-snelkoppeling, en het bijlagen-fundament (uploaden, verkleinen, media
+achter login). In aanbouw: klusdossier, planbord, overzichten, aanwezigheid,
+urenexport. **Per contractpunt staat de stand in [CONTEXT.md](CONTEXT.md) §1.**
 
 ## Werkafspraken
 
 - Nederlands in de app, in commits en in gesprek met Floris.
+- **Korte feature-branches**, zelf mergen naar `main` zonder PR-ceremonie. `main`
+  ís de develop-omgeving en moet altijd draaien, dus geen half afgemaakte
+  schermen daarheen. Bestandseigendom en wie welk spoor doet: CONTEXT.md §3.
+- Schermen die nog gebouwd worden hebben hun url-naam al geregistreerd in
+  `config/urls.py` en staan als gedimde tegel in `medewerkers/views.py:TEGELS`.
+  Bouw je er een, haal dan de route daar weg en de vlag `in_aanbouw` uit de
+  tegel — verder hoeft niemand die lijst aan te raken.
 - De scope van fase 1 is de lijst in SPEC.md, één op één overgenomen uit artikel 2
   van het contract. Wat daar niet in staat is meerwerk — bouw het niet ongevraagd.
 - De app maakt **geen facturen**. Alleen urenoverzichten die de boekhouder verwerkt.
@@ -40,10 +53,18 @@ Tests: `.venv\Scripts\python manage.py test`
 
 ## Stack
 
-Django 6.1 op Python 3.14, server-gerenderde templates, HTMX voor de
-interactieve stukken. Lokaal SQLite, op de VPS Postgres — dat schakelt via
-`DATABASE_URL`. Statische bestanden via WhiteNoise, dus geen aparte webserver
-nodig voor CSS.
+Django 6.1 op Python 3.14, server-gerenderde templates. Lokaal SQLite, op de VPS
+Postgres — dat schakelt via `DATABASE_URL`. Statische bestanden via WhiteNoise,
+dus geen aparte webserver nodig voor CSS.
+
+Geen HTMX, geen frontend-framework: gewone formulieren, en waar het echt nodig
+is een klein script naast de pagina (zie `static/js/kalender.js`). Voeg er geen
+bij zonder overleg — dit is een app van acht schermen, geen SPA.
+
+Geüploade foto's worden verkleind opgeslagen, niet als origineel
+(`klussen/afbeeldingen.py`), en uitgeleverd via een view die op inloggen
+controleert (`klussen.views.media_bestand`). Zet `MEDIA_ROOT` dus nooit open als
+statische map.
 
 Het uren-invoerscherm is het enige scherm dat later mogelijk client-side moet
 worden, namelijk als blijkt dat uren schrijven offline moet werken. Houd dat

@@ -14,16 +14,21 @@ LOONDOSSIER_WEB = "https://mijn.loondossier.nl/Aanmelden"
 LOONDOSSIER_APP = "https://mijn.loondossier.nl/open-app/"
 
 # Het beginscherm van de app: pictogrammen naar de onderdelen. Wat je ziet
-# hangt af van je rol. De onderdelen zelf worden hierna gebouwd; de tegels
-# zonder url zijn nog niet af.
+# hangt af van je rol.
+#
+# Elke tegel heeft zijn definitieve url_naam, ook als het scherm nog niet
+# bestaat — die namen staan geregistreerd in config/urls.py. Een tegel met
+# "in_aanbouw" wordt gedimd en niet-klikbaar getoond. Is jouw scherm af, haal
+# dan alléén die vlag hier weg en verplaats de route uit config/urls.py naar je
+# eigen urls.py. Zo hoeft niemand anders deze lijst aan te raken.
 TEGELS = [
     {"titel": "Uren schrijven", "teken": "⏱", "url_naam": "mijn_uren", "rollen": ["medewerker", "eigenaar"]},
-    {"titel": "Klussen", "teken": "◰", "url": None, "rollen": ["medewerker", "eigenaar"]},
-    {"titel": "Mijn overzicht", "teken": "≡", "url": None, "rollen": ["medewerker"]},
-    {"titel": "Planbord", "teken": "⊞", "url": None, "rollen": ["eigenaar"]},
-    {"titel": "Overzichten", "teken": "≡", "url": None, "rollen": ["eigenaar"]},
-    {"titel": "Aanwezigheid", "teken": "●", "url": None, "rollen": ["eigenaar"]},
-    {"titel": "Foto's", "teken": "▣", "url": None, "rollen": ["medewerker", "eigenaar"]},
+    {"titel": "Klussen", "teken": "◰", "url_naam": "klussen", "rollen": ["medewerker", "eigenaar"], "in_aanbouw": True},
+    {"titel": "Mijn overzicht", "teken": "≡", "url_naam": "mijn_overzicht", "rollen": ["medewerker"], "in_aanbouw": True},
+    {"titel": "Planbord", "teken": "⊞", "url_naam": "planbord", "rollen": ["eigenaar"], "in_aanbouw": True},
+    {"titel": "Overzichten", "teken": "≡", "url_naam": "urenexport", "rollen": ["eigenaar"], "in_aanbouw": True},
+    {"titel": "Aanwezigheid", "teken": "●", "url_naam": "aanwezigheid", "rollen": ["eigenaar"], "in_aanbouw": True},
+    {"titel": "Foto's", "teken": "▣", "url_naam": "fotos", "rollen": ["medewerker", "eigenaar"]},
     {"titel": "Loonstrook", "teken": "€", "url_naam": "loonstrook", "rollen": ["medewerker", "eigenaar"]},
     # Het Django-beheerscherm is geen scherm voor de klant: het toont alle
     # velden en verwijdert zonder vangnet. Alleen wie het systeem beheert
@@ -46,11 +51,27 @@ def start(request):
         tegel = dict(tegel)
         if "url_naam" in tegel:
             tegel["url"] = reverse(tegel["url_naam"])
+        # Een scherm dat nog gebouwd wordt tonen we gedimd en niet-klikbaar:
+        # de tegel bestaat al zodat het beginscherm niet elke week verspringt,
+        # maar erop tikken levert niets op.
+        if tegel.get("in_aanbouw"):
+            tegel["url"] = None
         # het loonstrookportaal is een andere site; die opent in een eigen
         # tabblad zodat je je uren niet kwijtraakt
         tegel["extern"] = str(tegel.get("url") or "").startswith("http")
         tegels.append(tegel)
     return render(request, "start.html", {"tegels": tegels, "vandaag": date.today()})
+
+
+@login_required
+def in_aanbouw(request):
+    """Tijdelijke view voor schermen die nog gebouwd worden.
+
+    Ze hebben nu al een geregistreerde url-naam, zodat de rest van de app
+    ernaar kan verwijzen zonder dat er halverwege links omgehangen moeten
+    worden. Zie config/urls.py.
+    """
+    return render(request, "in_aanbouw.html", status=404)
 
 
 @login_required
