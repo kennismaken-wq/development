@@ -34,10 +34,26 @@ lay-out before building any UI.
 
 ## Deploy
 
-Push to `main` → GitHub Actions (`.github/workflows/deploy.yml`) SSHes into
-the VPS as the `develop` user (scoped: own directory only, no access to the
-Outreach app, no root — restart of `develop-tool.service` only via a narrow
-sudoers rule) and restarts the service.
+Push naar `main` → binnen een minuut live op develop.handigerai.nl. De VPS
+haalt zelf elke minuut de nieuwste commits op. Er is géén GitHub
+Actions-workflow meer, en geen deploy key of secret nodig: de repo is publiek,
+dus de `git fetch` heeft geen authenticatie nodig.
+
+Op de server draait een systemd-timer (`develop-auto-deploy.timer`) die elke
+minuut `auto-deploy.sh` start. Dat script vergelijkt `HEAD` met `origin/main`
+en doet alleen iets als er verschil is: `git reset --hard origin/main`,
+`pip install -r requirements.txt`, en een herstart van `develop-tool.service`.
+
+Handmatig deployen of het logboek bekijken (als root op de VPS):
+
+    systemctl start develop-auto-deploy.service
+    journalctl -u develop-auto-deploy.service -n 50
+
+## Samenwerken
+
+Er is bewust één branch: `main`. Thijmen en Floris pushen daar allebei
+rechtstreeks naartoe, en `main` ís de develop-omgeving — er zit geen
+aparte productie-omgeving achter deze repo.
 
 ## Local dev
 
@@ -53,6 +69,5 @@ Runs on `:5001`.
 - Path: `/srv/handigerai/develop-tool`
 - Linux user: `develop`
 - systemd service: `develop-tool.service`
+- deploy-timer: `develop-auto-deploy.timer` → `auto-deploy.sh` (draait elke minuut)
 - nginx: proxies `develop.handigerai.nl` → `127.0.0.1:5001`
-
-_Last verified deploy: trigger test._
