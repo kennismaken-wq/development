@@ -9,21 +9,22 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Vorm van de deploy-sleutel vaststellen
-        # Zegt alleen ja of nee over de vorm; de sleutel zelf komt nooit in
-        # het logboek. Bedoeld om te zien of er een privesleutel in de secret
-        # staat, of per ongeluk de publieke sleutel, een PuTTY-bestand, of een
-        # plakfout waarbij de regeleinden zijn verdwenen.
+        # Meldt alleen de vorm: hoe lang elke regel is en wat de kop- en
+        # voetregel zijn. Die twee zijn geen geheim; de sleutelinhoud zelf
+        # komt nooit in het logboek.
         env:
           DEPLOY_KEY: ${{ secrets.DEVELOP_VPS_SSH_KEY }}
         run: |
           printf '%s\n' "$DEPLOY_KEY" | tr -d '\r' > /tmp/vorm
-          echo "regels:  $(wc -l < /tmp/vorm)"
-          echo "tekens:  $(wc -c < /tmp/vorm)"
-          if grep -q -- "-----BEGIN" /tmp/vorm; then echo "PEM-kop aanwezig:        ja"; else echo "PEM-kop aanwezig:        nee"; fi
-          if grep -q "PRIVATE KEY" /tmp/vorm; then echo "zegt PRIVATE KEY:        ja"; else echo "zegt PRIVATE KEY:        nee"; fi
-          if grep -qE "^(ssh-ed25519|ssh-rsa|ecdsa-)" /tmp/vorm; then echo "is een PUBLIEKE sleutel: ja"; else echo "is een PUBLIEKE sleutel: nee"; fi
-          if grep -q "PuTTY-User-Key-File" /tmp/vorm; then echo "PuTTY-formaat (.ppk):    ja"; else echo "PuTTY-formaat (.ppk):    nee"; fi
-          rm -f /tmp/vorm
+          echo "kopregel:   $(head -1 /tmp/vorm)"
+          echo "voetregel:  $(tail -1 /tmp/vorm)"
+          echo "regellengtes:"
+          awk '{ print "  regel " NR ": " length($0) " tekens" }' /tmp/vorm
+          echo "bevat letterlijke backslash-n: $(grep -c '\\n' /tmp/vorm)"
+          echo "oordeel van ssh-keygen:"
+          ssh-keygen -y -f /tmp/vorm > /dev/null 2>/tmp/fout || true
+          sed -e 's#/tmp/vorm#<sleutel>#g' /tmp/fout
+          rm -f /tmp/vorm /tmp/fout
 
       - name: Set up SSH
         env:
