@@ -6,7 +6,7 @@
   <div class="tegels">
     {% for tegel in tegels %}
       {% if tegel.url %}
-        <a class="tegel" href="{{ tegel.url }}">
+        <a class="tegel" href="{{ tegel.url }}"{% if tegel.extern %} target="_blank" rel="noopener"{% endif %}>
           <span class="teken">{{ tegel.teken }}</span>
           <span class="titel">{{ tegel.titel }}</span>
         </a>

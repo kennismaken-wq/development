@@ -40,3 +40,10 @@ class StartschermTest(TestCase):
         self.assertIn("Mijn overzicht", titels)
         for verboden in ("Planbord", "Aanwezigheid", "Beheer", "Overzichten"):
             self.assertNotIn(verboden, titels)
+
+    def test_loonstrook_wijst_naar_het_aanmeldscherm(self):
+        self.client.force_login(self.medewerker)
+        html = self.client.get(reverse("start")).content.decode()
+        self.assertIn('href="https://mijn.loondossier.nl/Aanmelden"', html)
+        # een andere site hoort in een eigen tabblad te openen
+        self.assertIn('target="_blank" rel="noopener"', html)
