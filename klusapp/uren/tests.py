@@ -9,6 +9,7 @@ from django.test import TestCase
 from klussen.models import Klus
 from medewerkers.models import Medewerker
 
+from . import export
 from .models import Aanwezigheid, Uurblok
 
 
@@ -593,3 +594,76 @@ class UurblokDetailTest(TestCase):
         self.client.force_login(self.sam)
         html = self.client.get(f"/uren/{self.blok.pk}/").content.decode()
         self.assertIn(f'name="uurblok" value="{self.blok.pk}"', html)
+
+
+class UrenexportTest(TestCase):
+    """De export ging live zonder tests. Hij gaat naar de boekhouder, dus een
+    verkeerd totaal is hier duurder dan een verkeerd scherm."""
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.sam = Medewerker.objects.create_user("sam", password="x", first_name="Sam", last_name="de Wit")
+        cls.joep = Medewerker.objects.create_user("joep", password="x", first_name="Joep", last_name="Bakker")
+        cls.maarten = Medewerker.objects.create_user(
+            "maarten", password="x", first_name="Maarten", rol=Medewerker.Rol.EIGENAAR
+        )
+        cls.klus = Klus.objects.create(naam="Tuin Vermeer", soort=Klus.Soort.AANLEG)
+        for medewerker, dag, begin, eind in [
+            (cls.sam, date(2026, 8, 3), time(8, 0), time(16, 30)),
+            (cls.sam, date(2026, 8, 4), time(8, 0), time(12, 0)),
+            (cls.joep, date(2026, 8, 3), time(9, 0), time(17, 0)),
+            # buiten de maand: mag niet meetellen
+            (cls.sam, date(2026, 9, 1), time(8, 0), time(16, 0)),
+        ]:
+            Uurblok.objects.create(
+                medewerker=medewerker, klus=cls.klus, datum=dag, begintijd=begin, eindtijd=eind
+            )
+
+    def test_inloggen_vereist(self):
+        self.assertEqual(self.client.get("/export/").status_code, 302)
+
+    def test_medewerker_komt_er_niet_in(self):
+        # 404 en geen 403: een medewerker hoeft niet te weten dat het bestaat.
+        self.client.force_login(self.sam)
+        self.assertEqual(self.client.get("/export/").status_code, 404)
+
+    def test_eigenaar_ziet_totalen_per_medewerker(self):
+        self.client.force_login(self.maarten)
+        antwoord = self.client.get("/export/?maand=2026-08")
+        totalen = {rij["medewerker"].username: rij["totaal"] for rij in antwoord.context["totalen"]}
+        self.assertEqual(totalen, {"sam": "12:30", "joep": "8:00"})
+
+    def test_download_levert_een_excelbestand(self):
+        self.client.force_login(self.maarten)
+        antwoord = self.client.get("/export/?maand=2026-08&download=1")
+        self.assertEqual(
+            antwoord["Content-Type"],
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        )
+        self.assertIn("uren-2026-08.xlsx", antwoord["Content-Disposition"])
+        # PK: een xlsx is een zipbestand; zo weten we dat het echt Excel is.
+        self.assertTrue(antwoord.content.startswith(b"PK"))
+
+    def test_werkboek_telt_per_medewerker_op_met_een_eindtotaal(self):
+        blokken = list(
+            Uurblok.objects.filter(datum__range=(date(2026, 8, 1), date(2026, 8, 31)))
+            .select_related("medewerker", "klus")
+            .order_by("medewerker__first_name", "datum", "begintijd")
+        )
+        blad = export.werkboek_bouwen(blokken, "Uren 08-2026").active
+        regels = [(rij[0].value, rij[5].value) for rij in blad.iter_rows(min_row=2)]
+        self.assertIn(("Totaal Joep Bakker", 8.0), regels)
+        self.assertIn(("Totaal Sam de Wit", 12.5), regels)
+        self.assertEqual(regels[-1], ("Totaal alle medewerkers", 20.5))
+
+    def test_lege_maand_geeft_een_leeg_maar_geldig_bestand(self):
+        self.client.force_login(self.maarten)
+        antwoord = self.client.get("/export/?maand=2026-01&download=1")
+        self.assertTrue(antwoord.content.startswith(b"PK"))
+        self.assertEqual(antwoord.context, None)
+
+    def test_filteren_op_een_medewerker(self):
+        self.client.force_login(self.maarten)
+        antwoord = self.client.get(f"/export/?maand=2026-08&medewerker={self.joep.pk}")
+        namen = [rij["medewerker"].username for rij in antwoord.context["totalen"]]
+        self.assertEqual(namen, ["joep"])
