@@ -104,3 +104,25 @@ de data/tekst aan naar wat jouw tool nodig heeft.
 Zodra jouw tool klaar is voor integratie in `tools.handigerai.nl`, is dit
 de reden dat we het dan kunnen inpluggen als nieuwe sidebar-icoon +
 tab zonder de rest van de site opnieuw te hoeven stylen.
+
+## Nieuw component nodig dat nergens in glass.html staat
+
+Staat het onderdeel dat je nodig hebt (drawer/sheet, combobox, date-picker,
+stepper, command-palette, wat dan ook) niet in `glass.html`? Kijk dan gerust
+op [ui.shadcn.com](https://ui.shadcn.com/docs/components) hoe zo'n component
+hoort te werken — welke staten het heeft, hoe het opent/sluit, welke
+toetsenbord- en focus-afhandeling erbij hoort. Dat is een prima *referentie*
+voor gedrag en structuur.
+
+**Maar:** shadcn/ui zelf is React (Radix UI + Tailwind) en wordt dus **niet**
+geïnstalleerd of geïmporteerd — geen npm-dependency, geen build-stap, geen
+React in deze server-gerenderde projecten. Bouw het component native na:
+gewone HTML/CSS, en alleen een klein stukje vanilla JS als het interactie
+vereist (zie `static/js/kalender.js` in de klusapp voor de stijl waarin dat
+hier gebeurt). Stijl het vervolgens met de bouwstenen hierboven — `.glass`,
+pill-vormige randen, Inter/Fraunces, de kleuren — zodat het onderdeel eruitziet
+alsof het altijd al bij deze merk-familie hoorde, niet alsof er een los
+component ingeplakt is.
+
+Dit vervangt geen enkele regel hierboven: als `glass.html` al een voorbeeld
+heeft, is dát nog steeds de bron van waarheid, niet shadcn.
