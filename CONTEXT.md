@@ -124,5 +124,21 @@ pill-vormige randen, Inter/Fraunces, de kleuren — zodat het onderdeel eruitzie
 alsof het altijd al bij deze merk-familie hoorde, niet alsof er een los
 component ingeplakt is.
 
+Twee andere sites zijn hier fijner dan shadcn, juist omdat ze al gewone
+HTML/CSS zijn — dus in principe direct te kopiëren zonder framework:
+
+- [uiverse.io/glassmorphism](https://uiverse.io/glassmorphism) — losse
+  community-componenten (kaarten, knoppen, modals, toggles) al in glasstijl,
+  puur HTML/CSS(/soms Tailwind-klassen die je dan naar gewone CSS omzet).
+  De meeste staan onder een vrije licentie, maar check dat per component
+  voor je 'm overneemt; bij twijfel herschrijf je 'm gewoon zelf met
+  dezelfde structuur in plaats van de code 1-op-1 over te nemen.
+- [glassmorphism.com/generator](https://glassmorphism.com/generator) — geen
+  componenten, maar een CSS-generator om blur/transparantie/border af te
+  stellen. Handig om een variant van `.glass` te verkennen, maar de
+  uitkomst blijft ondergeschikt aan wat hierboven al vastligt — niet de
+  bestaande `--accent`/`--warm`/kleuren overschrijven met wat de generator
+  toevallig teruggeeft.
+
 Dit vervangt geen enkele regel hierboven: als `glass.html` al een voorbeeld
-heeft, is dát nog steeds de bron van waarheid, niet shadcn.
+heeft, is dát nog steeds de bron van waarheid, niet shadcn of Uiverse.
