@@ -1,4 +1,6 @@
-from datetime import date, time, timedelta
+from datetime import date, datetime, time, timedelta
+from datetime import timezone as dt_timezone
+from unittest.mock import patch
 
 from django.core.exceptions import ValidationError
 from django.db import IntegrityError, transaction
@@ -165,7 +167,7 @@ class UrenSchrijvenTest(TestCase):
             medewerker=self.sam, klus=self.klus, datum=self.dag,
             begintijd=time(8, 0), eindtijd=time(16, 30),
         )
-        html = self.client.get(f"/uren/{blok.pk}/").content.decode()
+        html = self.client.get(f"/uren/{blok.pk}/bewerken/").content.decode()
         self.assertIn('value="2026-09-07"', html)
         self.assertIn('value="08:00"', html)
         self.assertIn('value="16:30"', html)
@@ -213,3 +215,67 @@ class UrenSchrijvenTest(TestCase):
         antwoord = self.client.get("/uren/?weergave=maand&dag=2026-09-15")
         self.assertEqual(antwoord.context["vorige"], date(2026, 8, 1))
         self.assertEqual(antwoord.context["volgende"], date(2026, 10, 1))
+
+
+class TijdzoneTest(TestCase):
+    """`date.today()` gaf op een UTC-server na 22:00 de vorige dag terug —
+    precies wanneer de mannen in de bus hun uren invullen."""
+
+    def setUp(self):
+        self.sam = Medewerker.objects.create_user("sam", password="x")
+        self.client.force_login(self.sam)
+
+    def test_na_tienen_s_avonds_is_vandaag_al_de_volgende_dag(self):
+        # 22:30 UTC = 23:30 in Amsterdam, dus nog steeds 14 januari daar.
+        with patch("django.utils.timezone.now", return_value=datetime(2026, 1, 14, 22, 30, tzinfo=dt_timezone.utc)):
+            antwoord = self.client.get("/uren/")
+        self.assertEqual(antwoord.context["vandaag"], date(2026, 1, 14))
+
+    def test_na_middernacht_amsterdam_schuift_de_dag_mee(self):
+        # 23:30 UTC = 00:30 in Amsterdam: daar is het al 15 januari.
+        with patch("django.utils.timezone.now", return_value=datetime(2026, 1, 14, 23, 30, tzinfo=dt_timezone.utc)):
+            antwoord = self.client.get("/uren/")
+        self.assertEqual(antwoord.context["vandaag"], date(2026, 1, 15))
+
+
+class UurblokDetailTest(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        cls.sam = Medewerker.objects.create_user("sam", password="x", first_name="Sam")
+        cls.joep = Medewerker.objects.create_user("joep", password="x", first_name="Joep")
+        cls.maarten = Medewerker.objects.create_user(
+            "maarten", password="x", first_name="Maarten", rol=Medewerker.Rol.EIGENAAR
+        )
+        cls.klus = Klus.objects.create(naam="Tuin Vermeer", soort=Klus.Soort.AANLEG)
+        cls.blok = Uurblok.objects.create(
+            medewerker=cls.sam, klus=cls.klus, datum=date(2026, 9, 7),
+            begintijd=time(8, 0), eindtijd=time(16, 30), toelichting="Bestrating gelegd",
+        )
+
+    def test_inloggen_vereist(self):
+        antwoord = self.client.get(f"/uren/{self.blok.pk}/")
+        self.assertEqual(antwoord.status_code, 302)
+
+    def test_eigen_blok_bekijken_met_bewerkknop(self):
+        self.client.force_login(self.sam)
+        antwoord = self.client.get(f"/uren/{self.blok.pk}/")
+        self.assertContains(antwoord, "Bestrating gelegd")
+        self.assertContains(antwoord, f"/uren/{self.blok.pk}/bewerken/")
+
+    def test_medewerker_ziet_blok_van_ander_niet(self):
+        self.client.force_login(self.joep)
+        self.assertEqual(self.client.get(f"/uren/{self.blok.pk}/").status_code, 404)
+
+    def test_eigenaar_bekijkt_wel_maar_bewerkt_niet(self):
+        # Doorklikken vanaf het planbord moet werken; corrigeren van andermans
+        # uren is bewust niet toegestaan.
+        self.client.force_login(self.maarten)
+        antwoord = self.client.get(f"/uren/{self.blok.pk}/")
+        self.assertContains(antwoord, "Bestrating gelegd")
+        self.assertNotContains(antwoord, f"/uren/{self.blok.pk}/bewerken/")
+        self.assertEqual(self.client.get(f"/uren/{self.blok.pk}/bewerken/").status_code, 404)
+
+    def test_uploadveld_hangt_de_bijlage_aan_dit_blok(self):
+        self.client.force_login(self.sam)
+        html = self.client.get(f"/uren/{self.blok.pk}/").content.decode()
+        self.assertIn(f'name="uurblok" value="{self.blok.pk}"', html)

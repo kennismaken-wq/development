@@ -56,7 +56,7 @@
               <div class="vak{% if vak.uurlijn %} uurlijn{% endif %}" data-vak="{{ vak.index }}"></div>
             {% endfor %}
             {% for getekend in dag_kolom.getekend %}
-              <a class="blok" href="{% url 'uurblok_bewerken' getekend.blok.pk %}"
+              <a class="blok" href="{% url 'uurblok_detail' getekend.blok.pk %}"
                  style="top:{{ getekend.top }}px; height:{{ getekend.hoogte }}px;
                         left:calc({{ getekend.links }}% + 3px); width:calc({{ getekend.breedte }}% - 6px);
                         background:linear-gradient(150deg, {{ getekend.kleur }}D9, {{ getekend.kleur }}73);

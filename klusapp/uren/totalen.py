@@ -9,6 +9,48 @@ honderd blokken per klus is het verschil niet te meten.
 """
 
 from .kalender import als_uren
+from .models import Uurblok
+
+
+def blokken_van(medewerker, begin, eind):
+    """De uurblokken van één medewerker in een periode, nieuwste dag onderaan.
+
+    Het canonieke queryset voor het overzicht (F2) en de export (T3): beide
+    tellen dezelfde uren op, dus ze horen ook dezelfde blokken op te halen.
+    """
+    return (
+        Uurblok.objects.filter(medewerker=medewerker, datum__range=(begin, eind))
+        .select_related("klus", "medewerker")
+        .order_by("datum", "begintijd")
+    )
+
+
+def per_klus(blokken):
+    """Hoeveel er in deze periode op elke klus is geschreven, meeste uren eerst."""
+    verzameld = {}
+    for blok in blokken:
+        rij = verzameld.setdefault(blok.klus_id, {"klus": blok.klus, "minuten": 0})
+        rij["minuten"] += blok.duur_minuten
+
+    rijen = [
+        {"klus": rij["klus"], "minuten": rij["minuten"], "uren": als_uren(rij["minuten"])}
+        for rij in verzameld.values()
+    ]
+    rijen.sort(key=lambda rij: (-rij["minuten"], rij["klus"].naam))
+    return rijen
+
+
+def per_dag(blokken):
+    """Per dag het totaal, op datum gesorteerd. Dagen zonder uren komen niet
+    voor — een overzicht van een maand met twintig lege regels leest slechter
+    dan een lijst van de dagen waarop echt gewerkt is."""
+    verzameld = {}
+    for blok in blokken:
+        verzameld[blok.datum] = verzameld.get(blok.datum, 0) + blok.duur_minuten
+    return [
+        {"datum": datum, "minuten": minuten, "uren": als_uren(minuten)}
+        for datum, minuten in sorted(verzameld.items())
+    ]
 
 
 def per_medewerker_op_klus(klus):
