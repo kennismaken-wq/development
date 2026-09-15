@@ -13,7 +13,7 @@ from medewerkers.rechten import alleen_eigenaar
 
 from . import export, kalender, periode, totalen
 from .forms import UurblokForm
-from .models import Uurblok
+from .models import Aanwezigheid, Uurblok
 
 
 def _tijd_uit(waarde):
@@ -409,6 +409,86 @@ def mijn_overzicht(request):
             "totaal_waarde": kalender.als_uren(sum(blok.duur_minuten for blok in blokken)),
         },
     )
+
+
+AANWEZIG_KEUZES = {"ja", "nee"}
+
+
+@login_required
+def aanwezigheid(request):
+    """Contractpunt 7: per dag bijhouden wie er is, groen of rood.
+
+    Bewust geen @alleen_eigenaar, als enige beheerdersscherm: de medewerkers
+    mogen deze dag wél inzien — wie is er vandaag, wie is er ziek — alleen niet
+    zetten. De rolcontrole staat daarom in de view, en óók op de POST: knoppen
+    weglaten in een template is geen rechtencontrole.
+
+    Drie standen, niet twee. "Nog niet ingevuld" is iets anders dan "afwezig",
+    maar `aanwezig` is een BooleanField dat niet leeg mag zijn. Onbekend is
+    hier dus het ontbreken van een rij, en de keuze wissen gooit de rij weer
+    weg — dat scheelt een migratie op een model dat al in gebruik is.
+    """
+    dag = periode.gekozen_dag(request)
+    vandaag = periode.vandaag()
+    medewerkers = list(Medewerker.objects.filter(uit_dienst_sinds__isnull=True))
+
+    if request.method == "POST":
+        if not request.user.is_eigenaar:
+            raise Http404
+        _aanwezigheid_opslaan(request, dag, medewerkers)
+        # Terug naar dezelfde dag, als GET: anders levert verversen een
+        # herhaalde post op, en dit scherm wordt op een telefoon gebruikt.
+        return redirect(f"{reverse('aanwezigheid')}?dag={dag.isoformat()}")
+
+    registraties = {
+        registratie.medewerker_id: registratie
+        for registratie in Aanwezigheid.objects.filter(datum=dag)
+    }
+    rijen = [
+        {"medewerker": medewerker, "registratie": registraties.get(medewerker.pk)}
+        for medewerker in medewerkers
+    ]
+    return render(
+        request,
+        "uren/aanwezigheid.html",
+        {
+            "dag": dag,
+            "vandaag": vandaag,
+            "vorige": dag - timedelta(days=1),
+            "volgende": dag + timedelta(days=1),
+            "is_huidige_periode": dag == vandaag,
+            "rijen": rijen,
+            "mag_zetten": request.user.is_eigenaar,
+            "aantal_aanwezig": sum(
+                1 for rij in rijen if rij["registratie"] and rij["registratie"].aanwezig
+            ),
+            "aantal_medewerkers": len(rijen),
+        },
+    )
+
+
+def _aanwezigheid_opslaan(request, dag, medewerkers):
+    """Het hele dagformulier in één keer wegschrijven.
+
+    update_or_create en geen create: op (medewerker, datum) ligt een unieke
+    sleutel, en zonder dit klapt hij eruit zodra iemand het formulier twee keer
+    verstuurt — wat op een telefoon met een halve streep bereik gewoon gebeurt.
+    """
+    for medewerker in medewerkers:
+        keuze = request.POST.get(f"aanwezig_{medewerker.pk}", "")
+        if keuze not in AANWEZIG_KEUZES:
+            Aanwezigheid.objects.filter(medewerker=medewerker, datum=dag).delete()
+            continue
+        Aanwezigheid.objects.update_or_create(
+            medewerker=medewerker,
+            datum=dag,
+            defaults={
+                "aanwezig": keuze == "ja",
+                # Afkappen op de veldlengte: een te lange opmerking hoort dit
+                # formulier niet te laten stranden op een validatiefout.
+                "opmerking": request.POST.get(f"opmerking_{medewerker.pk}", "").strip()[:200],
+            },
+        )
 
 
 def _maandopties(vandaag, aantal=14):

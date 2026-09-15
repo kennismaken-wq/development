@@ -32,7 +32,7 @@ TEGELS = [
     {"titel": "Mijn overzicht", "icoon": "overzicht", "url_naam": "mijn_overzicht", "rollen": ["medewerker", "eigenaar"]},
     {"titel": "Planbord", "icoon": "planbord", "url_naam": "planbord", "rollen": ["eigenaar"]},
     {"titel": "Overzichten", "icoon": "export", "url_naam": "urenexport", "rollen": ["eigenaar"]},
-    {"titel": "Aanwezigheid", "icoon": "aanwezigheid", "url_naam": "aanwezigheid", "rollen": ["eigenaar"], "in_aanbouw": True},
+    {"titel": "Aanwezigheid", "icoon": "aanwezigheid", "url_naam": "aanwezigheid", "rollen": ["eigenaar"]},
     {"titel": "Foto's", "icoon": "fotos", "url_naam": "fotos", "rollen": ["medewerker", "eigenaar"]},
     {"titel": "Loonstrook", "icoon": "loonstrook", "url_naam": "loonstrook", "rollen": ["medewerker", "eigenaar"]},
     # Het Django-beheerscherm is geen scherm voor de klant: het toont alle
