@@ -582,3 +582,15 @@ input[type=checkbox]{ width:auto; accent-color:var(--accent); transform:scale(1.
 }
 .legenda a:hover{ background:rgba(255,255,255,0.14); }
 .legenda .vlek{ width:14px; height:14px; border-radius:999px; border:1px solid; flex-shrink:0; }
+
+/* ══════════ MIJN OVERZICHT ══════════
+   Twee lijsten (per klus, per dag) in dezelfde .urenlijst als het
+   klusdossier — het zijn dezelfde sommen uit uren/totalen.py, dus horen ze
+   er ook hetzelfde uit te zien. Alleen de klusvlek is nieuw: die draagt hier
+   dezelfde kleurherkenning als in het planbord. */
+.overzicht-kiezer{ margin-bottom:1.4rem; }
+.overzicht-kiezer label{ margin-top:0; }
+.urenlijst .vlek{
+  display:inline-block; width:12px; height:12px; border-radius:999px;
+  border:1px solid; margin-right:.4rem; vertical-align:-1px;
+}

@@ -11,7 +11,7 @@ from klussen.forms import BijlageForm
 from medewerkers.models import Medewerker
 from medewerkers.rechten import alleen_eigenaar
 
-from . import export, kalender, periode
+from . import export, kalender, periode, totalen
 from .forms import UurblokForm
 from .models import Uurblok
 
@@ -323,6 +323,90 @@ def planbord(request):
                 for klus in sorted(klussen_in_beeld.values(), key=lambda klus: klus.naam.lower())
             ],
             "weektotaal": kalender.als_uren(sum(dagminuten.values())),
+        },
+    )
+
+
+def _gekozen_medewerker(request):
+    """Van wie het overzicht gaat.
+
+    Een medewerker die ?medewerker= van iemand anders meestuurt krijgt
+    zwijgend zijn eigen cijfers, geen foutpagina. De eigenaar deelt links
+    naar dit scherm, en een link die bij hem werkt en bij de rest een
+    foutmelding geeft levert alleen telefoontjes op — terwijl niemand
+    daarmee iets van een ander te zien krijgt.
+    """
+    gevraagd = request.GET.get("medewerker", "")
+    if request.user.is_eigenaar and gevraagd.isdigit():
+        return Medewerker.objects.filter(pk=gevraagd).first() or request.user
+    return request.user
+
+
+def _overzicht_periode(request, weergave, vandaag):
+    """Begin en eind van de getoonde periode, en waar ‹ en › heen gaan."""
+    if weergave == "maand":
+        begin = periode.gekozen_dag(request).replace(day=1)
+        eind = begin.replace(day=calendar.monthrange(begin.year, begin.month)[1])
+        return {
+            "begin": begin,
+            "eind": eind,
+            "dag": begin,
+            "vorige": _maand_erbij(begin, -1),
+            "volgende": _maand_erbij(begin, 1),
+            "is_huidige_periode": (begin.year, begin.month) == (vandaag.year, vandaag.month),
+        }
+    week = periode.week_context(request)
+    return {
+        "begin": week["maandag"],
+        "eind": week["zondag"],
+        "dag": week["dag"],
+        "vorige": week["vorige"],
+        "volgende": week["volgende"],
+        "is_huidige_periode": week["is_deze_week"],
+    }
+
+
+@login_required
+def mijn_overzicht(request):
+    """Contractpunt 3: gewerkte uren per medewerker, per week én per maand.
+
+    Beide periodes staan in het contract, dus staan ze allebei achter dezelfde
+    `?weergave=`-knoppen als de rest van de app al gebruikt. Het optellen komt
+    uit totalen.py — hetzelfde rekenwerk als het klusdossier en de export, want
+    drie schermen die los van elkaar uren optellen gaan uiteindelijk drie
+    verschillende getallen tonen.
+    """
+    weergave = "maand" if request.GET.get("weergave") == "maand" else "week"
+    vandaag = periode.vandaag()
+    medewerker = _gekozen_medewerker(request)
+    tijdvak = _overzicht_periode(request, weergave, vandaag)
+
+    # Eén keer ophalen: per_klus en per_dag lopen allebei door dezelfde blokken.
+    blokken = list(totalen.blokken_van(medewerker, tijdvak["begin"], tijdvak["eind"]))
+
+    return render(
+        request,
+        "uren/mijn_overzicht.html",
+        {
+            **tijdvak,
+            "weergave": weergave,
+            "vandaag": vandaag,
+            "medewerker": medewerker,
+            # Alleen de eigenaar mag kiezen; bij de rest blijft de keuzelijst
+            # weg én negeert _gekozen_medewerker de parameter.
+            "mag_kiezen": request.user.is_eigenaar,
+            "medewerker_pk": str(medewerker.pk) if request.user.is_eigenaar else "",
+            "medewerkers": (
+                Medewerker.objects.filter(uit_dienst_sinds__isnull=True)
+                if request.user.is_eigenaar
+                else []
+            ),
+            "klusrijen": [
+                dict(rij, kleur=kalender.kleur_van(rij["klus"]))
+                for rij in totalen.per_klus(blokken)
+            ],
+            "dagrijen": totalen.per_dag(blokken),
+            "totaal_waarde": kalender.als_uren(sum(blok.duur_minuten for blok in blokken)),
         },
     )
 

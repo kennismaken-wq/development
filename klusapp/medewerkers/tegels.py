@@ -27,7 +27,9 @@ LOONDOSSIER_WEB = "https://mijn.loondossier.nl/Aanmelden"
 TEGELS = [
     {"titel": "Uren schrijven", "icoon": "uren", "url_naam": "mijn_uren", "rollen": ["medewerker", "eigenaar"]},
     {"titel": "Klussen", "icoon": "klussen", "url_naam": "klussen", "rollen": ["medewerker", "eigenaar"]},
-    {"titel": "Mijn overzicht", "icoon": "overzicht", "url_naam": "mijn_overzicht", "rollen": ["medewerker"], "in_aanbouw": True},
+    # Ook voor de eigenaar: hij is degene die de maand van een ander opzoekt,
+    # en met alleen "medewerker" in deze lijst is het scherm voor hem onbereikbaar.
+    {"titel": "Mijn overzicht", "icoon": "overzicht", "url_naam": "mijn_overzicht", "rollen": ["medewerker", "eigenaar"]},
     {"titel": "Planbord", "icoon": "planbord", "url_naam": "planbord", "rollen": ["eigenaar"]},
     {"titel": "Overzichten", "icoon": "export", "url_naam": "urenexport", "rollen": ["eigenaar"]},
     {"titel": "Aanwezigheid", "icoon": "aanwezigheid", "url_naam": "aanwezigheid", "rollen": ["eigenaar"], "in_aanbouw": True},
