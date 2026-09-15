@@ -1,0 +1,49 @@
+{% extends "basis.html" %}
+{% block titel %}Urenexport{% endblock %}
+{% block kop %}Urenexport{% endblock %}
+{% block sub %}<a href="{% url 'start' %}" style="color:rgba(255,255,255,0.6)">‹ Terug</a>{% endblock %}
+{% block inhoud %}
+  <form method="get">
+    <label for="id_maand">Maand</label>
+    <select id="id_maand" name="maand" onchange="this.form.submit()">
+      {% for optie in maandopties %}
+        <option value="{{ optie|date:'Y-m' }}" {% if optie|date:'Y-m' == gekozen_maand|date:'Y-m' %}selected{% endif %}>
+          {{ optie|date:"F Y"|capfirst }}
+        </option>
+      {% endfor %}
+    </select>
+
+    <label for="id_medewerker">Medewerker</label>
+    <select id="id_medewerker" name="medewerker" onchange="this.form.submit()">
+      <option value="">Alle medewerkers</option>
+      {% for medewerker in medewerkers %}
+        <option value="{{ medewerker.pk }}" {% if medewerker_pk == medewerker.pk|stringformat:"s" %}selected{% endif %}>
+          {{ medewerker.naam }}
+        </option>
+      {% endfor %}
+    </select>
+
+    <noscript><p style="margin-top:1rem"><button type="submit" class="knop-stil">Bekijken</button></p></noscript>
+  </form>
+
+  <p class="sectiekop" style="margin-top:1.6rem">Uren in {{ gekozen_maand|date:"F Y" }}</p>
+  {% if totalen %}
+    <ul class="klussenlijst">
+      {% for regel in totalen %}
+        <li class="klusregel">
+          <span class="naam">{{ regel.medewerker.naam }}</span>
+          <span class="totaal-chip"><span class="n">{{ regel.totaal }}</span><span class="l">uur</span></span>
+        </li>
+      {% endfor %}
+    </ul>
+  {% else %}
+    <p class="leeg">Geen uren geschreven in deze periode.</p>
+  {% endif %}
+
+  <p style="margin-top:1.4rem">
+    <a class="knop"
+       href="?maand={{ gekozen_maand|date:'Y-m' }}{% if medewerker_pk %}&medewerker={{ medewerker_pk }}{% endif %}&download=1">
+      Downloaden als Excel
+    </a>
+  </p>
+{% endblock %}

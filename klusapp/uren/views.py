@@ -1,10 +1,15 @@
+import calendar
 from datetime import date, time, timedelta
 
 from django.contrib.auth.decorators import login_required
+from django.http import Http404, HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
+from django.utils import timezone
 
-from . import kalender
+from medewerkers.models import Medewerker
+
+from . import export, kalender
 from .forms import UurblokForm
 from .models import Uurblok
 
@@ -133,3 +138,86 @@ def uurblok_verwijderen(request, pk):
     if request.method == "POST":
         blok.delete()
     return _terug_naar_dag(dag)
+
+
+def _maandopties(vandaag, aantal=14):
+    """De laatste veertien kalendermaanden, nieuwste eerst — ruim genoeg om
+    terug te kunnen tot de start van de app zonder een aparte jaarkeuze."""
+    opties = []
+    jaar, maand = vandaag.year, vandaag.month
+    for _ in range(aantal):
+        opties.append(date(jaar, maand, 1))
+        maand -= 1
+        if maand == 0:
+            maand, jaar = 12, jaar - 1
+    return opties
+
+
+def _gekozen_maand(request, vandaag):
+    gevraagd = request.GET.get("maand", "")
+    try:
+        jaar, maand = (int(deel) for deel in gevraagd.split("-", 1))
+        return date(jaar, maand, 1)
+    except (TypeError, ValueError):
+        return vandaag.replace(day=1)
+
+
+@login_required
+def urenexport(request):
+    """Exportscherm voor de boekhouder: uren van een kalendermaand als Excel.
+
+    Periode is de kalendermaand-fallback uit docs/VRAGEN-MAARTEN.md; Maarten
+    heeft op 15-09-2026 wel al bevestigd dat het bestand Excel moet zijn, geen
+    CSV, zodat de boekhouding er verder in kan werken.
+
+    Alleen de eigenaar mag dit openen: de boekhouder krijgt geen account in de
+    app, hij krijgt het gedownloade bestand toegestuurd (SPEC §2, punt 6).
+    """
+    if not request.user.is_eigenaar:
+        raise Http404
+
+    vandaag = timezone.localdate()
+    gekozen_maand = _gekozen_maand(request, vandaag)
+    laatste_dag = calendar.monthrange(gekozen_maand.year, gekozen_maand.month)[1]
+    eind_maand = gekozen_maand.replace(day=laatste_dag)
+
+    medewerker_pk = request.GET.get("medewerker", "")
+    blokken = (
+        Uurblok.objects.filter(datum__range=(gekozen_maand, eind_maand))
+        .select_related("medewerker", "klus")
+        .order_by(
+            "medewerker__first_name", "medewerker__last_name", "medewerker__username", "datum", "begintijd"
+        )
+    )
+    if medewerker_pk:
+        blokken = blokken.filter(medewerker__pk=medewerker_pk)
+    blokken = list(blokken)
+
+    if request.GET.get("download") == "1":
+        boek = export.werkboek_bouwen(blokken, f"Uren {gekozen_maand:%m-%Y}")
+        antwoord = HttpResponse(
+            export.werkboek_als_bytes(boek),
+            content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        )
+        antwoord["Content-Disposition"] = f'attachment; filename="uren-{gekozen_maand:%Y-%m}.xlsx"'
+        return antwoord
+
+    totalen = []
+    for blok in blokken:
+        if not totalen or totalen[-1]["medewerker"] != blok.medewerker:
+            totalen.append({"medewerker": blok.medewerker, "minuten": 0})
+        totalen[-1]["minuten"] += blok.duur_minuten
+    for regel in totalen:
+        regel["totaal"] = kalender.als_uren(regel["minuten"])
+
+    return render(
+        request,
+        "uren/export.html",
+        {
+            "gekozen_maand": gekozen_maand,
+            "medewerker_pk": medewerker_pk,
+            "maandopties": _maandopties(vandaag),
+            "medewerkers": Medewerker.objects.filter(rol=Medewerker.Rol.MEDEWERKER),
+            "totalen": totalen,
+        },
+    )
