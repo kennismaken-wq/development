@@ -21,7 +21,13 @@ lopen perioden dwars door maanden heen en moet het overzicht anders gerekend wor
 **Als er geen antwoord komt:** CSV, kalendermaand, kolommen `medewerker, datum, klus,
 van, tot, uren, toelichting`, met een totaalregel per medewerker.
 
-**Antwoord:**
+**Antwoord (15-09-2026):** Excel, geen CSV — moet na het downloaden gewoon verder te
+bewerken zijn, de administratie van De Groene M draait nu op Excel. Periode niet expliciet
+afgewezen: we bouwen de kalendermaand-fallback. Facturen gaan via Exact Online, niet via
+deze app (staat al vast, SPEC: "de app maakt geen facturen"); Maarten wil op termijn wel
+een koppeling van "uren verzameld" naar "factuur in Exact Online" — dat is een apart,
+nog niet uitgewerkt vervolgtraject (fase 2 of meerwerk, niet fase 1). Niet ongevraagd
+beginnen, wel meenemen als Maarten er zelf over begint.
 
 ---
 
