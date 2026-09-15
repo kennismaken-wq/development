@@ -8,5 +8,6 @@ urlpatterns = [
     path("uren/<int:pk>/", views.uurblok_detail, name="uurblok_detail"),
     path("uren/<int:pk>/bewerken/", views.uurblok_bewerken, name="uurblok_bewerken"),
     path("uren/<int:pk>/verwijderen/", views.uurblok_verwijderen, name="uurblok_verwijderen"),
+    path("planbord/", views.planbord, name="planbord"),
     path("export/", views.urenexport, name="urenexport"),
 ]

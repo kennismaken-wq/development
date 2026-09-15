@@ -1,0 +1,78 @@
+{% extends "basis.html" %}
+{% block titel %}Planbord{% endblock %}
+{% block kaartklasse %}breed{% endblock %}
+{% block kop %}Planbord{% endblock %}
+{% block sub %}<a href="{% url 'start' %}" style="color:rgba(255,255,255,0.6)">‹ Terug</a>{% endblock %}
+{% block inhoud %}
+  <div class="navbalk">
+    <div class="navlinks">
+      <a class="knop-stil" href="?dag={{ vorige|date:'Y-m-d' }}">‹</a>
+      <a class="knop-stil" href="?dag={{ volgende|date:'Y-m-d' }}">›</a>
+      {% if not is_deze_week %}
+        <a class="knop-stil" href="{% url 'planbord' %}">Deze week</a>
+      {% endif %}
+      <span class="periodetitel">{{ maandag|date:"j M" }} – {{ zondag|date:"j M" }}</span>
+    </div>
+    <div class="totaal-chip">
+      <span class="n">{{ weektotaal }}</span>
+      <span class="l">{% if is_deze_week %}deze week{% else %}die week{% endif %}</span>
+    </div>
+  </div>
+
+  <div class="bord-scroll">
+    <div class="bord">
+      <div class="bord-hoek"></div>
+      {% for kopdag in kopdagen %}
+        <div class="bord-kop{% if kopdag.is_vandaag %} vandaag{% endif %}">
+          <div class="dag">{{ kopdag.datum|date:"D" }}</div>
+          <div class="datum">{{ kopdag.datum|date:"j M" }}</div>
+        </div>
+      {% endfor %}
+
+      {% for rij in rijen %}
+        <div class="bord-naam{% if not rij.heeft_uren %} zonder-uren{% endif %}">
+          <div class="wie">{{ rij.medewerker.naam }}</div>
+          {% if rij.medewerker.functie %}<div class="functie">{{ rij.medewerker.functie }}</div>{% endif %}
+          <div class="week">{{ rij.weektotaal }}</div>
+        </div>
+        {% for dagcel in rij.dagen %}
+          <div class="bord-cel{% if dagcel.is_vandaag %} vandaag{% endif %}">
+            {% for getekend in dagcel.blokken %}
+              {# begintijd en duur, niet de omschrijving: die breekt op deze breedte in lettergrepen (SPEC §5) #}
+              <a class="bord-chip" href="{% url 'uurblok_detail' getekend.blok.pk %}"
+                 title="{{ getekend.blok.klus.naam }} · {{ getekend.blok.begintijd|time:'H:i' }}–{{ getekend.blok.eindtijd|time:'H:i' }}"
+                 style="background:linear-gradient(150deg, {{ getekend.kleur }}D9, {{ getekend.kleur }}73);
+                        border-color:{{ getekend.kleur }}">
+                <span class="tijd">{{ getekend.blok.begintijd|time:"H:i" }}</span>
+                <span class="duur">{{ getekend.duur }}</span>
+              </a>
+            {% endfor %}
+          </div>
+        {% endfor %}
+      {% endfor %}
+
+      <div class="bord-naam bord-voet"><div class="wie">Totaal</div></div>
+      {% for kopdag in kopdagen %}
+        <div class="bord-cel bord-voet{% if kopdag.is_vandaag %} vandaag{% endif %}">
+          <span class="dagtotaal">{{ kopdag.totaal }}</span>
+        </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  {% if legenda %}
+    <p class="sectiekop">Klussen deze week</p>
+    <ul class="legenda">
+      {% for regel in legenda %}
+        <li>
+          <a href="{% url 'klus_detail' regel.klus.pk %}">
+            <span class="vlek" style="background:linear-gradient(150deg, {{ regel.kleur }}D9, {{ regel.kleur }}73); border-color:{{ regel.kleur }}"></span>
+            {{ regel.klus.naam }}
+          </a>
+        </li>
+      {% endfor %}
+    </ul>
+  {% else %}
+    <p class="leeg" style="margin-top:1.6rem">Deze week staat er nog niets op het bord.</p>
+  {% endif %}
+{% endblock %}

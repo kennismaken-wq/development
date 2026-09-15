@@ -11,7 +11,6 @@ from medewerkers import views as medewerkers_views
 # medewerkers/views.py. Zie klusapp/CONTEXT.md voor wie wat doet.
 nog_te_bouwen = [
     path("overzicht/", medewerkers_views.in_aanbouw, name="mijn_overzicht"),
-    path("planbord/", medewerkers_views.in_aanbouw, name="planbord"),
     path("aanwezigheid/", medewerkers_views.in_aanbouw, name="aanwezigheid"),
 ]
 
