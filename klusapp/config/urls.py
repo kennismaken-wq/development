@@ -9,10 +9,10 @@ from medewerkers import views as medewerkers_views
 # links om te hangen. Bouw je er een, haal 'm dan hier weg en zet de echte route
 # in de urls.py van je eigen app — en haal "in_aanbouw" uit de tegel in
 # medewerkers/views.py. Zie klusapp/CONTEXT.md voor wie wat doet.
-nog_te_bouwen = [
-    path("overzicht/", medewerkers_views.in_aanbouw, name="mijn_overzicht"),
-    path("aanwezigheid/", medewerkers_views.in_aanbouw, name="aanwezigheid"),
-]
+#
+# De lijst is leeg: alle schermen uit fase 1 zijn gebouwd. Hij blijft staan
+# voor het volgende scherm dat alvast een naam nodig heeft.
+nog_te_bouwen = []
 
 urlpatterns = [
     path("", medewerkers_views.start, name="start"),

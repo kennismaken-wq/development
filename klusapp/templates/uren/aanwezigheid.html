@@ -1,0 +1,91 @@
+{% extends "basis.html" %}
+{% block titel %}Aanwezigheid{% endblock %}
+{% block kop %}Aanwezigheid{% endblock %}
+{% block sub %}<a href="{% url 'start' %}" style="color:rgba(255,255,255,0.6)">‹ Terug</a>{% endblock %}
+{% block inhoud %}
+  <div class="navbalk">
+    <div class="navlinks">
+      <a class="knop-stil" href="?dag={{ vorige|date:'Y-m-d' }}">‹</a>
+      <a class="knop-stil" href="?dag={{ volgende|date:'Y-m-d' }}">›</a>
+      {% if not is_huidige_periode %}
+        <a class="knop-stil" href="{% url 'aanwezigheid' %}">Vandaag</a>
+      {% endif %}
+      <span class="periodetitel">{{ dag|date:"l j F"|capfirst }}</span>
+    </div>
+    <div class="totaal-chip">
+      <span class="n">{{ aantal_aanwezig }}/{{ aantal_medewerkers }}</span>
+      <span class="l">aanwezig</span>
+    </div>
+  </div>
+
+  {% if mag_zetten %}
+    {% comment %} Eén formulier voor de hele dag: zes mensen achter elkaar
+       aantikken en één keer opslaan, in plaats van zes keer wachten op de
+       server. {% endcomment %}
+    <form method="post">
+      {% csrf_token %}
+      <ul class="aanwezigheidslijst">
+        {% for rij in rijen %}
+          <li class="aanwezig-rij{% if not rij.registratie %} onbekend{% endif %}">
+            <div class="wie">
+              {{ rij.medewerker.naam }}
+              {% if rij.medewerker.functie %}<span class="functie">{{ rij.medewerker.functie }}</span>{% endif %}
+            </div>
+            <div class="keuzes">
+              <label class="keuzepil ja">
+                <input type="radio" name="aanwezig_{{ rij.medewerker.pk }}" value="ja"
+                       {% if rij.registratie and rij.registratie.aanwezig %}checked{% endif %}>
+                <span class="vlak">Aanwezig</span>
+              </label>
+              <label class="keuzepil nee">
+                <input type="radio" name="aanwezig_{{ rij.medewerker.pk }}" value="nee"
+                       {% if rij.registratie and not rij.registratie.aanwezig %}checked{% endif %}>
+                <span class="vlak">Afwezig</span>
+              </label>
+              {% comment %} De derde stand: geen registratie. Kiezen betekent
+                 de rij weggooien, want "nog niet ingevuld" past niet in een
+                 BooleanField dat niet leeg mag zijn. {% endcomment %}
+              <label class="keuzepil onbekend">
+                <input type="radio" name="aanwezig_{{ rij.medewerker.pk }}" value=""
+                       {% if not rij.registratie %}checked{% endif %}>
+                <span class="vlak">Onbekend</span>
+              </label>
+            </div>
+            <input type="text" class="opmerkingveld" name="opmerking_{{ rij.medewerker.pk }}"
+                   maxlength="200" value="{{ rij.registratie.opmerking }}"
+                   aria-label="Opmerking bij {{ rij.medewerker.naam }}">
+          </li>
+        {% empty %}
+          <li><p class="leeg">Er is niemand in dienst.</p></li>
+        {% endfor %}
+      </ul>
+
+      {% if rijen %}
+        <p style="margin-top:1.4rem"><button type="submit" class="knop">Opslaan</button></p>
+      {% endif %}
+    </form>
+  {% else %}
+    <ul class="aanwezigheidslijst">
+      {% for rij in rijen %}
+        <li class="aanwezig-rij{% if not rij.registratie %} onbekend{% endif %}">
+          <div class="wie">
+            {{ rij.medewerker.naam }}
+            {% if rij.medewerker.functie %}<span class="functie">{{ rij.medewerker.functie }}</span>{% endif %}
+          </div>
+          {% if not rij.registratie %}
+            <span class="stand onbekend">Niet ingevuld</span>
+          {% elif rij.registratie.aanwezig %}
+            <span class="stand ja">Aanwezig</span>
+          {% else %}
+            <span class="stand nee">Afwezig</span>
+          {% endif %}
+          {% if rij.registratie.opmerking %}
+            <span class="opmerking">{{ rij.registratie.opmerking }}</span>
+          {% endif %}
+        </li>
+      {% empty %}
+        <li><p class="leeg">Er is niemand in dienst.</p></li>
+      {% endfor %}
+    </ul>
+  {% endif %}
+{% endblock %}

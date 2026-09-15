@@ -11,9 +11,9 @@ from klussen.forms import BijlageForm
 from medewerkers.models import Medewerker
 from medewerkers.rechten import alleen_eigenaar
 
-from . import export, kalender, periode
+from . import export, kalender, periode, totalen
 from .forms import UurblokForm
-from .models import Uurblok
+from .models import Aanwezigheid, Uurblok
 
 
 def _tijd_uit(waarde):
@@ -325,6 +325,170 @@ def planbord(request):
             "weektotaal": kalender.als_uren(sum(dagminuten.values())),
         },
     )
+
+
+def _gekozen_medewerker(request):
+    """Van wie het overzicht gaat.
+
+    Een medewerker die ?medewerker= van iemand anders meestuurt krijgt
+    zwijgend zijn eigen cijfers, geen foutpagina. De eigenaar deelt links
+    naar dit scherm, en een link die bij hem werkt en bij de rest een
+    foutmelding geeft levert alleen telefoontjes op — terwijl niemand
+    daarmee iets van een ander te zien krijgt.
+    """
+    gevraagd = request.GET.get("medewerker", "")
+    if request.user.is_eigenaar and gevraagd.isdigit():
+        return Medewerker.objects.filter(pk=gevraagd).first() or request.user
+    return request.user
+
+
+def _overzicht_periode(request, weergave, vandaag):
+    """Begin en eind van de getoonde periode, en waar ‹ en › heen gaan."""
+    if weergave == "maand":
+        begin = periode.gekozen_dag(request).replace(day=1)
+        eind = begin.replace(day=calendar.monthrange(begin.year, begin.month)[1])
+        return {
+            "begin": begin,
+            "eind": eind,
+            "dag": begin,
+            "vorige": _maand_erbij(begin, -1),
+            "volgende": _maand_erbij(begin, 1),
+            "is_huidige_periode": (begin.year, begin.month) == (vandaag.year, vandaag.month),
+        }
+    week = periode.week_context(request)
+    return {
+        "begin": week["maandag"],
+        "eind": week["zondag"],
+        "dag": week["dag"],
+        "vorige": week["vorige"],
+        "volgende": week["volgende"],
+        "is_huidige_periode": week["is_deze_week"],
+    }
+
+
+@login_required
+def mijn_overzicht(request):
+    """Contractpunt 3: gewerkte uren per medewerker, per week én per maand.
+
+    Beide periodes staan in het contract, dus staan ze allebei achter dezelfde
+    `?weergave=`-knoppen als de rest van de app al gebruikt. Het optellen komt
+    uit totalen.py — hetzelfde rekenwerk als het klusdossier en de export, want
+    drie schermen die los van elkaar uren optellen gaan uiteindelijk drie
+    verschillende getallen tonen.
+    """
+    weergave = "maand" if request.GET.get("weergave") == "maand" else "week"
+    vandaag = periode.vandaag()
+    medewerker = _gekozen_medewerker(request)
+    tijdvak = _overzicht_periode(request, weergave, vandaag)
+
+    # Eén keer ophalen: per_klus en per_dag lopen allebei door dezelfde blokken.
+    blokken = list(totalen.blokken_van(medewerker, tijdvak["begin"], tijdvak["eind"]))
+
+    return render(
+        request,
+        "uren/mijn_overzicht.html",
+        {
+            **tijdvak,
+            "weergave": weergave,
+            "vandaag": vandaag,
+            "medewerker": medewerker,
+            # Alleen de eigenaar mag kiezen; bij de rest blijft de keuzelijst
+            # weg én negeert _gekozen_medewerker de parameter.
+            "mag_kiezen": request.user.is_eigenaar,
+            "medewerker_pk": str(medewerker.pk) if request.user.is_eigenaar else "",
+            "medewerkers": (
+                Medewerker.objects.filter(uit_dienst_sinds__isnull=True)
+                if request.user.is_eigenaar
+                else []
+            ),
+            "klusrijen": [
+                dict(rij, kleur=kalender.kleur_van(rij["klus"]))
+                for rij in totalen.per_klus(blokken)
+            ],
+            "dagrijen": totalen.per_dag(blokken),
+            "totaal_waarde": kalender.als_uren(sum(blok.duur_minuten for blok in blokken)),
+        },
+    )
+
+
+AANWEZIG_KEUZES = {"ja", "nee"}
+
+
+@login_required
+def aanwezigheid(request):
+    """Contractpunt 7: per dag bijhouden wie er is, groen of rood.
+
+    Bewust geen @alleen_eigenaar, als enige beheerdersscherm: de medewerkers
+    mogen deze dag wél inzien — wie is er vandaag, wie is er ziek — alleen niet
+    zetten. De rolcontrole staat daarom in de view, en óók op de POST: knoppen
+    weglaten in een template is geen rechtencontrole.
+
+    Drie standen, niet twee. "Nog niet ingevuld" is iets anders dan "afwezig",
+    maar `aanwezig` is een BooleanField dat niet leeg mag zijn. Onbekend is
+    hier dus het ontbreken van een rij, en de keuze wissen gooit de rij weer
+    weg — dat scheelt een migratie op een model dat al in gebruik is.
+    """
+    dag = periode.gekozen_dag(request)
+    vandaag = periode.vandaag()
+    medewerkers = list(Medewerker.objects.filter(uit_dienst_sinds__isnull=True))
+
+    if request.method == "POST":
+        if not request.user.is_eigenaar:
+            raise Http404
+        _aanwezigheid_opslaan(request, dag, medewerkers)
+        # Terug naar dezelfde dag, als GET: anders levert verversen een
+        # herhaalde post op, en dit scherm wordt op een telefoon gebruikt.
+        return redirect(f"{reverse('aanwezigheid')}?dag={dag.isoformat()}")
+
+    registraties = {
+        registratie.medewerker_id: registratie
+        for registratie in Aanwezigheid.objects.filter(datum=dag)
+    }
+    rijen = [
+        {"medewerker": medewerker, "registratie": registraties.get(medewerker.pk)}
+        for medewerker in medewerkers
+    ]
+    return render(
+        request,
+        "uren/aanwezigheid.html",
+        {
+            "dag": dag,
+            "vandaag": vandaag,
+            "vorige": dag - timedelta(days=1),
+            "volgende": dag + timedelta(days=1),
+            "is_huidige_periode": dag == vandaag,
+            "rijen": rijen,
+            "mag_zetten": request.user.is_eigenaar,
+            "aantal_aanwezig": sum(
+                1 for rij in rijen if rij["registratie"] and rij["registratie"].aanwezig
+            ),
+            "aantal_medewerkers": len(rijen),
+        },
+    )
+
+
+def _aanwezigheid_opslaan(request, dag, medewerkers):
+    """Het hele dagformulier in één keer wegschrijven.
+
+    update_or_create en geen create: op (medewerker, datum) ligt een unieke
+    sleutel, en zonder dit klapt hij eruit zodra iemand het formulier twee keer
+    verstuurt — wat op een telefoon met een halve streep bereik gewoon gebeurt.
+    """
+    for medewerker in medewerkers:
+        keuze = request.POST.get(f"aanwezig_{medewerker.pk}", "")
+        if keuze not in AANWEZIG_KEUZES:
+            Aanwezigheid.objects.filter(medewerker=medewerker, datum=dag).delete()
+            continue
+        Aanwezigheid.objects.update_or_create(
+            medewerker=medewerker,
+            datum=dag,
+            defaults={
+                "aanwezig": keuze == "ja",
+                # Afkappen op de veldlengte: een te lange opmerking hoort dit
+                # formulier niet te laten stranden op een validatiefout.
+                "opmerking": request.POST.get(f"opmerking_{medewerker.pk}", "").strip()[:200],
+            },
+        )
 
 
 def _maandopties(vandaag, aantal=14):

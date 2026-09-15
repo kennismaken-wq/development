@@ -43,6 +43,12 @@ body{
 body.met-navigatie{ padding-left:6.6rem; }
 @media (max-width:700px){
   body.met-navigatie{ padding-left:.7rem; padding-bottom:5.4rem; }
+  /* De balk zweeft óver de kaart heen, en de ruimte hierboven valt buiten de
+     scrollhoogte: onderaan de pagina lag de laatste knop dus onder de balk en
+     was hij niet aan te tikken. Dat raakte de knop "Uren toevoegen" en het
+     opslaan van de aanwezigheid — precies de twee dingen waarvoor iemand dit
+     scherm op zijn telefoon opent. */
+  body.met-navigatie .kaart{ padding-bottom:calc(5rem + env(safe-area-inset-bottom)); }
 }
 
 .glas{
@@ -582,3 +588,91 @@ input[type=checkbox]{ width:auto; accent-color:var(--accent); transform:scale(1.
 }
 .legenda a:hover{ background:rgba(255,255,255,0.14); }
 .legenda .vlek{ width:14px; height:14px; border-radius:999px; border:1px solid; flex-shrink:0; }
+
+/* ══════════ MIJN OVERZICHT ══════════
+   Twee lijsten (per klus, per dag) in dezelfde .urenlijst als het
+   klusdossier — het zijn dezelfde sommen uit uren/totalen.py, dus horen ze
+   er ook hetzelfde uit te zien. Alleen de klusvlek is nieuw: die draagt hier
+   dezelfde kleurherkenning als in het planbord. */
+.overzicht-kiezer{ margin-bottom:1.4rem; }
+.overzicht-kiezer label{ margin-top:0; }
+.urenlijst .vlek{
+  display:inline-block; width:12px; height:12px; border-radius:999px;
+  border:1px solid; margin-right:.4rem; vertical-align:-1px;
+}
+
+/* ══════════ AANWEZIGHEID ══════════
+   Eén rij per medewerker, op een telefoon onder elkaar: naam, dan de drie
+   standen, dan de opmerking. Drie en niet twee — "nog niet ingevuld" is iets
+   anders dan "afwezig", en die rij staat daarom gedimd tot er iets gekozen is.
+
+   De keuzeknoppen zijn radio's in een label: de radio zelf staat buiten beeld
+   en het label eromheen is de pil. Dat is dezelfde vormtaal als .pil, werkt
+   zonder een regel JavaScript, en houdt toetsenbord- en schermlezerbediening
+   intact. Het vinkje wordt met de buur-selector gestyled (input:checked +
+   .vlak), niet met :has() — dezelfde look op elke browser die de mannen op
+   hun telefoon hebben staan. */
+.aanwezigheidslijst{ list-style:none; margin:0; padding:0; display:grid; gap:.5rem; }
+.aanwezig-rij{
+  border-radius:18px; padding:.85rem 1rem;
+  background:rgba(255,255,255,0.07); border:1px solid rgba(255,255,255,0.14);
+  display:grid; gap:.55rem;
+}
+.aanwezig-rij.onbekend{ background:rgba(255,255,255,0.035); border-color:rgba(255,255,255,0.10); }
+.aanwezig-rij .wie{ font-size:13.5px; font-weight:600; }
+.aanwezig-rij.onbekend .wie{ color:rgba(255,255,255,0.6); font-weight:500; }
+.aanwezig-rij .functie{
+  margin-left:.45rem; font-size:10.5px; font-weight:500; padding:.1rem .5rem;
+  border-radius:999px; color:var(--hi);
+  background:rgba(var(--accent-rgb),0.16); border:1px solid rgba(var(--accent-rgb),0.34);
+}
+
+.keuzes{ display:flex; flex-wrap:wrap; gap:.4rem; }
+/* een <label> is in dit stylesheet een formulierkopje (klein, hoofdletters,
+   eigen marge); die opmaak moet er hier weer af, want dit label ís de knop */
+.keuzepil{
+  display:inline-block; position:relative; margin:0;
+  text-transform:none; letter-spacing:normal; color:inherit;
+}
+/* buiten beeld, maar niet display:none — anders is hij niet meer te focussen */
+.keuzepil input{
+  position:absolute; width:1px; height:1px; opacity:0; margin:0; padding:0;
+  transform:scale(1);
+}
+.keuzepil .vlak{
+  display:inline-flex; align-items:center; justify-content:center;
+  min-height:38px; padding:.4rem .95rem; border-radius:999px; cursor:pointer;
+  font-family:'Inter',sans-serif; font-size:12.5px; font-weight:600;
+  background:rgba(255,255,255,0.07); border:1px solid rgba(255,255,255,0.16);
+  color:rgba(255,255,255,0.7); transition:background .12s, color .12s, border-color .12s;
+}
+.keuzepil .vlak:hover{ background:rgba(255,255,255,0.14); color:#fff; }
+.keuzepil.ja input:checked + .vlak{
+  background:rgba(var(--accent-rgb),0.32); border-color:rgba(var(--accent-rgb),0.6); color:var(--hi);
+}
+.keuzepil.nee input:checked + .vlak{
+  background:rgba(224,123,95,0.30); border-color:rgba(224,123,95,0.62); color:#F6C7B6;
+}
+.keuzepil.onbekend input:checked + .vlak{
+  background:rgba(255,255,255,0.16); border-color:rgba(255,255,255,0.32); color:#fff;
+}
+.keuzepil input:focus-visible + .vlak{ outline:2px solid rgba(var(--accent-rgb),0.9); outline-offset:2px; }
+
+.opmerkingveld{ font-size:13.5px; padding:.6rem .85rem; }
+
+/* leesweergave voor een medewerker: dezelfde standen, zonder knoppen */
+.aanwezig-rij .stand{
+  justify-self:start; padding:.3rem .8rem; border-radius:999px;
+  font-size:11.5px; font-weight:600;
+}
+.aanwezig-rij .stand.ja{
+  background:rgba(var(--accent-rgb),0.22); border:1px solid rgba(var(--accent-rgb),0.45); color:var(--hi);
+}
+.aanwezig-rij .stand.nee{
+  background:rgba(224,123,95,0.22); border:1px solid rgba(224,123,95,0.48); color:#F6C7B6;
+}
+.aanwezig-rij .stand.onbekend{
+  background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.18);
+  color:rgba(255,255,255,0.55);
+}
+.aanwezig-rij .opmerking{ font-size:12.5px; color:rgba(255,255,255,0.7); }

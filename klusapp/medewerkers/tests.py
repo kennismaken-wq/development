@@ -34,7 +34,9 @@ class StartschermTest(TestCase):
         titels = tegeltitels(self.client.get(reverse("start")).content.decode())
         self.assertIn("Planbord", titels)
         self.assertIn("Aanwezigheid", titels)
-        self.assertNotIn("Mijn overzicht", titels)
+        # "Mijn overzicht" staat er sinds F2 ook voor de eigenaar bij: hij is
+        # juist degene die de maand van een ander opzoekt.
+        self.assertIn("Mijn overzicht", titels)
 
     def test_medewerker_ziet_geen_beheerderstegels(self):
         self.client.force_login(self.medewerker)
