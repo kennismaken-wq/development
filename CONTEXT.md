@@ -142,3 +142,36 @@ HTML/CSS zijn — dus in principe direct te kopiëren zonder framework:
 
 Dit vervangt geen enkele regel hierboven: als `glass.html` al een voorbeeld
 heeft, is dát nog steeds de bron van waarheid, niet shadcn of Uiverse.
+
+## Navigatie: zwevende zijbalk in plaats van een tegel-grid
+
+Vanaf september 2026 is dit de standaard voor beide projecten, niet alleen
+voor de klusapp: navigeren gaat via `nav.sidebar` met `.side-icon`-knoppen
+(letterlijk het patroon uit `glass.html:471-494`/`95-115`), niet via een grid
+van tegels op het startscherm. Het startscherm zelf wordt een begroeting
+("Hai, {naam}", zoals `glass.html:524`) plus relevante inhoud — bijvoorbeeld
+in de klusapp de klussen waar je deze week aan werkte — niet een lijst met
+knoppen om ergens heen te gaan.
+
+Verschil met de letterlijke `glass.html`-versie: die is 76px breed en plakt
+tegen de linkerrand. In een app die zelf al drijft als één gecentreerde
+`.kaart.glas` op de gradient (zoals de klusapp, in tegenstelling tot een
+edge-to-edge appschil zoals Outreach) hoort de zijbalk ook te zwéven: een
+ronde glaspil, verticaal gecentreerd, los van de randen — niet plat tegen de
+rand. Op een telefoon wordt dezelfde pil een horizontale balk onderaan
+(`env(safe-area-inset-bottom)`-bewust), met horizontaal scrollen als niet
+alle iconen passen — zelfde idioom als de weekkalender/het planbord, liever
+scrollen dan iconen verstoppen achter een extra menu.
+
+Referentie-implementatie: `klusapp/templates/basis.html` (de zijbalk-markup),
+`klusapp/static/css/app.css` (zoek op "ZIJBALK"), en
+`klusapp/medewerkers/{tegels,context_processors,pictogrammen}.py` (rol-
+gebaseerde zichtbaarheid + lijniconen, op elke pagina beschikbaar via een
+context processor, niet alleen op het startscherm).
+
+**Let op bestandseigendom:** dit raakte `static/css/app.css`,
+`templates/basis.html` en de tegel-lijst in `medewerkers/` — volgens
+`klusapp/CLAUDE.md` normaal gesproken alleen van Floris na blok 0. Dit is een
+bewuste, eenmalige uitzondering op verzoek van Thijmen om de nieuwe
+navigatierichting overal tegelijk neer te zetten, geen vrijbrief om daarna
+weer gewoon in die bestanden te werken zonder het even af te stemmen.

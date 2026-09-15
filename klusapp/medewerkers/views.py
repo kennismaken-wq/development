@@ -1,8 +1,9 @@
-from datetime import date
+from datetime import date, timedelta
 
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import redirect, render
-from django.urls import reverse
+
+from klussen.models import Klus
 
 # Loondossier heeft twee ingangen. Op Android staat in hun assetlinks.json
 # dat de app elk adres van mijn.loondossier.nl mag afvangen, dus daar opent
@@ -13,54 +14,23 @@ from django.urls import reverse
 LOONDOSSIER_WEB = "https://mijn.loondossier.nl/Aanmelden"
 LOONDOSSIER_APP = "https://mijn.loondossier.nl/open-app/"
 
-# Het beginscherm van de app: pictogrammen naar de onderdelen. Wat je ziet
-# hangt af van je rol.
-#
-# Elke tegel heeft zijn definitieve url_naam, ook als het scherm nog niet
-# bestaat — die namen staan geregistreerd in config/urls.py. Een tegel met
-# "in_aanbouw" wordt gedimd en niet-klikbaar getoond. Is jouw scherm af, haal
-# dan alléén die vlag hier weg en verplaats de route uit config/urls.py naar je
-# eigen urls.py. Zo hoeft niemand anders deze lijst aan te raken.
-TEGELS = [
-    {"titel": "Uren schrijven", "teken": "⏱", "url_naam": "mijn_uren", "rollen": ["medewerker", "eigenaar"]},
-    {"titel": "Klussen", "teken": "◰", "url_naam": "klussen", "rollen": ["medewerker", "eigenaar"]},
-    {"titel": "Mijn overzicht", "teken": "≡", "url_naam": "mijn_overzicht", "rollen": ["medewerker"], "in_aanbouw": True},
-    {"titel": "Planbord", "teken": "⊞", "url_naam": "planbord", "rollen": ["eigenaar"], "in_aanbouw": True},
-    {"titel": "Overzichten", "teken": "≡", "url_naam": "urenexport", "rollen": ["eigenaar"], "in_aanbouw": True},
-    {"titel": "Aanwezigheid", "teken": "●", "url_naam": "aanwezigheid", "rollen": ["eigenaar"], "in_aanbouw": True},
-    {"titel": "Foto's", "teken": "▣", "url_naam": "fotos", "rollen": ["medewerker", "eigenaar"]},
-    {"titel": "Loonstrook", "teken": "€", "url_naam": "loonstrook", "rollen": ["medewerker", "eigenaar"]},
-    # Het Django-beheerscherm is geen scherm voor de klant: het toont alle
-    # velden en verwijdert zonder vangnet. Alleen wie het systeem beheert
-    # (is_staff) ziet deze tegel — de rol "eigenaar" geeft er geen toegang toe.
-    # Hangt aan is_staff, niet aan een rol: wie het systeem beheert hoeft in
-    # de app geen eigenaar te zijn.
-    {"titel": "Beheer", "teken": "⚙", "url": "/beheer/", "rollen": ["medewerker", "eigenaar"], "alleen_beheerder": True},
-]
-
 
 @login_required
 def start(request):
-    rol = request.user.rol
-    tegels = []
-    for tegel in TEGELS:
-        if rol not in tegel["rollen"]:
-            continue
-        if tegel.get("alleen_beheerder") and not request.user.is_staff:
-            continue
-        tegel = dict(tegel)
-        if "url_naam" in tegel:
-            tegel["url"] = reverse(tegel["url_naam"])
-        # Een scherm dat nog gebouwd wordt tonen we gedimd en niet-klikbaar:
-        # de tegel bestaat al zodat het beginscherm niet elke week verspringt,
-        # maar erop tikken levert niets op.
-        if tegel.get("in_aanbouw"):
-            tegel["url"] = None
-        # het loonstrookportaal is een andere site; die opent in een eigen
-        # tabblad zodat je je uren niet kwijtraakt
-        tegel["extern"] = str(tegel.get("url") or "").startswith("http")
-        tegels.append(tegel)
-    return render(request, "start.html", {"tegels": tegels, "vandaag": date.today()})
+    """Het beginscherm: een begroeting en de klussen waar je deze week aan
+    hebt gewerkt. Navigatie zit niet meer hier maar in de zijbalk
+    (basis.html) — die krijgt zijn tegels via de context processor, dus
+    hoeft hier niet te worden meegegeven.
+    """
+    vandaag = date.today()
+    maandag = vandaag - timedelta(days=vandaag.weekday())
+    zondag = maandag + timedelta(days=6)
+    klussen_deze_week = (
+        Klus.objects.filter(uurblokken__medewerker=request.user, uurblokken__datum__range=(maandag, zondag))
+        .distinct()
+        .order_by("-aangemaakt_op")[:5]
+    )
+    return render(request, "start.html", {"vandaag": vandaag, "klussen_deze_week": klussen_deze_week})
 
 
 @login_required

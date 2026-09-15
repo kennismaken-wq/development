@@ -1,21 +1,24 @@
 {% extends "basis.html" %}
 {% block titel %}Start{% endblock %}
-{% block kop %}Hallo {{ user.first_name|default:user.username }}{% endblock %}
+{% block kop %}Hai, {{ user.first_name|default:user.naam }}{% endblock %}
 {% block sub %}{{ vandaag|date:"l j F Y"|capfirst }}{% endblock %}
 {% block inhoud %}
-  <div class="tegels">
-    {% for tegel in tegels %}
-      {% if tegel.url %}
-        <a class="tegel" href="{{ tegel.url }}"{% if tegel.extern %} target="_blank" rel="noopener"{% endif %}>
-          <span class="teken">{{ tegel.teken }}</span>
-          <span class="titel">{{ tegel.titel }}</span>
-        </a>
-      {% else %}
-        <span class="tegel nog-niet">
-          <span class="teken">{{ tegel.teken }}</span>
-          <span class="titel">{{ tegel.titel }}</span>
-        </span>
-      {% endif %}
-    {% endfor %}
-  </div>
+  <h2 class="sectiekop">Jouw klussen deze week</h2>
+  {% if klussen_deze_week %}
+    <ul class="klussenlijst">
+      {% for klus in klussen_deze_week %}
+        <li>
+          <a href="{{ klus.get_absolute_url }}" class="klusregel{% if not klus.actief %} afgerond{% endif %}">
+            <span class="soort-badge">{{ klus.get_soort_display }}</span>
+            <span class="naam">{{ klus.naam }}</span>
+            {% if klus.adres or klus.plaats %}
+              <span class="adres">{{ klus.adres }}{% if klus.adres and klus.plaats %}, {% endif %}{{ klus.plaats }}</span>
+            {% endif %}
+          </a>
+        </li>
+      {% endfor %}
+    </ul>
+  {% else %}
+    <p class="leeg">Nog geen uren deze week geschreven. <a href="{% url 'mijn_uren' %}">Begin bij uren schrijven</a>.</p>
+  {% endif %}
 {% endblock %}

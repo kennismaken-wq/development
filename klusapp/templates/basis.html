@@ -8,7 +8,31 @@
   {% load static %}
   <link rel="stylesheet" href="{% static 'css/app.css' %}">
 </head>
-<body>
+<body{% if user.is_authenticated %} class="met-navigatie"{% endif %}>
+  {% if user.is_authenticated %}
+    {% load pictogrammen %}
+    <nav class="sidebar glas" aria-label="Navigatie">
+      <a class="side-icon{% if request.resolver_match.url_name == 'start' %} actief{% endif %}" href="{% url 'start' %}">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">{{ "start"|pictogram }}</svg>
+        <span class="titel">Start</span>
+      </a>
+      {% for tegel in tegels %}
+        {% if tegel.url %}
+          <a class="side-icon{% if tegel.url_naam == request.resolver_match.url_name %} actief{% endif %}"
+             href="{{ tegel.url }}"{% if tegel.extern %} target="_blank" rel="noopener"{% endif %}>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">{{ tegel.icoon|pictogram }}</svg>
+            <span class="titel">{{ tegel.titel }}</span>
+          </a>
+        {% else %}
+          <span class="side-icon nog-niet">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">{{ tegel.icoon|pictogram }}</svg>
+            <span class="titel">{{ tegel.titel }}</span>
+          </span>
+        {% endif %}
+      {% endfor %}
+    </nav>
+  {% endif %}
+
   <div class="kaart glas {% block kaartklasse %}{% endblock %}">
     <div class="kop">
       <div>

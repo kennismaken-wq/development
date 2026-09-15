@@ -1,7 +1,11 @@
 import re
+from datetime import date, time, timedelta
 
 from django.test import TestCase
 from django.urls import reverse
+
+from klussen.models import Klus
+from uren.models import Uurblok
 
 from .models import Medewerker
 
@@ -101,3 +105,46 @@ class StartschermTest(TestCase):
         self.medewerker.save()
         self.client.force_login(self.medewerker)
         self.assertIn("Beheer", tegeltitels(self.client.get(reverse("start")).content.decode()))
+
+    def test_geen_uren_deze_week_toont_lege_staat(self):
+        self.client.force_login(self.medewerker)
+        self.assertContains(self.client.get(reverse("start")), "Nog geen uren deze week geschreven")
+
+    def test_klus_met_uren_deze_week_staat_op_het_startscherm(self):
+        klus = Klus.objects.create(naam="Tuin Vermeer")
+        Uurblok.objects.create(
+            medewerker=self.medewerker, klus=klus, datum=date.today(), begintijd=time(8), eindtijd=time(12)
+        )
+        self.client.force_login(self.medewerker)
+        self.assertContains(self.client.get(reverse("start")), "Tuin Vermeer")
+
+    def test_klus_van_vorige_week_staat_niet_op_het_startscherm(self):
+        klus = Klus.objects.create(naam="Oude klus")
+        vorige_week = date.today() - timedelta(days=14)
+        Uurblok.objects.create(
+            medewerker=self.medewerker, klus=klus, datum=vorige_week, begintijd=time(8), eindtijd=time(12)
+        )
+        self.client.force_login(self.medewerker)
+        self.assertNotContains(self.client.get(reverse("start")), "Oude klus")
+
+
+class NavigatieTest(TestCase):
+    """De zijbalk staat via een context processor op elke pagina, niet
+    alleen het startscherm — dat borgen we hier apart van StartschermTest."""
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.medewerker = Medewerker.objects.create_user(
+            "sam", password="test1234", first_name="Sam", rol=Medewerker.Rol.MEDEWERKER
+        )
+
+    def test_zijbalk_staat_ook_op_een_andere_pagina(self):
+        self.client.force_login(self.medewerker)
+        titels = tegeltitels(self.client.get(reverse("klussen")).content.decode())
+        self.assertIn("Uren schrijven", titels)
+        self.assertIn("Klussen", titels)
+
+    def test_uitgelogd_geen_zijbalk_en_geen_foutmelding(self):
+        antwoord = self.client.get(reverse("inloggen"))
+        self.assertEqual(antwoord.status_code, 200)
+        self.assertNotIn('class="sidebar', antwoord.content.decode())
