@@ -43,6 +43,12 @@ body{
 body.met-navigatie{ padding-left:6.6rem; }
 @media (max-width:700px){
   body.met-navigatie{ padding-left:.7rem; padding-bottom:5.4rem; }
+  /* De balk zweeft óver de kaart heen, en de ruimte hierboven valt buiten de
+     scrollhoogte: onderaan de pagina lag de laatste knop dus onder de balk en
+     was hij niet aan te tikken. Dat raakte de knop "Uren toevoegen" en het
+     opslaan van de aanwezigheid — precies de twee dingen waarvoor iemand dit
+     scherm op zijn telefoon opent. */
+  body.met-navigatie .kaart{ padding-bottom:calc(5rem + env(safe-area-inset-bottom)); }
 }
 
 .glas{
