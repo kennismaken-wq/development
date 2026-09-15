@@ -7,23 +7,12 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
 
+from klussen.forms import BijlageForm
 from medewerkers.models import Medewerker
 
-from . import export, kalender
+from . import export, kalender, periode
 from .forms import UurblokForm
 from .models import Uurblok
-
-
-def _gekozen_dag(request):
-    """De dag waar de kalender op staat. Standaard vandaag: uren worden
-    dezelfde avond ingevuld, dus dat is bijna altijd de goede."""
-    gevraagd = request.GET.get("dag")
-    if gevraagd:
-        try:
-            return date.fromisoformat(gevraagd)
-        except ValueError:
-            pass
-    return date.today()
 
 
 def _tijd_uit(waarde):
@@ -70,8 +59,8 @@ def _maand_erbij(eerste_van_maand, aantal):
 @login_required
 def mijn_uren(request):
     weergave = _gekozen_weergave(request)
-    dag = _gekozen_dag(request)
-    vandaag = date.today()
+    dag = periode.gekozen_dag(request)
+    vandaag = periode.vandaag()
 
     if weergave == "maand":
         return _maand_weergave(request, dag, vandaag)
@@ -166,7 +155,7 @@ def _maand_weergave(request, dag, vandaag):
 
 @login_required
 def uurblok_nieuw(request):
-    dag = _gekozen_dag(request)
+    dag = periode.gekozen_dag(request)
     if request.method == "POST":
         formulier = UurblokForm(request.POST)
         if formulier.is_valid():
@@ -189,6 +178,37 @@ def uurblok_nieuw(request):
         formulier = UurblokForm(initial={"datum": dag, "begintijd": van, "eindtijd": tot})
     return render(
         request, "uren/uurblok_form.html", {"formulier": formulier, "dag": dag, "nieuw": True}
+    )
+
+
+@login_required
+def uurblok_detail(request, pk):
+    """Het blok bekijken, niet bewerken (SPEC §5: view-first).
+
+    De eigenaar mag elk blok bekijken — anders klapt de doorklik vanuit het
+    planbord stuk. Bewerken blijft van de medewerker zelf: een gecorrigeerd
+    uurblok waar de mede­werker niets van weet levert discussie op die deze app
+    juist moet voorkomen.
+    """
+    blok = get_object_or_404(Uurblok.objects.select_related("klus", "medewerker"), pk=pk)
+    if blok.medewerker_id != request.user.pk and not request.user.is_eigenaar:
+        raise Http404
+
+    bijlagen = blok.bijlagen.select_related("toegevoegd_door").order_by("-toegevoegd_op")
+    return render(
+        request,
+        "uren/uurblok_detail.html",
+        {
+            "blok": blok,
+            "kleur": kalender.kleur_van(blok.klus),
+            "duur": kalender.als_uren(blok.duur_minuten),
+            "mag_bewerken": blok.medewerker_id == request.user.pk,
+            "foto_bijlagen": [los for los in bijlagen if los.is_foto],
+            "document_bijlagen": [los for los in bijlagen if not los.is_foto],
+            "formulier": BijlageForm(),
+            "upload_url": reverse("bijlage_toevoegen"),
+            "terug": request.get_full_path(),
+        },
     )
 
 
