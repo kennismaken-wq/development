@@ -1,0 +1,18 @@
+{% comment %} Maandoverzicht: puur navigeren, geen uren invoeren. Tikken op
+   een dag opent de dagweergave van die datum, waar het bestaande
+   tik/sleep-gedrag al werkt. Verwacht `maandraster` (lijst van weken, elke
+   week 7 dagcellen met datum/in_maand/is_vandaag/totaal). {% endcomment %}
+<div class="maandkoppen">
+  <span>Ma</span><span>Di</span><span>Wo</span><span>Do</span><span>Vr</span><span>Za</span><span>Zo</span>
+</div>
+<div class="maandraster">
+  {% for week in maandraster %}
+    {% for dagcel in week %}
+      <a class="maanddag{% if not dagcel.in_maand %} buiten-maand{% endif %}{% if dagcel.is_vandaag %} vandaag{% endif %}"
+         href="?weergave=dag&dag={{ dagcel.datum|date:'Y-m-d' }}">
+        <span class="nr">{{ dagcel.datum|date:"j" }}</span>
+        {% if dagcel.totaal %}<span class="uren">{{ dagcel.totaal }}</span>{% endif %}
+      </a>
+    {% endfor %}
+  {% endfor %}
+</div>

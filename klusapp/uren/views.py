@@ -37,48 +37,128 @@ def _terug_naar_dag(dag):
     return redirect(f"{reverse('mijn_uren')}?dag={dag.isoformat()}")
 
 
+WEERGAVEN = {"dag", "week", "maand"}
+
+
+def _gekozen_weergave(request):
+    """Dag is de standaard: de enige weergave die op geen enkele
+    schermbreedte hoeft te scrollen. Week en maand kies je erbij."""
+    weergave = request.GET.get("weergave")
+    return weergave if weergave in WEERGAVEN else "dag"
+
+
+def _dag_info(datum, blokken, vandaag):
+    """Één dag omgezet naar wat het raster direct kan tekenen. Gebruikt door
+    zowel de dag- als de weekweergave — alleen het aantal dagen verschilt."""
+    van_die_dag = [blok for blok in blokken if blok.datum == datum]
+    return {
+        "datum": datum,
+        "is_vandaag": datum == vandaag,
+        "getekend": kalender.plaats_blokken(van_die_dag),
+        "totaal": kalender.als_uren(sum(blok.duur_minuten for blok in van_die_dag)),
+        "heeft_uren": bool(van_die_dag),
+    }
+
+
+def _maand_erbij(eerste_van_maand, aantal):
+    maand_index = eerste_van_maand.month - 1 + aantal
+    jaar = eerste_van_maand.year + maand_index // 12
+    maand = maand_index % 12 + 1
+    return date(jaar, maand, 1)
+
+
 @login_required
 def mijn_uren(request):
+    weergave = _gekozen_weergave(request)
     dag = _gekozen_dag(request)
-    maandag = dag - timedelta(days=dag.weekday())
-    zondag = maandag + timedelta(days=6)
     vandaag = date.today()
 
+    if weergave == "maand":
+        return _maand_weergave(request, dag, vandaag)
+
+    if weergave == "week":
+        periode_begin = dag - timedelta(days=dag.weekday())
+        periode_eind = periode_begin + timedelta(days=6)
+    else:
+        periode_begin = periode_eind = dag
+
     blokken = (
-        Uurblok.objects.filter(medewerker=request.user, datum__range=(maandag, zondag))
+        Uurblok.objects.filter(medewerker=request.user, datum__range=(periode_begin, periode_eind))
         .select_related("klus")
         .order_by("begintijd")
     )
+    dagen = [
+        _dag_info(periode_begin + timedelta(days=n), blokken, vandaag)
+        for n in range((periode_eind - periode_begin).days + 1)
+    ]
 
-    dagen = []
-    for nummer in range(7):
-        datum = maandag + timedelta(days=nummer)
-        van_die_dag = [blok for blok in blokken if blok.datum == datum]
-        dagen.append(
+    context = {
+        "weergave": weergave,
+        "dag": dag,
+        "dagen": dagen,
+        "vakken": kalender.vakken(),
+        "uurlabels": kalender.uurlabels(),
+        "rasterhoogte": kalender.raster_hoogte(),
+        "rijhoogte": kalender.RIJ_H,
+        "vandaag": vandaag,
+        "totaal_waarde": kalender.als_uren(sum(blok.duur_minuten for blok in blokken)),
+    }
+    if weergave == "week":
+        context.update(
             {
-                "datum": datum,
-                "is_vandaag": datum == vandaag,
-                "getekend": kalender.plaats_blokken(van_die_dag),
-                "totaal": kalender.als_uren(sum(blok.duur_minuten for blok in van_die_dag)),
-                "heeft_uren": bool(van_die_dag),
+                "maandag": periode_begin,
+                "zondag": periode_eind,
+                "vorige_week": periode_begin - timedelta(days=7),
+                "volgende_week": periode_begin + timedelta(days=7),
+                "is_deze_week": periode_begin <= vandaag <= periode_eind,
+                "weektotaal": context["totaal_waarde"],
+                "vorige": periode_begin - timedelta(days=7),
+                "volgende": periode_begin + timedelta(days=7),
+                "is_huidige_periode": periode_begin <= vandaag <= periode_eind,
             }
         )
+    else:
+        context.update(
+            {
+                "vorige": dag - timedelta(days=1),
+                "volgende": dag + timedelta(days=1),
+                "is_huidige_periode": dag == vandaag,
+            }
+        )
+    return render(request, "uren/mijn_uren.html", context)
+
+
+def _maand_weergave(request, dag, vandaag):
+    eerste_van_maand = dag.replace(day=1)
+    weken = kalender.maandraster(eerste_van_maand.year, eerste_van_maand.month)
+    eerste_dag, laatste_dag = weken[0][0], weken[-1][-1]
+
+    blokken = Uurblok.objects.filter(
+        medewerker=request.user, datum__range=(eerste_dag, laatste_dag)
+    ).only("datum", "begintijd", "eindtijd")
+    minuten_per_dag = {}
+    for blok in blokken:
+        minuten_per_dag[blok.datum] = minuten_per_dag.get(blok.datum, 0) + blok.duur_minuten
+
+    def dagcel(datum):
+        return {
+            "datum": datum,
+            "in_maand": datum.month == eerste_van_maand.month,
+            "is_vandaag": datum == vandaag,
+            "totaal": kalender.als_uren(minuten_per_dag[datum]) if datum in minuten_per_dag else None,
+        }
 
     return render(
         request,
         "uren/mijn_uren.html",
         {
-            "dagen": dagen,
-            "maandag": maandag,
-            "zondag": zondag,
-            "vorige_week": maandag - timedelta(days=7),
-            "volgende_week": maandag + timedelta(days=7),
-            "is_deze_week": maandag <= vandaag <= zondag,
-            "weektotaal": kalender.als_uren(sum(blok.duur_minuten for blok in blokken)),
-            "vakken": kalender.vakken(),
-            "uurlabels": kalender.uurlabels(),
-            "rasterhoogte": kalender.raster_hoogte(),
-            "rijhoogte": kalender.RIJ_H,
+            "weergave": "maand",
+            "dag": dag,
+            "maandraster": [[dagcel(datum) for datum in week] for week in weken],
+            "vorige": _maand_erbij(eerste_van_maand, -1),
+            "volgende": _maand_erbij(eerste_van_maand, 1),
+            "is_huidige_periode": (eerste_van_maand.year, eerste_van_maand.month) == (vandaag.year, vandaag.month),
+            "totaal_waarde": kalender.als_uren(sum(minuten_per_dag.values())),
             "vandaag": vandaag,
         },
     )

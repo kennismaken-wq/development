@@ -205,6 +205,9 @@ input[type=time]::-webkit-calendar-picker-indicator{ filter:invert(1); opacity:.
 .raster-scroll::-webkit-scrollbar{ height:6px; }
 .raster-scroll::-webkit-scrollbar-thumb{ background:rgba(255,255,255,0.2); border-radius:999px; }
 .raster{ display:grid; grid-template-columns:48px repeat(7, minmax(92px,1fr)); min-width:700px; }
+/* dagweergave: één kolom, geen vaste breedte — dit is de regel die het
+   horizontaal scrollen op een telefoon opheft. */
+.raster.raster-dag{ grid-template-columns:48px 1fr; min-width:0; }
 
 .kolomkop{ font-size:11px; text-align:center; padding-bottom:.5rem; color:rgba(255,255,255,0.7); }
 .kolomkop .dag{ font-weight:600; text-transform:capitalize; }
@@ -241,6 +244,28 @@ input[type=time]::-webkit-calendar-picker-indicator{ filter:invert(1); opacity:.
   display:block; opacity:.85; margin-top:.1rem;
   overflow-wrap:break-word; word-break:break-word;
 }
+
+/* ══════════ UREN: MAANDWEERGAVE ══════════
+   Puur navigeren: een dag aantikken opent de dagweergave van die datum.
+   Geen tijdas, dus altijd 7 kolommen breed — past zonder scrollen, ook op
+   een telefoon. */
+.maandkoppen{
+  display:grid; grid-template-columns:repeat(7,1fr); gap:.3rem;
+  font-size:10.5px; text-align:center; color:rgba(255,255,255,0.5);
+  margin-bottom:.4rem;
+}
+.maandraster{ display:grid; grid-template-columns:repeat(7,1fr); gap:.3rem; }
+.maanddag{
+  aspect-ratio:1; border-radius:12px; padding:.3rem;
+  display:flex; flex-direction:column; align-items:center; justify-content:center; gap:.15rem;
+  background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.12);
+  color:#fff; text-decoration:none; transition:background .12s;
+}
+.maanddag:hover{ background:rgba(255,255,255,0.13); }
+.maanddag.buiten-maand{ opacity:.3; }
+.maanddag.vandaag{ border-color:rgba(var(--accent-rgb),0.6); background:rgba(var(--accent-rgb),0.18); }
+.maanddag .nr{ font-size:13px; font-weight:600; }
+.maanddag .uren{ font-size:9.5px; color:var(--hi); font-variant-numeric:tabular-nums; }
 
 /* ══════════ MELDINGEN ══════════ */
 .meldingen{ list-style:none; margin:0 0 1.2rem; padding:0; display:grid; gap:.5rem; }

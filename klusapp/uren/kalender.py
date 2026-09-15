@@ -1,10 +1,14 @@
-"""Rekenwerk voor de weekkalender.
+"""Rekenwerk voor de dag/week-kalender en de maandweergave.
 
 De kalender loopt van 06:00 tot 20:00 in vakken van een half uur van 26
 pixels hoog — dezelfde maten als in de demo. Een blok wordt absoluut
 geplaatst binnen zijn dagkolom, dus alles wat hier wordt uitgerekend is
-"hoeveel pixels vanaf de bovenkant" en "hoe hoog".
+"hoeveel pixels vanaf de bovenkant" en "hoe hoog". Dat werkt per dag, dus
+zowel de dag- als de weekweergave in uren/views.py hergebruiken het
+ongewijzigd — alleen het aantal kolommen verschilt.
 """
+
+import calendar
 
 START_MIN = 6 * 60
 EIND_MIN = 20 * 60
@@ -90,3 +94,10 @@ def tijd_van_vak(index):
     """Van vaknummer naar 'HH:MM', voor de links naar het formulier."""
     minuut = START_MIN + index * VAK_MIN
     return f"{minuut // 60:02d}:{minuut % 60:02d}"
+
+
+def maandraster(jaar, maand):
+    """Weken (ma-zo) die de maand vullen, incl. dagen uit de vorige/volgende
+    maand zodat elke week compleet is — zoals een gewone kalender."""
+    dagen = list(calendar.Calendar(firstweekday=0).itermonthdates(jaar, maand))
+    return [dagen[i : i + 7] for i in range(0, len(dagen), 7)]

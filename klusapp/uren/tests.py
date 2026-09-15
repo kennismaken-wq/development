@@ -92,7 +92,7 @@ class UrenSchrijvenTest(TestCase):
             medewerker=self.joep, klus=self.klus, datum=self.dag,
             begintijd=time(8, 0), eindtijd=time(16, 0), toelichting="Werk van Joep",
         )
-        antwoord = self.client.get("/uren/?dag=2026-09-07")
+        antwoord = self.client.get("/uren/?dag=2026-09-07&weergave=week")
         self.assertNotContains(antwoord, "Werk van Joep")
 
     def test_blok_van_ander_niet_te_bewerken(self):
@@ -128,14 +128,14 @@ class UrenSchrijvenTest(TestCase):
             medewerker=self.sam, klus=self.klus, datum=self.dag + timedelta(days=1),
             begintijd=time(8, 0), eindtijd=time(9, 0),
         )
-        antwoord = self.client.get("/uren/?dag=2026-09-07")
+        antwoord = self.client.get("/uren/?dag=2026-09-07&weergave=week")
         self.assertEqual(antwoord.context["weektotaal"], "4:45")
         maandag = antwoord.context["dagen"][0]
         self.assertEqual(maandag["datum"], self.dag)
         self.assertEqual(maandag["totaal"], "3:45")
 
     def test_week_toont_zeven_dagen_vanaf_maandag(self):
-        antwoord = self.client.get("/uren/?dag=2026-09-10")   # een donderdag
+        antwoord = self.client.get("/uren/?dag=2026-09-10&weergave=week")   # een donderdag
         dagen = antwoord.context["dagen"]
         self.assertEqual(len(dagen), 7)
         self.assertEqual(dagen[0]["datum"], date(2026, 9, 7))
@@ -152,7 +152,7 @@ class UrenSchrijvenTest(TestCase):
             medewerker=self.sam, klus=self.klus, datum=self.dag,
             begintijd=time(8, 0), eindtijd=time(9, 0),
         )
-        antwoord = self.client.get("/uren/?dag=2026-09-07")
+        antwoord = self.client.get("/uren/?dag=2026-09-07&weergave=week")
         getekend = antwoord.context["dagen"][0]["getekend"][0]
         # 08:00 is vier halve uren na 06:00, elk 26px hoog
         self.assertEqual(getekend["top"], 4 * 26)
@@ -169,3 +169,47 @@ class UrenSchrijvenTest(TestCase):
         self.assertIn('value="2026-09-07"', html)
         self.assertIn('value="08:00"', html)
         self.assertIn('value="16:30"', html)
+
+    def test_dag_is_de_standaardweergave(self):
+        antwoord = self.client.get("/uren/?dag=2026-09-07")
+        self.assertEqual(antwoord.context["weergave"], "dag")
+        self.assertEqual(len(antwoord.context["dagen"]), 1)
+        self.assertEqual(antwoord.context["dagen"][0]["datum"], self.dag)
+
+    def test_dagweergave_toont_alleen_die_dag(self):
+        Uurblok.objects.create(
+            medewerker=self.sam, klus=self.klus, datum=self.dag,
+            begintijd=time(8, 0), eindtijd=time(9, 0), toelichting="Vandaag",
+        )
+        Uurblok.objects.create(
+            medewerker=self.sam, klus=self.klus, datum=self.dag + timedelta(days=1),
+            begintijd=time(8, 0), eindtijd=time(9, 0), toelichting="Morgen",
+        )
+        antwoord = self.client.get("/uren/?dag=2026-09-07")
+        self.assertContains(antwoord, "Vandaag")
+        self.assertNotContains(antwoord, "Morgen")
+
+    def test_maandraster_bevat_complete_weken_vanaf_maandag(self):
+        antwoord = self.client.get("/uren/?weergave=maand&dag=2026-09-15")
+        raster = antwoord.context["maandraster"]
+        for week in raster:
+            self.assertEqual(len(week), 7)
+            self.assertEqual(week[0]["datum"].weekday(), 0)
+        alle_datums = [dagcel["datum"] for week in raster for dagcel in week]
+        self.assertIn(date(2026, 9, 1), alle_datums)
+        self.assertIn(date(2026, 9, 30), alle_datums)
+
+    def test_maandcel_toont_dagtotaal(self):
+        Uurblok.objects.create(
+            medewerker=self.sam, klus=self.klus, datum=date(2026, 9, 10),
+            begintijd=time(8, 0), eindtijd=time(9, 30),
+        )
+        antwoord = self.client.get("/uren/?weergave=maand&dag=2026-09-15")
+        raster = antwoord.context["maandraster"]
+        cel = next(dagcel for week in raster for dagcel in week if dagcel["datum"] == date(2026, 9, 10))
+        self.assertEqual(cel["totaal"], "1:30")
+
+    def test_maandnavigatie_naar_vorige_en_volgende_maand(self):
+        antwoord = self.client.get("/uren/?weergave=maand&dag=2026-09-15")
+        self.assertEqual(antwoord.context["vorige"], date(2026, 8, 1))
+        self.assertEqual(antwoord.context["volgende"], date(2026, 10, 1))

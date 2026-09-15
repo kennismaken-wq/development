@@ -175,3 +175,19 @@ context processor, niet alleen op het startscherm).
 bewuste, eenmalige uitzondering op verzoek van Thijmen om de nieuwe
 navigatierichting overal tegelijk neer te zetten, geen vrijbrief om daarna
 weer gewoon in die bestanden te werken zonder het even af te stemmen.
+
+## Uren schrijven: dag/week/maand i.p.v. alleen een weekraster
+
+Zelfde soort uitzondering, nu op `uren/` — nadrukkelijker Floris' eigen
+spoor (taak F1/F2 in `klusapp/CONTEXT.md`) dan de zijbalk al was. Op verzoek
+van Thijmen, omdat de weekkalender op een telefoon altijd 7 kolommen naast
+elkaar toonde en horizontaal moest scrollen om te passen — onbruikbaar
+klein. `uren/views.py`'s `mijn_uren` toont nu drie weergaven achter dezelfde
+`?weergave=`-knoppen als de fotobox al gebruikte: **dag** (standaard — de
+enige die op geen enkele breedte hoeft te scrollen), **week** (het oude
+gedrag, ongewijzigd) en **maand** (nieuw, een navigatie-raster zoals Google
+Agenda — tikken op een dag opent de dagweergave van die datum). De
+pixel-plaatsing van blokken zelf (`uren/kalender.py`) is niet aangeraakt:
+die rekent al per dag, dag- en weekweergave hergebruiken 'm identiek.
+
+Zelfde noot als bij de zijbalk: eenmalige uitzondering, geen vrijbrief.
