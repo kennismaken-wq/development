@@ -14,6 +14,10 @@ class Medewerker(AbstractUser):
         EIGENAAR = "eigenaar", "Eigenaar"
 
     rol = models.CharField(max_length=20, choices=Rol.choices, default=Rol.MEDEWERKER)
+    # Wat iemand doet, niet wat hij mag. "Voorman", "hovenier", "leerling" —
+    # staat naast zijn naam in het klusdossier. De rol hierboven bepaalt de
+    # rechten; dit veld bepaalt niets en is puur ter herkenning.
+    functie = models.CharField(max_length=60, blank=True)
     telefoon = models.CharField(max_length=20, blank=True)
     kleur = models.CharField(
         max_length=7,

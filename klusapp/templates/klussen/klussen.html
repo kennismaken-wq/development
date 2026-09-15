@@ -21,6 +21,12 @@
     <p class="leeg">Nog geen klussen.</p>
   {% endif %}
 
+  {% if user.is_eigenaar %}
+    <p style="margin-top:1.2rem">
+      <a class="knop" href="{% url 'klus_nieuw' %}">Nieuwe klus</a>
+    </p>
+  {% endif %}
+
   <p style="margin-top:1.2rem">
     {% if toon_alles %}
       <a class="knop-stil" href="{% url 'klussen' %}">Alleen actieve klussen</a>

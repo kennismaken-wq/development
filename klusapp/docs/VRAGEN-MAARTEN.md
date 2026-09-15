@@ -104,6 +104,29 @@ zodat het later geen verwijt wordt.
 
 ---
 
+## 7. Wie mag er op een klus uren schrijven?
+
+**Vraag:** Wil je zelf bepalen wie er op een klus mag werken, of mag iedereen op elke
+klus uren schrijven?
+
+**Waarom het uitmaakt:** nu ziet elke medewerker bij het uren schrijven **alle** actieve
+klussen in de keuzelijst. Met een handvol klussen gaat dat prima. Maar bij onderhoud doet
+één persoon zes tot acht adressen op een dag (SPEC §1), en dan scrol je 's avonds in de
+bus door tientallen klussen om de goede te vinden — precies het scherm dat volgens de
+spec pijnloos moet zijn.
+
+Wie er op een klus heeft gewerkt leiden we nu af uit de geschreven uren, dus in het
+klusdossier klopt het beeld hoe dan ook. De vraag gaat alleen over de invoerkant.
+
+Dit staat **niet in artikel 2**, dus vooraf toewijzen is meerwerk (~5 uur).
+
+**Als er geen antwoord komt:** niet bouwen. Wachten tot de lijst in de praktijk te lang
+wordt; dan weten we ook meteen hoe lang "te lang" is.
+
+**Antwoord:**
+
+---
+
 ## Niet vragen, wel vertellen
 
 - **Back-ups gaan off-site.** De verwerkersovereenkomst belooft dagelijkse back-ups maar

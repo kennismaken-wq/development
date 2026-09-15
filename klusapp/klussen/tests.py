@@ -11,6 +11,7 @@ from django.urls import reverse
 from PIL import Image
 
 from medewerkers.models import Medewerker
+from uren import totalen
 from uren.models import Uurblok
 
 from . import afbeeldingen, views
@@ -263,3 +264,153 @@ class FilterTest(TestCase):
         from .templatetags.bijlagen import mag_weg
 
         self.assertFalse(mag_weg(Bijlage(), AnonymousUser()))
+
+
+class KlusBeheerTest(TestCase):
+    """Klussen aanmaken en bijwerken. Alleen de eigenaar komt hier."""
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.sam = Medewerker.objects.create_user("sam", password="x", first_name="Sam")
+        cls.maarten = Medewerker.objects.create_user(
+            "maarten", password="x", first_name="Maarten", rol=Medewerker.Rol.EIGENAAR
+        )
+
+    def geldig(self, **afwijkend):
+        gegevens = {
+            "naam": "Tuin Vermeer",
+            "soort": Klus.Soort.AANLEG,
+            "startdatum": "2026-09-14",
+            "opdrachtgever": "Fam. Vermeer",
+            "adres": "Dijkweg 12",
+            "plaats": "Maasdijk",
+            "beschrijving": "Volledige aanleg achtertuin",
+            "kleur": "#95BF1D",
+            "actief": "on",
+        }
+        gegevens.update(afwijkend)
+        return gegevens
+
+    def test_eigenaar_maakt_een_klus_aan(self):
+        self.client.force_login(self.maarten)
+        antwoord = self.client.post(reverse("klus_nieuw"), self.geldig())
+        klus = Klus.objects.get()
+        self.assertRedirects(antwoord, klus.get_absolute_url())
+        self.assertEqual(klus.startdatum, date(2026, 9, 14))
+        self.assertEqual(klus.beschrijving, "Volledige aanleg achtertuin")
+
+    def test_medewerker_komt_er_niet_in(self):
+        # 404 en geen 403: een medewerker hoeft niet te weten dat het bestaat.
+        self.client.force_login(self.sam)
+        self.assertEqual(self.client.get(reverse("klus_nieuw")).status_code, 404)
+        self.assertEqual(self.client.post(reverse("klus_nieuw"), self.geldig()).status_code, 404)
+        self.assertFalse(Klus.objects.exists())
+
+    def test_uitgelogd_naar_inloggen(self):
+        antwoord = self.client.get(reverse("klus_nieuw"))
+        self.assertEqual(antwoord.status_code, 302)
+        self.assertIn(reverse("inloggen"), antwoord.headers["Location"])
+
+    def test_aanlegklus_zonder_startdatum_wordt_geweigerd(self):
+        self.client.force_login(self.maarten)
+        antwoord = self.client.post(reverse("klus_nieuw"), self.geldig(startdatum=""))
+        self.assertEqual(antwoord.status_code, 200)
+        self.assertContains(antwoord, "startdatum van de aanlegklus")
+        self.assertFalse(Klus.objects.exists())
+
+    def test_onderhoudsklant_heeft_geen_startdatum(self):
+        # Een onderhoudsklant is een terugkerende afspraak zonder begin.
+        self.client.force_login(self.maarten)
+        self.client.post(
+            reverse("klus_nieuw"),
+            self.geldig(soort=Klus.Soort.ONDERHOUD, startdatum="2026-09-14"),
+        )
+        self.assertIsNone(Klus.objects.get().startdatum)
+
+    def test_eigenaar_bewerkt_een_klus(self):
+        klus = Klus.objects.create(naam="Oude naam", startdatum=date(2026, 9, 14))
+        self.client.force_login(self.maarten)
+        self.client.post(reverse("klus_bewerken", args=[klus.pk]), self.geldig(naam="Nieuwe naam"))
+        klus.refresh_from_db()
+        self.assertEqual(klus.naam, "Nieuwe naam")
+
+    def test_medewerker_mag_niet_bewerken(self):
+        klus = Klus.objects.create(naam="Tuin Vermeer")
+        self.client.force_login(self.sam)
+        self.assertEqual(
+            self.client.get(reverse("klus_bewerken", args=[klus.pk])).status_code, 404
+        )
+
+    def test_alleen_de_eigenaar_ziet_de_knoppen(self):
+        klus = Klus.objects.create(naam="Tuin Vermeer")
+        self.client.force_login(self.sam)
+        self.assertNotContains(self.client.get(reverse("klussen")), "Nieuwe klus")
+        self.assertNotContains(self.client.get(klus.get_absolute_url()), "Bewerken")
+        self.client.force_login(self.maarten)
+        self.assertContains(self.client.get(reverse("klussen")), "Nieuwe klus")
+        self.assertContains(self.client.get(klus.get_absolute_url()), "Bewerken")
+
+
+class GewerkteUrenOpKlusTest(TestCase):
+    """Contractpunt 4: wie op welke klus heeft gewerkt."""
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.sam = Medewerker.objects.create_user(
+            "sam", password="x", first_name="Sam", last_name="de Wit", functie="Voorman"
+        )
+        cls.joep = Medewerker.objects.create_user("joep", password="x", first_name="Joep")
+        cls.klus = Klus.objects.create(naam="Tuin Vermeer")
+        cls.andere = Klus.objects.create(naam="Andere klus")
+
+    def blok(self, wie, dag, begin, eind, klus=None):
+        return Uurblok.objects.create(
+            medewerker=wie, klus=klus or self.klus, datum=dag,
+            begintijd=time(begin), eindtijd=time(eind),
+        )
+
+    def test_uren_worden_per_medewerker_opgeteld(self):
+        self.blok(self.sam, date(2026, 9, 7), 8, 16)      # 8:00
+        self.blok(self.sam, date(2026, 9, 8), 8, 12)      # 4:00
+        self.blok(self.joep, date(2026, 9, 8), 9, 11)     # 2:00
+        rijen = totalen.per_medewerker_op_klus(self.klus)
+        self.assertEqual([rij["uren"] for rij in rijen], ["12:00", "2:00"])
+        self.assertEqual(rijen[0]["medewerker"], self.sam)
+        self.assertEqual(rijen[0]["aantal_dagen"], 2)
+        self.assertEqual(rijen[0]["eerste_dag"], date(2026, 9, 7))
+        self.assertEqual(rijen[0]["laatste_dag"], date(2026, 9, 8))
+        self.assertEqual(totalen.totaal_van(rijen)["uren"], "14:00")
+
+    def test_twee_blokken_op_een_dag_tellen_als_een_dag(self):
+        # Bij onderhoud doet iemand zes tot acht adressen op een dag.
+        self.blok(self.sam, date(2026, 9, 7), 8, 9)
+        self.blok(self.sam, date(2026, 9, 7), 10, 11)
+        rij = totalen.per_medewerker_op_klus(self.klus)[0]
+        self.assertEqual(rij["aantal_dagen"], 1)
+        self.assertEqual(rij["uren"], "2:00")
+
+    def test_uren_van_een_andere_klus_tellen_niet_mee(self):
+        self.blok(self.sam, date(2026, 9, 7), 8, 16)
+        self.blok(self.sam, date(2026, 9, 7), 8, 16, klus=self.andere)
+        self.assertEqual(totalen.per_medewerker_op_klus(self.klus)[0]["uren"], "8:00")
+
+    def test_klus_zonder_uren_geeft_lege_lijst(self):
+        self.assertEqual(totalen.per_medewerker_op_klus(self.klus), [])
+        self.assertEqual(totalen.totaal_van([])["uren"], "0:00")
+
+    def test_medewerker_ziet_de_uren_van_collegas_in_het_dossier(self):
+        # SPEC 2: een medewerker ziet het volledige klusdossier. "Wie op welke
+        # klus heeft gewerkt" hoort daarbij; zijn eigen urenoverzicht is een
+        # ander scherm.
+        self.blok(self.joep, date(2026, 9, 7), 8, 16)
+        self.client.force_login(self.sam)
+        antwoord = self.client.get(self.klus.get_absolute_url())
+        self.assertContains(antwoord, "Joep")
+        self.assertContains(antwoord, "8:00")
+
+    def test_functie_staat_naast_de_naam(self):
+        self.blok(self.sam, date(2026, 9, 7), 8, 16)
+        self.client.force_login(self.sam)
+        antwoord = self.client.get(self.klus.get_absolute_url())
+        self.assertContains(antwoord, "Sam de Wit")
+        self.assertContains(antwoord, "Voorman")

@@ -430,3 +430,49 @@ dialog.foto-invoegen::backdrop{ background:rgba(10,10,8,0.55); backdrop-filter:b
   font-family:'Fraunces',serif; font-style:italic; font-weight:600; font-size:1rem;
 }
 .klustegel-info .tel{ font-size:11px; color:rgba(255,255,255,0.5); }
+
+/* ══════════ KLUSDOSSIER: GEWERKTE UREN ══════════
+   Wie er in deze lijst staat is afgeleid uit de geschreven uren, niet uit een
+   toewijzing. Zie uren/totalen.py. */
+.klusinfo .beschrijving{
+  margin:.6rem 0 0; font-size:13.5px; line-height:1.5;
+  color:rgba(255,255,255,0.78);
+}
+
+.urenlijst{ list-style:none; margin:0; padding:0; display:grid; gap:.4rem; }
+.urenlijst li{
+  display:grid; grid-template-columns:1fr auto; gap:.15rem .8rem;
+  align-items:baseline;
+  border-radius:14px; padding:.7rem .95rem;
+  background:rgba(255,255,255,0.07); border:1px solid rgba(255,255,255,0.14);
+}
+.urenlijst .wie{ font-size:13.5px; font-weight:500; }
+.urenlijst .functie{
+  margin-left:.45rem; font-size:10.5px; font-weight:500; padding:.1rem .5rem;
+  border-radius:999px; color:var(--hi);
+  background:rgba(var(--accent-rgb),0.16); border:1px solid rgba(var(--accent-rgb),0.34);
+}
+.urenlijst .wanneer{
+  grid-column:1; font-size:11px; color:rgba(255,255,255,0.5);
+}
+.urenlijst .uren{
+  grid-column:2; grid-row:1 / span 2;
+  font-family:'Fraunces',serif; font-style:italic; font-weight:600;
+  font-size:1.05rem; color:var(--hi); font-variant-numeric:tabular-nums;
+}
+.urenlijst .totaalregel{
+  background:rgba(var(--accent-rgb),0.14); border-color:rgba(var(--accent-rgb),0.34);
+}
+.urenlijst .totaalregel .wie{ color:rgba(255,255,255,0.75); }
+
+/* de kleurkiezer is standaard een klein grijs vakje; hier een brede pil */
+input[type=color]{
+  width:100%; height:46px; padding:.25rem; cursor:pointer;
+  background:rgba(255,255,255,0.10); border:1px solid rgba(255,255,255,0.20);
+  border-radius:14px;
+}
+input[type=color]::-webkit-color-swatch{ border:none; border-radius:10px; }
+input[type=color]::-webkit-color-swatch-wrapper{ padding:0; }
+
+/* een checkbox moet niet over de volle breedte gerekt worden */
+input[type=checkbox]{ width:auto; accent-color:var(--accent); transform:scale(1.25); }

@@ -126,6 +126,32 @@ bestanden en kunnen dus tegelijk.
 - Vragen aan Maarten uitgewerkt in [docs/VRAGEN-MAARTEN.md](docs/VRAGEN-MAARTEN.md),
   met per vraag de fallback als het antwoord uitblijft.
 
+### Klusbeheer — aanmaken, bewerken, uren per persoon ✅ gebouwd
+
+Beheerdersscherm voor de eigenaar: klussen aanmaken en bijwerken zonder `/beheer/`.
+
+- **Nieuwe velden op `Klus`**: `startdatum` (leeg bij onderhoud — een onderhoudsklant
+  is een terugkerende afspraak zonder begin) en `beschrijving`.
+- **Nieuw veld op `Medewerker`**: `functie` ("Voorman", "Leerling"). Puur ter herkenning;
+  de réchten zitten in `rol`. Voorlopig alleen te zetten via `/beheer/`, tot open vraag 5
+  aan Maarten beantwoord is.
+- **Wie op een klus werkt is afgeleid uit de geschreven uren**, niet uit een toewijzing.
+  Contractpunt 4 vraagt "wie op welke klus heeft gewerkt", en dat is precies wat uren
+  zijn. Gevolg: iemand verschijnt pas na zijn eerste uurblok.
+
+**Twee herbruikbare stukken** — gebruik deze in plaats van iets eigens te schrijven:
+
+- `uren/totalen.py` → `per_medewerker_op_klus(klus)` en `totaal_van(rijen)`. Nodig voor
+  F2 (mijn overzicht) en F3 (planbord). In Python en niet in SQL, omdat de duur van een
+  uurblok nergens is opgeslagen en het tijdsverschil op SQLite anders werkt dan op Postgres.
+- `medewerkers/rechten.py` → `@alleen_eigenaar`. Geeft een 404, geen 403: een medewerker
+  hoeft niet te weten dat het scherm bestaat. Gebruik 'm voor planbord, aanwezigheid en export.
+
+**Bewust niet gebouwd:** chat of opmerkingen per klus. Dat staat letterlijk in SPEC §3
+als fase 2-regel (€900 / 30 uur) — nu bouwen betekent weggeven. Ook niet gebouwd:
+medewerkers vooraf aan een klus toewijzen met een rol per klus. Staat niet in artikel 2;
+zie open vraag 7.
+
 ### 0b · Floris — klussenlijst en klusdetail (~3 u) · contractpunt 2
 
 Het geraamte waar al het andere in hangt.

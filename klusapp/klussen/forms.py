@@ -1,6 +1,57 @@
 from django import forms
 from django.utils import timezone
 
+from .models import Klus
+
+
+class KlusForm(forms.ModelForm):
+    """Klus aanmaken en bijwerken. Alleen de eigenaar komt hier.
+
+    Bewust weinig velden: SPEC §3 zet het uitgebreide klantbestand
+    (contracttype, factuurperiode) in fase 2. Meer dan dit hoeft nu niet.
+    """
+
+    class Meta:
+        model = Klus
+        fields = ["naam", "soort", "startdatum", "opdrachtgever", "adres", "plaats", "beschrijving", "kleur", "actief"]
+        widgets = {
+            # format="%Y-%m-%d" is verplicht bij type="date": zonder dat rendert
+            # Django een bestaande datum in het Nederlandse formaat en toont de
+            # browser een leeg veld.
+            "startdatum": forms.DateInput(attrs={"type": "date"}, format="%Y-%m-%d"),
+            "beschrijving": forms.Textarea(attrs={"rows": 4}),
+            "kleur": forms.TextInput(attrs={"type": "color"}),
+        }
+        labels = {
+            "naam": "Naam",
+            "soort": "Soort",
+            "startdatum": "Startdatum",
+            "opdrachtgever": "Opdrachtgever",
+            "adres": "Adres",
+            "plaats": "Plaats",
+            "beschrijving": "Beschrijving",
+            "kleur": "Kleur in het planbord",
+            "actief": "Actief",
+        }
+        help_texts = {veld: "" for veld in fields}
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Een kleurkiezer kan niet leeg zijn; zonder beginwaarde toont de
+        # browser zwart en lijkt er een kleur gekozen die er niet is.
+        if not self.initial.get("kleur"):
+            self.initial["kleur"] = "#95BF1D"
+
+    def clean(self):
+        gegevens = super().clean()
+        # Een onderhoudsklant is een terugkerende afspraak zonder einddatum en
+        # zonder begin (SPEC §1); een startdatum zou daar niets betekenen.
+        if gegevens.get("soort") == Klus.Soort.ONDERHOUD:
+            gegevens["startdatum"] = None
+        elif not gegevens.get("startdatum"):
+            self.add_error("startdatum", "Vul de startdatum van de aanlegklus in.")
+        return gegevens
+
 
 class MeerdereBestandenInvoer(forms.ClearableFileInput):
     """Django's standaardveld neemt één bestand aan. Vanaf een telefoon

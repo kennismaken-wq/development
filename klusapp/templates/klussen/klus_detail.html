@@ -8,13 +8,53 @@
       <span class="soort-badge">{{ klus.get_soort_display }}</span>
       {% if not klus.actief %}<span class="soort-badge afgerond-badge">Afgerond</span>{% endif %}
     </div>
+    {% if klus.startdatum %}
+      <p class="regel"><span class="lbl">Gestart</span>{{ klus.startdatum|date:"j F Y" }}</p>
+    {% endif %}
     {% if klus.opdrachtgever %}
       <p class="regel"><span class="lbl">Opdrachtgever</span>{{ klus.opdrachtgever }}</p>
     {% endif %}
     {% if klus.adres or klus.plaats %}
       <p class="regel"><span class="lbl">Adres</span>{{ klus.adres }}{% if klus.adres and klus.plaats %}, {% endif %}{{ klus.plaats }}</p>
     {% endif %}
+    {% if klus.beschrijving %}
+      <p class="beschrijving">{{ klus.beschrijving|linebreaksbr }}</p>
+    {% endif %}
+    {% if user.is_eigenaar %}
+      <p style="margin-top:.6rem">
+        <a class="knop-stil" href="{% url 'klus_bewerken' klus.pk %}">Bewerken</a>
+      </p>
+    {% endif %}
   </div>
+
+  <h2 class="sectiekop">Gewerkte uren</h2>
+  {% if gewerkt %}
+    {% comment %} Wie hier staat is afgeleid uit de geschreven uren, niet uit een
+       toewijzing: er is geen veld waarin staat wie op een klus hoort. Zie
+       uren/totalen.py. {% endcomment %}
+    <ul class="urenlijst">
+      {% for rij in gewerkt %}
+        <li>
+          <span class="wie">
+            {{ rij.medewerker.naam }}
+            {% if rij.medewerker.functie %}<span class="functie">{{ rij.medewerker.functie }}</span>{% endif %}
+          </span>
+          <span class="wanneer">
+            {{ rij.aantal_dagen }} dag{{ rij.aantal_dagen|pluralize:"en" }} ·
+            {{ rij.eerste_dag|date:"j M" }}{% if rij.eerste_dag != rij.laatste_dag %} – {{ rij.laatste_dag|date:"j M" }}{% endif %}
+          </span>
+          <span class="uren">{{ rij.uren }}</span>
+        </li>
+      {% endfor %}
+      <li class="totaalregel">
+        <span class="wie">Totaal</span>
+        <span class="wanneer"></span>
+        <span class="uren">{{ totaal.uren }}</span>
+      </li>
+    </ul>
+  {% else %}
+    <p class="leeg">Nog niemand heeft uren op deze klus geschreven.</p>
+  {% endif %}
 
   <h2 class="sectiekop">Foto's</h2>
   {% include "klussen/_fotoraster.html" with klus_pk=klus.pk %}

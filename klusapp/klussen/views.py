@@ -11,8 +11,11 @@ from django.urls import reverse
 from django.utils import timezone
 from django.utils.http import url_has_allowed_host_and_scheme
 
+from medewerkers.rechten import alleen_eigenaar
+from uren import totalen
+
 from . import afbeeldingen
-from .forms import BijlageForm
+from .forms import BijlageForm, KlusForm
 from .models import Bijlage, Klus
 
 
@@ -224,18 +227,49 @@ def klus_lijst(request):
 
 @login_required
 def klus_detail(request, pk):
-    """Klusdossier: kerngegevens plus de foto's en documenten die eraan hangen."""
+    """Klusdossier: kerngegevens, wie eraan gewerkt heeft, foto's en documenten.
+
+    Een medewerker ziet het volledige dossier (SPEC §2) — ook de uren van
+    collega's, want "wie op welke klus heeft gewerkt" is precies wat dit
+    scherm moet laten zien. Zijn eigen urenoverzicht blijft een ander scherm.
+    """
     klus = get_object_or_404(Klus, pk=pk)
     bijlagen = klus.bijlagen.select_related("toegevoegd_door").order_by("-toegevoegd_op")
+    gewerkt = totalen.per_medewerker_op_klus(klus)
     return render(
         request,
         "klussen/klus_detail.html",
         {
             "klus": klus,
+            "gewerkt": gewerkt,
+            "totaal": totalen.totaal_van(gewerkt),
             "foto_bijlagen": [los for los in bijlagen if los.is_foto],
             "document_bijlagen": [los for los in bijlagen if not los.is_foto],
             "formulier": BijlageForm(),
             "upload_url": reverse("bijlage_toevoegen"),
             "terug": request.get_full_path(),
         },
+    )
+
+
+@alleen_eigenaar
+def klus_nieuw(request):
+    formulier = KlusForm(request.POST or None)
+    if request.method == "POST" and formulier.is_valid():
+        klus = formulier.save()
+        messages.success(request, f"Klus '{klus.naam}' aangemaakt.")
+        return redirect(klus)
+    return render(request, "klussen/klus_form.html", {"formulier": formulier, "nieuw": True})
+
+
+@alleen_eigenaar
+def klus_bewerken(request, pk):
+    klus = get_object_or_404(Klus, pk=pk)
+    formulier = KlusForm(request.POST or None, instance=klus)
+    if request.method == "POST" and formulier.is_valid():
+        formulier.save()
+        messages.success(request, "Opgeslagen.")
+        return redirect(klus)
+    return render(
+        request, "klussen/klus_form.html", {"formulier": formulier, "klus": klus, "nieuw": False}
     )

@@ -21,6 +21,10 @@ class Klus(models.Model):
     opdrachtgever = models.CharField(max_length=120, blank=True)
     adres = models.CharField(max_length=200, blank=True)
     plaats = models.CharField(max_length=80, blank=True)
+    # Leeg bij onderhoud: een onderhoudsklant is een terugkerende afspraak
+    # zonder begin, geen project dat op een dag start.
+    startdatum = models.DateField(null=True, blank=True)
+    beschrijving = models.TextField(blank=True)
     kleur = models.CharField(
         max_length=7,
         blank=True,
