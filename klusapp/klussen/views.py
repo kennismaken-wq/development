@@ -4,6 +4,7 @@ from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.files.base import ContentFile
+from django.db.models import Count, Prefetch, Q
 from django.http import FileResponse, Http404, HttpResponse, HttpResponseNotAllowed
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
@@ -149,20 +150,55 @@ def media_bestand(request, pad):
 
 @login_required
 def fotos(request):
-    """De fotodropbox: losse foto's die niet aan een klus hangen.
+    """Foto's: losse bijlagen zonder klus, of per klus gegroepeerd.
 
-    Bewust kaal. Filters, de maandindeling en "koppel alsnog aan een klus"
-    horen bij taak T1, niet bij het fundament.
+    Twee weergaven op hetzelfde scherm, met dezelfde zoekbalk erboven:
+    "los" toont de dropbox (bijlagen zonder klus, zoals voorheen), "klus"
+    toont één tegel per klus met foto's — de klus zelf is dan het hokje,
+    doorklikken opent het klusdossier met alle foto's erin.
     """
+    weergave = "klus" if request.GET.get("weergave") == "klus" else "los"
+    zoek = request.GET.get("q", "").strip()
+
+    if weergave == "klus":
+        klussen = Klus.objects.annotate(
+            aantal_fotos=Count("bijlagen", filter=Q(bijlagen__soort=Bijlage.Soort.FOTO))
+        ).filter(aantal_fotos__gt=0)
+        if zoek:
+            klussen = klussen.filter(
+                Q(naam__icontains=zoek)
+                | Q(opdrachtgever__icontains=zoek)
+                | Q(adres__icontains=zoek)
+                | Q(plaats__icontains=zoek)
+            )
+        klussen = klussen.prefetch_related(
+            Prefetch(
+                "bijlagen",
+                queryset=Bijlage.objects.filter(soort=Bijlage.Soort.FOTO).order_by("-datum", "-toegevoegd_op"),
+                to_attr="recente_fotos",
+            )
+        )
+        for klus in klussen:
+            klus.omslagfoto = klus.recente_fotos[0] if klus.recente_fotos else None
+        return render(
+            request,
+            "klussen/fotos.html",
+            {"weergave": weergave, "zoek": zoek, "klus_tegels": klussen},
+        )
+
     bijlagen = (
         Bijlage.objects.filter(klus__isnull=True)
         .select_related("toegevoegd_door")
         .order_by("-toegevoegd_op")
     )
+    if zoek:
+        bijlagen = bijlagen.filter(Q(toelichting__icontains=zoek) | Q(originele_naam__icontains=zoek))
     return render(
         request,
         "klussen/fotos.html",
         {
+            "weergave": weergave,
+            "zoek": zoek,
             "foto_bijlagen": [los for los in bijlagen if los.is_foto],
             "document_bijlagen": [los for los in bijlagen if not los.is_foto],
             "formulier": BijlageForm(),

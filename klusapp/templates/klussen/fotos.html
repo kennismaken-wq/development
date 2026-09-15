@@ -3,16 +3,46 @@
 {% block kop %}Foto's{% endblock %}
 {% block sub %}<a href="{% url 'start' %}" style="color:rgba(255,255,255,0.6)">‹ Terug</a>{% endblock %}
 {% block inhoud %}
-  {% comment %} Bewust kaal: filters, maandindeling en "koppel alsnog aan een klus" zijn
-     taak T1. Dit scherm bestaat nu vooral om het bijlagen-fundament te kunnen
-     gebruiken en te testen. {% endcomment %}
-  {% include "klussen/_uploadveld.html" %}
+  <form method="get" class="foto-zoekbalk">
+    <input type="hidden" name="weergave" value="{{ weergave }}">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.6" y2="16.6"/></svg>
+    <input type="search" name="q" value="{{ zoek }}" placeholder="Zoek op omschrijving, klus of adres…">
+  </form>
 
-  <h2 class="sectiekop">Losse foto's</h2>
-  {% include "klussen/_fotoraster.html" %}
+  <div class="weergave-pillen">
+    <a href="?weergave=los{% if zoek %}&q={{ zoek|urlencode }}{% endif %}" class="pil{% if weergave == 'los' %} actief{% endif %}">Losse foto's</a>
+    <a href="?weergave=klus{% if zoek %}&q={{ zoek|urlencode }}{% endif %}" class="pil{% if weergave == 'klus' %} actief{% endif %}">Per klus</a>
+  </div>
 
-  {% if document_bijlagen %}
-    <h2 class="sectiekop">Losse documenten</h2>
-    {% include "klussen/_documentenlijst.html" %}
+  {% if weergave == 'klus' %}
+    {% if klus_tegels %}
+      <div class="klustegels">
+        {% for klus in klus_tegels %}
+          <a href="{{ klus.get_absolute_url }}" class="klustegel">
+            {% if klus.omslagfoto %}
+              <img src="{% url 'media_bestand' klus.omslagfoto.thumbnail.name|default:klus.omslagfoto.bestand.name %}"
+                   alt="" loading="lazy">
+            {% endif %}
+            <div class="klustegel-info">
+              <span class="soort-badge">{{ klus.get_soort_display }}</span>
+              <span class="naam">{{ klus.naam }}</span>
+              <span class="tel">{{ klus.aantal_fotos }} foto{{ klus.aantal_fotos|pluralize }}</span>
+            </div>
+          </a>
+        {% endfor %}
+      </div>
+    {% else %}
+      <p class="leeg">{% if zoek %}Niets gevonden voor "{{ zoek }}".{% else %}Nog geen klus met foto's.{% endif %}</p>
+    {% endif %}
+  {% else %}
+    {% include "klussen/_uploadveld.html" %}
+
+    <h2 class="sectiekop">Losse foto's</h2>
+    {% include "klussen/_fotoraster.html" %}
+
+    {% if document_bijlagen %}
+      <h2 class="sectiekop">Losse documenten</h2>
+      {% include "klussen/_documentenlijst.html" %}
+    {% endif %}
   {% endif %}
 {% endblock %}

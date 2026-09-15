@@ -26,5 +26,5 @@
     {% endfor %}
   </div>
 {% else %}
-  <p class="leeg">Nog geen foto's.</p>
+  <p class="leeg">{% if zoek %}Niets gevonden voor "{{ zoek }}".{% else %}Nog geen foto's.{% endif %}</p>
 {% endif %}

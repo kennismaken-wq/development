@@ -223,6 +223,32 @@ input[type=time]::-webkit-calendar-picker-indicator{ filter:invert(1); opacity:.
 /* ══════════ BIJLAGEN: FOTO'S EN DOCUMENTEN ══════════
    Gedeelde bouwstenen voor het klusdossier, de fotodropbox en de foto's bij
    een uurblok. Drie plekken, één vormtaal. */
+.foto-zoekbalk{
+  display:flex; align-items:center; gap:.6rem;
+  background:rgba(255,255,255,0.10); border:1px solid rgba(255,255,255,0.18);
+  border-radius:999px; padding:.75rem 1.1rem; margin-bottom:.9rem;
+}
+.foto-zoekbalk svg{ width:16px; height:16px; color:rgba(255,255,255,0.5); flex-shrink:0; }
+.foto-zoekbalk input{
+  background:none; border:none; outline:none; width:100%;
+  font-family:'Inter',sans-serif; font-size:13.5px; color:#fff;
+}
+.foto-zoekbalk input::placeholder{ color:rgba(255,255,255,0.45); }
+/* verbergt de zoekknop die sommige browsers in een type=search tonen */
+.foto-zoekbalk input::-webkit-search-cancel-button{ -webkit-appearance:none; }
+
+.weergave-pillen{ display:flex; gap:.5rem; margin-bottom:1.4rem; }
+.pil{
+  font-family:'Inter',sans-serif; font-size:12px; font-weight:600;
+  padding:.45rem 1rem; border-radius:999px; text-decoration:none;
+  background:rgba(255,255,255,0.07); border:1px solid rgba(255,255,255,0.16);
+  color:rgba(255,255,255,0.7); transition:background .12s, color .12s, border-color .12s;
+}
+.pil:hover{ background:rgba(255,255,255,0.14); color:#fff; }
+.pil.actief{
+  background:rgba(var(--accent-rgb),0.32); border-color:rgba(var(--accent-rgb),0.55); color:var(--hi);
+}
+
 .sectiekop{
   font-family:'Fraunces',serif; font-style:italic; font-weight:600;
   font-size:1.15rem; margin:1.8rem 0 .8rem;
@@ -250,15 +276,20 @@ input[type=time]::-webkit-calendar-picker-indicator{ filter:invert(1); opacity:.
   color:var(--ink);
 }
 
-.fotoraster{ display:grid; grid-template-columns:repeat(2,1fr); gap:.7rem; }
-@media (min-width:620px){ .fotoraster{ grid-template-columns:repeat(4,1fr); } }
+/* Pinterest-achtig metselwerk-raster: kolommen i.p.v. rijen, zodat elke foto
+   zijn eigen hoogte houdt in plaats van uniform bijgesneden te worden. Kan
+   omdat afbeeldingen.py de beeldverhouding al intact laat (THUMB_ZIJDE past
+   binnen een vierkant, snijdt niet bij). */
+.fotoraster{ columns:2 200px; column-gap:.7rem; }
+@media (min-width:620px){ .fotoraster{ columns:4 200px; } }
 
 .fotokaart{
-  position:relative; margin:0; border-radius:16px; overflow:hidden;
+  position:relative; margin:0 0 .7rem; border-radius:20px; overflow:hidden;
   background:rgba(255,255,255,0.07); border:1px solid rgba(255,255,255,0.14);
+  break-inside:avoid; display:inline-block; width:100%;
 }
 .fotokaart img{
-  display:block; width:100%; aspect-ratio:4/3; object-fit:cover;
+  display:block; width:100%; height:auto;
   background:rgba(0,0,0,0.2);
 }
 .fotokaart figcaption{ padding:.5rem .65rem .6rem; display:grid; gap:.15rem; }
@@ -318,3 +349,22 @@ input[type=time]::-webkit-calendar-picker-indicator{ filter:invert(1); opacity:.
   display:inline-block; min-width:110px; font-size:10.5px; font-weight:600;
   letter-spacing:.05em; text-transform:uppercase; color:rgba(255,255,255,0.45);
 }
+
+/* "Per klus"-weergave op het foto's-scherm: elke klus is één tegel, met de
+   meest recente foto als omslag. Zelfde metselwerk-raster als de losse
+   foto's, zodat het geheel bij elkaar blijft ogen als je wisselt. */
+.klustegels{ columns:2 220px; column-gap:.8rem; }
+@media (min-width:620px){ .klustegels{ columns:4 220px; } }
+.klustegel{
+  display:block; margin:0 0 .8rem; border-radius:20px; overflow:hidden;
+  background:rgba(255,255,255,0.07); border:1px solid rgba(255,255,255,0.14);
+  color:#fff; text-decoration:none; break-inside:avoid;
+  transition:transform .12s, background .12s;
+}
+.klustegel:hover{ transform:translateY(-2px); background:rgba(255,255,255,0.11); }
+.klustegel img{ display:block; width:100%; height:auto; background:rgba(0,0,0,0.2); }
+.klustegel-info{ padding:.75rem .9rem .9rem; display:grid; gap:.35rem; }
+.klustegel-info .naam{
+  font-family:'Fraunces',serif; font-style:italic; font-weight:600; font-size:1rem;
+}
+.klustegel-info .tel{ font-size:11px; color:rgba(255,255,255,0.5); }
