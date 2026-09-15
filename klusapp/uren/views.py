@@ -9,6 +9,7 @@ from django.utils import timezone
 
 from klussen.forms import BijlageForm
 from medewerkers.models import Medewerker
+from medewerkers.rechten import alleen_eigenaar
 
 from . import export, kalender, periode
 from .forms import UurblokForm
@@ -238,6 +239,92 @@ def uurblok_verwijderen(request, pk):
     if request.method == "POST":
         blok.delete()
     return _terug_naar_dag(dag)
+
+
+@alleen_eigenaar
+def planbord(request):
+    """Wie staat deze week waar — het scherm dat Maarten elke ochtend opent.
+
+    Rijen zijn medewerkers en kolommen zijn dagen, niet andersom (SPEC §5):
+    met zes man op één dag wordt een dagkalender zo smal dat er per blok nog
+    een pixel of vijftien overblijft en niemand meer ziet wat er staat. Daarom
+    ook geen kalender.plaats_blokken hier: dat rekent plekken uit op een
+    tijdas, terwijl een cel op dit bord een stapeltje chips is.
+    """
+    week = periode.week_context(request)
+
+    # Eén query voor de hele week, daarna groeperen in Python. Zes mensen en
+    # een paar honderd blokken — daar weegt een aggregatie per cel niet tegen
+    # op, en de index op (datum, medewerker) dekt precies deze filter.
+    blokken = (
+        Uurblok.objects.filter(datum__range=(week["maandag"], week["zondag"]))
+        .select_related("klus", "medewerker")
+        .order_by("begintijd")
+    )
+    per_cel = {}
+    klussen_in_beeld = {}
+    for blok in blokken:
+        per_cel.setdefault((blok.medewerker_id, blok.datum), []).append(blok)
+        klussen_in_beeld[blok.klus_id] = blok.klus
+
+    dagminuten = dict.fromkeys(week["dagen"], 0)
+    rijen = []
+    # Ook wie niets schreef krijgt een rij: "wie staat er níét ingepland" is
+    # net zo goed de vraag waarvoor dit scherm bestaat.
+    for medewerker in Medewerker.objects.filter(uit_dienst_sinds__isnull=True):
+        dagen, weekminuten = [], 0
+        for datum in week["dagen"]:
+            cel = per_cel.get((medewerker.pk, datum), [])
+            minuten = sum(blok.duur_minuten for blok in cel)
+            weekminuten += minuten
+            dagminuten[datum] += minuten
+            dagen.append(
+                {
+                    "datum": datum,
+                    "is_vandaag": datum == week["vandaag"],
+                    "blokken": [
+                        {
+                            "blok": blok,
+                            "kleur": kalender.kleur_van(blok.klus),
+                            "duur": kalender.als_uren(blok.duur_minuten),
+                        }
+                        for blok in cel
+                    ],
+                    "totaal": kalender.als_uren(minuten) if minuten else "",
+                }
+            )
+        rijen.append(
+            {
+                "medewerker": medewerker,
+                "dagen": dagen,
+                "weektotaal": kalender.als_uren(weekminuten) if weekminuten else "",
+                "heeft_uren": weekminuten > 0,
+            }
+        )
+
+    return render(
+        request,
+        "uren/planbord.html",
+        {
+            **week,
+            "rijen": rijen,
+            "kopdagen": [
+                {
+                    "datum": datum,
+                    "is_vandaag": datum == week["vandaag"],
+                    "totaal": kalender.als_uren(minuten) if minuten else "",
+                }
+                for datum, minuten in dagminuten.items()
+            ],
+            # De kleur draagt op deze breedte de klusidentiteit (SPEC §5), dus
+            # hoort er een legenda onder die vertelt welke kleur wat is.
+            "legenda": [
+                {"klus": klus, "kleur": kalender.kleur_van(klus)}
+                for klus in sorted(klussen_in_beeld.values(), key=lambda klus: klus.naam.lower())
+            ],
+            "weektotaal": kalender.als_uren(sum(dagminuten.values())),
+        },
+    )
 
 
 def _maandopties(vandaag, aantal=14):

@@ -238,6 +238,118 @@ class TijdzoneTest(TestCase):
         self.assertEqual(antwoord.context["vandaag"], date(2026, 1, 15))
 
 
+class PlanbordTest(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        cls.maarten = Medewerker.objects.create_user(
+            "maarten", password="x", first_name="Maarten", rol=Medewerker.Rol.EIGENAAR
+        )
+        cls.sam = Medewerker.objects.create_user("sam", password="x", first_name="Sam")
+        cls.joep = Medewerker.objects.create_user("joep", password="x", first_name="Joep")
+        cls.vertrokken = Medewerker.objects.create_user(
+            "wim", password="x", first_name="Wim", uit_dienst_sinds=date(2026, 1, 1)
+        )
+        cls.klus = Klus.objects.create(naam="Tuin Vermeer", soort=Klus.Soort.AANLEG)
+        cls.maandag = date(2026, 9, 7)
+        cls.woensdag = date(2026, 9, 9)
+
+    def rij_van(self, antwoord, medewerker):
+        return next(rij for rij in antwoord.context["rijen"] if rij["medewerker"] == medewerker)
+
+    def test_inloggen_vereist(self):
+        antwoord = self.client.get("/planbord/")
+        self.assertEqual(antwoord.status_code, 302)
+
+    def test_medewerker_mag_er_niet_in(self):
+        # 404 en geen 403: een medewerker hoeft niet te weten dat dit bestaat.
+        self.client.force_login(self.sam)
+        self.assertEqual(self.client.get("/planbord/").status_code, 404)
+
+    def test_eigenaar_ziet_iedereen_op_de_juiste_plek(self):
+        Uurblok.objects.create(
+            medewerker=self.sam, klus=self.klus, datum=self.maandag,
+            begintijd=time(8, 0), eindtijd=time(16, 30),
+        )
+        Uurblok.objects.create(
+            medewerker=self.joep, klus=self.klus, datum=self.woensdag,
+            begintijd=time(7, 30), eindtijd=time(12, 0),
+        )
+        self.client.force_login(self.maarten)
+        antwoord = self.client.get("/planbord/?dag=2026-09-09")
+        self.assertEqual(antwoord.status_code, 200)
+
+        sam = self.rij_van(antwoord, self.sam)
+        self.assertEqual(len(sam["dagen"][0]["blokken"]), 1)   # maandag
+        self.assertEqual(sam["dagen"][0]["blokken"][0]["duur"], "8:30")
+        self.assertEqual(sam["dagen"][2]["blokken"], [])       # woensdag
+        self.assertEqual(sam["weektotaal"], "8:30")
+
+        joep = self.rij_van(antwoord, self.joep)
+        self.assertEqual(joep["dagen"][0]["blokken"], [])
+        self.assertEqual(len(joep["dagen"][2]["blokken"]), 1)
+        self.assertEqual(joep["weektotaal"], "4:30")
+
+        self.assertEqual(antwoord.context["weektotaal"], "13:00")
+        self.assertEqual(antwoord.context["kopdagen"][2]["totaal"], "4:30")
+
+    def test_lege_rij_voor_wie_niets_schreef(self):
+        # "Wie staat er níét ingepland" is de vraag waarvoor dit scherm bestaat.
+        self.client.force_login(self.maarten)
+        antwoord = self.client.get("/planbord/?dag=2026-09-09")
+        self.assertEqual(self.rij_van(antwoord, self.joep)["weektotaal"], "")
+        self.assertContains(antwoord, "Joep")
+
+    def test_iemand_uit_dienst_krijgt_geen_rij(self):
+        self.client.force_login(self.maarten)
+        antwoord = self.client.get("/planbord/?dag=2026-09-09")
+        medewerkers = [rij["medewerker"] for rij in antwoord.context["rijen"]]
+        self.assertNotIn(self.vertrokken, medewerkers)
+
+    def test_dag_verschuift_de_zeven_kolommen(self):
+        self.client.force_login(self.maarten)
+        antwoord = self.client.get("/planbord/?dag=2026-09-16")   # week erna
+        kolommen = [kopdag["datum"] for kopdag in antwoord.context["kopdagen"]]
+        self.assertEqual(len(kolommen), 7)
+        self.assertEqual(kolommen[0], date(2026, 9, 14))
+        self.assertEqual(kolommen[6], date(2026, 9, 20))
+        rij = self.rij_van(antwoord, self.sam)
+        self.assertEqual([dagcel["datum"] for dagcel in rij["dagen"]], kolommen)
+
+    def test_blok_linkt_naar_het_detailscherm(self):
+        blok = Uurblok.objects.create(
+            medewerker=self.sam, klus=self.klus, datum=self.maandag,
+            begintijd=time(8, 0), eindtijd=time(16, 30),
+        )
+        self.client.force_login(self.maarten)
+        antwoord = self.client.get("/planbord/?dag=2026-09-09")
+        self.assertContains(antwoord, f'href="/uren/{blok.pk}/"')
+
+    def test_chip_toont_begintijd_en_duur_en_niet_de_omschrijving(self):
+        # SPEC §5: op deze breedte breekt een omschrijving in lettergrepen,
+        # de kleur draagt de klus.
+        Uurblok.objects.create(
+            medewerker=self.sam, klus=self.klus, datum=self.maandag,
+            begintijd=time(8, 0), eindtijd=time(16, 30), toelichting="Bestrating uitgevlakt",
+        )
+        self.client.force_login(self.maarten)
+        antwoord = self.client.get("/planbord/?dag=2026-09-09")
+        self.assertContains(antwoord, ">08:00<")
+        self.assertContains(antwoord, ">8:30<")
+        self.assertNotContains(antwoord, "Bestrating uitgevlakt")
+
+    def test_legenda_noemt_de_klussen_van_die_week(self):
+        andere_klus = Klus.objects.create(naam="Haag Jansen", soort=Klus.Soort.ONDERHOUD)
+        Uurblok.objects.create(
+            medewerker=self.sam, klus=self.klus, datum=self.maandag,
+            begintijd=time(8, 0), eindtijd=time(9, 0),
+        )
+        self.client.force_login(self.maarten)
+        antwoord = self.client.get("/planbord/?dag=2026-09-09")
+        klussen = [regel["klus"] for regel in antwoord.context["legenda"]]
+        self.assertEqual(klussen, [self.klus])
+        self.assertNotIn(andere_klus, klussen)
+
+
 class UurblokDetailTest(TestCase):
     @classmethod
     def setUpTestData(cls):
