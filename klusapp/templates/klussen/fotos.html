@@ -35,8 +35,6 @@
       <p class="leeg">{% if zoek %}Niets gevonden voor "{{ zoek }}".{% else %}Nog geen klus met foto's.{% endif %}</p>
     {% endif %}
   {% else %}
-    {% include "klussen/_uploadveld.html" %}
-
     <h2 class="sectiekop">Losse foto's</h2>
     {% include "klussen/_fotoraster.html" %}
 

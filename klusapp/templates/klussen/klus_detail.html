@@ -16,10 +16,8 @@
     {% endif %}
   </div>
 
-  {% include "klussen/_uploadveld.html" with klus_pk=klus.pk %}
-
   <h2 class="sectiekop">Foto's</h2>
-  {% include "klussen/_fotoraster.html" %}
+  {% include "klussen/_fotoraster.html" with klus_pk=klus.pk %}
 
   {% if document_bijlagen %}
     <h2 class="sectiekop">Documenten</h2>

@@ -6,6 +6,7 @@
    Optioneel: klus_pk / uurblok_pk  waar de bijlage aan hangt; zonder beide
                                     komt hij in de fotodropbox terecht {% endcomment %}
 <form class="uploadveld glas" method="post" action="{{ upload_url }}" enctype="multipart/form-data">
+  <button type="button" class="dialog-sluiten" onclick="this.closest('dialog').close()" aria-label="Sluiten">×</button>
   {% csrf_token %}
   {% if klus_pk %}<input type="hidden" name="klus" value="{{ klus_pk }}">{% endif %}
   {% if uurblok_pk %}<input type="hidden" name="uurblok" value="{{ uurblok_pk }}">{% endif %}

@@ -259,8 +259,17 @@ input[type=time]::-webkit-calendar-picker-indicator{ filter:invert(1); opacity:.
   border:1px dashed rgba(255,255,255,0.16); border-radius:18px;
 }
 
-.uploadveld{ border-radius:20px; padding:1.1rem 1.2rem 1.3rem; }
+.uploadveld{ position:relative; border-radius:20px; padding:1.1rem 1.2rem 1.3rem; }
 .uploadveld label:first-of-type{ margin-top:0; }
+/* sluitknopje rechtsboven op de dialoog, zelfde vormtaal als .weg bij een foto */
+.dialog-sluiten{
+  position:absolute; top:.7rem; right:.7rem;
+  width:28px; height:28px; border-radius:50%; cursor:pointer;
+  display:flex; align-items:center; justify-content:center;
+  font-family:'Inter',sans-serif; font-size:16px; line-height:1;
+  background:rgba(255,255,255,0.10); color:#fff; border:1px solid rgba(255,255,255,0.24);
+}
+.dialog-sluiten:hover{ background:rgba(255,255,255,0.18); }
 /* het standaard bestandsknopje van de browser is wit-op-wit op deze
    achtergrond; hier krijgt het dezelfde pilvorm als de rest */
 .uploadveld input[type=file]{
@@ -298,6 +307,25 @@ input[type=time]::-webkit-calendar-picker-indicator{ filter:invert(1); opacity:.
   overflow-wrap:break-word; word-break:break-word;
 }
 .fotokaart .wie{ font-size:10.5px; color:rgba(255,255,255,0.5); }
+
+/* eerste tegel in het raster: lege plek met een plus, opent de invoegdialoog */
+.fotokaart-nieuw{
+  margin:0 0 .7rem; border-radius:20px; break-inside:avoid;
+  width:100%; aspect-ratio:1; cursor:pointer;
+  display:flex; align-items:center; justify-content:center;
+  background:rgba(255,255,255,0.05); border:1px dashed rgba(255,255,255,0.28);
+  color:rgba(255,255,255,0.6);
+}
+.fotokaart-nieuw:hover{ background:rgba(255,255,255,0.10); color:#fff; }
+.fotokaart-nieuw svg{ width:32px; height:32px; }
+
+/* dialoog met het uploadveld: de form zelf is al een glaskaart (.uploadveld
+   .glas), de dialoog is alleen een neutrale drager met een donkere backdrop */
+dialog.foto-invoegen{
+  border:0; padding:0; background:transparent; color:inherit;
+  max-width:520px; width:calc(100% - 2.4rem);
+}
+dialog.foto-invoegen::backdrop{ background:rgba(10,10,8,0.55); backdrop-filter:blur(3px); }
 
 /* verwijderknopje rechtsboven op de kaart */
 .weg{ position:absolute; top:.4rem; right:.4rem; }

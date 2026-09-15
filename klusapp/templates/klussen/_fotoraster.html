@@ -1,30 +1,44 @@
-{% comment %} Raster van foto's. Verwacht `foto_bijlagen` en `terug`.
+{% comment %} Raster van foto's. Verwacht `foto_bijlagen`, `terug` en de
+   BijlageForm-context (`formulier`, `upload_url`, evt. `klus_pk`/`uurblok_pk`)
+   die _uploadveld.html nodig heeft — die staat hier in een dialoog achter de
+   lege eerste tegel.
 
    De thumbnail staat in het raster, de klik opent de volle versie. Beide gaan
    langs media_bestand, dus ook hier geldt: zonder inloggen geen bestand. {% endcomment %}
 {% load bijlagen %}
-{% if foto_bijlagen %}
-  <div class="fotoraster">
-    {% for bijlage in foto_bijlagen %}
-      <figure class="fotokaart">
-        <a href="{% url 'media_bestand' bijlage.bestand.name %}" target="_blank" rel="noopener">
-          <img src="{% url 'media_bestand' bijlage.thumbnail.name|default:bijlage.bestand.name %}"
-               alt="{{ bijlage.toonnaam }}" loading="lazy">
-        </a>
-        <figcaption>
-          {% if bijlage.toelichting %}<span class="wat">{{ bijlage.toelichting }}</span>{% endif %}
-          <span class="wie">{{ bijlage.toegevoegd_door.naam|default:"onbekend" }} · {{ bijlage.datum|date:"j M" }}</span>
-        </figcaption>
-        {% if bijlage|mag_weg:user %}
-          <form method="post" action="{% url 'bijlage_verwijderen' bijlage.pk %}" class="weg">
-            {% csrf_token %}
-            <input type="hidden" name="terug" value="{{ terug }}">
-            <button type="submit" title="Verwijderen" aria-label="Verwijderen">×</button>
-          </form>
-        {% endif %}
-      </figure>
-    {% endfor %}
-  </div>
-{% else %}
+<div class="fotoraster">
+  <button type="button" class="fotokaart-nieuw" onclick="document.getElementById('foto-invoegen').showModal()" aria-label="Foto of document toevoegen">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+  </button>
+  {% for bijlage in foto_bijlagen %}
+    <figure class="fotokaart">
+      <a href="{% url 'media_bestand' bijlage.bestand.name %}" target="_blank" rel="noopener">
+        <img src="{% url 'media_bestand' bijlage.thumbnail.name|default:bijlage.bestand.name %}"
+             alt="{{ bijlage.toonnaam }}" loading="lazy">
+      </a>
+      <figcaption>
+        {% if bijlage.toelichting %}<span class="wat">{{ bijlage.toelichting }}</span>{% endif %}
+        <span class="wie">{{ bijlage.toegevoegd_door.naam|default:"onbekend" }} · {{ bijlage.datum|date:"j M" }}</span>
+      </figcaption>
+      {% if bijlage|mag_weg:user %}
+        <form method="post" action="{% url 'bijlage_verwijderen' bijlage.pk %}" class="weg">
+          {% csrf_token %}
+          <input type="hidden" name="terug" value="{{ terug }}">
+          <button type="submit" title="Verwijderen" aria-label="Verwijderen">×</button>
+        </form>
+      {% endif %}
+    </figure>
+  {% endfor %}
+</div>
+{% if not foto_bijlagen %}
   <p class="leeg">{% if zoek %}Niets gevonden voor "{{ zoek }}".{% else %}Nog geen foto's.{% endif %}</p>
 {% endif %}
+
+<dialog id="foto-invoegen" class="foto-invoegen">
+  {% include "klussen/_uploadveld.html" %}
+</dialog>
+<script>
+  document.getElementById("foto-invoegen").addEventListener("click", function (e) {
+    if (e.target === this) this.close();
+  });
+</script>
