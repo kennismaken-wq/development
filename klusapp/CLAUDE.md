@@ -15,10 +15,16 @@ Contract is opgesteld (fase 1 verplicht, fase 2 en twee uitbreidingen optioneel)
 De klikbare demo heeft zijn werk gedaan en wordt niet meer aangepast; dit is de
 echte bouw, en die draait live op develop.handigerai.nl.
 
-Af: inloggen met rollen, startscherm, uren schrijven als weekkalender, de
-loonstrook-snelkoppeling, en het bijlagen-fundament (uploaden, verkleinen, media
-achter login). In aanbouw: klusdossier, planbord, overzichten, aanwezigheid,
-urenexport. **Per contractpunt staat de stand in [CONTEXT.md](CONTEXT.md) §1.**
+**Sinds 16-09-2026 hebben alle negen contractpunten van fase 1 een werkend
+scherm en staan ze live.** `nog_te_bouwen` in `config/urls.py` is leeg en geen
+tegel staat meer op `in_aanbouw`. Wat bewust nog open staat: de eigenaar kan zelf
+geen medewerkers toevoegen of uit dienst zetten (vraag 5 aan Maarten), en de
+productiepunten in [docs/DEPLOY.md](docs/DEPLOY.md) — een échte off-site back-up
+voorop. **Per contractpunt staat de stand in [CONTEXT.md](CONTEXT.md) §1.**
+
+Houd die twee documenten bij als je iets aflevert. Ze liepen in september 2026
+achter op de code, en de volgende die eraan begon heeft daardoor werk gepland dat
+al af was.
 
 ## Werkafspraken
 

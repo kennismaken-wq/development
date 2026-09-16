@@ -17,8 +17,9 @@ recept om het mee te herstellen. Dit document is dat recept.
 | Service | `develop-tool.service` — gunicorn op `127.0.0.1:5001` |
 | Deploy | `develop-auto-deploy.timer` → `auto-deploy.sh`, elke minuut |
 | Webserver | nginx, `develop.handigerai.nl` → `127.0.0.1:5001`, HTTPS via certbot |
-| Database | **SQLite** (`klusapp/db.sqlite3`) |
+| Database | **PostgreSQL 18**, database en user `klusapp`, via `DATABASE_URL` |
 | Media | `klusapp/media/` |
+| Back-up | `klusapp-backup.timer` → `/usr/local/bin/klusapp-backup.sh`, elke nacht 03:20 naar `/srv/backups/klusapp` |
 
 De naam `develop-tool` is historisch: die service draaide eerst de Flask-huisstijl-
 tool. Hij draait nu de klusapp.
@@ -63,7 +64,12 @@ DJANGO_DEBUG=0
 DJANGO_SECRET_KEY=<geheim>
 DJANGO_ALLOWED_HOSTS=develop.handigerai.nl,127.0.0.1,localhost
 DJANGO_CSRF_TRUSTED_ORIGINS=https://develop.handigerai.nl
+DATABASE_URL=postgres://klusapp:<geheim>@127.0.0.1:5432/klusapp
 ```
+
+Zonder `DATABASE_URL` valt `settings.py` terug op SQLite. Dat is prima lokaal,
+maar niet op de server: SQLite vergrendelt bij schrijven en zes man die 's avonds
+tegelijk hun uren invullen lopen dan tegen "database is locked" aan.
 
 `DJANGO_DEBUG=0` staat er expliciet in. Laat dat zo: met `DEBUG=1` toont een
 foutpagina de secret key en de omgeving aan wie de fout veroorzaakt.
@@ -146,21 +152,36 @@ server {
 }
 ```
 
+## Back-ups
+
+`klusapp-backup.timer` draait elke nacht om 03:20 `/usr/local/bin/klusapp-backup.sh`:
+een `pg_dump` van de database en een tar van `media/`, allebei gzip, naar
+`/srv/backups/klusapp`. Dumps ouder dan veertien dagen worden opgeruimd.
+
+De restore is op 16-09-2026 één keer echt uitgevoerd (teruggezet in een
+wegwerpdatabase `klusapp_restoretest`, rijen geteld, database daarna weggegooid) —
+een ongeteste restore is geen back-up.
+
+Terugzetten gaat zo:
+
+```bash
+gunzip -c /srv/backups/klusapp/db-<stempel>.sql.gz | sudo -u postgres psql klusapp
+tar xzf /srv/backups/klusapp/media-<stempel>.tar.gz -C /srv/handigerai/develop-tool/klusapp
+systemctl restart develop-tool.service
+```
+
+> **Dit is nog geen echte back-up.** De kopie staat op dezelfde schijf als wat hij
+> moet beschermen: bij schijfverlies ben je alles kwijt, en de klusfoto's bestaan
+> nergens anders. De verwerkersovereenkomst belooft off-site back-ups. Dit is een
+> bewuste tussenoplossing (besluit Thijmen, 16-09-2026) totdat er een Hetzner
+> Storage Box is; dan hoeft alleen het doelpad in het script te veranderen.
+
 ## Wat er nog niet staat
 
-Drie dingen die vóór echte oplevering aan De Groene M geregeld moeten zijn:
-
-1. **Back-ups. Er zijn er geen.** Geen cron, geen off-site kopie. `db.sqlite3` en
-   `media/` bestaan op precies één schijf, en de klusfoto's en klusdossiers staan
-   nergens anders — de boekhouder heeft alleen de uren. De verwerkersovereenkomst
-   belooft dagelijkse back-ups. Nodig: dagelijkse dump naar een Hetzner Storage
-   Box (een paar euro per maand), plus **één keer een restore echt uitvoeren** —
-   een ongeteste restore is geen back-up.
-2. **SQLite in plaats van Postgres.** SQLite vergrendelt bij schrijven; zes man
-   die 's avonds tegelijk hun uren invullen kunnen "database is locked" krijgen.
-   `settings.py` schakelt al om zodra `DATABASE_URL` gezet is, en `psycopg` staat
-   in `requirements.txt` — het is dus vooral een migratie van de bestaande data.
-3. **X-Accel-Redirect staat klaar maar is niet aangesloten.** `GEBRUIK_X_ACCEL`
+1. **Off-site back-up** — zie hierboven. Het enige echt openstaande risico.
+2. **X-Accel-Redirect staat klaar maar is niet aangesloten.** `GEBRUIK_X_ACCEL`
    in `settings.py` en de view `klussen.views.media_bestand` zijn er al; de
    `internal`-locatie in nginx ontbreekt. Nu gaat elke foto door gunicorn heen.
-   Bij 80 KB media niet urgent, bij een jaar klusfoto's wel.
+   Bij de huidige hoeveelheid media niet urgent, bij een jaar klusfoto's wel.
+3. **Data-export bij beëindiging** (uren als CSV, foto's als zip) — volgt uit de
+   contractreview (SPEC §8), nog niet gebouwd.

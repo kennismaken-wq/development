@@ -22,17 +22,25 @@ loonstrook-snelkoppeling zijn af. **De app draait live op develop.handigerai.nl.
 Wat ontbreekt is bijna alles rond klussen en foto's: zes van de negen contractpunten
 hebben nog geen scherm.
 
+**Bijgewerkt 16-09-2026: alle negen contractpunten hebben een werkend scherm en
+staan live.** De tabel hieronder is de stand van dat moment; `nog_te_bouwen` in
+`config/urls.py` is leeg en geen enkele tegel staat nog op `in_aanbouw`.
+
 | # | Contractpunt | Status | Wat ontbreekt |
 |---|---|---|---|
-| 1 | Urenregistratie (klus, tijdblok, toelichting, **foto's**) | 🟡 ~70% | Foto's bij een uurblok; view-first detailscherm |
-| 2 | Klusdossier per klus | 🔴 0% | `klussen/views.py` is leeg, geen urls, geen templates |
-| 3 | Overzicht per medewerker week **en maand** | 🟡 ~30% | Week zit in de kalender; maand ontbreekt, tegel is dood |
-| 4 | Beheerdersoverzicht / planbord | 🔴 0% | Tegel is dood |
-| 5 | Fotodropbox | 🟡 ~40% | Kaal scherm + upload staan (0c); filters en "koppel aan klus" = T1 |
-| 6 | Urenexport voor de boekhouder | 🔴 0% | **Geblokkeerd** op vraag aan Maarten |
-| 7 | Aanwezigheidsregistratie | 🟡 10% | Model + constraint + test staan er, geen UI |
-| 8 | Inlogbeheer rolgebaseerd | 🟢 ~80% | Eigenaar kan zelf geen medewerker toevoegen/uit dienst zetten |
+| 1 | Urenregistratie (klus, tijdblok, toelichting, **foto's**) | 🟢 100% | — foto's bij het uurblok en view-first detail zijn af (F1) |
+| 2 | Klusdossier per klus | 🟢 100% | — lijst, detail, aanmaken/bewerken, uploads |
+| 3 | Overzicht per medewerker week **en maand** | 🟢 100% | — `/overzicht/`, eigenaar kan een medewerker kiezen (F2) |
+| 4 | Beheerdersoverzicht / planbord | 🟢 100% | — `/planbord/`, vaste eerste kolom op mobiel (F3) |
+| 5 | Fotodropbox | 🟢 100% | — raster, zoeken, filter per klus |
+| 6 | Urenexport voor de boekhouder | 🟢 100% | — Excel per kalendermaand, getest (antwoord Maarten 15-09) |
+| 7 | Aanwezigheidsregistratie | 🟢 100% | — `/aanwezigheid/`, groen/rood/onbekend (F4) |
+| 8 | Inlogbeheer rolgebaseerd | 🟡 ~80% | Eigenaar kan zelf geen medewerker toevoegen/uit dienst zetten — bewust uitgesteld, vraag 5 staat nog open bij Maarten |
 | 9 | Loonstrook-snelkoppeling | 🟢 100% | Klaar, iOS/Android afgehandeld, getest |
+
+Productie: draait op Postgres met een nachtelijke dump (restore één keer echt
+getest). Wat daar nog open staat — een échte off-site back-up, X-Accel en de
+data-export bij beëindiging — staat in [docs/DEPLOY.md](docs/DEPLOY.md).
 
 Het datamodel loopt voor op de schermen: `Klus`, `Bijlage`, `Uurblok` en
 `Aanwezigheid` staan er mét constraints, indexen en tests. Er hoeft weinig model bij —
