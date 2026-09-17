@@ -43,12 +43,12 @@ TEGELS = [
 # blijven — getoond als knoppenlijst op het profielscherm (templates/profiel.html).
 PROFIEL_TEGELS = [
     {"titel": "Overzichten", "icoon": "export", "url_naam": "urenexport", "rollen": ["eigenaar"]},
+    # Niet in de balk: je mensen beheer je af en toe, niet dagelijks.
+    {"titel": "Medewerkers", "icoon": "medewerkers", "url_naam": "medewerkers", "rollen": ["eigenaar"]},
     {"titel": "Loonstrook", "icoon": "loonstrook", "url_naam": "loonstrook", "rollen": ["medewerker", "eigenaar"]},
     # Het Django-beheerscherm is geen scherm voor de klant: het toont alle
-    # velden en verwijdert zonder vangnet. Alleen wie het systeem beheert
-    # (is_staff) ziet deze tegel — de rol "eigenaar" geeft er geen toegang toe.
-    # Hangt aan is_staff, niet aan een rol: wie het systeem beheert hoeft in
-    # de app geen eigenaar te zijn.
+    # velden en verwijdert zonder vangnet. Alleen de systeembeheerder ziet
+    # deze tegel; een eigenaar komt er niet in.
     {"titel": "Beheer", "icoon": "beheer", "url": "/beheer/", "rollen": ["medewerker", "eigenaar"], "alleen_beheerder": True},
 ]
 
@@ -61,12 +61,15 @@ PROFIEL_TEGELS = [
 def _zichtbaar(lijst, user):
     """De tegels uit `lijst` die deze gebruiker mag zien, met opgeloste url en
     gedimde/niet-klikbare status voor onderdelen die nog gebouwd worden."""
-    rol = user.rol
+    # De systeembeheerder ziet alles wat de eigenaar ziet, plus het
+    # beheerscherm; daarom kijken we hier naar wat iemand mag, niet naar de
+    # letterlijke rolnaam.
+    rol = "eigenaar" if user.is_eigenaar else "medewerker"
     tegels = []
     for tegel in lijst:
         if rol not in tegel["rollen"]:
             continue
-        if tegel.get("alleen_beheerder") and not user.is_staff:
+        if tegel.get("alleen_beheerder") and not user.is_systeembeheerder:
             continue
         tegel = dict(tegel)
         if "url_naam" in tegel:

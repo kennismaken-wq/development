@@ -1,0 +1,44 @@
+{% extends "basis.html" %}
+{% block titel %}Medewerkers{% endblock %}
+{% block kop %}Medewerkers{% endblock %}
+{% block sub %}<a href="{% url 'start' %}" style="color:rgba(255,255,255,0.6)">‹ Terug</a>{% endblock %}
+{% block inhoud %}
+  {% if in_dienst %}
+    <ul class="klussenlijst">
+      {% for mw in in_dienst %}
+        <li>
+          <a href="{% url 'medewerker_bewerken' mw.pk %}" class="klusregel">
+            <span class="soort-badge">{{ mw.get_rol_display }}</span>
+            <span class="naam">{{ mw.naam }}</span>
+            <span class="adres">
+              {% if mw.functie %}{{ mw.functie }} · {% endif %}{{ mw.username }}
+            </span>
+          </a>
+        </li>
+      {% endfor %}
+    </ul>
+  {% else %}
+    <p class="leeg">Nog geen medewerkers.</p>
+  {% endif %}
+
+  {% if not user.is_systeembeheerder %}
+    <p style="margin-top:1.2rem">
+      <a class="knop" href="{% url 'medewerker_nieuw' %}">Nieuwe medewerker</a>
+    </p>
+  {% endif %}
+
+  {% if uit_dienst %}
+    <h2 class="sectiekop">Uit dienst</h2>
+    <ul class="klussenlijst">
+      {% for mw in uit_dienst %}
+        <li>
+          <a href="{% url 'medewerker_bewerken' mw.pk %}" class="klusregel afgerond">
+            <span class="soort-badge">{{ mw.get_rol_display }}</span>
+            <span class="naam">{{ mw.naam }}</span>
+            <span class="adres">sinds {{ mw.uit_dienst_sinds|date:"j F Y" }}</span>
+          </a>
+        </li>
+      {% endfor %}
+    </ul>
+  {% endif %}
+{% endblock %}
