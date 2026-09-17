@@ -160,7 +160,9 @@ label{
   text-transform:uppercase; color:rgba(255,255,255,0.5);
   margin:1.1rem 0 .35rem;
 }
-input[type=text],input[type=password],input[type=date],input[type=time],select,textarea{
+/* alles behalve de vinkjes en de kleurkiezer: die hebben hun eigen vorm.
+   Zo valt een nieuw soort veld — tel, email, number — nooit meer wit uit. */
+input:not([type=checkbox]):not([type=radio]):not([type=color]):not([type=file]),select,textarea{
   width:100%; padding:.8rem .9rem; font-size:16px;
   font-family:'Inter',sans-serif; color:#fff;
   background:rgba(255,255,255,0.10); border:1px solid rgba(255,255,255,0.20);

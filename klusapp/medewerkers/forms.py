@@ -28,25 +28,70 @@ class MedewerkerForm(forms.ModelForm):
 
     class Meta:
         model = Medewerker
-        fields = ["first_name", "last_name", "username", "functie", "telefoon", "rol", "kleur", "in_dienst_sinds"]
+        fields = [
+            "first_name", "last_name", "username", "functie", "rol",
+            "telefoon", "email", "adres", "postcode", "woonplaats",
+            "noodcontact_naam", "noodcontact_relatie", "noodcontact_telefoon",
+            "rijbewijs", "aanhanger",
+            "kleur", "in_dienst_sinds",
+        ]
         widgets = {
             # format="%Y-%m-%d" is verplicht bij type="date": zonder dat rendert
             # Django een bestaande datum in het Nederlandse formaat en toont de
             # browser een leeg veld.
             "in_dienst_sinds": forms.DateInput(attrs={"type": "date"}, format="%Y-%m-%d"),
             "kleur": forms.TextInput(attrs={"type": "color"}),
+            # inputmode/type zorgen dat een telefoon meteen het juiste
+            # toetsenbord opent
+            "telefoon": forms.TextInput(attrs={"type": "tel", "inputmode": "tel", "autocomplete": "mobile tel"}),
+            "noodcontact_telefoon": forms.TextInput(attrs={"type": "tel", "inputmode": "tel"}),
+            "email": forms.EmailInput(attrs={"inputmode": "email", "autocomplete": "email"}),
+            "postcode": forms.TextInput(attrs={"autocomplete": "postal-code"}),
         }
         labels = {
             "first_name": "Voornaam",
             "last_name": "Achternaam",
             "username": "Gebruikersnaam",
             "functie": "Functie",
-            "telefoon": "Telefoon",
             "rol": "Rol",
+            "telefoon": "Mobiel nummer",
+            "email": "E-mailadres",
+            "adres": "Straat en huisnummer",
+            "postcode": "Postcode",
+            "woonplaats": "Woonplaats",
+            "noodcontact_naam": "Naam",
+            "noodcontact_relatie": "Relatie",
+            "noodcontact_telefoon": "Telefoon",
+            "rijbewijs": "Rijbewijs",
+            "aanhanger": "Mag met een zware aanhanger (BE)",
             "kleur": "Kleur in het planbord",
             "in_dienst_sinds": "In dienst sinds",
         }
-        help_texts = {veld: "" for veld in fields}
+        # Alleen bij de relatie helpt een voorbeeld; de rest spreekt voor zich.
+        help_texts = {veld: "" for veld in fields if veld != "noodcontact_relatie"}
+
+    # Kopjes boven de velden, zodat het geen lange rij invulvakken wordt.
+    GROEPEN = [
+        ("", ["first_name", "last_name", "username", "functie", "rol"]),
+        ("Contact", ["telefoon", "email", "adres", "postcode", "woonplaats"]),
+        ("Bij nood bellen", ["noodcontact_naam", "noodcontact_relatie", "noodcontact_telefoon"]),
+        ("Rijbewijs", ["rijbewijs", "aanhanger"]),
+        ("In de app", ["kleur", "in_dienst_sinds"]),
+    ]
+
+    def groepen(self):
+        """(kopje, velden) voor de template. Velden die dit formulier niet
+        heeft — zoals het wachtwoord bij een nieuwe medewerker — komen er
+        onderaan achteraan."""
+        gebruikt = set()
+        for kop, namen in self.GROEPEN:
+            velden = [self[naam] for naam in namen if naam in self.fields]
+            gebruikt.update(naam for naam in namen if naam in self.fields)
+            if velden:
+                yield kop, velden
+        rest = [veld for veld in self if veld.name not in gebruikt]
+        if rest:
+            yield "Wachtwoord", rest
 
     def __init__(self, *args, door=None, **kwargs):
         """`door` is degene die het formulier invult; die bepaalt welke rollen

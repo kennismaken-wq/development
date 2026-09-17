@@ -12,7 +12,26 @@
     <dt>Gebruikersnaam</dt><dd>{{ medewerker.username }}</dd>
     <dt>Rol</dt><dd>{{ medewerker.get_rol_display }}</dd>
     {% if medewerker.functie %}<dt>Functie</dt><dd>{{ medewerker.functie }}</dd>{% endif %}
-    {% if medewerker.telefoon %}<dt>Telefoon</dt><dd>{{ medewerker.telefoon }}</dd>{% endif %}
+    {% if medewerker.telefoon %}<dt>Mobiel</dt><dd><a href="tel:{{ medewerker.telefoon }}">{{ medewerker.telefoon }}</a></dd>{% endif %}
+    {% if medewerker.email %}<dt>E-mail</dt><dd><a href="mailto:{{ medewerker.email }}">{{ medewerker.email }}</a></dd>{% endif %}
+    {% if medewerker.adres or medewerker.woonplaats %}
+      <dt>Adres</dt>
+      <dd>{{ medewerker.adres }}{% if medewerker.adres and medewerker.woonplaats %}, {% endif %}{{ medewerker.postcode }} {{ medewerker.woonplaats }}</dd>
+    {% endif %}
+    {% if medewerker.noodcontact_naam or medewerker.noodcontact_telefoon %}
+      <dt>Bij nood</dt>
+      <dd>
+        {{ medewerker.noodcontact_naam }}{% if medewerker.noodcontact_relatie %} ({{ medewerker.noodcontact_relatie }}){% endif %}
+        {% if medewerker.noodcontact_telefoon %} · <a href="tel:{{ medewerker.noodcontact_telefoon }}">{{ medewerker.noodcontact_telefoon }}</a>{% endif %}
+      </dd>
+    {% endif %}
+    {% if medewerker.rijbewijs or medewerker.aanhanger %}
+      <dt>Rijbewijs</dt>
+      <dd>
+        {% if medewerker.rijbewijs %}{{ medewerker.get_rijbewijs_display }}{% else %}geen{% endif %}
+        {% if medewerker.aanhanger %} · mag met aanhanger (BE){% endif %}
+      </dd>
+    {% endif %}
     {% if medewerker.in_dienst_sinds %}<dt>In dienst sinds</dt><dd>{{ medewerker.in_dienst_sinds|date:"j F Y" }}</dd>{% endif %}
     {% if medewerker.uit_dienst_sinds %}<dt>Uit dienst sinds</dt><dd>{{ medewerker.uit_dienst_sinds|date:"j F Y" }}</dd>{% endif %}
     <dt>Laatst ingelogd</dt>
