@@ -1,24 +1,23 @@
 {% extends "basis.html" %}
 {% block titel %}Foto's{% endblock %}
 {% block kop %}Foto's{% endblock %}
-{% block sub %}<a href="{% url 'start' %}" style="color:rgba(255,255,255,0.6)">‹ Terug</a>{% endblock %}
 {% block inhoud %}
   <form method="get" class="foto-zoekbalk">
-    <input type="hidden" name="weergave" value="{{ weergave }}">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.6" y2="16.6"/></svg>
     <input type="search" name="q" value="{{ zoek }}" placeholder="Zoek op omschrijving, klus of adres…">
   </form>
 
-  <div class="weergave-pillen">
-    <a href="?weergave=los{% if zoek %}&q={{ zoek|urlencode }}{% endif %}" class="pil{% if weergave == 'los' %} actief{% endif %}">Losse foto's</a>
-    <a href="?weergave=klus{% if zoek %}&q={{ zoek|urlencode }}{% endif %}" class="pil{% if weergave == 'klus' %} actief{% endif %}">Per klus</a>
-  </div>
+  <h2 class="sectiekop">Losse foto's</h2>
+  {% include "klussen/_fotoraster.html" %}
 
-  {% if weergave == 'klus' %}
+  {% if document_bijlagen %}
+    <h2 class="sectiekop">Losse documenten</h2>
+    {% include "klussen/_documentenlijst.html" %}
+  {% endif %}
+
+  <h2 class="sectiekop">Foto's per klus</h2>
+  {% if klus_tegels %}
     <div class="klustegels">
-      <button type="button" class="fotokaart-nieuw" onclick="document.getElementById('foto-invoegen').showModal()" aria-label="Foto of document toevoegen">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-      </button>
       {% for klus in klus_tegels %}
         <a href="{{ klus.get_absolute_url }}" class="klustegel">
           {% if klus.omslagfoto %}
@@ -33,18 +32,7 @@
         </a>
       {% endfor %}
     </div>
-    {% if not klus_tegels %}
-      <p class="leeg">{% if zoek %}Niets gevonden voor "{{ zoek }}".{% else %}Nog geen klus met foto's.{% endif %}</p>
-    {% endif %}
-
-    {% include "klussen/_fotodialoog.html" %}
   {% else %}
-    <h2 class="sectiekop">Losse foto's</h2>
-    {% include "klussen/_fotoraster.html" %}
-
-    {% if document_bijlagen %}
-      <h2 class="sectiekop">Losse documenten</h2>
-      {% include "klussen/_documentenlijst.html" %}
-    {% endif %}
+    <p class="leeg">{% if zoek %}Niets gevonden voor "{{ zoek }}".{% else %}Nog geen klus met foto's.{% endif %}</p>
   {% endif %}
 {% endblock %}

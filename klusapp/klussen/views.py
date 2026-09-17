@@ -153,48 +153,14 @@ def media_bestand(request, pad):
 
 @login_required
 def fotos(request):
-    """Foto's: losse bijlagen zonder klus, of per klus gegroepeerd.
+    """Foto's: losse bijlagen zonder klus, en daaronder per klus gegroepeerd.
 
-    Twee weergaven op hetzelfde scherm, met dezelfde zoekbalk erboven:
-    "los" toont de dropbox (bijlagen zonder klus, zoals voorheen), "klus"
-    toont één tegel per klus met foto's — de klus zelf is dan het hokje,
-    doorklikken opent het klusdossier met alle foto's erin.
+    Eén scherm, één zoekbalk erboven die op allebei tegelijk filtert: eerst de
+    dropbox (bijlagen zonder klus), daarna een tegel per klus met foto's — de
+    klus zelf is dan het hokje, doorklikken opent het klusdossier met alle
+    foto's erin.
     """
-    weergave = "klus" if request.GET.get("weergave") == "klus" else "los"
     zoek = request.GET.get("q", "").strip()
-
-    if weergave == "klus":
-        klussen = Klus.objects.annotate(
-            aantal_fotos=Count("bijlagen", filter=Q(bijlagen__soort=Bijlage.Soort.FOTO))
-        ).filter(aantal_fotos__gt=0)
-        if zoek:
-            klussen = klussen.filter(
-                Q(naam__icontains=zoek)
-                | Q(opdrachtgever__icontains=zoek)
-                | Q(adres__icontains=zoek)
-                | Q(plaats__icontains=zoek)
-            )
-        klussen = klussen.prefetch_related(
-            Prefetch(
-                "bijlagen",
-                queryset=Bijlage.objects.filter(soort=Bijlage.Soort.FOTO).order_by("-datum", "-toegevoegd_op"),
-                to_attr="recente_fotos",
-            )
-        )
-        for klus in klussen:
-            klus.omslagfoto = klus.recente_fotos[0] if klus.recente_fotos else None
-        return render(
-            request,
-            "klussen/fotos.html",
-            {
-                "weergave": weergave,
-                "zoek": zoek,
-                "klus_tegels": klussen,
-                "formulier": BijlageForm(),
-                "upload_url": reverse("bijlage_toevoegen"),
-                "terug": request.get_full_path(),
-            },
-        )
 
     bijlagen = (
         Bijlage.objects.filter(klus__isnull=True)
@@ -203,14 +169,35 @@ def fotos(request):
     )
     if zoek:
         bijlagen = bijlagen.filter(Q(toelichting__icontains=zoek) | Q(originele_naam__icontains=zoek))
+
+    klussen = Klus.objects.annotate(
+        aantal_fotos=Count("bijlagen", filter=Q(bijlagen__soort=Bijlage.Soort.FOTO))
+    ).filter(aantal_fotos__gt=0)
+    if zoek:
+        klussen = klussen.filter(
+            Q(naam__icontains=zoek)
+            | Q(opdrachtgever__icontains=zoek)
+            | Q(adres__icontains=zoek)
+            | Q(plaats__icontains=zoek)
+        )
+    klussen = klussen.prefetch_related(
+        Prefetch(
+            "bijlagen",
+            queryset=Bijlage.objects.filter(soort=Bijlage.Soort.FOTO).order_by("-datum", "-toegevoegd_op"),
+            to_attr="recente_fotos",
+        )
+    )
+    for klus in klussen:
+        klus.omslagfoto = klus.recente_fotos[0] if klus.recente_fotos else None
+
     return render(
         request,
         "klussen/fotos.html",
         {
-            "weergave": weergave,
             "zoek": zoek,
             "foto_bijlagen": [los for los in bijlagen if los.is_foto],
             "document_bijlagen": [los for los in bijlagen if not los.is_foto],
+            "klus_tegels": klussen,
             "formulier": BijlageForm(),
             "upload_url": reverse("bijlage_toevoegen"),
             "terug": request.get_full_path(),

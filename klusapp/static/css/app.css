@@ -325,7 +325,7 @@ input[type=time]::-webkit-calendar-picker-indicator{ filter:invert(1); opacity:.
 }
 /* ruimte tussen de "+"-tegel en de leegmelding erna, anders schuren ze tegen
    elkaar aan zodra het raster nog maar één (leeg) tegeltje breed is */
-.fotoraster + .leeg, .klustegels + .leeg{ margin-top:.9rem; }
+.fotoraster + .leeg{ margin-top:.9rem; }
 
 .uploadveld{ position:relative; border-radius:20px; padding:1.1rem 1.2rem 1.3rem; }
 .uploadveld label:first-of-type{ margin-top:0; }
