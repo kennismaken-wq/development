@@ -207,7 +207,18 @@ input[type=time]::-webkit-calendar-picker-indicator{ filter:invert(1); opacity:.
 }
 .totaal-chip .l{ font-size:11px; color:rgba(255,255,255,0.75); }
 
-.raster-scroll{ overflow-x:auto; padding-bottom:.4rem; }
+.raster-scroll{
+  overflow-x:auto; padding-bottom:.4rem;
+  scroll-snap-type:x mandatory; -webkit-overflow-scrolling:touch;
+  /* de sticky tijdas dekt de eerste 48px van elke snap; zonder scroll-padding
+     snapt de browser op de rauwe kolomgrens (waar de dag dus half achter de
+     as verdwijnt) in plaats van waar de dag zichtbaar begint */
+  scroll-padding-left:48px;
+  /* rechts een vervagende rand als scroll-hint, zelfde idioom als .sidebar —
+     alleen rechts: links zit de vaste tijdas, die moet vol zichtbaar blijven */
+  mask-image:linear-gradient(to right, #000 calc(100% - 22px), transparent 100%);
+  -webkit-mask-image:linear-gradient(to right, #000 calc(100% - 22px), transparent 100%);
+}
 .raster-scroll::-webkit-scrollbar{ height:6px; }
 .raster-scroll::-webkit-scrollbar-thumb{ background:rgba(255,255,255,0.2); border-radius:999px; }
 .raster{ display:grid; grid-template-columns:48px repeat(7, minmax(92px,1fr)); min-width:700px; }
@@ -223,7 +234,24 @@ input[type=time]::-webkit-calendar-picker-indicator{ filter:invert(1); opacity:.
 }
 .kolomkop.vandaag .dag{ color:var(--hi); }
 
-.gutter{ position:relative; }
+/* Tijdas + hoek blijven staan bij horizontaal scrollen — zelfde reden en
+   opbouw als .bord-naam/.bord-hoek bij het planbord: zonder een eigen
+   dekkende ondergrond zou de kleur van een dagkolom er onderdoor schuiven,
+   en zonder de aparte hoek blijft de dagkoppenrij kort door de linker 48px
+   heen zichtbaar. Bewust geen background-attachment:fixed, zie planbord. */
+.raster-hoek{
+  position:sticky; left:0; z-index:4;
+  background:
+    linear-gradient(150deg, rgba(255,255,255,0.125), rgba(255,255,255,0.05)),
+    linear-gradient(160deg, #20211C, #282C21);
+}
+.gutter{
+  position:sticky; left:0; z-index:3;
+  background:
+    linear-gradient(150deg, rgba(255,255,255,0.125), rgba(255,255,255,0.05)),
+    linear-gradient(160deg, #20211C, #282C21);
+  box-shadow:14px 0 18px -14px rgba(0,0,0,0.75);
+}
 .gutter-lbl{
   position:absolute; right:.5rem; transform:translateY(-50%);
   font-size:9.5px; color:rgba(255,255,255,0.45);
@@ -231,9 +259,17 @@ input[type=time]::-webkit-calendar-picker-indicator{ filter:invert(1); opacity:.
 
 .dagkolom{
   position:relative; border-left:1px solid rgba(255,255,255,0.08);
-  background:rgba(255,255,255,0.03); touch-action:pan-y;
+  background:rgba(255,255,255,0.03);
+  /* pan-y alleen zou een vinger die hier over het rooster beweegt alleen
+     verticaal (de pagina) laten scrollen, en het horizontaal wisselen van
+     dag — de hele reden voor .raster-scroll op een telefoon — juist
+     blokkeren. Beide richtingen toestaan, alleen pinch-zoom blijft uit. */
+  touch-action:pan-x pan-y;
+  scroll-snap-align:start;
 }
 .dagkolom:hover{ background:rgba(255,255,255,0.05); }
+/* zelfde tint als .bord-cel.vandaag bij het planbord */
+.dagkolom.vandaag{ background:rgba(var(--accent-rgb),0.07); }
 .vak{ height:26px; border-top:1px solid rgba(255,255,255,0.06); cursor:pointer; }
 .vak.uurlijn{ border-top:1px solid rgba(255,255,255,0.14); }
 .vak.kiezen{ background:rgba(var(--accent-rgb),0.35); }

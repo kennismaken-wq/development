@@ -34,7 +34,7 @@
   {% else %}
     <div class="raster-scroll">
       <div class="raster{% if weergave == 'dag' %} raster-dag{% endif %}">
-        <div></div>
+        <div class="raster-hoek"></div>
         {% for dag_kop in dagen %}
           <div class="kolomkop {% if dag_kop.is_vandaag %}vandaag{% endif %}">
             <div class="dag">{{ dag_kop.datum|date:"D" }}</div>
@@ -50,7 +50,7 @@
         </div>
 
         {% for dag_kolom in dagen %}
-          <div class="dagkolom" data-dag="{{ dag_kolom.datum|date:'Y-m-d' }}" style="height:{{ rasterhoogte }}px">
+          <div class="dagkolom{% if dag_kolom.is_vandaag %} vandaag{% endif %}" data-dag="{{ dag_kolom.datum|date:'Y-m-d' }}" style="height:{{ rasterhoogte }}px">
             {% for vak in vakken %}
               <div class="vak{% if vak.uurlijn %} uurlijn{% endif %}" data-vak="{{ vak.index }}"></div>
             {% endfor %}
@@ -80,6 +80,17 @@
       document.getElementById("uren-invoegen").addEventListener("click", function (e) {
         if (e.target === this) this.close();
       });
+    </script>
+
+    <script>
+      // Opent de weekweergave al gescrold naar vandaag i.p.v. maandag — anders
+      // moet je op een telefoon eerst zelf naar de juiste dagkolom scrollen.
+      // scrollIntoView met inline:"start" houdt zelf rekening met de
+      // scroll-padding-left in app.css, die precies de vaste tijdas compenseert.
+      (function () {
+        var vandaag = document.querySelector(".raster:not(.raster-dag) .dagkolom.vandaag");
+        if (vandaag) vandaag.scrollIntoView({ inline: "start", block: "nearest" });
+      })();
     </script>
 
     <script src="{% static 'js/kalender.js' %}"
