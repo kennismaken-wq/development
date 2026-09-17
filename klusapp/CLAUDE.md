@@ -9,6 +9,12 @@ welke ontwerpkeuzes al vastliggen en wat nog open is.
 **Daarna [CONTEXT.md](CONTEXT.md)** voor de aanpak van fase 1: wat er al af is, in welke
 volgorde we bouwen, wie welk spoor doet en wat er per taak aan tijd staat.
 
+**Bij UI-werk: [../DESIGN.md](../DESIGN.md).** De glass-stijl (kleuren, typografie,
+spacing, radius-schaal, componenten) als opzoekbaar naslagwerk — gedeeld met de
+root-tool, met de groene accentkleur van klusapp als het enige verschil. Vervangt de
+regel "kopiëren, niet verzinnen" uit `../CONTEXT.md` niet, maakt 'm alleen sneller
+te checken zonder eerst `glass.html` en app.css te moeten doorzoeken.
+
 ## Status
 
 Contract is opgesteld (fase 1 verplicht, fase 2 en twee uitbreidingen optioneel).
