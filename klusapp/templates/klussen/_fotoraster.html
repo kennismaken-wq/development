@@ -1,7 +1,6 @@
 {% comment %} Raster van foto's. Verwacht `foto_bijlagen`, `terug` en de
    BijlageForm-context (`formulier`, `upload_url`, evt. `klus_pk`/`uurblok_pk`)
-   die _uploadveld.html nodig heeft — die staat hier in een dialoog achter de
-   lege eerste tegel.
+   die _uploadveld.html nodig heeft via _fotodialoog.html.
 
    De thumbnail staat in het raster, de klik opent de volle versie. Beide gaan
    langs media_bestand, dus ook hier geldt: zonder inloggen geen bestand. {% endcomment %}
@@ -34,11 +33,4 @@
   <p class="leeg">{% if zoek %}Niets gevonden voor "{{ zoek }}".{% else %}Nog geen foto's.{% endif %}</p>
 {% endif %}
 
-<dialog id="foto-invoegen" class="foto-invoegen">
-  {% include "klussen/_uploadveld.html" %}
-</dialog>
-<script>
-  document.getElementById("foto-invoegen").addEventListener("click", function (e) {
-    if (e.target === this) this.close();
-  });
-</script>
+{% include "klussen/_fotodialoog.html" %}

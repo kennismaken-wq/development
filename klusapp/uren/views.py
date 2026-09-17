@@ -82,10 +82,26 @@ def mijn_uren(request):
         for n in range((periode_eind - periode_begin).days + 1)
     ]
 
+    # Voor de "uren toevoegen"-dialoog die over de agenda heen opent (in
+    # plaats van ernaartoe te navigeren, zie kalender.js): begintijd sluit
+    # standaard aan op het laatste blok van de dag, net als uurblok_nieuw dat
+    # zonder ?van= zou doen.
+    laatste_van_dag = max(
+        (blok for blok in blokken if blok.datum == dag), key=lambda blok: blok.eindtijd, default=None
+    )
+    formulier = UurblokForm(
+        initial={"datum": dag, "begintijd": laatste_van_dag.eindtijd if laatste_van_dag else None}
+    )
+
     context = {
         "weergave": weergave,
         "dag": dag,
         "dagen": dagen,
+        "formulier": formulier,
+        # Met ?dag= erbij, zodat een mislukte post (validatiefout) via
+        # periode.gekozen_dag() op dezelfde dag terechtkomt als waar je 'm
+        # opende — zie uurblok_nieuw().
+        "uurblok_nieuw_actie": f"{reverse('uurblok_nieuw')}?dag={dag.isoformat()}",
         "vakken": kalender.vakken(),
         "uurlabels": kalender.uurlabels(),
         "rasterhoogte": kalender.raster_hoogte(),

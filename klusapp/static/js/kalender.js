@@ -19,9 +19,26 @@
   function openFormulier(dag, vanVak, totVak) {
     // totVak is null bij een tik: dan alleen een begintijd meegeven.
     const van = totVak === null ? vanVak : Math.min(vanVak, totVak);
-    let adres = nieuwUrl + "?dag=" + dag + "&van=" + tijd(van);
-    if (totVak !== null) adres += "&tot=" + tijd(Math.max(vanVak, totVak) + 1);
-    window.location.href = adres;
+    const vanTijd = tijd(van);
+    const totTijd = totVak === null ? "" : tijd(Math.max(vanVak, totVak) + 1);
+
+    // De dialoog staat al klaar in de pagina (mijn_uren.html): die vullen we
+    // met de gesleepte dag/tijd en openen we, in plaats van ernaartoe te
+    // navigeren — zo blijft de agenda op de achtergrond zichtbaar. Alleen in
+    // de maandweergave staat de dialoog er niet (geen sleepbaar raster), dan
+    // valt dit terug op de oude navigatie.
+    const dialoog = document.getElementById("uren-invoegen");
+    if (!dialoog) {
+      let adres = nieuwUrl + "?dag=" + dag + "&van=" + vanTijd;
+      if (totTijd) adres += "&tot=" + totTijd;
+      window.location.href = adres;
+      return;
+    }
+    dialoog.querySelector("form").action = nieuwUrl + "?dag=" + dag;
+    document.getElementById("id_datum").value = dag;
+    document.getElementById("id_begintijd").value = vanTijd;
+    document.getElementById("id_eindtijd").value = totTijd;
+    dialoog.showModal();
   }
 
   let muisGebruikt = false;

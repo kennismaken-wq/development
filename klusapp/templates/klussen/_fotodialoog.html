@@ -1,0 +1,12 @@
+{% comment %} Uploaddialoog voor een losse foto/document. Los van _fotoraster.html
+   getrokken zodat ook een scherm zonder fotoraster (de "per klus"-weergave van
+   de dropbox) 'm kan tonen. Verwacht formulier/upload_url/terug (en evt.
+   klus_pk/uurblok_pk) — dezelfde BijlageForm-context als _uploadveld.html. {% endcomment %}
+<dialog id="foto-invoegen" class="foto-invoegen">
+  {% include "klussen/_uploadveld.html" %}
+</dialog>
+<script>
+  document.getElementById("foto-invoegen").addEventListener("click", function (e) {
+    if (e.target === this) this.close();
+  });
+</script>

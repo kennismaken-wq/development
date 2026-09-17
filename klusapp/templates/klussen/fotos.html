@@ -15,25 +15,29 @@
   </div>
 
   {% if weergave == 'klus' %}
-    {% if klus_tegels %}
-      <div class="klustegels">
-        {% for klus in klus_tegels %}
-          <a href="{{ klus.get_absolute_url }}" class="klustegel">
-            {% if klus.omslagfoto %}
-              <img src="{% url 'media_bestand' klus.omslagfoto.thumbnail.name|default:klus.omslagfoto.bestand.name %}"
-                   alt="" loading="lazy">
-            {% endif %}
-            <div class="klustegel-info">
-              <span class="soort-badge">{{ klus.get_soort_display }}</span>
-              <span class="naam">{{ klus.naam }}</span>
-              <span class="tel">{{ klus.aantal_fotos }} foto{{ klus.aantal_fotos|pluralize }}</span>
-            </div>
-          </a>
-        {% endfor %}
-      </div>
-    {% else %}
+    <div class="klustegels">
+      <button type="button" class="fotokaart-nieuw" onclick="document.getElementById('foto-invoegen').showModal()" aria-label="Foto of document toevoegen">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      </button>
+      {% for klus in klus_tegels %}
+        <a href="{{ klus.get_absolute_url }}" class="klustegel">
+          {% if klus.omslagfoto %}
+            <img src="{% url 'media_bestand' klus.omslagfoto.thumbnail.name|default:klus.omslagfoto.bestand.name %}"
+                 alt="" loading="lazy">
+          {% endif %}
+          <div class="klustegel-info">
+            <span class="soort-badge">{{ klus.get_soort_display }}</span>
+            <span class="naam">{{ klus.naam }}</span>
+            <span class="tel">{{ klus.aantal_fotos }} foto{{ klus.aantal_fotos|pluralize }}</span>
+          </div>
+        </a>
+      {% endfor %}
+    </div>
+    {% if not klus_tegels %}
       <p class="leeg">{% if zoek %}Niets gevonden voor "{{ zoek }}".{% else %}Nog geen klus met foto's.{% endif %}</p>
     {% endif %}
+
+    {% include "klussen/_fotodialoog.html" %}
   {% else %}
     <h2 class="sectiekop">Losse foto's</h2>
     {% include "klussen/_fotoraster.html" %}

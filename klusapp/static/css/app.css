@@ -323,6 +323,9 @@ input[type=time]::-webkit-calendar-picker-indicator{ filter:invert(1); opacity:.
   padding:1.6rem 1rem; margin:0;
   border:1px dashed rgba(255,255,255,0.16); border-radius:18px;
 }
+/* ruimte tussen de "+"-tegel en de leegmelding erna, anders schuren ze tegen
+   elkaar aan zodra het raster nog maar één (leeg) tegeltje breed is */
+.fotoraster + .leeg, .klustegels + .leeg{ margin-top:.9rem; }
 
 .uploadveld{ position:relative; border-radius:20px; padding:1.1rem 1.2rem 1.3rem; }
 .uploadveld label:first-of-type{ margin-top:0; }
@@ -373,16 +376,18 @@ input[type=time]::-webkit-calendar-picker-indicator{ filter:invert(1); opacity:.
 }
 .fotokaart .wie{ font-size:10.5px; color:rgba(255,255,255,0.5); }
 
-/* eerste tegel in het raster: lege plek met een plus, opent de invoegdialoog */
+/* eerste tegel in het raster: lege plek met een plus, opent de invoegdialoog.
+   max-width erop, anders wordt hij bij een enkel (leeg) raster net zo breed
+   als de hele kolom en dus een onnodig grote vierkante tegel. */
 .fotokaart-nieuw{
   margin:0 0 .7rem; border-radius:20px; break-inside:avoid;
-  width:100%; aspect-ratio:1; cursor:pointer;
+  width:100%; max-width:160px; aspect-ratio:1; cursor:pointer;
   display:flex; align-items:center; justify-content:center;
   background:rgba(255,255,255,0.05); border:1px dashed rgba(255,255,255,0.28);
   color:rgba(255,255,255,0.6);
 }
 .fotokaart-nieuw:hover{ background:rgba(255,255,255,0.10); color:#fff; }
-.fotokaart-nieuw svg{ width:32px; height:32px; }
+.fotokaart-nieuw svg{ width:22px; height:22px; }
 
 /* dialoog met het uploadveld: de form zelf is al een glaskaart (.uploadveld
    .glas), de dialoog is alleen een neutrale drager met een donkere backdrop */
@@ -391,6 +396,16 @@ dialog.foto-invoegen{
   max-width:520px; width:calc(100% - 2.4rem);
 }
 dialog.foto-invoegen::backdrop{ background:rgba(10,10,8,0.55); backdrop-filter:blur(3px); }
+
+/* zelfde idee voor "uren toevoegen": als dialoog boven de agenda in plaats
+   van een navigatie ernaartoe, zodat de agenda op de achtergrond zichtbaar
+   blijft (SPEC: sleep/tik in het raster mag de kalender niet laten verdwijnen). */
+.uurblokformulier.glas{ position:relative; border-radius:20px; padding:1.1rem 1.2rem 1.3rem; }
+dialog.uren-invoegen{
+  border:0; padding:0; background:transparent; color:inherit;
+  max-width:480px; width:calc(100% - 2.4rem);
+}
+dialog.uren-invoegen::backdrop{ background:rgba(10,10,8,0.55); backdrop-filter:blur(3px); }
 
 /* verwijderknopje rechtsboven op de kaart */
 .weg{ position:absolute; top:.4rem; right:.4rem; }

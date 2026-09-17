@@ -1,0 +1,16 @@
+{% comment %} Het formulier om een uurblok toe te voegen. Verwacht `formulier`
+   (UurblokForm). Optioneel `actie` (url om naar te posten; zonder dat gaat
+   hij naar de huidige pagina) en `in_dialoog` (sluitkruisje + glaskaart-look,
+   voor gebruik binnen <dialog id="uren-invoegen"> op de agenda zelf). {% endcomment %}
+<form class="uurblokformulier{% if in_dialoog %} glas{% endif %}" method="post"{% if actie %} action="{{ actie }}"{% endif %}>
+  {% if in_dialoog %}
+    <button type="button" class="dialog-sluiten" onclick="this.closest('dialog').close()" aria-label="Sluiten">×</button>
+  {% endif %}
+  {% csrf_token %}
+  {% for veld in formulier %}
+    <label for="{{ veld.id_for_label }}">{{ veld.label }}</label>
+    {{ veld }}
+    {% for fout in veld.errors %}<p class="fout">{{ fout }}</p>{% endfor %}
+  {% endfor %}
+  <p style="margin-top:1.8rem"><button type="submit" class="knop">Opslaan</button></p>
+</form>

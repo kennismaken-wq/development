@@ -71,8 +71,17 @@
     </div>
 
     <p style="margin-top:1.2rem">
-      <a class="knop" href="{% url 'uurblok_nieuw' %}?dag={{ dag|date:'Y-m-d' }}">Uren toevoegen</a>
+      <button type="button" class="knop" onclick="document.getElementById('uren-invoegen').showModal()">Uren toevoegen</button>
     </p>
+
+    <dialog id="uren-invoegen" class="uren-invoegen">
+      {% include "uren/_uurblokformulier.html" with actie=uurblok_nieuw_actie in_dialoog=True %}
+    </dialog>
+    <script>
+      document.getElementById("uren-invoegen").addEventListener("click", function (e) {
+        if (e.target === this) this.close();
+      });
+    </script>
 
     <script src="{% static 'js/kalender.js' %}"
             data-nieuw-url="{% url 'uurblok_nieuw' %}"></script>

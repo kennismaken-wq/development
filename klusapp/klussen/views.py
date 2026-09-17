@@ -186,7 +186,14 @@ def fotos(request):
         return render(
             request,
             "klussen/fotos.html",
-            {"weergave": weergave, "zoek": zoek, "klus_tegels": klussen},
+            {
+                "weergave": weergave,
+                "zoek": zoek,
+                "klus_tegels": klussen,
+                "formulier": BijlageForm(),
+                "upload_url": reverse("bijlage_toevoegen"),
+                "terug": request.get_full_path(),
+            },
         )
 
     bijlagen = (
