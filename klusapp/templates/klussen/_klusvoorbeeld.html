@@ -14,7 +14,9 @@
             <span class="naam">{{ item.originele_naam|default:"Document" }}</span>
           </div>
         {% else %}
-          <div class="voorbeeldlaag-inhoud notitietekst">{{ item.tekst|truncatechars:70 }}</div>
+          <div class="voorbeeldlaag-inhoud">
+            <p class="notitietekst">{{ item.tekst|truncatechars:160 }}</p>
+          </div>
         {% endif %}
       </div>
     {% endfor %}

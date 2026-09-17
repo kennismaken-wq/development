@@ -621,7 +621,15 @@ dialog.foto-popup img{
   overflow:hidden; text-overflow:ellipsis; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical;
 }
 .voorbeeldlaag-notitie{ background:rgba(var(--accent-rgb),0.14); border-color:rgba(var(--accent-rgb),0.30); }
-.voorbeeldlaag-notitie .notitietekst{ font-family:'Fraunces',serif; font-style:italic; font-size:10px; line-height:1.25; color:var(--hi); }
+/* line-clamp i.p.v. alleen op tekens afkappen: bij een klus zonder foto's of
+   documenten wordt dit de voorste, niet-gedraaide laag (dus volledig
+   leesbaar in plaats van half achter iets anders verstopt), en dan moet een
+   lange beschrijving netjes op een paar regels stoppen in plaats van in
+   piepkleine regeltjes te worden geknipt. */
+.voorbeeldlaag-notitie .notitietekst{
+  margin:0; font-family:'Fraunces',serif; font-style:italic; font-size:10.5px; line-height:1.3; color:var(--hi);
+  display:-webkit-box; -webkit-line-clamp:4; -webkit-box-orient:vertical; overflow:hidden;
+}
 
 .voorbeeldstapel-meer{
   position:absolute; bottom:-4px; right:-4px; z-index:4;
