@@ -1,6 +1,6 @@
 import shutil
 import tempfile
-from datetime import date, time
+from datetime import date, time, timedelta
 from io import BytesIO
 
 from django.contrib.auth.models import AnonymousUser
@@ -14,7 +14,7 @@ from medewerkers.models import Medewerker
 from uren import totalen
 from uren.models import Uurblok
 
-from . import afbeeldingen, views
+from . import afbeeldingen, kleuren, views
 from .models import Bijlage, Klus
 
 TIJDELIJKE_MEDIA = tempfile.mkdtemp()
@@ -165,6 +165,81 @@ class BijlageUploadTest(TestCase):
             {"bestanden": upload(), "terug": "https://kwaadaardig.example/pak"},
         )
         self.assertEqual(antwoord.headers["Location"], reverse("fotos"))
+
+
+@override_settings(MEDIA_ROOT=TIJDELIJKE_MEDIA)
+class FotosWeergaveTest(TestCase):
+    """De schakelaar op /fotos/: "los" toont alles plat, "klus" toont elke
+    klus als tegel — ook zonder inhoud (zie klussen/views.py:fotos)."""
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.sam = Medewerker.objects.create_user("sam", password="x", first_name="Sam")
+        cls.klus = Klus.objects.create(naam="Tuin Vermeer", adres="Dijkweg 12")
+        cls.lege_klus = Klus.objects.create(naam="Kale klus", actief=False)
+        cls.foto_op_klus = Bijlage.objects.create(
+            klus=cls.klus, bestand=upload(), soort=Bijlage.Soort.FOTO, datum=date(2026, 9, 1),
+        )
+        cls.losse_foto = Bijlage.objects.create(
+            bestand=upload("los.jpg"), soort=Bijlage.Soort.FOTO, datum=date(2026, 9, 2),
+        )
+
+    @classmethod
+    def tearDownClass(cls):
+        shutil.rmtree(TIJDELIJKE_MEDIA, ignore_errors=True)
+        super().tearDownClass()
+
+    def setUp(self):
+        self.client.force_login(self.sam)
+
+    def test_zonder_weergave_valt_terug_op_los(self):
+        antwoord = self.client.get(reverse("fotos"))
+        self.assertEqual(antwoord.context["weergave"], "los")
+
+    def test_onbekende_weergave_valt_terug_op_los(self):
+        antwoord = self.client.get(reverse("fotos"), {"weergave": "onzin"})
+        self.assertEqual(antwoord.context["weergave"], "los")
+
+    def test_losse_fotos_toont_ook_fotos_van_een_klus(self):
+        # Vóór deze wijziging liet "los" alleen bijlagen zonder klus zien.
+        antwoord = self.client.get(reverse("fotos"), {"weergave": "los"})
+        self.assertIn(self.foto_op_klus, antwoord.context["foto_bijlagen"])
+        self.assertIn(self.losse_foto, antwoord.context["foto_bijlagen"])
+
+    def test_elke_klus_krijgt_een_tegel_ook_zonder_inhoud(self):
+        # Vóór deze wijziging verborg aantal_fotos__gt=0 een kale klus.
+        antwoord = self.client.get(reverse("fotos"), {"weergave": "klus"})
+        namen = [klus.naam for klus in antwoord.context["klus_tegels"]]
+        self.assertIn(self.klus.naam, namen)
+        self.assertIn(self.lege_klus.naam, namen)
+
+    def test_klus_zonder_inhoud_toont_lege_stapel(self):
+        antwoord = self.client.get(reverse("fotos"), {"weergave": "klus"})
+        self.assertContains(antwoord, "Nog geen inhoud")
+
+
+@override_settings(MEDIA_ROOT=TIJDELIJKE_MEDIA)
+class VoorbeeldItemsTest(TestCase):
+    """De gewaaierde stapel op een klustegel: _voorbeeld_items() bepaalt wat
+    er in past en wat er "+N meer" bij komt te staan."""
+
+    @classmethod
+    def tearDownClass(cls):
+        shutil.rmtree(TIJDELIJKE_MEDIA, ignore_errors=True)
+        super().tearDownClass()
+
+    def test_notitie_is_de_achterste_laag_en_verdringt_geen_media(self):
+        klus = Klus.objects.create(naam="Tuin Vermeer", beschrijving="Volledige aanleg achtertuin")
+        for dag in range(1, 5):
+            Bijlage.objects.create(klus=klus, bestand=upload(), soort=Bijlage.Soort.FOTO, datum=date(2026, 9, dag))
+        klus.voorbeeld_bijlagen = list(klus.bijlagen.order_by("-datum", "-toegevoegd_op"))
+
+        items, meer = views._voorbeeld_items(klus)
+
+        self.assertEqual(len(items), 3)
+        self.assertEqual(meer, 2)  # 4 foto's + 1 notitie = 5 stuks inhoud, 3 getoond -> 2 meer
+        self.assertEqual(items[0]["soort"], "notitie")
+        self.assertEqual(items[-1].datum, date(2026, 9, 4))  # meest recente foto, voorste laag
 
 
 @override_settings(MEDIA_ROOT=TIJDELIJKE_MEDIA)
@@ -349,6 +424,95 @@ class KlusBeheerTest(TestCase):
         self.client.force_login(self.maarten)
         self.assertContains(self.client.get(reverse("klussen")), "Nieuwe klus")
         self.assertContains(self.client.get(klus.get_absolute_url()), "Bewerken")
+
+
+class KlusKleurTest(TestCase):
+    """Automatische kleurtoewijzing bij het aanmaken van een klus (klussen.kleuren)."""
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.maarten = Medewerker.objects.create_user(
+            "maarten", password="x", rol=Medewerker.Rol.EIGENAAR
+        )
+
+    def geldig(self, **afwijkend):
+        gegevens = {
+            "naam": "Tuin Vermeer",
+            "soort": Klus.Soort.AANLEG,
+            "startdatum": "2026-09-14",
+            "adres": "Dijkweg 12",
+            "plaats": "Maasdijk",
+            "actief": "on",
+        }
+        gegevens.update(afwijkend)
+        return gegevens
+
+    def test_kleur_komt_uit_het_palet(self):
+        self.client.force_login(self.maarten)
+        self.client.post(reverse("klus_nieuw"), self.geldig())
+        self.assertIn(Klus.objects.get().kleur, kleuren.PALET)
+
+    def test_kleurkiezer_staat_niet_op_het_aanmaakformulier(self):
+        self.client.force_login(self.maarten)
+        antwoord = self.client.get(reverse("klus_nieuw"))
+        self.assertNotContains(antwoord, 'type="color"')
+
+    def test_kleurkiezer_staat_wel_op_het_bewerkformulier(self):
+        klus = Klus.objects.create(naam="Tuin Vermeer", kleur=kleuren.PALET[0])
+        self.client.force_login(self.maarten)
+        antwoord = self.client.get(reverse("klus_bewerken", args=[klus.pk]))
+        self.assertContains(antwoord, 'type="color"')
+
+    def test_een_geposte_kleur_wordt_genegeerd_bij_aanmaken(self):
+        # Het veld is verborgen; ook als iemand het zelf aanpast bepaalt de
+        # server de kleur, niet de client.
+        Klus.objects.create(naam="Bestaand", actief=True, kleur=kleuren.PALET[0])
+        self.client.force_login(self.maarten)
+        self.client.post(reverse("klus_nieuw"), self.geldig(kleur="#000000"))
+        nieuwe = Klus.objects.exclude(naam="Bestaand").get()
+        self.assertNotEqual(nieuwe.kleur, "#000000")
+
+    def test_nieuwe_klus_krijgt_niet_de_kleur_van_een_actieve_klus(self):
+        Klus.objects.create(naam="Bestaand", actief=True, kleur=kleuren.PALET[0])
+        self.client.force_login(self.maarten)
+        self.client.post(reverse("klus_nieuw"), self.geldig())
+        nieuwe = Klus.objects.exclude(naam="Bestaand").get()
+        self.assertNotEqual(nieuwe.kleur, kleuren.PALET[0])
+
+    def test_nieuwe_klus_krijgt_niet_de_kleur_van_een_recent_afgeronde_klus(self):
+        afgerond = Klus.objects.create(naam="Bestaand", actief=True, kleur=kleuren.PALET[0])
+        afgerond.actief = False
+        afgerond.save()
+        self.assertEqual(afgerond.afgerond_op, date.today())
+
+        self.client.force_login(self.maarten)
+        self.client.post(reverse("klus_nieuw"), self.geldig())
+        nieuwe = Klus.objects.exclude(naam="Bestaand").get()
+        self.assertNotEqual(nieuwe.kleur, kleuren.PALET[0])
+
+    def test_kleur_van_lang_geleden_afgeronde_klus_mag_weer_gebruikt_worden(self):
+        lang_geleden = date.today() - timedelta(days=kleuren.RECENT_AFGEROND_DAGEN + 1)
+        Klus.objects.create(
+            naam="Bestaand", actief=False, kleur=kleuren.PALET[0], afgerond_op=lang_geleden
+        )
+        self.assertEqual(kleuren.volgende_kleur(), kleuren.PALET[0])
+
+    def test_reactiveren_wist_afgerond_op(self):
+        klus = Klus.objects.create(naam="Bestaand", actief=True)
+        klus.actief = False
+        klus.save()
+        self.assertIsNotNone(klus.afgerond_op)
+        klus.actief = True
+        klus.save()
+        self.assertIsNone(klus.afgerond_op)
+
+    def test_leeg_palet_valt_terug_op_minst_gebruikte_kleur(self):
+        for i, kleur in enumerate(kleuren.PALET):
+            Klus.objects.create(naam=f"Klus {i}", actief=True, kleur=kleur)
+        # Eén kleur twee keer, zodat er een duidelijk minst-drukke kleur overblijft.
+        Klus.objects.create(naam="Extra", actief=True, kleur=kleuren.PALET[0])
+        overgebleven = [k for k in kleuren.PALET if k != kleuren.PALET[0]]
+        self.assertIn(kleuren.volgende_kleur(), overgebleven)
 
 
 class GewerkteUrenOpKlusTest(TestCase):

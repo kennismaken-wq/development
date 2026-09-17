@@ -567,24 +567,78 @@ dialog.foto-popup img{
   letter-spacing:.05em; text-transform:uppercase; color:rgba(255,255,255,0.45);
 }
 
-/* "Per klus"-weergave op het foto's-scherm: elke klus is één tegel, met de
-   meest recente foto als omslag. Zelfde metselwerk-raster als de losse
-   foto's, zodat het geheel bij elkaar blijft ogen als je wisselt. */
-.klustegels{ columns:2 220px; column-gap:.8rem; }
-@media (min-width:620px){ .klustegels{ columns:4 220px; } }
+/* "Per klus": elke klus is nu een front-of-card, geen fotogalerij meer, en
+   zonder één grote omslagfoto zijn de tegels vrij uniform van hoogte — dus
+   een gewoon grid i.p.v. het Pinterest-metselwerk van .fotoraster (dat
+   bestond juist om wisselende beeldverhoudingen op te vangen). Grid leest
+   ook van boven naar onder / links naar rechts; CSS-columns vult eerst een
+   hele kolom, wat voor een lijst klussen onnatuurlijk aanvoelt. */
+.klustegels{
+  display:grid; grid-template-columns:repeat(auto-fill, minmax(220px, 1fr)); gap:.8rem;
+}
 .klustegel{
-  display:block; margin:0 0 .8rem; border-radius:20px; overflow:hidden;
+  display:flex; flex-direction:column; gap:.6rem;
+  border-radius:20px; padding:1rem 1rem 1.1rem;
   background:rgba(255,255,255,0.07); border:1px solid rgba(255,255,255,0.14);
-  color:#fff; text-decoration:none; break-inside:avoid;
-  transition:transform .12s, background .12s;
+  color:#fff; text-decoration:none; transition:transform .12s, background .12s;
 }
 .klustegel:hover{ transform:translateY(-2px); background:rgba(255,255,255,0.11); }
-.klustegel img{ display:block; width:100%; height:auto; background:rgba(0,0,0,0.2); }
-.klustegel-info{ padding:.75rem .9rem .9rem; display:grid; gap:.35rem; }
-.klustegel-info .naam{
-  font-family:'Fraunces',serif; font-style:italic; font-weight:600; font-size:1rem;
+.klustegel.afgerond{ opacity:.6; }
+
+.klustegel-kop{ display:grid; gap:.2rem; }
+.klustegel-kop .badges{ display:flex; gap:.3rem; margin-bottom:.1rem; }
+.klustegel-kop .naam{ font-family:'Fraunces',serif; font-style:italic; font-weight:600; font-size:1rem; }
+.klustegel-kop .adres{ font-size:12px; color:rgba(255,255,255,0.6); }
+
+/* Gewaaierde stapel, naar het "Poetry"-voorbeeld: 2-3 lagen licht gedraaid
+   en verschoven achter een voorste laag die recht staat. Nieuw idioom in
+   deze app (nergens anders staat iets gekanteld) — daarom bewust ingetogen:
+   kleine hoeken, subtiele offsets, verder dezelfde glaskaart-taal (afgeronde
+   hoeken, dun randje, schaduw) als de rest van de app. */
+.voorbeeldstapel{ position:relative; height:78px; width:78px; margin-top:.2rem; }
+.voorbeeldlaag{
+  position:absolute; inset:0; border-radius:14px; overflow:hidden;
+  background:rgba(255,255,255,0.09); border:1px solid rgba(255,255,255,0.20);
+  box-shadow:0 10px 22px rgba(0,0,0,0.28);
+  transition:transform .18s ease;
 }
-.klustegel-info .tel{ font-size:11px; color:rgba(255,255,255,0.5); }
+.laag-voor-1{ z-index:3; transform:rotate(0deg) translate(0, 0) scale(1); }
+.laag-voor-2{ z-index:2; transform:rotate(8deg) translate(11px, 5px) scale(0.95); }
+.laag-voor-3{ z-index:1; transform:rotate(-10deg) translate(-11px, 9px) scale(0.90); }
+.klustegel:hover .laag-voor-2{ transform:rotate(11deg) translate(15px, 7px) scale(0.95); }
+.klustegel:hover .laag-voor-3{ transform:rotate(-13deg) translate(-15px, 12px) scale(0.90); }
+
+.voorbeeldlaag-foto img{ display:block; width:100%; height:100%; object-fit:cover; background:rgba(0,0,0,0.2); }
+.voorbeeldlaag-document .voorbeeldlaag-inhoud,
+.voorbeeldlaag-notitie .voorbeeldlaag-inhoud{
+  height:100%; padding:.4rem; display:flex; flex-direction:column;
+  align-items:center; justify-content:center; gap:.2rem; text-align:center;
+}
+.voorbeeldlaag-document{ background:rgba(255,255,255,0.05); }
+.voorbeeldlaag-document svg{ width:20px; height:20px; color:rgba(255,255,255,0.55); }
+.voorbeeldlaag-document .naam{
+  font-size:9px; color:rgba(255,255,255,0.6); line-height:1.15;
+  overflow:hidden; text-overflow:ellipsis; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical;
+}
+.voorbeeldlaag-notitie{ background:rgba(var(--accent-rgb),0.14); border-color:rgba(var(--accent-rgb),0.30); }
+.voorbeeldlaag-notitie .notitietekst{ font-family:'Fraunces',serif; font-style:italic; font-size:10px; line-height:1.25; color:var(--hi); }
+
+.voorbeeldstapel-meer{
+  position:absolute; bottom:-4px; right:-4px; z-index:4;
+  background:var(--ink); color:#fff; font-size:10px; font-weight:600;
+  padding:.15rem .45rem; border-radius:999px; border:1px solid rgba(255,255,255,0.25);
+}
+.voorbeeldstapel-leeg{
+  display:flex; align-items:center; justify-content:center;
+  border:1px dashed rgba(255,255,255,0.20); border-radius:14px;
+  color:rgba(255,255,255,0.4); font-size:10px;
+}
+
+.fotokaart .klus-badge{
+  display:inline-block; font-size:10.5px; font-weight:600; color:var(--hi);
+  text-decoration:none; margin-bottom:.1rem;
+}
+.fotokaart .klus-badge:hover{ text-decoration:underline; }
 
 /* ══════════ KLUSDOSSIER: GEWERKTE UREN ══════════
    Wie er in deze lijst staat is afgeleid uit de geschreven uren, niet uit een

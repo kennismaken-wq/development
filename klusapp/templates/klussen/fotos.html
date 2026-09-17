@@ -5,34 +5,63 @@
   <form method="get" class="foto-zoekbalk">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.6" y2="16.6"/></svg>
     <input type="search" name="q" value="{{ zoek }}" placeholder="Zoek op omschrijving, klus of adres…">
+    <input type="hidden" name="weergave" value="{{ weergave }}">
   </form>
 
-  <h2 class="sectiekop">Losse foto's</h2>
-  {% include "klussen/_fotoraster.html" %}
+  <div class="weergave-pillen">
+    <a href="?weergave=los{% if zoek %}&q={{ zoek|urlencode }}{% endif %}" class="pil{% if weergave == 'los' %} actief{% endif %}">Losse foto's</a>
+    <a href="?weergave=klus{% if zoek %}&q={{ zoek|urlencode }}{% endif %}" class="pil{% if weergave == 'klus' %} actief{% endif %}">Per klus</a>
+  </div>
 
-  {% if document_bijlagen %}
-    <h2 class="sectiekop">Losse documenten</h2>
-    {% include "klussen/_documentenlijst.html" %}
-  {% endif %}
-
-  <h2 class="sectiekop">Foto's per klus</h2>
-  {% if klus_tegels %}
-    <div class="klustegels">
-      {% for klus in klus_tegels %}
-        <a href="{{ klus.get_absolute_url }}" class="klustegel">
-          {% if klus.omslagfoto %}
-            <img src="{% url 'media_bestand' klus.omslagfoto.thumbnail.name|default:klus.omslagfoto.bestand.name %}"
-                 alt="" loading="lazy">
-          {% endif %}
-          <div class="klustegel-info">
-            <span class="soort-badge">{{ klus.get_soort_display }}</span>
-            <span class="naam">{{ klus.naam }}</span>
-            <span class="tel">{{ klus.aantal_fotos }} foto{{ klus.aantal_fotos|pluralize }}</span>
-          </div>
-        </a>
-      {% endfor %}
-    </div>
+  {% if weergave == 'klus' %}
+    {% if klus_tegels %}
+      <div class="klustegels">
+        {% for klus in klus_tegels %}
+          <a href="{{ klus.get_absolute_url }}" class="klustegel{% if not klus.actief %} afgerond{% endif %}">
+            <div class="klustegel-kop">
+              <div class="badges">
+                <span class="soort-badge">{{ klus.get_soort_display }}</span>
+                {% if not klus.actief %}<span class="soort-badge afgerond-badge">Afgerond</span>{% endif %}
+              </div>
+              <span class="naam">{{ klus.naam }}</span>
+              {% if klus.adres or klus.plaats %}
+                <span class="adres">{{ klus.adres }}{% if klus.adres and klus.plaats %}, {% endif %}{{ klus.plaats }}</span>
+              {% endif %}
+            </div>
+            {% if klus.voorbeeld_items %}
+              <div class="voorbeeldstapel">
+                {% for item in klus.voorbeeld_items %}
+                  <div class="voorbeeldlaag laag-voor-{{ forloop.revcounter }} {% if item.soort == 'foto' %}voorbeeldlaag-foto{% elif item.soort == 'document' %}voorbeeldlaag-document{% else %}voorbeeldlaag-notitie{% endif %}">
+                    {% if item.soort == 'foto' %}
+                      <img src="{% url 'media_bestand' item.thumbnail.name|default:item.bestand.name %}" alt="" loading="lazy">
+                    {% elif item.soort == 'document' %}
+                      <div class="voorbeeldlaag-inhoud">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M7 2h7l4 4v15a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1z"/><path d="M14 2v4h4"/></svg>
+                        <span class="naam">{{ item.originele_naam|default:"Document" }}</span>
+                      </div>
+                    {% else %}
+                      <div class="voorbeeldlaag-inhoud notitietekst">{{ item.tekst|truncatechars:70 }}</div>
+                    {% endif %}
+                  </div>
+                {% endfor %}
+                {% if klus.voorbeeld_meer %}<span class="voorbeeldstapel-meer">+{{ klus.voorbeeld_meer }}</span>{% endif %}
+              </div>
+            {% else %}
+              <div class="voorbeeldstapel voorbeeldstapel-leeg"><span>Nog geen inhoud</span></div>
+            {% endif %}
+          </a>
+        {% endfor %}
+      </div>
+    {% else %}
+      <p class="leeg">{% if zoek %}Niets gevonden voor "{{ zoek }}".{% else %}Nog geen klussen.{% endif %}</p>
+    {% endif %}
   {% else %}
-    <p class="leeg">{% if zoek %}Niets gevonden voor "{{ zoek }}".{% else %}Nog geen klus met foto's.{% endif %}</p>
+    <h2 class="sectiekop">Losse foto's</h2>
+    {% include "klussen/_fotoraster.html" with toon_klus=True %}
+
+    {% if document_bijlagen %}
+      <h2 class="sectiekop">Losse documenten</h2>
+      {% include "klussen/_documentenlijst.html" %}
+    {% endif %}
   {% endif %}
 {% endblock %}

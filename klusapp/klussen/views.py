@@ -4,7 +4,7 @@ from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.files.base import ContentFile
-from django.db.models import Count, Prefetch, Q
+from django.db.models import Prefetch, Q
 from django.http import FileResponse, Http404, HttpResponse, HttpResponseNotAllowed
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
@@ -151,58 +151,80 @@ def media_bestand(request, pad):
     return FileResponse(volledig.open("rb"), as_attachment=bool(naam), filename=naam)
 
 
+def _voorbeeld_items(klus, cap=3):
+    """Tot `cap` stukjes inhoud voor de gewaaierde stapel op de klustegel.
+
+    Eerst de nieuwste foto's/documenten (uit de al-geprefetchte
+    `voorbeeld_bijlagen`, nieuw->oud); is er nog ruimte binnen de cap, dan de
+    notitie (klus.beschrijving) als achterste laag — een notitie verdringt
+    dus nooit al aanwezige foto's/documenten.
+
+    Geeft (items, aantal_meer) terug. `items` staat achter-naar-voor: het
+    eerste item is de achterste laag, het laatste de voorste — zo loopt de
+    template 'm door met forloop.revcounter voor de laagklasse.
+    """
+    media = klus.voorbeeld_bijlagen
+    heeft_notitie = bool(klus.beschrijving.strip())
+    ruimte_voor_media = cap - (1 if heeft_notitie else 0)
+    getoonde_media = media[:ruimte_voor_media]
+    items = list(reversed(getoonde_media))  # oud -> nieuw, dus nieuwste laatst (voorste)
+    if heeft_notitie:
+        items.insert(0, {"soort": "notitie", "tekst": klus.beschrijving})
+    totaal = len(media) + (1 if heeft_notitie else 0)
+    return items, totaal - len(items)
+
+
 @login_required
 def fotos(request):
-    """Foto's: losse bijlagen zonder klus, en daaronder per klus gegroepeerd.
+    """Foto's: alle foto's/documenten op één hoop, of per klus als tegel.
 
-    Eén scherm, één zoekbalk erboven die op allebei tegelijk filtert: eerst de
-    dropbox (bijlagen zonder klus), daarna een tegel per klus met foto's — de
-    klus zelf is dan het hokje, doorklikken opent het klusdossier met alle
-    foto's erin.
+    Twee weergaven achter dezelfde zoekbalk, zelfde ?weergave=-patroon als
+    de dag/week/maand-pillen bij de uren (templates/uren/mijn_uren.html):
+    "los" toont alles plat op datum, "klus" toont elke klus als tegel met
+    een voorproefje van zijn inhoud.
     """
     zoek = request.GET.get("q", "").strip()
+    weergave = request.GET.get("weergave") if request.GET.get("weergave") in ("los", "klus") else "los"
 
-    bijlagen = (
-        Bijlage.objects.filter(klus__isnull=True)
-        .select_related("toegevoegd_door")
-        .order_by("-toegevoegd_op")
-    )
+    context = {
+        "zoek": zoek,
+        "weergave": weergave,
+        "formulier": BijlageForm(),
+        "upload_url": reverse("bijlage_toevoegen"),
+        "terug": request.get_full_path(),
+    }
+
+    if weergave == "klus":
+        klussen = Klus.objects.prefetch_related(
+            Prefetch(
+                "bijlagen",
+                queryset=Bijlage.objects.order_by("-datum", "-toegevoegd_op"),
+                to_attr="voorbeeld_bijlagen",
+            )
+        )
+        if zoek:
+            klussen = klussen.filter(
+                Q(naam__icontains=zoek)
+                | Q(opdrachtgever__icontains=zoek)
+                | Q(adres__icontains=zoek)
+                | Q(plaats__icontains=zoek)
+            )
+        klussen = list(klussen)  # Meta.ordering = ["-actief", "naam"] blijft gelden
+        for klus in klussen:
+            klus.voorbeeld_items, klus.voorbeeld_meer = _voorbeeld_items(klus)
+        context["klus_tegels"] = klussen
+        return render(request, "klussen/fotos.html", context)
+
+    bijlagen = Bijlage.objects.select_related("toegevoegd_door", "klus").order_by("-datum", "-toegevoegd_op")
     if zoek:
         bijlagen = bijlagen.filter(Q(toelichting__icontains=zoek) | Q(originele_naam__icontains=zoek))
-
-    klussen = Klus.objects.annotate(
-        aantal_fotos=Count("bijlagen", filter=Q(bijlagen__soort=Bijlage.Soort.FOTO))
-    ).filter(aantal_fotos__gt=0)
-    if zoek:
-        klussen = klussen.filter(
-            Q(naam__icontains=zoek)
-            | Q(opdrachtgever__icontains=zoek)
-            | Q(adres__icontains=zoek)
-            | Q(plaats__icontains=zoek)
-        )
-    klussen = klussen.prefetch_related(
-        Prefetch(
-            "bijlagen",
-            queryset=Bijlage.objects.filter(soort=Bijlage.Soort.FOTO).order_by("-datum", "-toegevoegd_op"),
-            to_attr="recente_fotos",
-        )
-    )
-    for klus in klussen:
-        klus.omslagfoto = klus.recente_fotos[0] if klus.recente_fotos else None
-
-    return render(
-        request,
-        "klussen/fotos.html",
-        {
-            "zoek": zoek,
-            "foto_bijlagen": [los for los in bijlagen if los.is_foto],
-            "document_bijlagen": [los for los in bijlagen if not los.is_foto],
-            "klus_tegels": klussen,
-            "formulier": BijlageForm(),
-            "upload_url": reverse("bijlage_toevoegen"),
-            "terug": request.get_full_path(),
-        },
-    )
+    bijlagen = list(bijlagen)
+    context["foto_bijlagen"] = [b for b in bijlagen if b.is_foto]
+    # Documenten blijven beperkt tot losse (geen klus): klus-documenten zijn
+    # al te zien via de gewaaierde stapel op de klustegel ("per klus"). Wil je
+    # ze hier ook: haal "and b.klus_id is None" hieronder weg.
+    context["document_bijlagen"] = [b for b in bijlagen if not b.is_foto and b.klus_id is None]
+    return render(request, "klussen/fotos.html", context)
 
 
 @login_required
