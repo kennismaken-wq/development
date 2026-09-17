@@ -187,16 +187,10 @@ class ProfielschermTest(TestCase):
         self.assertNotIn("Beheer", tegeltitels(self.client.get(reverse("mijn_profiel")).content.decode()))
 
     def test_systeembeheerder_ziet_de_beheertegel_wel(self):
-        self.eigenaar.is_staff = True
+        # De rol bepaalt de toegang; een vinkje zetten doet niets meer.
+        self.eigenaar.rol = Medewerker.Rol.BEHEERDER
         self.eigenaar.save()
         self.client.force_login(self.eigenaar)
-        self.assertIn("Beheer", tegeltitels(self.client.get(reverse("mijn_profiel")).content.decode()))
-
-    def test_beheerder_met_rol_medewerker_ziet_de_tegel_ook(self):
-        # createsuperuser geeft geen rol mee; die staat dan op medewerker.
-        self.medewerker.is_staff = True
-        self.medewerker.save()
-        self.client.force_login(self.medewerker)
         self.assertIn("Beheer", tegeltitels(self.client.get(reverse("mijn_profiel")).content.decode()))
 
     def test_uitloggen_staat_op_het_profielscherm(self):
@@ -208,3 +202,56 @@ class ProfielschermTest(TestCase):
         antwoord = self.client.get(reverse("mijn_profiel"))
         self.assertEqual(antwoord.status_code, 302)
         self.assertIn(reverse("inloggen"), antwoord.headers["Location"])
+
+class SysteembeheerderTest(TestCase):
+    """De rol boven de eigenaar: die van ons, en de enige die in het
+    Django-beheerscherm komt."""
+
+    def maak(self, naam, rol):
+        return Medewerker.objects.create_user(naam, password="test1234", rol=rol)
+
+    def test_alleen_de_beheerder_komt_in_het_beheerscherm(self):
+        beheerder = self.maak("floris", Medewerker.Rol.BEHEERDER)
+        eigenaar = self.maak("maarten", Medewerker.Rol.EIGENAAR)
+        medewerker = self.maak("sam", Medewerker.Rol.MEDEWERKER)
+
+        self.client.force_login(beheerder)
+        self.assertEqual(self.client.get("/beheer/").status_code, 200)
+
+        for geweigerd in (eigenaar, medewerker):
+            self.client.force_login(geweigerd)
+            antwoord = self.client.get("/beheer/")
+            # Django stuurt wie niet binnen mag terug naar zijn eigen inlog
+            self.assertNotEqual(antwoord.status_code, 200)
+
+    def test_beheerrecht_volgt_de_rol(self):
+        mw = self.maak("floris", Medewerker.Rol.BEHEERDER)
+        self.assertTrue(mw.is_staff)
+
+        # en verdwijnt weer zodra de rol verandert
+        mw.rol = Medewerker.Rol.EIGENAAR
+        mw.save()
+        self.assertFalse(mw.is_staff)
+
+    def test_vinkje_zetten_geeft_geen_toegang(self):
+        # Wie geen beheerder is, komt er ook niet in door is_staff aan te zetten.
+        mw = self.maak("maarten", Medewerker.Rol.EIGENAAR)
+        mw.is_staff = True
+        mw.save()
+        self.assertFalse(mw.is_staff)
+
+    def test_superuser_wordt_beheerder(self):
+        # createsuperuser kent onze rollen niet en zet alleen de vlaggen.
+        mw = Medewerker.objects.create_superuser("floris", password="test1234")
+        self.assertEqual(mw.rol, Medewerker.Rol.BEHEERDER)
+        self.assertTrue(mw.is_staff)
+
+    def test_beheerder_ziet_de_beheertegel(self):
+        beheerder = self.maak("floris", Medewerker.Rol.BEHEERDER)
+        self.client.force_login(beheerder)
+        self.assertIn("Beheer", tegeltitels(self.client.get(reverse("mijn_profiel")).content.decode()))
+
+    def test_eigenaar_ziet_de_beheertegel_niet(self):
+        eigenaar = self.maak("maarten", Medewerker.Rol.EIGENAAR)
+        self.client.force_login(eigenaar)
+        self.assertNotIn("Beheer", tegeltitels(self.client.get(reverse("mijn_profiel")).content.decode()))

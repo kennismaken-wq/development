@@ -5,13 +5,16 @@ from django.db import models
 class Medewerker(AbstractUser):
     """Iedereen die inlogt. De rol bepaalt wat je ziet.
 
-    Eigenaar ziet alles; een medewerker ziet alleen zijn eigen uren, maar wel
-    het volledige klusdossier.
+    Een medewerker ziet alleen zijn eigen uren, maar wel het volledige
+    klusdossier. Een eigenaar ziet alles van het bedrijf. Daarboven staat de
+    systeembeheerder: dat zijn wij, en dat is de enige rol die in het
+    Django-beheerscherm komt.
     """
 
     class Rol(models.TextChoices):
         MEDEWERKER = "medewerker", "Medewerker"
         EIGENAAR = "eigenaar", "Eigenaar"
+        BEHEERDER = "beheerder", "Systeembeheerder"
 
     rol = models.CharField(max_length=20, choices=Rol.choices, default=Rol.MEDEWERKER)
     # Wat iemand doet, niet wat hij mag. "Voorman", "hovenier", "leerling" —
@@ -44,6 +47,27 @@ class Medewerker(AbstractUser):
         volledig = f"{self.first_name} {self.last_name}".strip()
         return volledig or self.username
 
+    def save(self, *args, **kwargs):
+        # createsuperuser kent onze rollen niet en zet alleen de vlaggen van
+        # Django; wie superuser is, is bij ons systeembeheerder.
+        if self.is_superuser:
+            self.rol = self.Rol.BEHEERDER
+        # De toegang tot het Django-beheerscherm hangt aan de rol, en nergens
+        # anders aan. Zo kunnen die twee niet uit elkaar lopen en kan niemand
+        # per ongeluk binnenkomen door een vinkje te zetten.
+        self.is_staff = self.rol == self.Rol.BEHEERDER
+        super().save(*args, **kwargs)
+
+    @property
+    def is_systeembeheerder(self):
+        """Alleen deze rol komt in het Django-beheerscherm."""
+        return self.rol == self.Rol.BEHEERDER
+
     @property
     def is_eigenaar(self):
-        return self.rol == self.Rol.EIGENAAR
+        """Mag alles zien wat het bedrijf aangaat.
+
+        De systeembeheerder valt hier ook onder: die moet kunnen meekijken
+        als er iets aan de hand is.
+        """
+        return self.rol in (self.Rol.EIGENAAR, self.Rol.BEHEERDER)

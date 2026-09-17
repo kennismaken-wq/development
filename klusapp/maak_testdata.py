@@ -13,7 +13,8 @@ def zorg_voor(username, voornaam, achternaam, rol, wachtwoord, staff=False):
         defaults={"first_name": voornaam, "last_name": achternaam, "rol": rol},
     )
     mw.first_name, mw.last_name, mw.rol = voornaam, achternaam, rol
-    mw.is_staff = mw.is_superuser = staff
+    # is_staff volgt automatisch uit de rol; zie Medewerker.save()
+    mw.is_superuser = staff
     mw.set_password(wachtwoord)
     mw.save()
     print(("aangemaakt" if nieuw else "bijgewerkt"), username, rol)
