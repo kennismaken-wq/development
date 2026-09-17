@@ -35,17 +35,55 @@
 
   <h2 class="sectiekop">Laatst toegevoegde foto's</h2>
   {% if recente_fotos %}
-    <div class="fotoslider">
+    <div class="fotoslider" id="fotoslider">
       {% for foto in recente_fotos %}
         <figure class="fotoslide">
-          <a href="{{ foto.klus.get_absolute_url }}">
+          <button type="button" onclick="fotoPopupOpen('{% url 'media_bestand' foto.bestand.name %}', '{{ foto.toonnaam|escapejs }}')">
             <img src="{% url 'media_bestand' foto.thumbnail.name|default:foto.bestand.name %}"
                  alt="{{ foto.toonnaam }}" loading="lazy">
-          </a>
-          <figcaption>{{ foto.klus.naam }}</figcaption>
+          </button>
         </figure>
       {% endfor %}
     </div>
+    <dialog id="foto-popup" class="foto-popup">
+      <img id="foto-popup-img" src="" alt="">
+    </dialog>
+    <script>
+      (function () {
+        var slider = document.getElementById('fotoslider');
+        var popup = document.getElementById('foto-popup');
+        var timer = null;
+
+        function volgende() {
+          var kaart = slider.querySelector('.fotoslide');
+          if (!kaart) return;
+          var stap = kaart.getBoundingClientRect().width + parseFloat(getComputedStyle(slider).gap || 0);
+          var eind = slider.scrollWidth - slider.clientWidth - 2;
+          if (slider.scrollLeft >= eind) {
+            slider.scrollTo({ left: 0, behavior: 'smooth' });
+          } else {
+            slider.scrollBy({ left: stap, behavior: 'smooth' });
+          }
+        }
+        function start() { stop(); timer = setInterval(volgende, 3500); }
+        function stop() { if (timer) clearInterval(timer); timer = null; }
+
+        slider.addEventListener('pointerdown', stop);
+        slider.addEventListener('pointerup', function () { setTimeout(start, 4000); });
+        slider.addEventListener('mouseenter', stop);
+        slider.addEventListener('mouseleave', start);
+        popup.addEventListener('click', function (e) { if (e.target === this) this.close(); });
+
+        if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) start();
+      })();
+
+      function fotoPopupOpen(src, alt) {
+        var img = document.getElementById('foto-popup-img');
+        img.src = src;
+        img.alt = alt;
+        document.getElementById('foto-popup').showModal();
+      }
+    </script>
   {% else %}
     <p class="leeg">Nog geen foto's toegevoegd.</p>
   {% endif %}
