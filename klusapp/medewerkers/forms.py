@@ -1,7 +1,21 @@
 from django import forms
 from django.contrib.auth.password_validation import validate_password
+from django.utils.safestring import mark_safe
 
 from .models import Medewerker
+
+# Wat Django afkeurt, in gewone taal. Deze vier punten horen bij de
+# validators in config/settings.py (AUTH_PASSWORD_VALIDATORS); verandert daar
+# iets, verander het hier ook. Ze staan bij het invulveld zelf, want een eis
+# die je pas leest nadat je hem overtreedt is geen hulp.
+WACHTWOORD_EISEN = mark_safe(
+    "<ul class='eisen'>"
+    "<li>Minstens 8 tekens</li>"
+    "<li>Niet alleen cijfers</li>"
+    "<li>Geen veelgebruikt wachtwoord, zoals <em>welkom123</em> of <em>wachtwoord</em></li>"
+    "<li>Niet te veel lijken op de naam of gebruikersnaam</li>"
+    "</ul>"
+)
 
 
 class MedewerkerForm(forms.ModelForm):
@@ -67,6 +81,7 @@ class NieuweMedewerkerForm(MedewerkerForm):
         label="Tijdelijk wachtwoord",
         widget=forms.PasswordInput(render_value=True),
         strip=False,
+        help_text=WACHTWOORD_EISEN,
     )
 
     def clean_wachtwoord(self):
@@ -90,6 +105,7 @@ class WachtwoordForm(forms.Form):
         label="Nieuw wachtwoord",
         widget=forms.PasswordInput(render_value=True),
         strip=False,
+        help_text=WACHTWOORD_EISEN,
     )
 
     def clean_wachtwoord(self):

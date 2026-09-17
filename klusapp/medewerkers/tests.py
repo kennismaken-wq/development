@@ -348,3 +348,15 @@ class MedewerkersBeherenTest(TestCase):
         self.eigenaar.refresh_from_db()
         self.assertIsNone(self.eigenaar.uit_dienst_sinds)
         self.assertTrue(self.eigenaar.is_active)
+
+    def test_de_wachtwoordeisen_staan_bij_het_veld(self):
+        # Een eis die je pas leest nadat je hem overtreedt is geen hulp.
+        for adres in (reverse("medewerker_nieuw"), reverse("medewerker_wachtwoord", args=[self.sam.pk])):
+            html = self.client.get(adres).content.decode()
+            self.assertIn("Minstens 8 tekens", html, adres)
+            self.assertIn("Niet alleen cijfers", html, adres)
+
+    def test_wachtwoord_dat_lijkt_op_de_naam_wordt_geweigerd(self):
+        self.client.post(reverse("medewerker_wachtwoord", args=[self.sam.pk]), {"wachtwoord": "sam"})
+        self.sam.refresh_from_db()
+        self.assertTrue(self.sam.check_password("test1234"))

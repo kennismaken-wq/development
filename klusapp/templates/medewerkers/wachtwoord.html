@@ -13,6 +13,7 @@
     {% for veld in formulier %}
       <label for="{{ veld.id_for_label }}">{{ veld.label }}</label>
       {{ veld }}
+      {% if veld.help_text %}<div class="eisen-blok">{{ veld.help_text }}</div>{% endif %}
       {% for fout in veld.errors %}<p class="fout">{{ fout }}</p>{% endfor %}
     {% endfor %}
     <p style="margin-top:1.8rem"><button type="submit" class="knop">Wachtwoord instellen</button></p>

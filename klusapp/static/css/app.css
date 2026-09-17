@@ -318,6 +318,15 @@ input[type=time]::-webkit-calendar-picker-indicator{ filter:invert(1); opacity:.
   font-family:'Fraunces',serif; font-style:italic; font-weight:600;
   font-size:1.15rem; margin:1.8rem 0 .8rem;
 }
+/* de wachtwoordeisen, direct onder het invulveld */
+.eisen-blok{ margin:.5rem 0 0; }
+.eisen{
+  margin:0; padding:0 0 0 1.1rem;
+  color:rgba(255,255,255,0.55); font-size:12px; line-height:1.6;
+}
+.eisen li::marker{ color:rgba(var(--accent-rgb),0.7); }
+.eisen em{ font-style:normal; color:rgba(255,255,255,0.75); }
+
 /* korte toelichting boven of onder een formulier */
 .uitleg{
   color:rgba(255,255,255,0.65); font-size:13px; line-height:1.55;
