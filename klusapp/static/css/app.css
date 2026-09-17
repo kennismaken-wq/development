@@ -489,6 +489,15 @@ dialog.uren-invoegen::backdrop{ background:rgba(10,10,8,0.55); backdrop-filter:b
 .klusregel .naam{ font-family:'Fraunces',serif; font-style:italic; font-weight:600; font-size:1rem; }
 .klusregel .adres{ font-size:12px; color:rgba(255,255,255,0.6); }
 
+/* kleurstip vóór de naam — dezelfde kleur als het planbord (SPEC §5: "de
+   kleur draagt de klusidentiteit"). .legenda .vlek hierboven geeft de vorm
+   alleen binnen die context; hier staat de stip los in tekst, dus krijgt hij
+   zijn eigen afmetingen in plaats van op .legenda te leunen. */
+.naam .vlek, h1 .vlek{
+  display:inline-block; width:14px; height:14px; border-radius:999px; border:1px solid;
+  vertical-align:middle; margin:0 .5rem 0 0;
+}
+
 /* ══════════ PROFIELSCHERM: MENULIJST ══════════
    Zelfde rijenpatroon als .klussenlijst/.klusregel hierboven, nu met een
    icoon ervoor — voor de schermen die niet in de navigatiebalk passen (zie

@@ -1,6 +1,7 @@
 {% extends "basis.html" %}
+{% load kleuren %}
 {% block titel %}{{ klus.naam }}{% endblock %}
-{% block kop %}{{ klus.naam }}{% endblock %}
+{% block kop %}<span class="vlek" style="background:linear-gradient(150deg, {{ klus|kleur_van }}D9, {{ klus|kleur_van }}73); border-color:{{ klus|kleur_van }}"></span>{{ klus.naam }}{% endblock %}
 {% block sub %}<a href="{% url 'klussen' %}" style="color:rgba(255,255,255,0.6)">‹ Klussen</a>{% endblock %}
 {% block inhoud %}
   <div class="klusinfo">

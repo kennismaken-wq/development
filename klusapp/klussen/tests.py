@@ -632,6 +632,55 @@ class KlusKleurTest(TestCase):
         overgebleven = [k for k in kleuren.PALET if k != kleuren.PALET[0]]
         self.assertIn(kleuren.volgende_kleur(), overgebleven)
 
+    def test_kleinletters_uit_de_kleurkiezer_botsen_toch_met_het_palet(self):
+        # <input type=color> levert altijd kleine letters ("#95bf1d"), PALET
+        # staat in hoofdletters ("#95BF1D") — zonder normaliseren ziet
+        # volgende_kleur() dat niet als dezelfde kleur.
+        Klus.objects.create(naam="Bestaand", actief=True, kleur=kleuren.PALET[0].lower())
+        self.assertNotEqual(kleuren.volgende_kleur().upper(), kleuren.PALET[0].upper())
+
+    def test_kleurstip_staat_in_de_klussenlijst_en_op_het_dossier(self):
+        klus = Klus.objects.create(naam="Tuin Vermeer", kleur=kleuren.PALET[2])
+        self.client.force_login(self.maarten)
+        self.assertContains(self.client.get(reverse("klussen")), kleuren.PALET[2])
+        self.assertContains(self.client.get(klus.get_absolute_url()), kleuren.PALET[2])
+
+
+class KleurBackfillMigratieTest(TestCase):
+    """migrations/0007_kleur_backfill.py: klussen van vóór de automatische
+    kleurtoewijzing (kleur='') moeten alsnog, en elk apart, een kleur krijgen."""
+
+    def kleur_vullen(self):
+        import importlib.util
+
+        pad = "klussen/migrations/0007_kleur_backfill.py"
+        spec = importlib.util.spec_from_file_location("kleur_backfill", pad)
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+
+        class NepApps:
+            def get_model(self, app_label, naam):
+                return Klus
+
+        module.kleur_vullen(NepApps(), None)
+
+    def test_klussen_zonder_kleur_krijgen_er_allemaal_een_andere(self):
+        klussen = [Klus.objects.create(naam=f"Klus {i}") for i in range(3)]
+        self.kleur_vullen()
+        gekregen = [Klus.objects.get(pk=k.pk).kleur for k in klussen]
+        self.assertTrue(all(gekregen))
+        self.assertEqual(len(gekregen), len(set(k.upper() for k in gekregen)))
+
+    def test_bestaande_kleur_blijft_staan_en_telt_mee_als_bezet(self):
+        # Kleinletters uit de kleurkiezer moeten ook hier als bezet gelden.
+        oud = Klus.objects.create(naam="Al gekleurd", kleur=kleuren.PALET[0].lower())
+        nieuw = Klus.objects.create(naam="Nog leeg")
+        self.kleur_vullen()
+        oud.refresh_from_db()
+        nieuw.refresh_from_db()
+        self.assertEqual(oud.kleur, kleuren.PALET[0].lower())
+        self.assertNotEqual(nieuw.kleur.upper(), kleuren.PALET[0].upper())
+
 
 class GewerkteUrenOpKlusTest(TestCase):
     """Contractpunt 4: wie op welke klus heeft gewerkt."""

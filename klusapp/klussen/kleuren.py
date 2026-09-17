@@ -23,17 +23,21 @@ RECENT_AFGEROND_DAGEN = 30
 
 def volgende_kleur():
     vandaag = timezone.localdate()
-    in_gebruik = list(
-        Klus.objects.filter(
+    # .upper(): een kleurkiezer (<input type=color>) levert altijd kleine
+    # letters, PALET staat in hoofdletters — zonder normaliseren ziet "#95bf1d"
+    # er als andere kleur uit dan "#95BF1D" en botsen ze alsnog.
+    in_gebruik = [
+        kleur.upper()
+        for kleur in Klus.objects.filter(
             Q(actief=True) | Q(afgerond_op__gte=vandaag - timedelta(days=RECENT_AFGEROND_DAGEN))
         )
         .exclude(kleur="")
         .values_list("kleur", flat=True)
-    )
+    ]
     for kleur in PALET:
-        if kleur not in in_gebruik:
+        if kleur.upper() not in in_gebruik:
             return kleur
     # Palet op (meer actieve klussen dan kleuren, bijvoorbeeld bij veel
     # onderhoudsklanten): kies de kleur die het minst vaak voorkomt, zodat de
     # botsing zo klein mogelijk blijft in plaats van alles op één kleur te stapelen.
-    return min(PALET, key=in_gebruik.count)
+    return min(PALET, key=lambda kleur: in_gebruik.count(kleur.upper()))

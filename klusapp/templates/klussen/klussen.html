@@ -1,19 +1,25 @@
 {% extends "basis.html" %}
 {% block titel %}Klussen{% endblock %}
 {% block kop %}Klussen{% endblock %}
+{% load kleuren %}
 {% block inhoud %}
   {% if klussen %}
     <ul class="klussenlijst">
       {% for klus in klussen %}
-        <li>
-          <a href="{{ klus.get_absolute_url }}" class="klusregel{% if not klus.actief %} afgerond{% endif %}">
-            <span class="soort-badge">{{ klus.get_soort_display }}</span>
-            <span class="naam">{{ klus.naam }}</span>
-            {% if klus.adres or klus.plaats %}
-              <span class="adres">{{ klus.adres }}{% if klus.adres and klus.plaats %}, {% endif %}{{ klus.plaats }}</span>
-            {% endif %}
-          </a>
-        </li>
+        {% with kleur=klus|kleur_van %}
+          <li>
+            <a href="{{ klus.get_absolute_url }}" class="klusregel{% if not klus.actief %} afgerond{% endif %}">
+              <span class="soort-badge">{{ klus.get_soort_display }}</span>
+              <span class="naam">
+                <span class="vlek" style="background:linear-gradient(150deg, {{ kleur }}D9, {{ kleur }}73); border-color:{{ kleur }}"></span>
+                {{ klus.naam }}
+              </span>
+              {% if klus.adres or klus.plaats %}
+                <span class="adres">{{ klus.adres }}{% if klus.adres and klus.plaats %}, {% endif %}{{ klus.plaats }}</span>
+              {% endif %}
+            </a>
+          </li>
+        {% endwith %}
       {% endfor %}
     </ul>
   {% else %}
