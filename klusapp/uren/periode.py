@@ -1,10 +1,10 @@
 """Welke week of dag een scherm laat zien, en hoe je een stap vooruit of
 terug gaat.
 
-Losse module omdat vier schermen dezelfde navigatie hebben: uren schrijven,
-mijn overzicht, het planbord en de aanwezigheid. Zonder deze module staat
-dezelfde weekberekening vier keer in views.py, en dan loopt hij vroeg of laat
-uit elkaar.
+Losse module omdat meerdere schermen dezelfde navigatie hebben: uren schrijven,
+het planbord en de aanwezigheid. Zonder deze module staat dezelfde
+weekberekening meerdere keren in views.py, en dan loopt hij vroeg of laat uit
+elkaar.
 
 `timezone.localdate()` en niet `date.today()`: met USE_TZ=True en
 TIME_ZONE="Europe/Amsterdam" geeft `date.today()` op een UTC-server na 22:00 de

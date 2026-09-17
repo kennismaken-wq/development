@@ -26,11 +26,16 @@ hebben nog geen scherm.
 staan live.** De tabel hieronder is de stand van dat moment; `nog_te_bouwen` in
 `config/urls.py` is leeg en geen enkele tegel staat nog op `in_aanbouw`.
 
+**Bijgewerkt 17-09-2026:** F2 "Mijn overzicht" (contractpunt 3) is op verzoek van
+Thijmen weer volledig verwijderd — route, view, template, menutegel, tests en CSS.
+Contractpunt 3 heeft dus weer geen scherm; zie SPEC.md voor wat artikel 2 daar
+verplicht.
+
 | # | Contractpunt | Status | Wat ontbreekt |
 |---|---|---|---|
 | 1 | Urenregistratie (klus, tijdblok, toelichting, **foto's**) | 🟢 100% | — foto's bij het uurblok en view-first detail zijn af (F1) |
 | 2 | Klusdossier per klus | 🟢 100% | — lijst, detail, aanmaken/bewerken, uploads |
-| 3 | Overzicht per medewerker week **en maand** | 🟢 100% | — `/overzicht/`, eigenaar kan een medewerker kiezen (F2) |
+| 3 | Overzicht per medewerker week **en maand** | 🔴 verwijderd | — F2 is op 17-09-2026 weer weggehaald, geen scherm meer |
 | 4 | Beheerdersoverzicht / planbord | 🟢 100% | — `/planbord/`, vaste eerste kolom op mobiel (F3) |
 | 5 | Fotodropbox | 🟢 100% | — raster, zoeken, filter per klus |
 | 6 | Urenexport voor de boekhouder | 🟢 100% | — Excel per kalendermaand, getest (antwoord Maarten 15-09) |
@@ -74,7 +79,6 @@ zet 'm in de `urls.py` van je eigen app, en haal de vlag `in_aanbouw` uit de teg
 | `/loonstrook/` | `loonstrook` | | ✅ af |
 | `/klussen/` | `klussen` | klussenlijst | 0b Floris |
 | `/klussen/<pk>/` | `klus_detail` | klusdossier | 0b Floris |
-| `/overzicht/` | `mijn_overzicht` | week en maand | F2 Floris |
 | `/planbord/` | `planbord` | planbord eigenaar | F3 Floris |
 | `/aanwezigheid/` | `aanwezigheid` | groen/rood | F4 Floris |
 | `/export/` | `urenexport` | boekhouder | T3 Thijmen |

@@ -42,9 +42,6 @@ TEGELS = [
 # Schermen die niet in de navigatiebalk passen maar wel bereikbaar moeten
 # blijven — getoond als knoppenlijst op het profielscherm (templates/profiel.html).
 PROFIEL_TEGELS = [
-    # Ook voor de eigenaar: hij is degene die de maand van een ander opzoekt,
-    # en met alleen "medewerker" in deze lijst is het scherm voor hem onbereikbaar.
-    {"titel": "Mijn overzicht", "icoon": "overzicht", "url_naam": "mijn_overzicht", "rollen": ["medewerker", "eigenaar"]},
     {"titel": "Overzichten", "icoon": "export", "url_naam": "urenexport", "rollen": ["eigenaar"]},
     {"titel": "Loonstrook", "icoon": "loonstrook", "url_naam": "loonstrook", "rollen": ["medewerker", "eigenaar"]},
     # Het Django-beheerscherm is geen scherm voor de klant: het toont alle

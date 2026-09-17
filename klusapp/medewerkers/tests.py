@@ -35,10 +35,9 @@ class StartschermTest(TestCase):
         self.client.force_login(self.eigenaar)
         titels = tegeltitels(self.client.get(reverse("start")).content.decode())
         self.assertIn("Aanwezigheid", titels)
-        # Planbord, Mijn overzicht, Overzichten, Loonstrook en Beheer staan
-        # niet meer in de balk zelf maar op het profielscherm, zie
-        # ProfielschermTest hieronder.
-        for verplaatst in ("Planbord", "Mijn overzicht", "Overzichten", "Loonstrook", "Beheer"):
+        # Planbord, Overzichten, Loonstrook en Beheer staan niet meer in de
+        # balk zelf maar op het profielscherm, zie ProfielschermTest hieronder.
+        for verplaatst in ("Planbord", "Overzichten", "Loonstrook", "Beheer"):
             self.assertNotIn(verplaatst, titels)
 
     def test_medewerker_ziet_geen_beheerderstegels(self):
@@ -46,7 +45,7 @@ class StartschermTest(TestCase):
         titels = tegeltitels(self.client.get(reverse("start")).content.decode())
         self.assertIn("Uren schrijven", titels)
         self.assertIn("Mijn profiel", titels)
-        for verboden in ("Planbord", "Aanwezigheid", "Beheer", "Overzichten", "Mijn overzicht"):
+        for verboden in ("Planbord", "Aanwezigheid", "Beheer", "Overzichten"):
             self.assertNotIn(verboden, titels)
 
     def test_loonstrook_op_android_direct_naar_loondossier(self):
@@ -161,10 +160,9 @@ class ProfielschermTest(TestCase):
             "sam", password="test1234", first_name="Sam", rol=Medewerker.Rol.MEDEWERKER
         )
 
-    def test_medewerker_ziet_mijn_overzicht_en_loonstrook_niet_overzichten_of_beheer(self):
+    def test_medewerker_ziet_loonstrook_niet_overzichten_of_beheer(self):
         self.client.force_login(self.medewerker)
         titels = tegeltitels(self.client.get(reverse("mijn_profiel")).content.decode())
-        self.assertIn("Mijn overzicht", titels)
         self.assertIn("Loonstrook", titels)
         for verboden in ("Overzichten", "Beheer", "Planbord"):
             self.assertNotIn(verboden, titels)
