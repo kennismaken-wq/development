@@ -1,0 +1,37 @@
+{% extends "basis.html" %}
+{% block titel %}{% if nieuw %}Nieuwe medewerker{% else %}{{ medewerker.naam }}{% endif %}{% endblock %}
+{% block kop %}{% if nieuw %}Nieuwe medewerker{% else %}{{ medewerker.naam }}{% endif %}{% endblock %}
+{% block sub %}<a href="{% url 'medewerkers' %}" style="color:rgba(255,255,255,0.6)">‹ Medewerkers</a>{% endblock %}
+{% block inhoud %}
+  <form method="post">
+    {% csrf_token %}
+    {% for veld in formulier %}
+      <label for="{{ veld.id_for_label }}">{{ veld.label }}</label>
+      {{ veld }}
+      {% for fout in veld.errors %}<p class="fout">{{ fout }}</p>{% endfor %}
+    {% endfor %}
+    <p style="margin-top:1.8rem"><button type="submit" class="knop">Opslaan</button></p>
+  </form>
+
+  {% if nieuw %}
+    <p class="uitleg">
+      Het wachtwoord is tijdelijk: geef het door en laat het daarna wijzigen.
+    </p>
+  {% else %}
+    <p style="margin-top:1.2rem">
+      <a class="knop-stil" href="{% url 'medewerker_wachtwoord' medewerker.pk %}">
+        Nieuw wachtwoord instellen
+      </a>
+    </p>
+
+    {% if medewerker.pk != user.pk %}
+      <form method="post" action="{% url 'medewerker_dienst' medewerker.pk %}" class="verwijder"
+            onsubmit="return confirm({% if medewerker.uit_dienst_sinds %}'{{ medewerker.naam }} weer in dienst nemen?'{% else %}'{{ medewerker.naam }} uit dienst zetten? Inloggen kan daarna niet meer; uren en foto’s blijven bewaard.'{% endif %});">
+        {% csrf_token %}
+        <button type="submit">
+          {% if medewerker.uit_dienst_sinds %}Weer in dienst nemen{% else %}Uit dienst zetten{% endif %}
+        </button>
+      </form>
+    {% endif %}
+  {% endif %}
+{% endblock %}

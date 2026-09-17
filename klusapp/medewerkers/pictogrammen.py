@@ -44,6 +44,12 @@ PICTOGRAMMEN = {
         '<circle cx="12" cy="12" r="9"/>'
         '<path d="M8 12.5l2.5 2.5L16 9.5"/>'
     ),
+    "medewerkers": (
+        '<circle cx="9" cy="8" r="3.2"/>'
+        '<path d="M3.5 19.5c0-3 2.5-5 5.5-5s5.5 2 5.5 5"/>'
+        '<path d="M16 5.5a3 3 0 0 1 0 5.6"/>'
+        '<path d="M17.5 14.8c1.9.5 3.2 2.2 3.2 4.7"/>'
+    ),
     "fotos": (
         '<rect x="3" y="4" width="18" height="16" rx="2.5"/>'
         '<circle cx="8.5" cy="9.5" r="1.7"/>'

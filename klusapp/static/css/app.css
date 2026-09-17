@@ -318,6 +318,12 @@ input[type=time]::-webkit-calendar-picker-indicator{ filter:invert(1); opacity:.
   font-family:'Fraunces',serif; font-style:italic; font-weight:600;
   font-size:1.15rem; margin:1.8rem 0 .8rem;
 }
+/* korte toelichting boven of onder een formulier */
+.uitleg{
+  color:rgba(255,255,255,0.65); font-size:13px; line-height:1.55;
+  margin:0 0 1.2rem;
+}
+
 .leeg{
   color:rgba(255,255,255,0.5); font-size:13px; text-align:center;
   padding:1.6rem 1rem; margin:0;

@@ -1,0 +1,20 @@
+{% extends "basis.html" %}
+{% block titel %}Wachtwoord{% endblock %}
+{% block kop %}Wachtwoord{% endblock %}
+{% block sub %}<a href="{% url 'medewerker_bewerken' medewerker.pk %}" style="color:rgba(255,255,255,0.6)">‹ {{ medewerker.naam }}</a>{% endblock %}
+{% block inhoud %}
+  <p class="uitleg">
+    Je zet hier een nieuw wachtwoord voor {{ medewerker.naam }}. Het oude hoef
+    je niet te weten. Geef het nieuwe persoonlijk door, niet per app.
+  </p>
+
+  <form method="post">
+    {% csrf_token %}
+    {% for veld in formulier %}
+      <label for="{{ veld.id_for_label }}">{{ veld.label }}</label>
+      {{ veld }}
+      {% for fout in veld.errors %}<p class="fout">{{ fout }}</p>{% endfor %}
+    {% endfor %}
+    <p style="margin-top:1.8rem"><button type="submit" class="knop">Wachtwoord instellen</button></p>
+  </form>
+{% endblock %}

@@ -43,6 +43,8 @@ TEGELS = [
 # blijven — getoond als knoppenlijst op het profielscherm (templates/profiel.html).
 PROFIEL_TEGELS = [
     {"titel": "Overzichten", "icoon": "export", "url_naam": "urenexport", "rollen": ["eigenaar"]},
+    # Niet in de balk: je mensen beheer je af en toe, niet dagelijks.
+    {"titel": "Medewerkers", "icoon": "medewerkers", "url_naam": "medewerkers", "rollen": ["eigenaar"]},
     {"titel": "Loonstrook", "icoon": "loonstrook", "url_naam": "loonstrook", "rollen": ["medewerker", "eigenaar"]},
     # Het Django-beheerscherm is geen scherm voor de klant: het toont alle
     # velden en verwijdert zonder vangnet. Alleen de systeembeheerder ziet

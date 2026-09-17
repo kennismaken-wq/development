@@ -1,0 +1,11 @@
+from django.urls import path
+
+from . import views
+
+urlpatterns = [
+    path("medewerkers/", views.medewerker_lijst, name="medewerkers"),
+    path("medewerkers/nieuw/", views.medewerker_nieuw, name="medewerker_nieuw"),
+    path("medewerkers/<int:pk>/", views.medewerker_bewerken, name="medewerker_bewerken"),
+    path("medewerkers/<int:pk>/wachtwoord/", views.medewerker_wachtwoord, name="medewerker_wachtwoord"),
+    path("medewerkers/<int:pk>/dienst/", views.medewerker_dienst, name="medewerker_dienst"),
+]
