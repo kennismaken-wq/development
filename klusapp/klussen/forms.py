@@ -115,3 +115,13 @@ class BijlageForm(forms.Form):
         required=False,
         widget=forms.Textarea(attrs={"rows": 2}),
     )
+
+
+class NieuweKlusBijlagenForm(BijlageForm):
+    """Zelfde uploadveld als BijlageForm, maar dan naast het aanmaakformulier
+    van een klus: bestanden kiezen is daar geen verplichte stap — een klus
+    zonder foto's of documenten moet gewoon aan te maken zijn."""
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["bestanden"].required = False

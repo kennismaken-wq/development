@@ -15,7 +15,7 @@ from medewerkers.rechten import alleen_eigenaar
 from uren import totalen
 
 from . import afbeeldingen, kleuren, voorbeeld
-from .forms import BijlageForm, KlusForm
+from .forms import BijlageForm, KlusForm, NieuweKlusBijlagenForm
 from .models import Bijlage, Klus
 
 
@@ -137,6 +137,9 @@ def media_bestand(request, pad):
         raise Http404
 
     bijlage = Bijlage.objects.filter(bestand=pad).first() or Bijlage.objects.filter(thumbnail=pad).first()
+    # inline, niet attachment: een pdf moet in de browser te bekijken zijn
+    # zonder eerst gedownload te worden. naam blijft gezet zodat "bewaren als"
+    # in de browser een leesbare naam voorstelt in plaats van de opslag-uuid.
     naam = bijlage.originele_naam if bijlage and not bijlage.is_foto else None
 
     if settings.GEBRUIK_X_ACCEL:
@@ -145,10 +148,10 @@ def media_bestand(request, pad):
         antwoord["X-Accel-Redirect"] = f"{settings.MEDIA_INTERN_PAD}{pad}"
         del antwoord["Content-Type"]
         if naam:
-            antwoord["Content-Disposition"] = f'attachment; filename="{naam}"'
+            antwoord["Content-Disposition"] = f'inline; filename="{naam}"'
         return antwoord
 
-    return FileResponse(volledig.open("rb"), as_attachment=bool(naam), filename=naam)
+    return FileResponse(volledig.open("rb"), as_attachment=False, filename=naam)
 
 
 @login_required
@@ -248,16 +251,34 @@ def klus_detail(request, pk):
 @alleen_eigenaar
 def klus_nieuw(request):
     formulier = KlusForm(request.POST or None)
-    if request.method == "POST" and formulier.is_valid():
+    # Eén formulier op de pagina, twee Django-formulieren erachter: bestanden
+    # kiezen is optioneel (zie NieuweKlusBijlagenForm), dus die mogen de klus
+    # zelf nooit blokkeren.
+    bijlagenformulier = NieuweKlusBijlagenForm(request.POST or None, request.FILES or None)
+    if request.method == "POST" and formulier.is_valid() and bijlagenformulier.is_valid():
         klus = formulier.save(commit=False)
         # Niet via het formulier: de kleur wordt hier bepaald, niet met de
         # hand gekozen (klussen.kleuren.volgende_kleur), en dat moet ook
         # gelden als iemand het verborgen veld zelf zou aanpassen.
         klus.kleur = kleuren.volgende_kleur()
         klus.save()
+
+        datum = bijlagenformulier.cleaned_data["datum"] or timezone.localdate()
+        toelichting = bijlagenformulier.cleaned_data["toelichting"]
+        for bestand in bijlagenformulier.cleaned_data["bestanden"]:
+            try:
+                _bewaar(bestand, datum, toelichting, klus, None, request.user)
+            except afbeeldingen.BestandNietLeesbaar as probleem:
+                # De klus staat er al; alleen het ene bestand mislukt, niet de rest.
+                messages.error(request, f"{bestand.name}: {probleem}")
+
         messages.success(request, f"Klus '{klus.naam}' aangemaakt.")
         return redirect(klus)
-    return render(request, "klussen/klus_form.html", {"formulier": formulier, "nieuw": True})
+    return render(
+        request,
+        "klussen/klus_form.html",
+        {"formulier": formulier, "bijlagenformulier": bijlagenformulier, "nieuw": True},
+    )
 
 
 @alleen_eigenaar

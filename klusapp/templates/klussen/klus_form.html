@@ -10,7 +10,7 @@
   {% endif %}
 {% endblock %}
 {% block inhoud %}
-  <form method="post">
+  <form method="post" enctype="multipart/form-data">
     {% csrf_token %}
     {% for veld in formulier %}
       {% if veld.is_hidden %}
@@ -21,6 +21,13 @@
       {% endif %}
       {% for fout in veld.errors %}<p class="fout">{{ fout }}</p>{% endfor %}
     {% endfor %}
+
+    {% if bijlagenformulier %}
+      <label for="{{ bijlagenformulier.bestanden.id_for_label }}">Foto's of documenten</label>
+      {{ bijlagenformulier.bestanden }}
+      {% for fout in bijlagenformulier.bestanden.errors %}<p class="fout">{{ fout }}</p>{% endfor %}
+    {% endif %}
+
     <p style="margin-top:1.8rem"><button type="submit" class="knop">Opslaan</button></p>
   </form>
   <script src="{% static 'js/adres-zoeken.js' %}"></script>

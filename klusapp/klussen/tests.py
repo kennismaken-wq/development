@@ -333,6 +333,19 @@ class MediaTest(TestCase):
         with self.assertRaises(Http404):
             views.media_bestand(verzoek, "bijlagen/2026/09/bestaatniet.jpg")
 
+    def test_document_is_inline_te_bekijken_niet_als_download(self):
+        # Zonder dit forceert de browser een downloaddialoog in plaats van de
+        # pdf te tonen, en daarmee is er geen preview "in de app zelf".
+        self.client.force_login(self.sam)
+        self.client.post(
+            reverse("bijlage_toevoegen"),
+            {"bestanden": upload("Offerte.pdf", b"%PDF-1.4", "application/pdf")},
+        )
+        bijlage = Bijlage.objects.get()
+        antwoord = self.client.get(reverse("media_bestand", args=[bijlage.bestand.name]))
+        self.assertIn("inline", antwoord.headers["Content-Disposition"])
+        self.assertIn("Offerte.pdf", antwoord.headers["Content-Disposition"])
+
 
 @override_settings(MEDIA_ROOT=TIJDELIJKE_MEDIA)
 class DocumentToevoegenKnopTest(TestCase):
@@ -458,6 +471,77 @@ class KlusBeheerTest(TestCase):
         self.client.force_login(self.maarten)
         self.assertContains(self.client.get(reverse("klussen")), "Nieuwe klus")
         self.assertContains(self.client.get(klus.get_absolute_url()), "Bewerken")
+
+
+@override_settings(MEDIA_ROOT=TIJDELIJKE_MEDIA)
+class KlusBijlagenBijAanmakenTest(TestCase):
+    """Foto's/documenten kunnen meteen op het aanmaakformulier, niet pas erna
+    (klussen.forms.NieuweKlusBijlagenForm, klussen.views.klus_nieuw)."""
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.maarten = Medewerker.objects.create_user(
+            "maarten", password="x", rol=Medewerker.Rol.EIGENAAR
+        )
+
+    @classmethod
+    def tearDownClass(cls):
+        shutil.rmtree(TIJDELIJKE_MEDIA, ignore_errors=True)
+        super().tearDownClass()
+
+    def geldig(self, **afwijkend):
+        gegevens = {
+            "naam": "Tuin Vermeer",
+            "soort": Klus.Soort.AANLEG,
+            "startdatum": "2026-09-14",
+            "adres": "Dijkweg 12",
+            "plaats": "Maasdijk",
+            "actief": "on",
+        }
+        gegevens.update(afwijkend)
+        return gegevens
+
+    def test_klus_aanmaken_zonder_bestanden_werkt_gewoon(self):
+        # Bestanden kiezen is geen verplichte stap.
+        self.client.force_login(self.maarten)
+        antwoord = self.client.post(reverse("klus_nieuw"), self.geldig())
+        klus = Klus.objects.get()
+        self.assertRedirects(antwoord, klus.get_absolute_url())
+        self.assertFalse(klus.bijlagen.exists())
+
+    def test_pdf_meteen_bij_het_aanmaken_toevoegen(self):
+        self.client.force_login(self.maarten)
+        self.client.post(
+            reverse("klus_nieuw"),
+            self.geldig(bestanden=upload("Offerte.pdf", b"%PDF-1.4", "application/pdf")),
+        )
+        klus = Klus.objects.get()
+        bijlage = klus.bijlagen.get()
+        self.assertEqual(bijlage.soort, Bijlage.Soort.DOCUMENT)
+        self.assertEqual(bijlage.originele_naam, "Offerte.pdf")
+        self.assertEqual(bijlage.toegevoegd_door, self.maarten)
+
+    def test_meerdere_bestanden_tegelijk_bij_het_aanmaken(self):
+        self.client.force_login(self.maarten)
+        self.client.post(
+            reverse("klus_nieuw"),
+            self.geldig(bestanden=[upload("een.jpg"), upload("Offerte.pdf", b"%PDF-1.4", "application/pdf")]),
+        )
+        klus = Klus.objects.get()
+        self.assertEqual(klus.bijlagen.count(), 2)
+
+    def test_een_kapot_bestand_blokkeert_de_klus_niet(self):
+        # De klus staat er al; alleen het ene bestand mislukt.
+        self.client.force_login(self.maarten)
+        antwoord = self.client.post(
+            reverse("klus_nieuw"),
+            self.geldig(bestanden=upload("stuk.jpg", b"geen plaatje")),
+            follow=True,
+        )
+        klus = Klus.objects.get()
+        self.assertRedirects(antwoord, klus.get_absolute_url())
+        self.assertContains(antwoord, "stuk.jpg")
+        self.assertFalse(klus.bijlagen.exists())
 
 
 class KlusKleurTest(TestCase):
