@@ -24,16 +24,28 @@ LOONDOSSIER_WEB = "https://mijn.loondossier.nl/Aanmelden"
 #
 # "icoon" wijst naar een sleutel in pictogrammen.PICTOGRAMMEN — de zijbalk
 # tekent daarmee een lijnicoon i.p.v. een los teken.
+#
+# TEGELS zijn de vaste iconen in de navigatiebalk zelf: bewust maar vijf voor
+# iedereen (Start staat los in basis.html, dus hier vier) plus Aanwezigheid
+# als extra voor de eigenaar, die dat scherm dagelijks gebruikt. Alles wat
+# minder vaak nodig is staat in PROFIEL_TEGELS, bereikbaar via die vijfde
+# tegel "Mijn profiel" — zo blijft de balk kort in plaats van dat hij vol
+# loopt met elk scherm dat er ooit bijkomt.
 TEGELS = [
     {"titel": "Uren schrijven", "icoon": "uren", "url_naam": "mijn_uren", "rollen": ["medewerker", "eigenaar"]},
     {"titel": "Klussen", "icoon": "klussen", "url_naam": "klussen", "rollen": ["medewerker", "eigenaar"]},
+    {"titel": "Foto's", "icoon": "fotos", "url_naam": "fotos", "rollen": ["medewerker", "eigenaar"]},
+    {"titel": "Aanwezigheid", "icoon": "aanwezigheid", "url_naam": "aanwezigheid", "rollen": ["eigenaar"]},
+    {"titel": "Mijn profiel", "icoon": "profiel", "url_naam": "mijn_profiel", "rollen": ["medewerker", "eigenaar"]},
+]
+
+# Schermen die niet in de navigatiebalk passen maar wel bereikbaar moeten
+# blijven — getoond als knoppenlijst op het profielscherm (templates/profiel.html).
+PROFIEL_TEGELS = [
     # Ook voor de eigenaar: hij is degene die de maand van een ander opzoekt,
     # en met alleen "medewerker" in deze lijst is het scherm voor hem onbereikbaar.
     {"titel": "Mijn overzicht", "icoon": "overzicht", "url_naam": "mijn_overzicht", "rollen": ["medewerker", "eigenaar"]},
-    {"titel": "Planbord", "icoon": "planbord", "url_naam": "planbord", "rollen": ["eigenaar"]},
     {"titel": "Overzichten", "icoon": "export", "url_naam": "urenexport", "rollen": ["eigenaar"]},
-    {"titel": "Aanwezigheid", "icoon": "aanwezigheid", "url_naam": "aanwezigheid", "rollen": ["eigenaar"]},
-    {"titel": "Foto's", "icoon": "fotos", "url_naam": "fotos", "rollen": ["medewerker", "eigenaar"]},
     {"titel": "Loonstrook", "icoon": "loonstrook", "url_naam": "loonstrook", "rollen": ["medewerker", "eigenaar"]},
     # Het Django-beheerscherm is geen scherm voor de klant: het toont alle
     # velden en verwijdert zonder vangnet. Alleen wie het systeem beheert
@@ -43,13 +55,18 @@ TEGELS = [
     {"titel": "Beheer", "icoon": "beheer", "url": "/beheer/", "rollen": ["medewerker", "eigenaar"], "alleen_beheerder": True},
 ]
 
+# Planbord is op 17-09-2026 op verzoek van Thijmen uit de navigatie gehaald
+# om de balk tot vijf iconen te beperken (later apart te bespreken waar het
+# terugkomt). De route en view (uren.views.planbord, url_naam "planbord")
+# bestaan nog gewoon; alleen de link ernaartoe ontbreekt bewust.
 
-def zichtbare_tegels(user):
-    """De tegels die deze gebruiker mag zien, met opgeloste url en
+
+def _zichtbaar(lijst, user):
+    """De tegels uit `lijst` die deze gebruiker mag zien, met opgeloste url en
     gedimde/niet-klikbare status voor onderdelen die nog gebouwd worden."""
     rol = user.rol
     tegels = []
-    for tegel in TEGELS:
+    for tegel in lijst:
         if rol not in tegel["rollen"]:
             continue
         if tegel.get("alleen_beheerder") and not user.is_staff:
@@ -67,3 +84,11 @@ def zichtbare_tegels(user):
         tegel["extern"] = str(tegel.get("url") or "").startswith("http")
         tegels.append(tegel)
     return tegels
+
+
+def zichtbare_tegels(user):
+    return _zichtbaar(TEGELS, user)
+
+
+def zichtbare_profieltegels(user):
+    return _zichtbaar(PROFIEL_TEGELS, user)

@@ -1,7 +1,6 @@
 {% extends "basis.html" %}
 {% block titel %}{{ blok.klus.naam }}{% endblock %}
 {% block kop %}{{ blok.klus.naam }}{% endblock %}
-{% block sub %}<a href="{% url 'mijn_uren' %}?dag={{ blok.datum|date:'Y-m-d' }}" style="color:rgba(255,255,255,0.6)">‹ Terug</a>{% endblock %}
 {% block inhoud %}
   <div class="klusinfo">
     <div>

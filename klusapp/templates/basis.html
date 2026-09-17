@@ -40,10 +40,7 @@
         <p class="sub">{% block sub %}{% endblock %}</p>
       </div>
       {% if user.is_authenticated %}
-        <form method="post" action="{% url 'uitloggen' %}">
-          {% csrf_token %}
-          <button type="submit" class="uitlogknop">Uitloggen</button>
-        </form>
+        <a href="{% url 'mijn_profiel' %}" class="uitlogknop">Mijn profiel</a>
       {% endif %}
     </div>
 

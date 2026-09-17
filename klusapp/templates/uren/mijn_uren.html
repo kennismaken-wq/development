@@ -3,7 +3,6 @@
 {% block titel %}Uren{% endblock %}
 {% block kaartklasse %}breed{% endblock %}
 {% block kop %}Mijn uren{% endblock %}
-{% block sub %}<a href="{% url 'start' %}" style="color:rgba(255,255,255,0.6)">‹ Terug</a>{% endblock %}
 {% block inhoud %}
   <div class="weergave-pillen">
     <a href="?weergave=dag&dag={{ dag|date:'Y-m-d' }}" class="pil{% if weergave == 'dag' %} actief{% endif %}">Dag</a>

@@ -1,0 +1,27 @@
+{% extends "basis.html" %}
+{% load pictogrammen %}
+{% block titel %}Mijn profiel{% endblock %}
+{% block kop %}Mijn profiel{% endblock %}
+{% block sub %}{{ user.get_rol_display }}{% endblock %}
+{% block inhoud %}
+  <p>{{ user.first_name|default:user.naam }}</p>
+
+  {% if profiel_tegels %}
+    <h2 class="sectiekop">Meer</h2>
+    <ul class="profiellijst">
+      {% for tegel in profiel_tegels %}
+        <li>
+          <a class="profielregel" href="{{ tegel.url }}"{% if tegel.extern %} target="_blank" rel="noopener"{% endif %}>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">{{ tegel.icoon|pictogram }}</svg>
+            <span class="titel">{{ tegel.titel }}</span>
+          </a>
+        </li>
+      {% endfor %}
+    </ul>
+  {% endif %}
+
+  <form method="post" action="{% url 'uitloggen' %}" style="margin-top:1.6rem">
+    {% csrf_token %}
+    <button type="submit" class="knop">Uitloggen</button>
+  </form>
+{% endblock %}

@@ -95,3 +95,15 @@ def totaal_van(rijen):
     zodat er niet twee keer door dezelfde blokken wordt gelopen."""
     minuten = sum(rij["minuten"] for rij in rijen)
     return {"minuten": minuten, "uren": als_uren(minuten)}
+
+
+def totaal_en_week(medewerker, week_begin, week_eind):
+    """Voor het startscherm: al-time totaal en het totaal van deze week, in één
+    keer door de blokken van een medewerker heen."""
+    blokken = Uurblok.objects.filter(medewerker=medewerker).only("datum", "begintijd", "eindtijd")
+    totaal_minuten = week_minuten = 0
+    for blok in blokken:
+        totaal_minuten += blok.duur_minuten
+        if week_begin <= blok.datum <= week_eind:
+            week_minuten += blok.duur_minuten
+    return {"totaal": als_uren(totaal_minuten), "week": als_uren(week_minuten)}

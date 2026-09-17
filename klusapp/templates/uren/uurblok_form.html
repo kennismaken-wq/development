@@ -1,7 +1,6 @@
 {% extends "basis.html" %}
 {% block titel %}{% if nieuw %}Uren toevoegen{% else %}Uren aanpassen{% endif %}{% endblock %}
 {% block kop %}{% if nieuw %}Uren toevoegen{% else %}Uren aanpassen{% endif %}{% endblock %}
-{% block sub %}<a href="{% url 'mijn_uren' %}?dag={{ dag|date:'Y-m-d' }}" style="color:rgba(255,255,255,0.6)">‹ Terug</a>{% endblock %}
 {% block inhoud %}
   {% include "uren/_uurblokformulier.html" %}
 

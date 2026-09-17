@@ -440,6 +440,70 @@ dialog.uren-invoegen::backdrop{ background:rgba(10,10,8,0.55); backdrop-filter:b
 .klusregel .naam{ font-family:'Fraunces',serif; font-style:italic; font-weight:600; font-size:1rem; }
 .klusregel .adres{ font-size:12px; color:rgba(255,255,255,0.6); }
 
+/* ══════════ PROFIELSCHERM: MENULIJST ══════════
+   Zelfde rijenpatroon als .klussenlijst/.klusregel hierboven, nu met een
+   icoon ervoor — voor de schermen die niet in de navigatiebalk passen (zie
+   medewerkers/tegels.py: PROFIEL_TEGELS). */
+.profiellijst{ list-style:none; margin:0; padding:0; display:grid; gap:.5rem; }
+.profielregel{
+  display:flex; align-items:center; gap:.8rem; border-radius:16px; padding:.85rem 1rem;
+  background:rgba(255,255,255,0.07); border:1px solid rgba(255,255,255,0.14);
+  color:#fff; text-decoration:none; transition:background .12s;
+}
+.profielregel:hover{ background:rgba(255,255,255,0.13); }
+.profielregel svg{ width:20px; height:20px; flex-shrink:0; color:rgba(255,255,255,0.7); }
+.profielregel .titel{ font-size:14px; font-weight:500; }
+
+/* ══════════ STARTSCHERM: KLUSSENSLIDER, STATS, FOTOSLIDESHOW ══════════
+   Beide sliders zijn horizontaal scrollende rijen met scroll-snap, zelfde
+   idioom als .raster-scroll en .bord-scroll elders in de app: vegen op een
+   telefoon, geen JS-timer nodig. */
+.klussen-slider{
+  display:flex; gap:.7rem; overflow-x:auto; padding-bottom:.3rem;
+  scroll-snap-type:x mandatory; -webkit-overflow-scrolling:touch;
+}
+.klussen-slider::-webkit-scrollbar{ height:6px; }
+.klussen-slider::-webkit-scrollbar-thumb{ background:rgba(255,255,255,0.2); border-radius:999px; }
+.klus-slide{
+  scroll-snap-align:start; flex:0 0 78%; max-width:280px;
+  display:grid; gap:.3rem; border-radius:16px; padding:.85rem 1rem;
+  background:rgba(255,255,255,0.07); border:1px solid rgba(255,255,255,0.14);
+  color:#fff; text-decoration:none; transition:background .12s;
+}
+.klus-slide:hover{ background:rgba(255,255,255,0.13); }
+.klus-slide.afgerond{ opacity:.55; }
+.klus-slide .naam{ font-family:'Fraunces',serif; font-style:italic; font-weight:600; font-size:1rem; }
+.klus-slide .adres{ font-size:12px; color:rgba(255,255,255,0.6); }
+
+.statrij{ display:grid; grid-template-columns:1fr 1fr; gap:.7rem; margin:1.2rem 0; }
+.statkaart{
+  border-radius:18px; padding:1.1rem 1.2rem; display:flex; flex-direction:column; gap:.3rem;
+  background:linear-gradient(135deg, rgba(var(--accent-rgb),0.30), rgba(var(--accent-rgb),0.10));
+  border:1px solid rgba(var(--accent-rgb),0.38);
+}
+.statgetal{
+  font-family:'Fraunces',serif; font-style:italic; font-weight:600; font-size:1.8rem;
+  color:var(--hi); line-height:1; font-variant-numeric:tabular-nums;
+}
+.statlabel{ font-size:11.5px; color:rgba(255,255,255,0.75); }
+
+.fotoslider{
+  display:flex; gap:.7rem; overflow-x:auto; padding-bottom:.3rem;
+  scroll-snap-type:x mandatory; -webkit-overflow-scrolling:touch;
+}
+.fotoslider::-webkit-scrollbar{ height:6px; }
+.fotoslider::-webkit-scrollbar-thumb{ background:rgba(255,255,255,0.2); border-radius:999px; }
+.fotoslide{
+  scroll-snap-align:start; flex:0 0 62%; max-width:220px; margin:0;
+  border-radius:20px; overflow:hidden;
+  background:rgba(255,255,255,0.07); border:1px solid rgba(255,255,255,0.14);
+}
+.fotoslide img{ display:block; width:100%; height:150px; object-fit:cover; background:rgba(0,0,0,0.2); }
+.fotoslide figcaption{
+  padding:.5rem .65rem .6rem; font-size:12px; color:#fff;
+  overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+}
+
 .soort-badge{
   display:inline-flex; align-items:center; width:fit-content;
   padding:.25rem .7rem; border-radius:999px; font-size:10.5px; font-weight:600;

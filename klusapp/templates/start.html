@@ -3,22 +3,50 @@
 {% block kop %}Hai, {{ user.first_name|default:user.naam }}{% endblock %}
 {% block sub %}{{ vandaag|date:"l j F Y"|capfirst }}{% endblock %}
 {% block inhoud %}
-  <h2 class="sectiekop">Jouw klussen deze week</h2>
-  {% if klussen_deze_week %}
-    <ul class="klussenlijst">
-      {% for klus in klussen_deze_week %}
-        <li>
-          <a href="{{ klus.get_absolute_url }}" class="klusregel{% if not klus.actief %} afgerond{% endif %}">
-            <span class="soort-badge">{{ klus.get_soort_display }}</span>
-            <span class="naam">{{ klus.naam }}</span>
-            {% if klus.adres or klus.plaats %}
-              <span class="adres">{{ klus.adres }}{% if klus.adres and klus.plaats %}, {% endif %}{{ klus.plaats }}</span>
-            {% endif %}
-          </a>
-        </li>
+  <h2 class="sectiekop">Jouw klussen</h2>
+  {% if klussen_recent %}
+    <div class="klussen-slider">
+      {% for klus in klussen_recent %}
+        <a href="{{ klus.get_absolute_url }}" class="klus-slide{% if not klus.actief %} afgerond{% endif %}">
+          <span class="soort-badge">{{ klus.get_soort_display }}</span>
+          <span class="naam">{{ klus.naam }}</span>
+          {% if klus.adres or klus.plaats %}
+            <span class="adres">{{ klus.adres }}{% if klus.adres and klus.plaats %}, {% endif %}{{ klus.plaats }}</span>
+          {% endif %}
+        </a>
       {% endfor %}
-    </ul>
+    </div>
   {% else %}
-    <p class="leeg">Nog geen uren deze week geschreven. <a href="{% url 'mijn_uren' %}">Begin bij uren schrijven</a>.</p>
+    <p class="leeg">Nog geen uren geschreven. <a href="{% url 'mijn_uren' %}">Begin bij uren schrijven</a>.</p>
+  {% endif %}
+
+  <div class="statrij">
+    <div class="statkaart">
+      <span class="statgetal">{{ uren_stats.totaal }}</span>
+      <span class="statlabel">Uren gewerkt totaal</span>
+    </div>
+    <div class="statkaart">
+      <span class="statgetal">{{ uren_stats.week }}</span>
+      <span class="statlabel">Uren gewerkt deze week</span>
+    </div>
+  </div>
+
+  <a href="{% url 'uurblok_nieuw' %}" class="knop">Voeg uren toe</a>
+
+  <h2 class="sectiekop">Laatst toegevoegde foto's</h2>
+  {% if recente_fotos %}
+    <div class="fotoslider">
+      {% for foto in recente_fotos %}
+        <figure class="fotoslide">
+          <a href="{{ foto.klus.get_absolute_url }}">
+            <img src="{% url 'media_bestand' foto.thumbnail.name|default:foto.bestand.name %}"
+                 alt="{{ foto.toonnaam }}" loading="lazy">
+          </a>
+          <figcaption>{{ foto.klus.naam }}</figcaption>
+        </figure>
+      {% endfor %}
+    </div>
+  {% else %}
+    <p class="leeg">Nog geen foto's toegevoegd.</p>
   {% endif %}
 {% endblock %}

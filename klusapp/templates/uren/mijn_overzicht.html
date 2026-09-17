@@ -1,7 +1,6 @@
 {% extends "basis.html" %}
 {% block titel %}Mijn overzicht{% endblock %}
 {% block kop %}{% if medewerker == user %}Mijn overzicht{% else %}Uren van {{ medewerker.naam }}{% endif %}{% endblock %}
-{% block sub %}<a href="{% url 'start' %}" style="color:rgba(255,255,255,0.6)">‹ Terug</a>{% endblock %}
 {% block inhoud %}
   <div class="weergave-pillen">
     <a href="?weergave=week&dag={{ dag|date:'Y-m-d' }}{% if medewerker_pk %}&medewerker={{ medewerker_pk }}{% endif %}"

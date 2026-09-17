@@ -19,6 +19,7 @@ urlpatterns = [
     path("inloggen/", auth_views.LoginView.as_view(redirect_authenticated_user=True), name="inloggen"),
     path("uitloggen/", auth_views.LogoutView.as_view(), name="uitloggen"),
     path("loonstrook/", medewerkers_views.loonstrook, name="loonstrook"),
+    path("mijn-profiel/", medewerkers_views.mijn_profiel, name="mijn_profiel"),
     path("", include("uren.urls")),
     path("", include("klussen.urls")),
     *nog_te_bouwen,
