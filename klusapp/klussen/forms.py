@@ -37,9 +37,15 @@ class KlusForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        # Een kleurkiezer kan niet leeg zijn; zonder beginwaarde toont de
-        # browser zwart en lijkt er een kleur gekozen die er niet is.
-        if not self.initial.get("kleur"):
+        if not self.instance.pk:
+            # Nieuwe klus: de kleur wordt automatisch toegewezen (zie
+            # klussen.views.klus_nieuw / klussen.kleuren.volgende_kleur), dus
+            # hier geen kleurkiezer tonen.
+            self.fields["kleur"].widget = forms.HiddenInput()
+            self.fields["kleur"].required = False
+        elif not self.initial.get("kleur"):
+            # Een kleurkiezer kan niet leeg zijn; zonder beginwaarde toont de
+            # browser zwart en lijkt er een kleur gekozen die er niet is.
             self.initial["kleur"] = "#95BF1D"
 
     def clean(self):

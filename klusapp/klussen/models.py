@@ -31,12 +31,32 @@ class Klus(models.Model):
         help_text="Hexkleur van de blokken in het planbord.",
     )
     actief = models.BooleanField(default=True)
+    # Gezet zodra actief van aan naar uit gaat (zie save() hieronder). Gebruikt
+    # om een kleur uit het palet pas na een tijdje vrij te geven voor een
+    # nieuwe klus — zie klussen.kleuren.volgende_kleur.
+    afgerond_op = models.DateField(null=True, blank=True)
     aangemaakt_op = models.DateTimeField(auto_now_add=True)
 
     class Meta:
         verbose_name = "klus"
         verbose_name_plural = "klussen"
         ordering = ["-actief", "naam"]
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._actief_bij_laden = self.actief
+
+    def save(self, *args, **kwargs):
+        # Alleen aanpassen bij een echte overgang naar inactief: anders
+        # overschrijft elke opslag van een allang afgeronde klus zijn eigen
+        # afgerond_op-datum, en kan er ook geen bestaande datum worden
+        # meegegeven (handmatige correctie, testdata).
+        if self.actief:
+            self.afgerond_op = None
+        elif self._actief_bij_laden or (self._state.adding and self.afgerond_op is None):
+            self.afgerond_op = timezone.localdate()
+        super().save(*args, **kwargs)
+        self._actief_bij_laden = self.actief
 
     def __str__(self):
         return self.naam

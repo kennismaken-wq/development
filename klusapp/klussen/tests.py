@@ -14,7 +14,7 @@ from medewerkers.models import Medewerker
 from uren import totalen
 from uren.models import Uurblok
 
-from . import afbeeldingen, kleuren, views
+from . import afbeeldingen, kleuren, views, voorbeeld
 from .models import Bijlage, Klus
 
 TIJDELIJKE_MEDIA = tempfile.mkdtemp()
@@ -220,8 +220,8 @@ class FotosWeergaveTest(TestCase):
 
 @override_settings(MEDIA_ROOT=TIJDELIJKE_MEDIA)
 class VoorbeeldItemsTest(TestCase):
-    """De gewaaierde stapel op een klustegel: _voorbeeld_items() bepaalt wat
-    er in past en wat er "+N meer" bij komt te staan."""
+    """De gewaaierde stapel op een klustegel: voorbeeld.items_voor_stapel()
+    bepaalt wat er in past en wat er "+N meer" bij komt te staan."""
 
     @classmethod
     def tearDownClass(cls):
@@ -234,7 +234,7 @@ class VoorbeeldItemsTest(TestCase):
             Bijlage.objects.create(klus=klus, bestand=upload(), soort=Bijlage.Soort.FOTO, datum=date(2026, 9, dag))
         klus.voorbeeld_bijlagen = list(klus.bijlagen.order_by("-datum", "-toegevoegd_op"))
 
-        items, meer = views._voorbeeld_items(klus)
+        items, meer = voorbeeld.items_voor_stapel(klus)
 
         self.assertEqual(len(items), 3)
         self.assertEqual(meer, 2)  # 4 foto's + 1 notitie = 5 stuks inhoud, 3 getoond -> 2 meer

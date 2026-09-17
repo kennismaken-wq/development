@@ -13,6 +13,7 @@
           {% if klus.adres or klus.plaats %}
             <span class="adres">{{ klus.adres }}{% if klus.adres and klus.plaats %}, {% endif %}{{ klus.plaats }}</span>
           {% endif %}
+          {% include "klussen/_klusvoorbeeld.html" %}
         </a>
       {% endfor %}
     </div>

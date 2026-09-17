@@ -1,0 +1,25 @@
+{% comment %} Gewaaierde inhoudspreview van een klus (foto's, documenten,
+   notitie). Verwacht `klus` met `voorbeeld_items`/`voorbeeld_meer`, gezet
+   door klussen.voorbeeld.items_voor_stapel() — zie klussen/views.py:fotos en
+   medewerkers/views.py:start, de twee plekken die dit tonen. {% endcomment %}
+{% if klus.voorbeeld_items %}
+  <div class="voorbeeldstapel">
+    {% for item in klus.voorbeeld_items %}
+      <div class="voorbeeldlaag laag-voor-{{ forloop.revcounter }} {% if item.soort == 'foto' %}voorbeeldlaag-foto{% elif item.soort == 'document' %}voorbeeldlaag-document{% else %}voorbeeldlaag-notitie{% endif %}">
+        {% if item.soort == 'foto' %}
+          <img src="{% url 'media_bestand' item.thumbnail.name|default:item.bestand.name %}" alt="" loading="lazy">
+        {% elif item.soort == 'document' %}
+          <div class="voorbeeldlaag-inhoud">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M7 2h7l4 4v15a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1z"/><path d="M14 2v4h4"/></svg>
+            <span class="naam">{{ item.originele_naam|default:"Document" }}</span>
+          </div>
+        {% else %}
+          <div class="voorbeeldlaag-inhoud notitietekst">{{ item.tekst|truncatechars:70 }}</div>
+        {% endif %}
+      </div>
+    {% endfor %}
+    {% if klus.voorbeeld_meer %}<span class="voorbeeldstapel-meer">+{{ klus.voorbeeld_meer }}</span>{% endif %}
+  </div>
+{% else %}
+  <div class="voorbeeldstapel voorbeeldstapel-leeg"><span>Nog geen inhoud</span></div>
+{% endif %}

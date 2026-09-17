@@ -14,7 +14,7 @@ from django.utils.http import url_has_allowed_host_and_scheme
 from medewerkers.rechten import alleen_eigenaar
 from uren import totalen
 
-from . import afbeeldingen
+from . import afbeeldingen, kleuren, voorbeeld
 from .forms import BijlageForm, KlusForm
 from .models import Bijlage, Klus
 
@@ -151,29 +151,6 @@ def media_bestand(request, pad):
     return FileResponse(volledig.open("rb"), as_attachment=bool(naam), filename=naam)
 
 
-def _voorbeeld_items(klus, cap=3):
-    """Tot `cap` stukjes inhoud voor de gewaaierde stapel op de klustegel.
-
-    Eerst de nieuwste foto's/documenten (uit de al-geprefetchte
-    `voorbeeld_bijlagen`, nieuw->oud); is er nog ruimte binnen de cap, dan de
-    notitie (klus.beschrijving) als achterste laag — een notitie verdringt
-    dus nooit al aanwezige foto's/documenten.
-
-    Geeft (items, aantal_meer) terug. `items` staat achter-naar-voor: het
-    eerste item is de achterste laag, het laatste de voorste — zo loopt de
-    template 'm door met forloop.revcounter voor de laagklasse.
-    """
-    media = klus.voorbeeld_bijlagen
-    heeft_notitie = bool(klus.beschrijving.strip())
-    ruimte_voor_media = cap - (1 if heeft_notitie else 0)
-    getoonde_media = media[:ruimte_voor_media]
-    items = list(reversed(getoonde_media))  # oud -> nieuw, dus nieuwste laatst (voorste)
-    if heeft_notitie:
-        items.insert(0, {"soort": "notitie", "tekst": klus.beschrijving})
-    totaal = len(media) + (1 if heeft_notitie else 0)
-    return items, totaal - len(items)
-
-
 @login_required
 def fotos(request):
     """Foto's: alle foto's/documenten op één hoop, of per klus als tegel.
@@ -211,7 +188,7 @@ def fotos(request):
             )
         klussen = list(klussen)  # Meta.ordering = ["-actief", "naam"] blijft gelden
         for klus in klussen:
-            klus.voorbeeld_items, klus.voorbeeld_meer = _voorbeeld_items(klus)
+            klus.voorbeeld_items, klus.voorbeeld_meer = voorbeeld.items_voor_stapel(klus)
         context["klus_tegels"] = klussen
         return render(request, "klussen/fotos.html", context)
 
@@ -272,7 +249,12 @@ def klus_detail(request, pk):
 def klus_nieuw(request):
     formulier = KlusForm(request.POST or None)
     if request.method == "POST" and formulier.is_valid():
-        klus = formulier.save()
+        klus = formulier.save(commit=False)
+        # Niet via het formulier: de kleur wordt hier bepaald, niet met de
+        # hand gekozen (klussen.kleuren.volgende_kleur), en dat moet ook
+        # gelden als iemand het verborgen veld zelf zou aanpassen.
+        klus.kleur = kleuren.volgende_kleur()
+        klus.save()
         messages.success(request, f"Klus '{klus.naam}' aangemaakt.")
         return redirect(klus)
     return render(request, "klussen/klus_form.html", {"formulier": formulier, "nieuw": True})

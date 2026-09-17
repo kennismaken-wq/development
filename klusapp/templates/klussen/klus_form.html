@@ -1,4 +1,5 @@
 {% extends "basis.html" %}
+{% load static %}
 {% block titel %}{% if nieuw %}Nieuwe klus{% else %}{{ klus.naam }} bewerken{% endif %}{% endblock %}
 {% block kop %}{% if nieuw %}Nieuwe klus{% else %}Klus bewerken{% endif %}{% endblock %}
 {% block sub %}
@@ -12,10 +13,15 @@
   <form method="post">
     {% csrf_token %}
     {% for veld in formulier %}
-      <label for="{{ veld.id_for_label }}">{{ veld.label }}</label>
-      {{ veld }}
+      {% if veld.is_hidden %}
+        {{ veld }}
+      {% else %}
+        <label for="{{ veld.id_for_label }}">{{ veld.label }}</label>
+        {{ veld }}
+      {% endif %}
       {% for fout in veld.errors %}<p class="fout">{{ fout }}</p>{% endfor %}
     {% endfor %}
     <p style="margin-top:1.8rem"><button type="submit" class="knop">Opslaan</button></p>
   </form>
+  <script src="{% static 'js/adres-zoeken.js' %}"></script>
 {% endblock %}

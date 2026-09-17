@@ -1,9 +1,10 @@
 from datetime import date, timedelta
 
 from django.contrib.auth.decorators import login_required
-from django.db.models import Max, Q
+from django.db.models import Max, Prefetch, Q
 from django.shortcuts import redirect, render
 
+from klussen import voorbeeld
 from klussen.models import Bijlage, Klus
 from uren import totalen
 
@@ -33,13 +34,23 @@ def start(request):
 
     # Niet beperkt tot deze week: de klus waar je het laatst aan werkte staat
     # vooraan, ook als dat vorige week was.
-    klussen_recent = (
+    klussen_recent = list(
         Klus.objects.annotate(
             laatste_uur=Max("uurblokken__datum", filter=Q(uurblokken__medewerker=request.user))
         )
         .filter(laatste_uur__isnull=False)
+        .prefetch_related(
+            Prefetch(
+                "bijlagen",
+                queryset=Bijlage.objects.order_by("-datum", "-toegevoegd_op"),
+                to_attr="voorbeeld_bijlagen",
+            )
+        )
         .order_by("-laatste_uur")[:10]
     )
+    # Zelfde gewaaierde voorproefje als op het foto's-scherm (klussen/views.py:fotos).
+    for klus in klussen_recent:
+        klus.voorbeeld_items, klus.voorbeeld_meer = voorbeeld.items_voor_stapel(klus)
 
     uren_stats = totalen.totaal_en_week(request.user, maandag, zondag)
 
