@@ -51,6 +51,12 @@ Kort samengevat: warme gradient-achtergrond met glazen kaarten erop, Inter voor 
 *italic* Fraunces voor koppen, pill-vormige knoppen, ruime spacing, nooit scherpe hoeken
 of witte vlakken. De details staan in `CONTEXT.md`.
 
+**[`DESIGN.md`](DESIGN.md)** legt diezelfde stijl vast als opzoekbaar naslagwerk —
+kleuren, typografie, radius-schaal, spacing en componenten als tokens, gedeeld met de
+klusapp (die dezelfde structuur draait met een groene in plaats van blauwe accentkleur).
+Vervangt `CONTEXT.md`/`glass.html` niet als bron van waarheid, maakt ze alleen sneller
+te checken.
+
 ## Lokaal draaien
 
     python3 -m venv .venv
