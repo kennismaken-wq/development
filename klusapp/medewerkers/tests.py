@@ -360,3 +360,44 @@ class MedewerkersBeherenTest(TestCase):
         self.client.post(reverse("medewerker_wachtwoord", args=[self.sam.pk]), {"wachtwoord": "sam"})
         self.sam.refresh_from_db()
         self.assertTrue(self.sam.check_password("test1234"))
+
+
+class SysteembeheerderKijktMeeTest(TestCase):
+    """Wij mogen meekijken om te kunnen helpen, maar niet meeschrijven: een
+    wachtwoord zetten is een account overnemen."""
+
+    def setUp(self):
+        self.beheerder = Medewerker.objects.create_user(
+            "floris", password="test1234", first_name="Floris", rol=Medewerker.Rol.BEHEERDER
+        )
+        self.sam = Medewerker.objects.create_user(
+            "sam", password="test1234", first_name="Sam", rol=Medewerker.Rol.MEDEWERKER
+        )
+        self.client.force_login(self.beheerder)
+
+    def test_mag_de_lijst_en_de_gegevens_zien(self):
+        self.assertContains(self.client.get(reverse("medewerkers")), "Sam")
+        antwoord = self.client.get(reverse("medewerker_bewerken", args=[self.sam.pk]))
+        self.assertEqual(antwoord.status_code, 200)
+        self.assertTemplateUsed(antwoord, "medewerkers/inzien.html")
+
+    def test_mag_geen_wachtwoord_zetten(self):
+        adres = reverse("medewerker_wachtwoord", args=[self.sam.pk])
+        self.assertEqual(self.client.get(adres).status_code, 404)
+        self.client.post(adres, {"wachtwoord": "overgenomen26"})
+        self.sam.refresh_from_db()
+        self.assertTrue(self.sam.check_password("test1234"))
+
+    def test_mag_niemand_aannemen_of_uit_dienst_zetten(self):
+        self.assertEqual(self.client.get(reverse("medewerker_nieuw")).status_code, 404)
+        self.client.post(reverse("medewerker_dienst", args=[self.sam.pk]))
+        self.sam.refresh_from_db()
+        self.assertIsNone(self.sam.uit_dienst_sinds)
+
+    def test_mag_gegevens_niet_wijzigen(self):
+        self.client.post(
+            reverse("medewerker_bewerken", args=[self.sam.pk]),
+            {"first_name": "Gewijzigd", "username": "sam", "rol": Medewerker.Rol.MEDEWERKER},
+        )
+        self.sam.refresh_from_db()
+        self.assertEqual(self.sam.first_name, "Sam")

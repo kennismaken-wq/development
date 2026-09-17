@@ -1,0 +1,21 @@
+{% extends "basis.html" %}
+{% block titel %}{{ medewerker.naam }}{% endblock %}
+{% block kop %}{{ medewerker.naam }}{% endblock %}
+{% block sub %}<a href="{% url 'medewerkers' %}" style="color:rgba(255,255,255,0.6)">‹ Medewerkers</a>{% endblock %}
+{% block inhoud %}
+  <p class="uitleg">
+    Je kijkt mee als systeembeheerder. Gegevens wijzigen en wachtwoorden
+    zetten doet de werkgever zelf.
+  </p>
+
+  <dl class="gegevens">
+    <dt>Gebruikersnaam</dt><dd>{{ medewerker.username }}</dd>
+    <dt>Rol</dt><dd>{{ medewerker.get_rol_display }}</dd>
+    {% if medewerker.functie %}<dt>Functie</dt><dd>{{ medewerker.functie }}</dd>{% endif %}
+    {% if medewerker.telefoon %}<dt>Telefoon</dt><dd>{{ medewerker.telefoon }}</dd>{% endif %}
+    {% if medewerker.in_dienst_sinds %}<dt>In dienst sinds</dt><dd>{{ medewerker.in_dienst_sinds|date:"j F Y" }}</dd>{% endif %}
+    {% if medewerker.uit_dienst_sinds %}<dt>Uit dienst sinds</dt><dd>{{ medewerker.uit_dienst_sinds|date:"j F Y" }}</dd>{% endif %}
+    <dt>Laatst ingelogd</dt>
+    <dd>{% if medewerker.last_login %}{{ medewerker.last_login|date:"j F Y, H:i" }}{% else %}nog nooit{% endif %}</dd>
+  </dl>
+{% endblock %}

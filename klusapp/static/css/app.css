@@ -327,6 +327,14 @@ input[type=time]::-webkit-calendar-picker-indicator{ filter:invert(1); opacity:.
 .eisen li::marker{ color:rgba(var(--accent-rgb),0.7); }
 .eisen em{ font-style:normal; color:rgba(255,255,255,0.75); }
 
+/* lijstje met vaste gegevens, zonder invulvelden */
+.gegevens{ margin:0; display:grid; grid-template-columns:auto 1fr; gap:.5rem 1.2rem; }
+.gegevens dt{
+  font-size:10.5px; font-weight:600; letter-spacing:.07em; text-transform:uppercase;
+  color:rgba(255,255,255,0.5); align-self:center;
+}
+.gegevens dd{ margin:0; font-size:14px; }
+
 /* korte toelichting boven of onder een formulier */
 .uitleg{
   color:rgba(255,255,255,0.65); font-size:13px; line-height:1.55;

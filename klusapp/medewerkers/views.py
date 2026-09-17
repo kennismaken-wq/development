@@ -1,8 +1,11 @@
 from datetime import date, timedelta
 
+from functools import wraps
+
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.db.models import Max, Q
+from django.http import Http404
 from django.shortcuts import get_object_or_404, redirect, render
 
 from klussen.models import Bijlage, Klus
@@ -96,6 +99,25 @@ def loonstrook(request):
     return render(request, "loonstrook.html", {"app_adres": LOONDOSSIER_APP, "web_adres": LOONDOSSIER_WEB})
 
 
+def alleen_werkgever(view):
+    """Schermen waar alleen de werkgever bij mag: wachtwoorden zetten, iemand
+    aannemen of uit dienst zetten.
+
+    Wij als systeembeheerder mogen die gegevens inzien om te kunnen helpen,
+    maar niet wijzigen — een wachtwoord zetten is een account overnemen, en
+    dat hoort niet bij onderhoud.
+    """
+
+    @wraps(view)
+    @alleen_eigenaar
+    def binnen(request, *args, **kwargs):
+        if request.user.is_systeembeheerder:
+            raise Http404
+        return view(request, *args, **kwargs)
+
+    return binnen
+
+
 def _te_beheren(gebruiker):
     """Wie deze gebruiker mag zien en bewerken.
 
@@ -121,7 +143,7 @@ def medewerker_lijst(request):
     )
 
 
-@alleen_eigenaar
+@alleen_werkgever
 def medewerker_nieuw(request):
     if request.method == "POST":
         formulier = NieuweMedewerkerForm(request.POST, door=request.user)
@@ -141,6 +163,10 @@ def medewerker_nieuw(request):
 @alleen_eigenaar
 def medewerker_bewerken(request, pk):
     medewerker = get_object_or_404(_te_beheren(request.user), pk=pk)
+    if request.user.is_systeembeheerder:
+        # Meekijken mag, meeschrijven niet: de mensen van de klant zijn niet
+        # van ons om aan te passen.
+        return render(request, "medewerkers/inzien.html", {"medewerker": medewerker})
     if request.method == "POST":
         formulier = MedewerkerForm(request.POST, instance=medewerker, door=request.user)
         if formulier.is_valid():
@@ -156,7 +182,7 @@ def medewerker_bewerken(request, pk):
     )
 
 
-@alleen_eigenaar
+@alleen_werkgever
 def medewerker_wachtwoord(request, pk):
     medewerker = get_object_or_404(_te_beheren(request.user), pk=pk)
     if request.method == "POST":
@@ -175,7 +201,7 @@ def medewerker_wachtwoord(request, pk):
     )
 
 
-@alleen_eigenaar
+@alleen_werkgever
 def medewerker_dienst(request, pk):
     """Uit dienst zetten of terughalen.
 

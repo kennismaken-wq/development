@@ -21,9 +21,11 @@
     <p class="leeg">Nog geen medewerkers.</p>
   {% endif %}
 
-  <p style="margin-top:1.2rem">
-    <a class="knop" href="{% url 'medewerker_nieuw' %}">Nieuwe medewerker</a>
-  </p>
+  {% if not user.is_systeembeheerder %}
+    <p style="margin-top:1.2rem">
+      <a class="knop" href="{% url 'medewerker_nieuw' %}">Nieuwe medewerker</a>
+    </p>
+  {% endif %}
 
   {% if uit_dienst %}
     <h2 class="sectiekop">Uit dienst</h2>
