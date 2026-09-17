@@ -544,6 +544,34 @@ class KlusBijlagenBijAanmakenTest(TestCase):
         self.assertFalse(klus.bijlagen.exists())
 
 
+class TelefoonInvoerTest(TestCase):
+    """Kleine dingen die op een telefoon het verschil maken en die je anders
+    pas merkt als er een filmpje van 200 MB in een klusdossier staat."""
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.maarten = Medewerker.objects.create_user(
+            "maarten", password="x", rol=Medewerker.Rol.EIGENAAR
+        )
+
+    def setUp(self):
+        self.client.force_login(self.maarten)
+
+    def test_bestandsveld_beperkt_wat_de_telefoon_aanbiedt(self):
+        # Zonder accept zet iOS er "video opnemen" bij; dat bestand kan de app
+        # niet verwerken en vult wel de opslag.
+        antwoord = self.client.get(reverse("klus_nieuw"))
+        self.assertContains(antwoord, 'accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.txt"')
+
+    def test_naam_en_adres_krijgen_hoofdletters_per_woord(self):
+        # Een telefoontoetsenbord maakt standaard alleen het eerste woord groot.
+        antwoord = self.client.get(reverse("klus_nieuw"))
+        inhoud = antwoord.content.decode()
+        for veld in ("naam", "opdrachtgever", "adres", "plaats"):
+            self.assertIn(f'name="{veld}"', inhoud)
+        self.assertEqual(inhoud.count('autocapitalize="words"'), 4)
+
+
 class KlusKleurTest(TestCase):
     """Automatische kleurtoewijzing bij het aanmaken van een klus (klussen.kleuren)."""
 

@@ -67,6 +67,40 @@ body.met-navigatie{ padding-left:6.6rem; }
 .kaart.breed{ max-width:1180px; }
 @media (max-width:700px){ .kaart{ border-radius:22px; padding:1.2rem 1rem 1.6rem; } }
 
+/* ══════════ AANRAAKGEDRAG ══════════
+   Alles hierboven is ontworpen voor een telefoon, maar een browser gedraagt
+   zich op touch net even anders dan met een muis:
+
+   1. Een tik geeft standaard een blauwe/grijze flits over het element heen.
+      Die vloekt met het glas en hoort bij geen enkele knop hier.
+   2. :hover blíjft op touch hangen ná een tik, tot je ergens anders tikt —
+      een aangetikte klusregel blijft dan "opgelicht" alsof hij geselecteerd
+      is. Daarom staat elke hover-regel in dit bestand in @media (hover:hover):
+      alleen een echte muis krijgt ze.
+   3. Zonder drukfeedback voelt een tik als "er gebeurt niets" zolang de
+      volgende pagina laadt — op 4G in de bus zijn dat zomaar twee seconden.
+      Daarom krijgt alles wat je kunt aantikken een :active-staat.
+   4. touch-action:manipulation haalt de dubbeltik-om-in-te-zoomen weg op
+      knoppen en rijen; dat scheelt de vertraging vóór een tik "aankomt". */
+a, button, .knop, .knop-stil, .pil, .side-icon, .klusregel, .profielregel,
+.klus-slide, .klustegel, .maanddag, .fotokaart-nieuw, .keuzepil .vlak,
+.doclijst .nieuw-knop, .dialog-sluiten, .weg button, .legenda a{
+  -webkit-tap-highlight-color:transparent;
+  touch-action:manipulation;
+}
+
+.knop:active, .knop-stil:active, .pil:active, .legenda a:active,
+.fotokaart-nieuw:active, .doclijst .nieuw-knop:active, .keuzepil .vlak:active{
+  filter:brightness(.92);
+}
+.klusregel:active, .profielregel:active, .klus-slide:active,
+.maanddag:active, .adres-suggesties li:active{
+  background:rgba(255,255,255,0.16);
+}
+.klustegel:active, .blok:active, .bord-chip:active{ transform:scale(.985); }
+.side-icon:active{ background:rgba(255,255,255,0.16); }
+.weg button:active, .dialog-sluiten:active{ background:rgba(255,255,255,0.28); }
+
 /* ══════════ KOP ══════════ */
 .kop{
   display:flex; align-items:flex-start; justify-content:space-between;
@@ -77,12 +111,16 @@ h1{
   font-size:1.6rem; margin:0; line-height:1.15;
 }
 .kop .sub{ font-size:11.5px; color:rgba(255,255,255,0.6); margin:.25rem 0 0; }
+/* De terugverwijzing in .sub is op bijna elk scherm de enige weg terug, en
+   was een regel tekst van 11,5px zonder ruimte eromheen — met een duim raak
+   je die half. De tekst blijft even klein, de tikruimte eromheen niet. */
+.kop .sub a{ display:inline-block; padding:.45rem .6rem .45rem 0; margin:-.45rem 0; }
 .uitlogknop{
   background:none; border:0; color:rgba(255,255,255,0.6);
   font-family:'Inter',sans-serif; font-size:11.5px; cursor:pointer;
-  padding:.4rem 0; text-decoration:underline; white-space:nowrap;
+  padding:.55rem 0 .55rem .6rem; margin:-.55rem 0; text-decoration:underline; white-space:nowrap;
 }
-.uitlogknop:hover{ color:#fff; }
+@media (hover:hover){ .uitlogknop:hover{ color:#fff; } }
 
 /* ══════════ NAVIGATIE: ZWEVENDE ZIJBALK / ONDERBALK ══════════
    Eén nav-element, alleen ingelogd getoond (basis.html). Op een breed
@@ -106,7 +144,7 @@ h1{
   color:rgba(255,255,255,0.6); text-decoration:none;
   transition:background .12s, color .12s;
 }
-a.side-icon:hover{ background:rgba(255,255,255,0.10); color:#fff; }
+@media (hover:hover){ a.side-icon:hover{ background:rgba(255,255,255,0.10); color:#fff; } }
 .side-icon svg{ width:20px; height:20px; }
 .side-icon.actief{
   background:linear-gradient(135deg, rgba(var(--accent-rgb),0.55), rgba(var(--accent-rgb),0.20));
@@ -152,7 +190,7 @@ a.side-icon:hover{ background:rgba(255,255,255,0.10); color:#fff; }
   border-radius:999px; font-family:'Inter',sans-serif; font-size:13px; font-weight:500;
   text-decoration:none; cursor:pointer; line-height:1;
 }
-.knop-stil:hover{ background:rgba(255,255,255,0.18); }
+@media (hover:hover){ .knop-stil:hover{ background:rgba(255,255,255,0.18); } }
 
 /* ══════════ FORMULIEREN ══════════ */
 label{
@@ -267,7 +305,7 @@ input[type=time]::-webkit-calendar-picker-indicator{ filter:invert(1); opacity:.
   touch-action:pan-x pan-y;
   scroll-snap-align:start;
 }
-.dagkolom:hover{ background:rgba(255,255,255,0.05); }
+@media (hover:hover){ .dagkolom:hover{ background:rgba(255,255,255,0.05); } }
 /* zelfde tint als .bord-cel.vandaag bij het planbord */
 .dagkolom.vandaag{ background:rgba(var(--accent-rgb),0.07); }
 .vak{ height:26px; border-top:1px solid rgba(255,255,255,0.06); cursor:pointer; }
@@ -280,7 +318,7 @@ input[type=time]::-webkit-calendar-picker-indicator{ filter:invert(1); opacity:.
   border:1px solid; color:#fff; text-decoration:none;
   transition:transform .1s;
 }
-.blok:hover{ transform:scale(1.015); border-color:rgba(255,255,255,0.75); z-index:5; }
+@media (hover:hover){ .blok:hover{ transform:scale(1.015); border-color:rgba(255,255,255,0.75); z-index:5; } }
 .blok .tijd{ display:block; font-weight:600; font-variant-numeric:tabular-nums; }
 .blok .onder{
   display:block; opacity:.85; margin-top:.1rem;
@@ -303,11 +341,28 @@ input[type=time]::-webkit-calendar-picker-indicator{ filter:invert(1); opacity:.
   background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.12);
   color:#fff; text-decoration:none; transition:background .12s;
 }
-.maanddag:hover{ background:rgba(255,255,255,0.13); }
+@media (hover:hover){ .maanddag:hover{ background:rgba(255,255,255,0.13); } }
 .maanddag.buiten-maand{ opacity:.3; }
 .maanddag.vandaag{ border-color:rgba(var(--accent-rgb),0.6); background:rgba(var(--accent-rgb),0.18); }
 .maanddag .nr{ font-size:13px; font-weight:600; }
 .maanddag .uren{ font-size:9.5px; color:var(--hi); font-variant-numeric:tabular-nums; }
+
+/* ══════════ HOOFDACTIE OP EEN TELEFOON ══════════
+   "Uren toevoegen" stond onder een dagagenda van zo'n 700px die meestal leeg
+   is. Op een desktop zie je die knop gewoon staan; op een telefoon moet je er
+   eerst helemaal langs scrollen — terwijl dat nu juist de handeling is
+   waarvoor de app 's avonds in de bus opengaat.
+
+   Op een telefoon wisselt hij daarom van plek: boven de agenda in plaats van
+   eronder, zodat hij meteen in beeld staat. Bewust met flex-order en niet met
+   position:fixed — .kaart heeft backdrop-filter, en dat maakt een fixed kind
+   relatief aan de kaart in plaats van aan het scherm; zo'n knop verdwijnt dan
+   alsnog onderaan de pagina. */
+.urenblok{ display:flex; flex-direction:column; }
+.hoofdactie{ margin:1.2rem 0 0; }
+@media (max-width:700px){
+  .hoofdactie{ order:-1; margin:0 0 1rem; }
+}
 
 /* ══════════ MELDINGEN ══════════ */
 .meldingen{ list-style:none; margin:0 0 1.2rem; padding:0; display:grid; gap:.5rem; }
@@ -345,7 +400,7 @@ input[type=time]::-webkit-calendar-picker-indicator{ filter:invert(1); opacity:.
   background:rgba(255,255,255,0.07); border:1px solid rgba(255,255,255,0.16);
   color:rgba(255,255,255,0.7); transition:background .12s, color .12s, border-color .12s;
 }
-.pil:hover{ background:rgba(255,255,255,0.14); color:#fff; }
+@media (hover:hover){ .pil:hover{ background:rgba(255,255,255,0.14); color:#fff; } }
 .pil.actief{
   background:rgba(var(--accent-rgb),0.32); border-color:rgba(var(--accent-rgb),0.55); color:var(--hi);
 }
@@ -368,25 +423,62 @@ input[type=time]::-webkit-calendar-picker-indicator{ filter:invert(1); opacity:.
 /* sluitknopje rechtsboven op de dialoog, zelfde vormtaal als .weg bij een foto */
 .dialog-sluiten{
   position:absolute; top:.7rem; right:.7rem;
-  width:28px; height:28px; border-radius:50%; cursor:pointer;
+  width:34px; height:34px; border-radius:50%; cursor:pointer;
   display:flex; align-items:center; justify-content:center;
-  font-family:'Inter',sans-serif; font-size:16px; line-height:1;
+  font-family:'Inter',sans-serif; font-size:18px; line-height:1;
   background:rgba(255,255,255,0.10); color:#fff; border:1px solid rgba(255,255,255,0.24);
 }
-.dialog-sluiten:hover{ background:rgba(255,255,255,0.18); }
+/* zelfde reden als bij .weg button: zichtbaar rustig, aanraakgebied ~44px */
+.dialog-sluiten::after{ content:''; position:absolute; inset:-5px; border-radius:50%; }
+@media (hover:hover){ .dialog-sluiten:hover{ background:rgba(255,255,255,0.18); } }
 /* het standaard bestandsknopje van de browser is wit-op-wit op deze
-   achtergrond; hier krijgt het dezelfde pilvorm als de rest */
-.uploadveld input[type=file]{
+   achtergrond; hier krijgt het dezelfde pilvorm als de rest.
+
+   Bewust op elk bestandsveld en niet alleen binnen .uploadveld: hetzelfde
+   veld staat ook op het aanmaakformulier van een klus, en daar viel het
+   anders terug op de kale browserknop. */
+input[type=file]{
   width:100%; font-size:13px; color:rgba(255,255,255,0.75);
   background:rgba(255,255,255,0.07); border:1px solid rgba(255,255,255,0.18);
   border-radius:14px; padding:.7rem .8rem;
 }
-.uploadveld input[type=file]::file-selector-button{
+input[type=file]::file-selector-button{
   font-family:'Inter',sans-serif; font-size:13px; font-weight:600;
-  margin-right:.8rem; padding:.45rem 1rem; cursor:pointer;
+  /* min-height 44px: dit is op een telefoon de knop waarmee je de camera of
+     je fotorol opent, en daar moet je met een duim niet naar hoeven mikken */
+  min-height:44px; margin-right:.8rem; padding:.45rem 1.1rem; cursor:pointer;
   border:1px solid rgba(var(--accent-rgb),0.5); border-radius:999px;
   background:linear-gradient(135deg, rgba(var(--accent-rgb),0.9), rgba(var(--accent-rgb),0.68));
   color:var(--ink);
+}
+
+/* Eigen knop vóór het bestandsveld (static/js/bestandsveld.js). Het echte
+   veld gaat buiten beeld maar blijft bestaan en bedienbaar — vandaar geen
+   display:none, want dan is het niet meer te focussen met een toetsenbord en
+   koppelt het label er niet meer aan. */
+input[type=file].bestandsveld-verborgen{
+  position:absolute; width:1px; height:1px; padding:0; margin:-1px;
+  overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0;
+}
+.bestandsknop{
+  display:flex; align-items:center; justify-content:center; gap:.55rem;
+  width:100%; min-height:50px; padding:.8rem 1.2rem; margin:0;
+  border:1px solid rgba(var(--accent-rgb),0.45); border-radius:999px;
+  background:rgba(var(--accent-rgb),0.18); cursor:pointer;
+  /* label krijgt in dit stylesheet standaard de kleine hoofdletter-opmaak van
+     een formulierkopje; dit label ís de knop, dus die opmaak moet eraf */
+  font-family:'Inter',sans-serif; font-size:14.5px; font-weight:600;
+  letter-spacing:normal; text-transform:none; color:#fff;
+}
+.bestandsknop svg{ width:18px; height:18px; flex-shrink:0; }
+@media (hover:hover){ .bestandsknop:hover{ background:rgba(var(--accent-rgb),0.28); } }
+.bestandsknop:active{ filter:brightness(.92); }
+input[type=file]:focus-visible + .bestandsknop{
+  outline:2px solid rgba(var(--accent-rgb),0.9); outline-offset:2px;
+}
+.bestandsstatus{
+  margin:.5rem 0 0; font-size:12.5px; color:rgba(255,255,255,0.6);
+  text-align:center; overflow-wrap:break-word;
 }
 
 /* Pinterest-achtig metselwerk-raster: kolommen i.p.v. rijen, zodat elke foto
@@ -422,7 +514,7 @@ input[type=time]::-webkit-calendar-picker-indicator{ filter:invert(1); opacity:.
   background:rgba(255,255,255,0.05); border:1px dashed rgba(255,255,255,0.28);
   color:rgba(255,255,255,0.6);
 }
-.fotokaart-nieuw:hover{ background:rgba(255,255,255,0.10); color:#fff; }
+@media (hover:hover){ .fotokaart-nieuw:hover{ background:rgba(255,255,255,0.10); color:#fff; } }
 .fotokaart-nieuw svg{ width:22px; height:22px; }
 
 /* dialoog met het uploadveld: de form zelf is al een glaskaart (.uploadveld
@@ -443,15 +535,43 @@ dialog.uren-invoegen{
 }
 dialog.uren-invoegen::backdrop{ background:rgba(10,10,8,0.55); backdrop-filter:blur(3px); }
 
+/* Een dialoog op een telefoon: zodra het toetsenbord opengaat (tikken in
+   "Werkzaamheden" of "Toelichting") houdt de browser maar een strook scherm
+   over. Een dialoog die dood in het midden staat en niet kan scrollen, duwt
+   zijn eigen opslaan-knop dan buiten beeld — je vult iets in en kunt het niet
+   wegschrijven. Vandaar: hoogte begrenzen op wat er écht zichtbaar is (dvh
+   volgt het toetsenbord, vh niet), binnenin scrollen, en niet verticaal
+   gecentreerd maar iets naar boven zodat het veld waar je in typt in beeld
+   blijft. overscroll-behavior houdt de pagina eronder stil tijdens dat
+   scrollen. */
+dialog.foto-invoegen, dialog.uren-invoegen{
+  max-height:calc(100vh - 2rem);
+  max-height:calc(100dvh - 2rem);
+  margin-top:max(1rem, env(safe-area-inset-top));
+  margin-bottom:max(1rem, env(safe-area-inset-bottom));
+  overflow:visible;
+}
+dialog.foto-invoegen .uploadveld, dialog.uren-invoegen .uurblokformulier{
+  max-height:calc(100vh - 3rem);
+  max-height:calc(100dvh - 3rem);
+  overflow-y:auto; overscroll-behavior:contain;
+}
+
 /* verwijderknopje rechtsboven op de kaart */
 .weg{ position:absolute; top:.4rem; right:.4rem; }
 .weg button{
+  position:relative;
   width:26px; height:26px; border-radius:50%; cursor:pointer;
   display:flex; align-items:center; justify-content:center;
   font-family:'Inter',sans-serif; font-size:15px; line-height:1;
   background:rgba(0,0,0,0.45); color:#fff; border:1px solid rgba(255,255,255,0.25);
 }
-.weg button:hover{ background:rgba(224,123,95,0.8); }
+/* Een kruisje van 26px is met een muis prima en met een duim niet: je raakt
+   net de foto eronder en opent 'm in plaats van te verwijderen. Het zichtbare
+   rondje blijft klein — het aanraakgebied groeit eromheen naar ~44px, de maat
+   die Apple en Google allebei als minimum aanhouden. */
+.weg button::after{ content:''; position:absolute; inset:-9px; border-radius:50%; }
+@media (hover:hover){ .weg button:hover{ background:rgba(224,123,95,0.8); } }
 
 .doclijst{ list-style:none; margin:0; padding:0; display:grid; gap:.5rem; }
 .doclijst li{
@@ -474,7 +594,7 @@ dialog.uren-invoegen::backdrop{ background:rgba(10,10,8,0.55); backdrop-filter:b
   background:rgba(255,255,255,0.05); border:1px dashed rgba(255,255,255,0.28);
   color:rgba(255,255,255,0.7);
 }
-.doclijst .nieuw-knop:hover{ background:rgba(255,255,255,0.10); color:#fff; }
+@media (hover:hover){ .doclijst .nieuw-knop:hover{ background:rgba(255,255,255,0.10); color:#fff; } }
 .doclijst .nieuw-knop svg{ width:18px; height:18px; flex-shrink:0; }
 
 /* ══════════ KLUSSENLIJST EN KLUSDETAIL ══════════ */
@@ -484,7 +604,7 @@ dialog.uren-invoegen::backdrop{ background:rgba(10,10,8,0.55); backdrop-filter:b
   background:rgba(255,255,255,0.07); border:1px solid rgba(255,255,255,0.14);
   color:#fff; text-decoration:none; transition:background .12s;
 }
-.klusregel:hover{ background:rgba(255,255,255,0.13); }
+@media (hover:hover){ .klusregel:hover{ background:rgba(255,255,255,0.13); } }
 .klusregel.afgerond{ opacity:.55; }
 .klusregel .naam{ font-family:'Fraunces',serif; font-style:italic; font-weight:600; font-size:1rem; }
 .klusregel .adres{ font-size:12px; color:rgba(255,255,255,0.6); }
@@ -508,7 +628,7 @@ dialog.uren-invoegen::backdrop{ background:rgba(10,10,8,0.55); backdrop-filter:b
   background:rgba(255,255,255,0.07); border:1px solid rgba(255,255,255,0.14);
   color:#fff; text-decoration:none; transition:background .12s;
 }
-.profielregel:hover{ background:rgba(255,255,255,0.13); }
+@media (hover:hover){ .profielregel:hover{ background:rgba(255,255,255,0.13); } }
 .profielregel svg{ width:20px; height:20px; flex-shrink:0; color:rgba(255,255,255,0.7); }
 .profielregel .titel{ font-size:14px; font-weight:500; }
 
@@ -528,7 +648,7 @@ dialog.uren-invoegen::backdrop{ background:rgba(10,10,8,0.55); backdrop-filter:b
   background:rgba(255,255,255,0.07); border:1px solid rgba(255,255,255,0.14);
   color:#fff; text-decoration:none; transition:background .12s;
 }
-.klus-slide:hover{ background:rgba(255,255,255,0.13); }
+@media (hover:hover){ .klus-slide:hover{ background:rgba(255,255,255,0.13); } }
 .klus-slide.afgerond{ opacity:.55; }
 .klus-slide .naam{ font-family:'Fraunces',serif; font-style:italic; font-weight:600; font-size:1rem; }
 .klus-slide .adres{ font-size:12px; color:rgba(255,255,255,0.6); }
@@ -604,7 +724,7 @@ dialog.foto-popup img{
   background:rgba(255,255,255,0.07); border:1px solid rgba(255,255,255,0.14);
   color:#fff; text-decoration:none; transition:transform .12s, background .12s;
 }
-.klustegel:hover{ transform:translateY(-2px); background:rgba(255,255,255,0.11); }
+@media (hover:hover){ .klustegel:hover{ transform:translateY(-2px); background:rgba(255,255,255,0.11); } }
 .klustegel.afgerond{ opacity:.6; }
 
 .klustegel-kop{ display:grid; gap:.2rem; }
@@ -627,8 +747,8 @@ dialog.foto-popup img{
 .laag-voor-1{ z-index:3; transform:rotate(0deg) translate(0, 0) scale(1); }
 .laag-voor-2{ z-index:2; transform:rotate(8deg) translate(11px, 5px) scale(0.95); }
 .laag-voor-3{ z-index:1; transform:rotate(-10deg) translate(-11px, 9px) scale(0.90); }
-.klustegel:hover .laag-voor-2, .klus-slide:hover .laag-voor-2{ transform:rotate(11deg) translate(15px, 7px) scale(0.95); }
-.klustegel:hover .laag-voor-3, .klus-slide:hover .laag-voor-3{ transform:rotate(-13deg) translate(-15px, 12px) scale(0.90); }
+@media (hover:hover){ .klustegel:hover .laag-voor-2, .klus-slide:hover .laag-voor-2{ transform:rotate(11deg) translate(15px, 7px) scale(0.95); } }
+@media (hover:hover){ .klustegel:hover .laag-voor-3, .klus-slide:hover .laag-voor-3{ transform:rotate(-13deg) translate(-15px, 12px) scale(0.90); } }
 
 .voorbeeldlaag-foto img{ display:block; width:100%; height:100%; object-fit:cover; background:rgba(0,0,0,0.2); }
 .voorbeeldlaag-document .voorbeeldlaag-inhoud,
@@ -668,7 +788,7 @@ dialog.foto-popup img{
   display:inline-block; font-size:10.5px; font-weight:600; color:var(--hi);
   text-decoration:none; margin-bottom:.1rem;
 }
-.fotokaart .klus-badge:hover{ text-decoration:underline; }
+@media (hover:hover){ .fotokaart .klus-badge:hover{ text-decoration:underline; } }
 
 /* ══════════ KLUSDOSSIER: GEWERKTE UREN ══════════
    Wie er in deze lijst staat is afgeleid uit de geschreven uren, niet uit een
@@ -713,8 +833,15 @@ input[type=color]{
 input[type=color]::-webkit-color-swatch{ border:none; border-radius:10px; }
 input[type=color]::-webkit-color-swatch-wrapper{ padding:0; }
 
-/* een checkbox moet niet over de volle breedte gerekt worden */
-input[type=checkbox]{ width:auto; accent-color:var(--accent); transform:scale(1.25); }
+/* Een checkbox moet niet over de volle breedte gerekt worden. Wel groter dan
+   de standaard 16px: met scale(1.25) is het vinkje ~20px en dat is met een
+   duim mikken. Het label ernaast heeft een `for`, dus de tekst schakelt mee —
+   samen is dat een fatsoenlijk aanraakgebied. */
+input[type=checkbox]{
+  width:auto; accent-color:var(--accent); transform:scale(1.5);
+  margin:.35rem .5rem .35rem .25rem;
+}
+label:has(> input[type=checkbox]), input[type=checkbox] + label{ cursor:pointer; }
 
 /* ══════════ ADRES-AUTOCOMPLETE (klusformulier) ══════════
    Suggesties van OpenStreetMap/Nominatim onder het adresveld. Positie komt uit
@@ -729,7 +856,7 @@ input[type=checkbox]{ width:auto; accent-color:var(--accent); transform:scale(1.
   padding:.6rem .7rem; border-radius:10px; font-size:13px; line-height:1.35;
   color:rgba(255,255,255,0.85); cursor:pointer;
 }
-.adres-suggesties li:hover{ background:rgba(255,255,255,0.12); color:#fff; }
+@media (hover:hover){ .adres-suggesties li:hover{ background:rgba(255,255,255,0.12); color:#fff; } }
 
 /* ══════════ PLANBORD ══════════
    Rijen zijn medewerkers, kolommen zijn dagen (SPEC §5). Zeven dagkolommen
@@ -789,7 +916,7 @@ input[type=checkbox]{ width:auto; accent-color:var(--accent); transform:scale(1.
   font-size:10.5px; line-height:1.3; color:#fff; text-decoration:none;
   transition:transform .1s;
 }
-.bord-chip:hover{ transform:scale(1.03); border-color:rgba(255,255,255,0.75); }
+@media (hover:hover){ .bord-chip:hover{ transform:scale(1.03); border-color:rgba(255,255,255,0.75); } }
 .bord-chip .tijd{ display:block; font-weight:600; font-variant-numeric:tabular-nums; }
 .bord-chip .duur{ display:block; opacity:.85; font-variant-numeric:tabular-nums; }
 
@@ -809,7 +936,7 @@ input[type=checkbox]{ width:auto; accent-color:var(--accent); transform:scale(1.
   background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.16);
   font-size:12px; color:#fff; text-decoration:none;
 }
-.legenda a:hover{ background:rgba(255,255,255,0.14); }
+@media (hover:hover){ .legenda a:hover{ background:rgba(255,255,255,0.14); } }
 .legenda .vlek{ width:14px; height:14px; border-radius:999px; border:1px solid; flex-shrink:0; }
 
 /* ══════════ AANWEZIGHEID ══════════
@@ -857,7 +984,7 @@ input[type=checkbox]{ width:auto; accent-color:var(--accent); transform:scale(1.
   background:rgba(255,255,255,0.07); border:1px solid rgba(255,255,255,0.16);
   color:rgba(255,255,255,0.7); transition:background .12s, color .12s, border-color .12s;
 }
-.keuzepil .vlak:hover{ background:rgba(255,255,255,0.14); color:#fff; }
+@media (hover:hover){ .keuzepil .vlak:hover{ background:rgba(255,255,255,0.14); color:#fff; } }
 .keuzepil.ja input:checked + .vlak{
   background:rgba(var(--accent-rgb),0.32); border-color:rgba(var(--accent-rgb),0.6); color:var(--hi);
 }

@@ -32,6 +32,7 @@
   {% if weergave == "maand" %}
     {% include "uren/_maandraster.html" %}
   {% else %}
+    <div class="urenblok">
     <div class="raster-scroll">
       <div class="raster{% if weergave == 'dag' %} raster-dag{% endif %}">
         <div class="raster-hoek"></div>
@@ -69,9 +70,14 @@
       </div>
     </div>
 
-    <p style="margin-top:1.2rem">
+    {% comment %} Op een telefoon springt deze knop bóven de agenda (zie
+       .hoofdactie in app.css): die agenda is ~700px hoog en meestal leeg, en
+       juist dit is waarvoor iemand 's avonds in de bus de app opent — dat
+       mag geen scrollbeweging kosten. {% endcomment %}
+    <p class="hoofdactie">
       <button type="button" class="knop" onclick="document.getElementById('uren-invoegen').showModal()">Uren toevoegen</button>
     </p>
+    </div>
 
     <dialog id="uren-invoegen" class="uren-invoegen">
       {% include "uren/_uurblokformulier.html" with actie=uurblok_nieuw_actie in_dialoog=True %}
