@@ -334,6 +334,40 @@ class MediaTest(TestCase):
             views.media_bestand(verzoek, "bijlagen/2026/09/bestaatniet.jpg")
 
 
+@override_settings(MEDIA_ROOT=TIJDELIJKE_MEDIA)
+class DocumentToevoegenKnopTest(TestCase):
+    """De "Documenten"-sectie en de knop erin moeten er staan vóórdat er ooit
+    een document is geweest — anders is er geen zichtbare manier om de eerste
+    pdf toe te voegen (zie klussen/_documentenlijst.html)."""
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.sam = Medewerker.objects.create_user("sam", password="x")
+        cls.klus = Klus.objects.create(naam="Tuin Vermeer")
+
+    @classmethod
+    def tearDownClass(cls):
+        shutil.rmtree(TIJDELIJKE_MEDIA, ignore_errors=True)
+        super().tearDownClass()
+
+    def setUp(self):
+        self.client.force_login(self.sam)
+
+    def test_documentknop_staat_er_ook_zonder_bestaande_documenten(self):
+        antwoord = self.client.get(self.klus.get_absolute_url())
+        self.assertContains(antwoord, "Documenten")
+        self.assertContains(antwoord, "Document toevoegen")
+        self.assertContains(antwoord, "Nog geen documenten.")
+
+    def test_geuploade_pdf_komt_in_de_documentenlijst_op_het_klusdossier(self):
+        self.client.post(
+            reverse("bijlage_toevoegen"),
+            {"bestanden": upload("Offerte.pdf", b"%PDF-1.4", "application/pdf"), "klus": self.klus.pk},
+        )
+        antwoord = self.client.get(self.klus.get_absolute_url())
+        self.assertContains(antwoord, "Offerte.pdf")
+
+
 class FilterTest(TestCase):
     def test_uitgelogde_bezoeker_mag_niks_verwijderen(self):
         from .templatetags.bijlagen import mag_weg

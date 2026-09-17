@@ -1,22 +1,33 @@
-{# Tekeningen, offertes, pdf's. Verwacht `document_bijlagen` en `terug`. #}
+{% comment %} Tekeningen, offertes, pdf's. Verwacht `document_bijlagen` en `terug`.
+
+   Moet ná _fotoraster.html op de pagina staan: de "+"-knop hieronder opent
+   dezelfde uploaddialoog (#foto-invoegen) die _fotoraster.html insluit, in
+   plaats van een eigen dialoog te tekenen. Zonder deze knop was er geen
+   zichtbare manier om een document toe te voegen zolang er nog geen enkel
+   document bestond — de sectie stond er dan simpelweg niet. {% endcomment %}
 {% load bijlagen %}
-{% if document_bijlagen %}
-  <ul class="doclijst">
-    {% for bijlage in document_bijlagen %}
-      <li>
-        <a href="{% url 'media_bestand' bijlage.bestand.name %}">{{ bijlage.toonnaam }}</a>
-        {% if bijlage.toelichting %}<span class="wat">{{ bijlage.toelichting }}</span>{% endif %}
-        <span class="wie">{{ bijlage.toegevoegd_door.naam|default:"onbekend" }} · {{ bijlage.datum|date:"j M Y" }}</span>
-        {% if bijlage|mag_weg:user %}
-          <form method="post" action="{% url 'bijlage_verwijderen' bijlage.pk %}" class="weg">
-            {% csrf_token %}
-            <input type="hidden" name="terug" value="{{ terug }}">
-            <button type="submit" title="Verwijderen" aria-label="Verwijderen">×</button>
-          </form>
-        {% endif %}
-      </li>
-    {% endfor %}
-  </ul>
-{% else %}
+<ul class="doclijst">
+  <li class="nieuw">
+    <button type="button" class="nieuw-knop" onclick="document.getElementById('foto-invoegen').showModal()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      Document toevoegen
+    </button>
+  </li>
+  {% for bijlage in document_bijlagen %}
+    <li>
+      <a href="{% url 'media_bestand' bijlage.bestand.name %}">{{ bijlage.toonnaam }}</a>
+      {% if bijlage.toelichting %}<span class="wat">{{ bijlage.toelichting }}</span>{% endif %}
+      <span class="wie">{{ bijlage.toegevoegd_door.naam|default:"onbekend" }} · {{ bijlage.datum|date:"j M Y" }}</span>
+      {% if bijlage|mag_weg:user %}
+        <form method="post" action="{% url 'bijlage_verwijderen' bijlage.pk %}" class="weg">
+          {% csrf_token %}
+          <input type="hidden" name="terug" value="{{ terug }}">
+          <button type="submit" title="Verwijderen" aria-label="Verwijderen">×</button>
+        </form>
+      {% endif %}
+    </li>
+  {% endfor %}
+</ul>
+{% if not document_bijlagen %}
   <p class="leeg">Nog geen documenten.</p>
 {% endif %}

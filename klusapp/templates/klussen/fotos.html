@@ -39,9 +39,7 @@
     <h2 class="sectiekop">Losse foto's</h2>
     {% include "klussen/_fotoraster.html" with toon_klus=True %}
 
-    {% if document_bijlagen %}
-      <h2 class="sectiekop">Losse documenten</h2>
-      {% include "klussen/_documentenlijst.html" %}
-    {% endif %}
+    <h2 class="sectiekop">Losse documenten</h2>
+    {% include "klussen/_documentenlijst.html" %}
   {% endif %}
 {% endblock %}

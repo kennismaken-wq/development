@@ -59,8 +59,6 @@
   <h2 class="sectiekop">Foto's</h2>
   {% include "klussen/_fotoraster.html" with klus_pk=klus.pk %}
 
-  {% if document_bijlagen %}
-    <h2 class="sectiekop">Documenten</h2>
-    {% include "klussen/_documentenlijst.html" %}
-  {% endif %}
+  <h2 class="sectiekop">Documenten</h2>
+  {% include "klussen/_documentenlijst.html" %}
 {% endblock %}
