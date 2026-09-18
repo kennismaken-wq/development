@@ -35,21 +35,10 @@ body{
   display:flex; flex-direction:column; align-items:center;
   -webkit-text-size-adjust:100%;
 }
-@media (max-width:700px){ body{ padding:.7rem; padding-top:calc(.7rem + env(safe-area-inset-top)); } }
-
 /* ruimte voor de zwevende navigatie: een kolom links op een breed scherm,
    een balk onderaan op een telefoon — zie .sidebar hieronder. Alleen
    ingelogd, dus als eigen klasse i.p.v. altijd-aan op body. */
 body.met-navigatie{ padding-left:6.6rem; }
-@media (max-width:700px){
-  body.met-navigatie{ padding-left:.7rem; padding-bottom:5.4rem; }
-  /* De balk zweeft óver de kaart heen, en de ruimte hierboven valt buiten de
-     scrollhoogte: onderaan de pagina lag de laatste knop dus onder de balk en
-     was hij niet aan te tikken. Dat raakte de knop "Uren toevoegen" en het
-     opslaan van de aanwezigheid — precies de twee dingen waarvoor iemand dit
-     scherm op zijn telefoon opent. */
-  body.met-navigatie .kaart{ padding-bottom:calc(5rem + env(safe-area-inset-bottom)); }
-}
 
 .glas{
   background:rgba(255,255,255,0.10);
@@ -65,7 +54,37 @@ body.met-navigatie{ padding-left:6.6rem; }
 }
 /* de weekkalender is 700px breed; die krijgt een ruimere kaart */
 .kaart.breed{ max-width:1180px; }
-@media (max-width:700px){ .kaart{ border-radius:22px; padding:1.2rem 1rem 1.6rem; } }
+
+/* ══════════ TELEFOON: DE APP *IS* HET SCHERM ══════════
+   Op een breed scherm is de app één zwevende glaskaart op de gradient — dat
+   is de vormtaal en die blijft. Op een telefoon klopte dat niet: je keek naar
+   een scherm, met daarin een marge, met daarin een kader met ronde hoeken en
+   een randje, en pas daarbínnen begon de app. Drie lagen om hetzelfde te
+   zeggen, en je verliest er aan alle kanten ruimte mee op het smalste scherm
+   dat we hebben.
+
+   Op een telefoon vult de app daarom het hele scherm: geen buitenmarge, geen
+   rand, geen ronde hoeken, geen slagschaduw. De gradient blijft de ondergrond
+   en de losse onderdelen (rijen, knoppen, dialogen, de navigatiebalk) houden
+   hun glas — de herkenning zit in díé onderdelen, niet in een kader eromheen.
+
+   Meegenomen voordeel: zonder backdrop-filter op .kaart is die geen
+   containing block meer voor position:fixed-kinderen, wat eerder al een
+   zwevende knop binnen de kaart liet vastlopen. */
+@media (max-width:700px){
+  body{ padding:0; padding-top:env(safe-area-inset-top); }
+  body.met-navigatie{ padding-left:0; padding-bottom:0; }
+  .kaart.glas{
+    max-width:none;
+    border:0; border-radius:0; box-shadow:none;
+    background:none; backdrop-filter:none; -webkit-backdrop-filter:none;
+    padding:1.2rem 1rem 1.6rem;
+  }
+  /* De navigatiebalk zweeft over de inhoud heen en valt buiten de
+     scrollhoogte: zonder deze ruimte ligt de laatste knop van een scherm
+     eronder en is hij niet aan te tikken. */
+  body.met-navigatie .kaart{ padding-bottom:calc(6rem + env(safe-area-inset-bottom)); }
+}
 
 /* ══════════ AANRAAKGEDRAG ══════════
    Alles hierboven is ontworpen voor een telefoon, maar een browser gedraagt
@@ -116,6 +135,16 @@ a, button, .knop, .knop-stil, .pil, .side-icon, .klusregel, .profielregel,
 .kaart.inloggen{ max-width:420px; }
 .kaart.inloggen .kop{ flex-direction:column; align-items:center; text-align:center; gap:.9rem; }
 .kaart.inloggen .merk{ width:96px; margin-top:.4rem; }
+/* Zonder kaartkader (zie "TELEFOON: DE APP IS HET SCHERM") plakt een
+   inlogscherm bovenaan met een half scherm leegte eronder. Verticaal
+   centreren geeft hetzelfde beeld als het inlogscherm van een echte app. */
+@media (max-width:700px){
+  .kaart.inloggen{
+    display:flex; flex-direction:column; justify-content:center;
+    min-height:calc(100vh - env(safe-area-inset-top));
+    min-height:calc(100dvh - env(safe-area-inset-top));
+  }
+}
 
 h1{
   font-family:'Fraunces',serif; font-style:italic; font-weight:600;
