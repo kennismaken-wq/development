@@ -6,6 +6,8 @@
   <meta name="theme-color" content="#1D1D1B">
   <title>{% block titel %}Klusapp{% endblock %} · De Groene M</title>
   {% load static %}
+  <link rel="icon" href="{% static 'img/favicon.png' %}" sizes="32x32">
+  <link rel="apple-touch-icon" href="{% static 'img/icoon-180.png' %}">
   <link rel="stylesheet" href="{% static 'css/app.css' %}">
 </head>
 <body{% if user.is_authenticated %} class="met-navigatie"{% endif %}>
@@ -35,7 +37,8 @@
 
   <div class="kaart glas {% block kaartklasse %}{% endblock %}">
     <div class="kop">
-      <div>
+      <img class="merk" src="{% static 'img/logo-de-groene-m-licht.png' %}" alt="" width="512" height="437">
+      <div class="koptekst">
         <h1>{% block kop %}De Groene M{% endblock %}</h1>
         <p class="sub">{% block sub %}{% endblock %}</p>
       </div>

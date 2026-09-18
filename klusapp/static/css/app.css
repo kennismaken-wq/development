@@ -106,6 +106,17 @@ a, button, .knop, .knop-stil, .pil, .side-icon, .klusregel, .profielregel,
   display:flex; align-items:flex-start; justify-content:space-between;
   gap:1rem; margin-bottom:1.4rem;
 }
+/* Het blad uit het logo van De Groene M, links naast de titel. De lichte
+   variant (donkere blad-helften vervangen door gebroken wit) omdat de zwarte
+   uit het origineel wegvalt tegen de donkere achtergrond. */
+.kop .merk{ width:34px; height:auto; flex-shrink:0; margin-top:.1rem; }
+.kop .koptekst{ flex:1 1 auto; min-width:0; }
+
+/* Inlogscherm: daar is het blad geen bijzaak maar het eerste dat je ziet. */
+.kaart.inloggen{ max-width:420px; }
+.kaart.inloggen .kop{ flex-direction:column; align-items:center; text-align:center; gap:.9rem; }
+.kaart.inloggen .merk{ width:96px; margin-top:.4rem; }
+
 h1{
   font-family:'Fraunces',serif; font-style:italic; font-weight:600;
   font-size:1.6rem; margin:0; line-height:1.15;

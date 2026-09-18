@@ -305,6 +305,12 @@ Never `0px` or `4px`. If a shape looks even slightly sharp, round it further.
 - `badge-pill` recipe — accent-tinted translucent fill, matching border at higher opacity, pill radius, small uppercase-ish text.
 - A colored dot (`.vlek`) — `width/height: 14px`, `border-radius: 999px`, `border: 1px solid`, filled with `linear-gradient(150deg, {kleur}D9, {kleur}73)` — is the pattern for "this item has its own identity color" (klus color-coding). The `D9`/`73` suffixes are hex alpha (~85%/~45%) appended directly to a hex color — reuse that trick instead of switching to `rgba()` when the color itself is a runtime variable.
 
+### Brand Mark
+- klusapp carries De Groene M's leaf: `34px` wide next to the page title in `.kop` (`.merk`), `96px` and centered above the title on the login card (`.kaart.inloggen`). Never a full lockup with wordmark — the card already says "De Groene M" in Fraunces.
+- The supplied logo is green + near-black (`#1D1D1B`) with a drop shadow. On the dark glass the black halves disappear and the shadow smudges, so the app uses a derived light variant (`static/img/logo-de-groene-m-licht.png`: black → `#F4F6EE`, shadow stripped). The untouched two-tone file (`logo-de-groene-m.png`) is for light surfaces such as the photo report PDF.
+- Favicon/home-screen icon is the leaf on a solid `#1D1D1B` tile (`favicon.png`, `icoon-180.png`), not the bare transparent leaf: a white-and-green mark on a light browser tab loses half of itself.
+- A product without its own client logo shows no mark at all rather than a stand-in.
+
 ### Navigation
 - **Floating glass pill**, not a tile grid: desktop = vertical pill, fixed, vertically centered, detached from the edge (`left: 1.3rem`); mobile (<700px) = horizontal bar pinned to the bottom, `env(safe-area-inset-bottom)`-aware, horizontal-scrolling if icons don't fit (never collapses into a hamburger/overflow menu).
 - Active state = accent-tinted gradient fill + border; inactive = transparent, `rgba(255,255,255,0.6)` icon color, brightens on hover.
