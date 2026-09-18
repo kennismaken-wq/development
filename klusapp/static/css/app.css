@@ -610,11 +610,21 @@ dialog.foto-invoegen .uploadveld, dialog.uren-invoegen .uurblokformulier{
 
 /* ══════════ KLUSSENLIJST EN KLUSDETAIL ══════════ */
 .klussenlijst{ list-style:none; margin:0; padding:0; display:grid; gap:.5rem; }
+/* Twee kolommen: tekst links, de gewaaierde voorbeeldstapel rechts. Niet
+   onder elkaar, want dan wordt elke regel ~80px hoger en past er op een
+   telefoon nog maar een handvol klussen op een scherm. De tekst zit in een
+   eigen kolom-container: zonder dat rekken badge/naam/adres mee met de
+   hoogte van de stapel en staan ze met grote gaten uit elkaar. */
 .klusregel{
-  display:grid; gap:.3rem; border-radius:16px; padding:.85rem 1rem;
+  /* 1.1rem en niet minder: de achterste laag van de stapel staat gedraaid en
+     steekt ~15px naar links uit, en die mag de tekst niet raken */
+  display:grid; grid-template-columns:minmax(0,1fr) auto; gap:1.1rem;
+  align-items:center;
+  border-radius:16px; padding:.85rem 1rem;
   background:rgba(255,255,255,0.07); border:1px solid rgba(255,255,255,0.14);
   color:#fff; text-decoration:none; transition:background .12s;
 }
+.klusregel-tekst{ display:grid; gap:.3rem; min-width:0; }
 @media (hover:hover){ .klusregel:hover{ background:rgba(255,255,255,0.13); } }
 .klusregel.afgerond{ opacity:.55; }
 .klusregel .naam{ font-family:'Fraunces',serif; font-style:italic; font-weight:600; font-size:1rem; }
@@ -758,8 +768,8 @@ dialog.foto-popup img{
 .laag-voor-1{ z-index:3; transform:rotate(0deg) translate(0, 0) scale(1); }
 .laag-voor-2{ z-index:2; transform:rotate(8deg) translate(11px, 5px) scale(0.95); }
 .laag-voor-3{ z-index:1; transform:rotate(-10deg) translate(-11px, 9px) scale(0.90); }
-@media (hover:hover){ .klustegel:hover .laag-voor-2, .klus-slide:hover .laag-voor-2{ transform:rotate(11deg) translate(15px, 7px) scale(0.95); } }
-@media (hover:hover){ .klustegel:hover .laag-voor-3, .klus-slide:hover .laag-voor-3{ transform:rotate(-13deg) translate(-15px, 12px) scale(0.90); } }
+@media (hover:hover){ .klustegel:hover .laag-voor-2, .klus-slide:hover .laag-voor-2, .klusregel:hover .laag-voor-2{ transform:rotate(11deg) translate(15px, 7px) scale(0.95); } }
+@media (hover:hover){ .klustegel:hover .laag-voor-3, .klus-slide:hover .laag-voor-3, .klusregel:hover .laag-voor-3{ transform:rotate(-13deg) translate(-15px, 12px) scale(0.90); } }
 
 .voorbeeldlaag-foto img{ display:block; width:100%; height:100%; object-fit:cover; background:rgba(0,0,0,0.2); }
 .voorbeeldlaag-document .voorbeeldlaag-inhoud,

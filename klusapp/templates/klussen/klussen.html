@@ -9,14 +9,18 @@
         {% with kleur=klus|kleur_van %}
           <li>
             <a href="{{ klus.get_absolute_url }}" class="klusregel{% if not klus.actief %} afgerond{% endif %}">
-              <span class="soort-badge">{{ klus.get_soort_display }}</span>
-              <span class="naam">
-                <span class="vlek" style="background:linear-gradient(150deg, {{ kleur }}D9, {{ kleur }}73); border-color:{{ kleur }}"></span>
-                {{ klus.naam }}
+              <span class="klusregel-tekst">
+                <span class="soort-badge">{{ klus.get_soort_display }}</span>
+                <span class="naam">
+                  <span class="vlek" style="background:linear-gradient(150deg, {{ kleur }}D9, {{ kleur }}73); border-color:{{ kleur }}"></span>
+                  {{ klus.naam }}
+                </span>
+                {% if klus.adres or klus.plaats %}
+                  <span class="adres">{{ klus.adres }}{% if klus.adres and klus.plaats %}, {% endif %}{{ klus.plaats }}</span>
+                {% endif %}
               </span>
-              {% if klus.adres or klus.plaats %}
-                <span class="adres">{{ klus.adres }}{% if klus.adres and klus.plaats %}, {% endif %}{{ klus.plaats }}</span>
-              {% endif %}
+              {# zelfde gewaaierde stapel als op het startscherm en bij "per klus" #}
+              {% include "klussen/_klusvoorbeeld.html" %}
             </a>
           </li>
         {% endwith %}

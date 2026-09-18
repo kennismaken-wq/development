@@ -5,7 +5,9 @@ from io import BytesIO
 
 from django.contrib.auth.models import AnonymousUser
 from django.core.files.uploadedfile import SimpleUploadedFile
+from django.db import connection
 from django.http import Http404
+from django.test.utils import CaptureQueriesContext
 from django.test import RequestFactory, TestCase, override_settings
 from django.urls import reverse
 from PIL import Image
@@ -542,6 +544,45 @@ class KlusBijlagenBijAanmakenTest(TestCase):
         self.assertRedirects(antwoord, klus.get_absolute_url())
         self.assertContains(antwoord, "stuk.jpg")
         self.assertFalse(klus.bijlagen.exists())
+
+
+@override_settings(MEDIA_ROOT=TIJDELIJKE_MEDIA)
+class KlussenlijstVoorbeeldTest(TestCase):
+    """De klussenlijst toont dezelfde gewaaierde stapel als het startscherm
+    (klussen/views.py:klus_lijst → klussen.voorbeeld.items_voor_stapel)."""
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.sam = Medewerker.objects.create_user("sam", password="x")
+
+    @classmethod
+    def tearDownClass(cls):
+        shutil.rmtree(TIJDELIJKE_MEDIA, ignore_errors=True)
+        super().tearDownClass()
+
+    def setUp(self):
+        self.client.force_login(self.sam)
+
+    def test_klus_met_inhoud_krijgt_een_stapel_en_zonder_inhoud_een_lege(self):
+        met = Klus.objects.create(naam="Met inhoud", beschrijving="Een notitie")
+        Klus.objects.create(naam="Zonder inhoud")
+        self.client.post(
+            reverse("bijlage_toevoegen"), {"bestanden": upload(), "klus": met.pk}
+        )
+        antwoord = self.client.get(reverse("klussen"))
+        self.assertContains(antwoord, "voorbeeldstapel")
+        self.assertContains(antwoord, "voorbeeldstapel-leeg")
+
+    def test_meer_klussen_kosten_niet_meer_queries(self):
+        # Zonder de Prefetch in klus_lijst wordt dit een query per klus.
+        Klus.objects.create(naam="Klus 1")
+        with CaptureQueriesContext(connection) as een:
+            self.client.get(reverse("klussen"))
+        for nummer in range(2, 7):
+            Klus.objects.create(naam=f"Klus {nummer}")
+        with CaptureQueriesContext(connection) as zes:
+            self.client.get(reverse("klussen"))
+        self.assertEqual(len(een), len(zes))
 
 
 class TelefoonInvoerTest(TestCase):

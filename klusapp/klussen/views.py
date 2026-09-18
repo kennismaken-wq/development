@@ -218,6 +218,20 @@ def klus_lijst(request):
     """
     toon_alles = request.GET.get("alles") == "1"
     klussen = Klus.objects.all() if toon_alles else Klus.objects.filter(actief=True)
+    # Zelfde gewaaierde voorproefje als op het startscherm en het foto's-scherm.
+    # De prefetch hoort erbij: zonder to_attr haalt items_voor_stapel() de
+    # bijlagen per klus apart op en wordt een lijst van tien klussen elf queries.
+    klussen = list(
+        klussen.prefetch_related(
+            Prefetch(
+                "bijlagen",
+                queryset=Bijlage.objects.order_by("-datum", "-toegevoegd_op"),
+                to_attr="voorbeeld_bijlagen",
+            )
+        )
+    )
+    for klus in klussen:
+        klus.voorbeeld_items, klus.voorbeeld_meer = voorbeeld.items_voor_stapel(klus)
     return render(request, "klussen/klussen.html", {"klussen": klussen, "toon_alles": toon_alles})
 
 
