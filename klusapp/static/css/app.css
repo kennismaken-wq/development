@@ -371,7 +371,7 @@ input[type=time]::-webkit-calendar-picker-indicator{ filter:invert(1); opacity:.
 .totaal-chip .l{ font-size:11px; color:rgba(255,255,255,0.75); }
 
 .raster-scroll{
-  overflow-x:auto; padding-bottom:.4rem;
+  overflow-x:auto; overflow-y:hidden; padding-bottom:.4rem;
   scroll-snap-type:x mandatory; -webkit-overflow-scrolling:touch;
   /* de sticky tijdas dekt de eerste 48px van elke snap; zonder scroll-padding
      snapt de browser op de rauwe kolomgrens (waar de dag dus half achter de
@@ -384,6 +384,16 @@ input[type=time]::-webkit-calendar-picker-indicator{ filter:invert(1); opacity:.
 }
 .raster-scroll::-webkit-scrollbar{ height:6px; }
 .raster-scroll::-webkit-scrollbar-thumb{ background:rgba(255,255,255,0.2); border-radius:999px; }
+/* Op een telefoon breekt de agenda uit de kaartpadding: dezelfde reden als
+   "TELEFOON: DE APP IS HET SCHERM" hierboven — de tijd-as moet aan de echte
+   schermrand staan, niet nog eens 1rem naar binnen. De padding komt terug op
+   het rooster zelf, zodat de uren-tekst niet letterlijk tegen de rand plakt. */
+@media (max-width:700px){
+  /* -1rem (kaartpadding) + .5rem terug = per saldo 8px van de fysieke
+     schermrand i.p.v. de volle 16px van de rest van de pagina-inhoud — merkbaar
+     dichter tegen de rand, maar de tijden plakken niet letterlijk tegen de rand. */
+  .raster-scroll{ margin:0 -1rem; padding-left:.5rem; padding-right:.5rem; width:calc(100% + 2rem); }
+}
 .raster{ display:grid; grid-template-columns:48px repeat(7, minmax(92px,1fr)); min-width:700px; }
 /* dagweergave: één kolom, geen vaste breedte — dit is de regel die het
    horizontaal scrollen op een telefoon opheft. */
@@ -397,28 +407,37 @@ input[type=time]::-webkit-calendar-picker-indicator{ filter:invert(1); opacity:.
 }
 .kolomkop.vandaag .dag{ color:var(--hi); }
 
-/* Tijdas + hoek blijven staan bij horizontaal scrollen — zelfde reden en
-   opbouw als .bord-naam/.bord-hoek bij het planbord: zonder een eigen
-   dekkende ondergrond zou de kleur van een dagkolom er onderdoor schuiven,
-   en zonder de aparte hoek blijft de dagkoppenrij kort door de linker 48px
-   heen zichtbaar. Bewust geen background-attachment:fixed, zie planbord. */
-.raster-hoek{
-  position:sticky; left:0; z-index:4;
-  background:
-    linear-gradient(150deg, rgba(255,255,255,0.125), rgba(255,255,255,0.05)),
-    linear-gradient(160deg, #20211C, #282C21);
+/* Tijdas: in de weekweergave blijft hij staan bij horizontaal scrollen
+   (zelfde reden en opbouw als .bord-naam/.bord-hoek bij het planbord: zonder
+   een eigen dekkende ondergrond zou de kleur van een dagkolom er onderdoor
+   schuiven). In de dagweergave wordt helemaal niet gescrold — daar was dit
+   vlak dus nergens voor nodig en oogde het als een los, verkeerd uitgelijnd
+   blokje (zie git-geschiedenis). Daar gewoon platte tekst op de achtergrond,
+   zoals bij Google Calendar: geen eigen vlak, geen sticky, geen schaduw. */
+.raster-hoek{ background:none; }
+/* position:relative altijd nodig, ook zonder sticky (dagweergave): de
+   uurlabels erin zijn absoluut gepositioneerd tegen déze 48px, niet tegen
+   een verdere voorouder — zonder dit schoten ze naar de rechterrand van het
+   hele scherm in plaats van naast hun eigen kolom te blijven staan. */
+.gutter{ position:relative; background:none; }
+.raster:not(.raster-dag) .raster-hoek,
+.raster:not(.raster-dag) .gutter{
+  position:sticky; left:0;
+  /* iets donkerder dan de dagkolommen ernaast (die hebben
+     rgba(255,255,255,0.03)) — genoeg contrast om de uren-tekst nooit te
+     laten verdwijnen achter een blok dat eronderdoor schuift */
+  background:rgba(20,21,17,0.92);
 }
-.gutter{
-  position:sticky; left:0; z-index:3;
-  background:
-    linear-gradient(150deg, rgba(255,255,255,0.125), rgba(255,255,255,0.05)),
-    linear-gradient(160deg, #20211C, #282C21);
-  box-shadow:14px 0 18px -14px rgba(0,0,0,0.75);
-}
+.raster:not(.raster-dag) .raster-hoek{ z-index:4; }
+.raster:not(.raster-dag) .gutter{ z-index:3; }
 .gutter-lbl{
   position:absolute; right:.5rem; transform:translateY(-50%);
   font-size:9.5px; color:rgba(255,255,255,0.45);
 }
+/* Het eerste label (06:00) hoort exact op de bovenrand van het rooster, en
+   translateY(-50%) hangt 'm dus voor de helft ín het rijtje erboven —
+   zonder deze regel liep dat dwars door de dagkop ("Vr 18 Sep") heen. */
+.gutter-lbl:first-child{ top:2px; transform:none; }
 
 .dagkolom{
   position:relative; border-left:1px solid rgba(255,255,255,0.08);
