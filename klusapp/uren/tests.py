@@ -218,6 +218,53 @@ class UrenSchrijvenTest(TestCase):
         self.assertEqual(antwoord.context["volgende"], date(2026, 10, 1))
 
 
+class UrenCompacteKopTest(TestCase):
+    """De compacte kop (dropdown i.p.v. drie knoppen, swipe-doelen, "+"-knop
+    i.p.v. "Uren toevoegen") — zie templates/uren/mijn_uren.html."""
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.sam = Medewerker.objects.create_user("sam", password="x")
+
+    def setUp(self):
+        self.client.force_login(self.sam)
+
+    def test_dropdown_heeft_drie_weergaven_met_juiste_selectie(self):
+        html = self.client.get("/uren/?dag=2026-09-07&weergave=week").content.decode()
+        self.assertIn('class="weergave-kiezer"', html)
+        self.assertIn(">Dag<", html)
+        self.assertIn(">Week<", html)
+        self.assertIn(">Maand<", html)
+        self.assertIn('value="?weergave=week&dag=2026-09-07" selected', html)
+
+    def test_swipe_doelen_staan_in_de_dagweergave(self):
+        # kalender.js zoekt hierop om te weten welke kant op te navigeren.
+        html = self.client.get("/uren/?dag=2026-09-07&weergave=dag").content.decode()
+        self.assertIn('data-urennav="vorige"', html)
+        self.assertIn('data-urennav="volgende"', html)
+
+    def test_swipe_doelen_staan_ook_in_de_weekweergave(self):
+        # De swipe zelf doet kalender.js alleen bij precies één dagkolom,
+        # maar de vorige/volgende-links moeten er sowieso staan.
+        html = self.client.get("/uren/?dag=2026-09-07&weergave=week").content.decode()
+        self.assertIn('data-urennav="vorige"', html)
+        self.assertIn('data-urennav="volgende"', html)
+
+    def test_geen_losse_uren_toevoegen_tekstknop_meer(self):
+        # Vervangen door .knop-uren-toevoegen (tekst op breed scherm, zwevend
+        # "+"-knopje op een telefoon — CSS, niet twee aparte knoppen).
+        html = self.client.get("/uren/?dag=2026-09-07&weergave=dag").content.decode()
+        self.assertNotIn('class="knop" onclick', html)
+        self.assertIn("knop-uren-toevoegen", html)
+        self.assertIn("openSheet", html)
+
+    def test_maandweergave_heeft_geen_swipe_doelen_of_toevoegknop(self):
+        # De maandweergave heeft geen sleepbaar dagraster en geen eigen
+        # "uren toevoegen"-knop; tikken op een dag opent die dagweergave.
+        html = self.client.get("/uren/?weergave=maand&dag=2026-09-15").content.decode()
+        self.assertNotIn("knop-uren-toevoegen", html)
+
+
 class TijdzoneTest(TestCase):
     """`date.today()` gaf op een UTC-server na 22:00 de vorige dag terug —
     precies wanneer de mannen in de bus hun uren invullen."""

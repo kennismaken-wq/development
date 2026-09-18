@@ -4,35 +4,44 @@
 {% block kaartklasse %}breed{% endblock %}
 {% block kop %}Mijn uren{% endblock %}
 {% block inhoud %}
-  <div class="weergave-pillen">
-    <a href="?weergave=dag&dag={{ dag|date:'Y-m-d' }}" class="pil{% if weergave == 'dag' %} actief{% endif %}">Dag</a>
-    <a href="?weergave=week&dag={{ dag|date:'Y-m-d' }}" class="pil{% if weergave == 'week' %} actief{% endif %}">Week</a>
-    <a href="?weergave=maand&dag={{ dag|date:'Y-m-d' }}" class="pil{% if weergave == 'maand' %} actief{% endif %}">Maand</a>
-  </div>
-
-  <div class="navbalk">
-    <div class="navlinks">
-      <a class="knop-stil" href="?weergave={{ weergave }}&dag={{ vorige|date:'Y-m-d' }}">‹</a>
-      <a class="knop-stil" href="?weergave={{ weergave }}&dag={{ volgende|date:'Y-m-d' }}">›</a>
-      {% if not is_huidige_periode %}
-        <a class="knop-stil" href="?weergave={{ weergave }}">Vandaag</a>
-      {% endif %}
+  {% comment %} Compacte kopregel i.p.v. drie losse blokken (weergave-pillen,
+     navbalk, "Uren toevoegen"): pijlen + datum op één regel, Dag/Week/Maand
+     als één dropdown i.p.v. drie knoppen naast elkaar (zie .weergave-kiezer
+     in app.css — een echte <select> geeft de native, toegankelijke
+     platformkeuzelijst gratis mee). {% endcomment %}
+  <div class="urentop">
+    <div class="urentop-nav">
+      <a class="urenpijl" data-urennav="vorige" href="?weergave={{ weergave }}&dag={{ vorige|date:'Y-m-d' }}" aria-label="Vorige periode">‹</a>
       <span class="periodetitel">
         {% if weergave == "week" %}{{ maandag|date:"j M" }} – {{ zondag|date:"j M" }}
         {% elif weergave == "maand" %}{{ dag|date:"F Y"|capfirst }}
         {% else %}{{ dag|date:"l j F"|capfirst }}{% endif %}
       </span>
+      <a class="urenpijl" data-urennav="volgende" href="?weergave={{ weergave }}&dag={{ volgende|date:'Y-m-d' }}" aria-label="Volgende periode">›</a>
     </div>
-    <div class="totaal-chip">
+    <label class="weergave-kiezer">
+      <select onchange="if(this.value) window.location.href=this.value">
+        <option value="?weergave=dag&dag={{ dag|date:'Y-m-d' }}"{% if weergave == "dag" %} selected{% endif %}>Dag</option>
+        <option value="?weergave=week&dag={{ dag|date:'Y-m-d' }}"{% if weergave == "week" %} selected{% endif %}>Week</option>
+        <option value="?weergave=maand&dag={{ dag|date:'Y-m-d' }}"{% if weergave == "maand" %} selected{% endif %}>Maand</option>
+      </select>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
+    </label>
+  </div>
+
+  <div class="urensub">
+    <span class="totaal-chip-klein">
       <span class="n">{{ totaal_waarde }}</span>
       <span class="l">{% if weergave == "week" %}deze week{% elif weergave == "maand" %}deze maand{% else %}vandaag{% endif %}</span>
-    </div>
+    </span>
+    {% if not is_huidige_periode %}
+      <a class="vandaag-chip" href="?weergave={{ weergave }}">Vandaag</a>
+    {% endif %}
   </div>
 
   {% if weergave == "maand" %}
     {% include "uren/_maandraster.html" %}
   {% else %}
-    <div class="urenblok">
     <div class="raster-scroll">
       <div class="raster{% if weergave == 'dag' %} raster-dag{% endif %}">
         <div class="raster-hoek"></div>
@@ -70,21 +79,20 @@
       </div>
     </div>
 
-    {% comment %} Op een telefoon springt deze knop bóven de agenda (zie
-       .hoofdactie in app.css): die agenda is ~700px hoog en meestal leeg, en
-       juist dit is waarvoor iemand 's avonds in de bus de app opent — dat
-       mag geen scrollbeweging kosten. {% endcomment %}
-    <p class="hoofdactie">
-      <button type="button" class="knop" onclick="document.getElementById('uren-invoegen').showModal()">Uren toevoegen</button>
-    </p>
-    </div>
+    {% comment %} Op een telefoon wordt dit een zwevend "+"-knopje rechtsonder
+       i.p.v. een knop onderaan de pagina — zie .knop-uren-toevoegen in
+       app.css. Op een breed scherm blijft het gewoon een knop met tekst. {% endcomment %}
+    <button type="button" class="knop-uren-toevoegen" onclick="window.openSheet(document.getElementById('uren-invoegen'))">
+      <span class="tekst">Uren toevoegen</span>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+    </button>
 
     <dialog id="uren-invoegen" class="uren-invoegen">
       {% include "uren/_uurblokformulier.html" with actie=uurblok_nieuw_actie in_dialoog=True %}
     </dialog>
     <script>
       document.getElementById("uren-invoegen").addEventListener("click", function (e) {
-        if (e.target === this) this.close();
+        if (e.target === this) window.closeSheet(this);
       });
     </script>
 
@@ -99,6 +107,7 @@
       })();
     </script>
 
+    <script src="{% static 'js/bottomsheet.js' %}"></script>
     <script src="{% static 'js/kalender.js' %}"
             data-nieuw-url="{% url 'uurblok_nieuw' %}"></script>
   {% endif %}

@@ -4,7 +4,9 @@
    voor gebruik binnen <dialog id="uren-invoegen"> op de agenda zelf). {% endcomment %}
 <form class="uurblokformulier{% if in_dialoog %} glas{% endif %}" method="post"{% if actie %} action="{{ actie }}"{% endif %}>
   {% if in_dialoog %}
-    <button type="button" class="dialog-sluiten" onclick="this.closest('dialog').close()" aria-label="Sluiten">×</button>
+    {# alleen zichtbaar als bottom sheet (<700px, zie app.css); puur visueel signaal, geen sleepgebaar erachter #}
+    <div class="sheet-hendel" aria-hidden="true"></div>
+    <button type="button" class="dialog-sluiten" onclick="window.closeSheet(this.closest('dialog'))" aria-label="Sluiten">×</button>
   {% endif %}
   {% csrf_token %}
   {% for veld in formulier %}

@@ -261,6 +261,91 @@ input[type=time]::-webkit-calendar-picker-indicator{ filter:invert(1); opacity:.
   text-decoration:underline;
 }
 
+/* ══════════ UREN SCHRIJVEN: COMPACTE KOP ══════════
+   Verving drie blokken (weergave-pillen, navbalk, een volle-breedte
+   "Uren toevoegen"-knop — samen ruim 180px) door twee korte regels. De oude
+   klassen (.navbalk, .totaal-chip, .weergave-pillen/.pil) blijven bestaan
+   voor aanwezigheid.html, export.html en planbord.html — dit zijn bewust
+   nieuwe, eigen klassen, geen herstyling van de oude. */
+.urentop{ display:flex; align-items:center; justify-content:space-between; gap:.6rem; margin-bottom:.5rem; }
+.urentop-nav{ display:flex; align-items:center; gap:.3rem; min-width:0; }
+.urenpijl{
+  display:flex; align-items:center; justify-content:center; flex-shrink:0;
+  width:34px; height:34px; border-radius:50%;
+  background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.18);
+  color:#fff; font-size:16px; text-decoration:none; line-height:1;
+}
+@media (hover:hover){ .urenpijl:hover{ background:rgba(255,255,255,0.16); } }
+.urenpijl:active{ background:rgba(255,255,255,0.22); }
+.urentop .periodetitel{
+  flex:1 1 auto; min-width:0; margin:0 .2rem; font-size:.95rem;
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+}
+
+/* Eén <select> i.p.v. drie knoppen naast elkaar: de browser geeft de native
+   platformkeuzelijst (wieltje op iOS, dropdown op Android) er gratis bij —
+   geen eigen JS-menu om open/dicht/toetsenbord/focus voor te bouwen. De
+   pijl staat los achter het (doorzichtige) select-element, met
+   pointer-events:none zodat een tik er dwars doorheen bij het select komt. */
+.weergave-kiezer{ position:relative; flex-shrink:0; }
+.weergave-kiezer select{
+  width:auto; margin:0; padding:.4rem 1.8rem .4rem .85rem; font-size:12.5px; font-weight:600;
+  border-radius:999px; background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.18);
+  color:#fff; cursor:pointer;
+}
+.weergave-kiezer svg{
+  position:absolute; top:50%; right:.6rem; transform:translateY(-50%);
+  width:13px; height:13px; color:rgba(255,255,255,0.6); pointer-events:none;
+}
+
+.urensub{ display:flex; align-items:center; gap:.5rem; margin-bottom:1rem; }
+.totaal-chip-klein{
+  display:inline-flex; align-items:baseline; gap:.35rem;
+  padding:.3rem .7rem; border-radius:999px;
+  background:linear-gradient(135deg, rgba(var(--accent-rgb),0.30), rgba(var(--accent-rgb),0.12));
+  border:1px solid rgba(var(--accent-rgb),0.35);
+}
+.totaal-chip-klein .n{
+  font-family:'Fraunces',serif; font-style:italic; font-weight:600; font-size:.95rem; color:var(--hi);
+}
+.totaal-chip-klein .l{ font-size:10.5px; color:rgba(255,255,255,0.7); }
+.vandaag-chip{
+  padding:.3rem .75rem; border-radius:999px; font-size:11px; font-weight:600;
+  background:rgba(255,255,255,0.07); border:1px solid rgba(255,255,255,0.16);
+  color:rgba(255,255,255,0.7); text-decoration:none;
+}
+@media (hover:hover){ .vandaag-chip:hover{ background:rgba(255,255,255,0.14); color:#fff; } }
+
+/* "Uren toevoegen": op een breed scherm een gewone knop met tekst; op een
+   telefoon een zwevend rond "+"-knopje rechtsonder (zoals het "+"-knopje in
+   een agenda-app), altijd in beeld — niet meer ergens onderaan een agenda
+   van ~700px die meestal leeg is. */
+.knop-uren-toevoegen{
+  display:flex; align-items:center; justify-content:center; gap:.5rem;
+  width:100%; min-height:50px; margin-top:1.2rem; padding:.85rem 1.2rem;
+  border:1px solid rgba(var(--accent-rgb),0.5); border-radius:999px;
+  background:linear-gradient(135deg, rgba(var(--accent-rgb),0.95), rgba(var(--accent-rgb),0.72));
+  color:var(--ink); font-family:'Inter',sans-serif; font-size:15px; font-weight:600;
+  cursor:pointer;
+}
+.knop-uren-toevoegen:active{ filter:brightness(.94); }
+.knop-uren-toevoegen svg{ display:none; }
+@media (max-width:700px){
+  .knop-uren-toevoegen{
+    position:fixed; z-index:19; margin:0;
+    right:1rem; bottom:calc(5.3rem + env(safe-area-inset-bottom));
+    width:56px; height:56px; min-height:0; padding:0; border-radius:50%;
+    box-shadow:0 10px 26px rgba(0,0,0,0.35);
+  }
+  /* tekst blijft voor schermlezers, verdwijnt visueel — zelfde truc als
+     .side-icon .titel elders in dit bestand */
+  .knop-uren-toevoegen .tekst{
+    position:absolute; width:1px; height:1px; padding:0; margin:-1px;
+    overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0;
+  }
+  .knop-uren-toevoegen svg{ display:block; width:24px; height:24px; }
+}
+
 /* ══════════ UREN SCHRIJVEN: WEEKKALENDER ══════════
    Maten uit de demo: van 06:00 tot 20:00 in vakken van een half uur van
    26px. Zeven dagen naast elkaar passen niet op een telefoon, dus het
@@ -386,23 +471,6 @@ input[type=time]::-webkit-calendar-picker-indicator{ filter:invert(1); opacity:.
 .maanddag.vandaag{ border-color:rgba(var(--accent-rgb),0.6); background:rgba(var(--accent-rgb),0.18); }
 .maanddag .nr{ font-size:13px; font-weight:600; }
 .maanddag .uren{ font-size:9.5px; color:var(--hi); font-variant-numeric:tabular-nums; }
-
-/* ══════════ HOOFDACTIE OP EEN TELEFOON ══════════
-   "Uren toevoegen" stond onder een dagagenda van zo'n 700px die meestal leeg
-   is. Op een desktop zie je die knop gewoon staan; op een telefoon moet je er
-   eerst helemaal langs scrollen — terwijl dat nu juist de handeling is
-   waarvoor de app 's avonds in de bus opengaat.
-
-   Op een telefoon wisselt hij daarom van plek: boven de agenda in plaats van
-   eronder, zodat hij meteen in beeld staat. Bewust met flex-order en niet met
-   position:fixed — .kaart heeft backdrop-filter, en dat maakt een fixed kind
-   relatief aan de kaart in plaats van aan het scherm; zo'n knop verdwijnt dan
-   alsnog onderaan de pagina. */
-.urenblok{ display:flex; flex-direction:column; }
-.hoofdactie{ margin:1.2rem 0 0; }
-@media (max-width:700px){
-  .hoofdactie{ order:-1; margin:0 0 1rem; }
-}
 
 /* ══════════ MELDINGEN ══════════ */
 .meldingen{ list-style:none; margin:0 0 1.2rem; padding:0; display:grid; gap:.5rem; }
@@ -595,6 +663,43 @@ dialog.foto-invoegen .uploadveld, dialog.uren-invoegen .uurblokformulier{
   max-height:calc(100vh - 3rem);
   max-height:calc(100dvh - 3rem);
   overflow-y:auto; overscroll-behavior:contain;
+}
+
+/* ══════════ TELEFOON: BOTTOM SHEET I.P.V. DIALOOG IN HET MIDDEN ══════════
+   Op een telefoon komt "uren toevoegen" nu vanaf onderen omhoog, zoals in
+   zowat elke native agenda-app — dat voelt bij één hand bedienen natuurlijker
+   dan een kaart die zomaar in het midden van het scherm verschijnt.
+   Alleen dialog.uren-invoegen, bewust niet ook dialog.foto-invoegen: dat
+   is een apart scherm dat (nog) niet is gevraagd te veranderen.
+
+   De overgang wordt in JS in gang gezet (static/js/bottomsheet.js): een
+   <dialog> zet display meteen om bij showModal(), dus zonder die omweg is er
+   niets om te animeren. */
+@media (max-width:700px){
+  dialog.uren-invoegen{
+    position:fixed; inset:auto 0 0 0; margin:0;
+    max-width:none; width:100%;
+    max-height:85vh; max-height:85dvh;
+    transform:translateY(100%);
+    transition:transform .22s ease-out;
+  }
+  dialog.uren-invoegen.open-anim{ transform:translateY(0); }
+  .uurblokformulier.glas{
+    border-radius:22px 22px 0 0;
+    padding:.6rem 1.2rem calc(1.3rem + env(safe-area-inset-bottom));
+  }
+  dialog.uren-invoegen .uurblokformulier{
+    max-height:85vh; max-height:85dvh;
+  }
+  /* zichtbaar sleepstaafje bovenaan — het universele signaal "dit is een
+     bottom sheet"; puur decoratief, er zit geen sleepgebaar achter */
+  .sheet-hendel{
+    width:36px; height:4px; border-radius:999px; margin:.3rem auto 1rem;
+    background:rgba(255,255,255,0.25);
+  }
+}
+@media (min-width:701px){
+  .sheet-hendel{ display:none; }
 }
 
 /* verwijderknopje rechtsboven op de kaart */
