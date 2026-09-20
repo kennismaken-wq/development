@@ -5,14 +5,16 @@ from django.contrib.auth.decorators import login_required
 from django.db.models import Case, IntegerField, Max, Prefetch, Q, Value, When
 from django.db.models.functions import Lower
 from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
 
 from klussen import voorbeeld
 from klussen.models import Bijlage, Klus
-from uren.models import Aanwezigheid
+from uren.models import Aanwezigheid, Uurblok
 from uren import totalen
 
 from .forms import MedewerkerForm, NieuweMedewerkerForm, WachtwoordForm
 from .models import Medewerker
+from . import testgegevens as demo_gegevens
 from .rechten import alleen_eigenaar
 from .tegels import zichtbare_profieltegels, zichtbare_tegels
 
@@ -256,8 +258,29 @@ def menu_demo(request):
         info["medewerkers"] = f"{in_dienst} in dienst"
         info["aanwezigheid"] = f"{aanwezig} van {in_dienst} aanwezig"
         info["urenexport"] = f"{vandaag:%B}".lower()
+        gewerkt_deze_week = (
+            Uurblok.objects.filter(datum__range=(maandag, zondag))
+            .values("medewerker")
+            .distinct()
+            .count()
+        )
+        info["planbord"] = f"{gewerkt_deze_week} aan het werk"
 
     onderdelen = zichtbare_tegels(request.user) + zichtbare_profieltegels(request.user)
+
+    # Het planbord staat sinds 17-09 niet meer in de navigatiebalk (zie
+    # medewerkers/tegels.py), maar is precies het scherm dat dit menu moet
+    # laten zien: alle uren van alle medewerkers in één week. Hier dus wel.
+    if request.user.is_eigenaar:
+        onderdelen.append(
+            {
+                "titel": "Planbord",
+                "icoon": "planbord",
+                "url_naam": "planbord",
+                "url": reverse("planbord"),
+                "extern": False,
+            }
+        )
     for onderdeel in onderdelen:
         onderdeel["info"] = info.get(onderdeel.get("url_naam"), "")
 
@@ -265,3 +288,36 @@ def menu_demo(request):
     onderdelen = [o for o in onderdelen if o.get("url_naam") not in ("mijn_profiel", "menu_demo")]
 
     return render(request, "menu.html", {"onderdelen": onderdelen, "vandaag": vandaag})
+
+
+@alleen_eigenaar
+def testgegevens(request):
+    """TIJDELIJK — nepmedewerkers met uren aanmaken of weghalen.
+
+    Staat onderaan het rastermenu. Zie medewerkers/testgegevens.py.
+    """
+    if request.method != "POST":
+        return redirect("menu_demo")
+
+    if request.POST.get("actie") == "opruimen":
+        aantal = demo_gegevens.opruimen()
+        messages.success(request, f"{aantal} testmedewerkers en hun uren zijn verwijderd.")
+        return redirect("menu_demo")
+
+    gekozen = request.POST.get("week")
+    try:
+        dag = date.fromisoformat(gekozen) if gekozen else date.today()
+    except ValueError:
+        dag = date.today()
+
+    mensen, blokken = demo_gegevens.aanmaken(dag)
+    maandag, zondag = demo_gegevens.week_van(dag)
+    def kort(datum):
+        return datum.strftime("%d %B").lstrip("0")
+
+    messages.success(
+        request,
+        f"{mensen} testmedewerkers met {blokken} uurblokken in de week van "
+        f"{kort(maandag)} tot {kort(zondag)}.",
+    )
+    return redirect("menu_demo")

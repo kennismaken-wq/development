@@ -321,3 +321,56 @@ class MenuDemoTest(TestCase):
     def test_vereist_inloggen(self):
         antwoord = self.client.get(reverse("menu_demo"))
         self.assertEqual(antwoord.status_code, 302)
+
+
+class TestgegevensTest(TestCase):
+    """Tijdelijke knop die nepmedewerkers met uren aanmaakt."""
+
+    def setUp(self):
+        self.eigenaar = Medewerker.objects.create_user(
+            "maarten", password="x", first_name="Maarten", rol=Medewerker.Rol.EIGENAAR
+        )
+        self.sam = Medewerker.objects.create_user("sam", password="x", first_name="Sam")
+
+    def test_medewerker_komt_er_niet_bij(self):
+        self.client.force_login(self.sam)
+        self.client.post(reverse("testgegevens"), {"week": "2026-09-14"})
+        self.assertFalse(Medewerker.objects.filter(username__startswith="demo-").exists())
+
+    def test_aanmaken_geeft_een_week_vol_uren(self):
+        self.client.force_login(self.eigenaar)
+        self.client.post(reverse("testgegevens"), {"week": "2026-09-16"})
+
+        nep = Medewerker.objects.filter(username__startswith="demo-")
+        self.assertEqual(nep.count(), 5)
+        blokken = Uurblok.objects.filter(medewerker__in=nep)
+        self.assertGreater(blokken.count(), 15)
+        # allemaal binnen die ene week, en nooit in het weekend
+        for blok in blokken:
+            self.assertGreaterEqual(blok.datum, date(2026, 9, 14))
+            self.assertLessEqual(blok.datum, date(2026, 9, 20))
+            self.assertLess(blok.datum.weekday(), 5)
+
+    def test_testaccounts_kunnen_niet_inloggen(self):
+        self.client.force_login(self.eigenaar)
+        self.client.post(reverse("testgegevens"), {"week": "2026-09-16"})
+        for nep in Medewerker.objects.filter(username__startswith="demo-"):
+            self.assertFalse(nep.has_usable_password())
+
+    def test_twee_keer_draaien_verdubbelt_de_uren_niet(self):
+        self.client.force_login(self.eigenaar)
+        self.client.post(reverse("testgegevens"), {"week": "2026-09-16"})
+        eerste = Uurblok.objects.count()
+        self.client.post(reverse("testgegevens"), {"week": "2026-09-16"})
+        self.assertEqual(Uurblok.objects.count(), eerste)
+
+    def test_opruimen_haalt_alles_weg_maar_laat_de_rest_staan(self):
+        self.client.force_login(self.eigenaar)
+        self.client.post(reverse("testgegevens"), {"week": "2026-09-16"})
+        self.client.post(reverse("testgegevens"), {"actie": "opruimen"})
+
+        self.assertFalse(Medewerker.objects.filter(username__startswith="demo-").exists())
+        self.assertFalse(Uurblok.objects.exists())
+        # de echte accounts blijven
+        self.assertTrue(Medewerker.objects.filter(username="maarten").exists())
+        self.assertTrue(Medewerker.objects.filter(username="sam").exists())
