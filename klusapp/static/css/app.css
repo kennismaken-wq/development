@@ -817,6 +817,35 @@ dialog.foto-invoegen .uploadveld, dialog.uren-invoegen .uurblokformulier{
   vertical-align:middle; margin:0 .5rem 0 0;
 }
 
+/* ══════════ MEDEWERKERSLIJST ══════════
+   Zelfde rijvorm als .klusregel en .profielregel (16px radius, glasvlak,
+   zelfde padding), maar met de volgorde die bij een persoon hoort: naam
+   voorop, eronder waaraan je 'm herkent, en de rol rechts als etiket.
+   De naam staat hier in Inter en niet in cursieve Fraunces: dat is de kop-
+   letter, en een naam in een lijst is gegevens, geen kop. */
+.mwlijst{ list-style:none; margin:0; padding:0; display:grid; gap:.5rem; }
+.mwregel{
+  display:grid; grid-template-columns:minmax(0,1fr) auto; gap:1rem;
+  align-items:center;
+  border-radius:16px; padding:.85rem 1rem;
+  background:rgba(255,255,255,0.07); border:1px solid rgba(255,255,255,0.14);
+  color:#fff; text-decoration:none; transition:background .12s;
+}
+@media (hover:hover){ .mwregel:hover{ background:rgba(255,255,255,0.13); } }
+.mwregel.afgerond{ opacity:.55; }
+.mwregel-tekst{ display:grid; gap:.15rem; min-width:0; }
+.mwregel .naam{ font-size:15px; font-weight:600; }
+.mwregel .meta{
+  font-size:12px; color:rgba(255,255,255,0.55);
+  overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+}
+/* Rol als rustig etiket: alleen de eigenaar krijgt de accentkleur, anders
+   schreeuwen zes gelijke groene labels om aandacht die ze niet verdienen. */
+.soort-badge.stil{
+  background:rgba(255,255,255,0.08); border-color:rgba(255,255,255,0.16);
+  color:rgba(255,255,255,0.6);
+}
+
 /* ══════════ PROFIELSCHERM: MENULIJST ══════════
    Zelfde rijenpatroon als .klussenlijst/.klusregel hierboven, nu met een
    icoon ervoor — voor de schermen die niet in de navigatiebalk passen (zie
