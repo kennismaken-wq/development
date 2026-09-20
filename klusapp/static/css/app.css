@@ -872,10 +872,17 @@ dialog.foto-invoegen .uploadveld, dialog.uren-invoegen .uurblokformulier{
 .klussen-slider::-webkit-scrollbar-thumb{ background:rgba(255,255,255,0.2); border-radius:999px; }
 .klus-slide{
   scroll-snap-align:start; flex:0 0 78%; max-width:280px;
-  /* .2rem in plaats van .3: soort, naam en adres horen als één blokje te
-     lezen, niet als drie losse regels. De ruimte komt onder het adres, vóór
-     de fotostapel. */
-  display:grid; gap:.2rem; border-radius:16px; padding:.85rem 1rem;
+  /* Tekst links, soort rechtsboven ernaast, fotostapel eronder over de volle
+     breedte. Naam en adres staan dicht op elkaar zodat ze als één blokje
+     lezen; de ruimte valt eronder, vóór de stapel. */
+  display:grid;
+  grid-template-columns:minmax(0,1fr) auto;
+  grid-template-areas:
+    "naam  soort"
+    "adres soort"
+    "stapel stapel";
+  gap:.2rem .6rem; align-content:start;
+  border-radius:16px; padding:.85rem 1rem;
   background:rgba(255,255,255,0.07); border:1px solid rgba(255,255,255,0.14);
   color:#fff; text-decoration:none; transition:background .12s;
 }
@@ -886,15 +893,21 @@ dialog.foto-invoegen .uploadveld, dialog.uren-invoegen .uurblokformulier{
    hebt gezien wélke klus het is. */
 .klus-slide .naam{
   font-family:'Fraunces',serif; font-style:italic; font-weight:600;
-  font-size:1.25rem; line-height:1.15;
+  font-size:1.12rem; line-height:1.2;
   /* Twee regels en dan afbreken, zelfde idioom als de notitielaag: een lange
      klusnaam mag de kaart niet hoger maken dan zijn buren, want dan staan de
      fotostapels in de slider niet meer op één lijn. */
   display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;
 }
-.klus-slide .adres{ font-size:12.5px; color:rgba(255,255,255,0.55); }
-.klus-slide .soort-badge{ font-size:9.5px; padding:.2rem .55rem; margin-bottom:.15rem; }
-.klus-slide .voorbeeldstapel{ margin-top:.5rem; }
+.klus-slide .naam{ grid-area:naam; }
+.klus-slide .adres{ grid-area:adres; font-size:12.5px; color:rgba(255,255,255,0.55); }
+/* align-self:start houdt het etiket op de hoogte van de naam in plaats van
+   het over twee regels te centreren. */
+.klus-slide .soort-badge{
+  grid-area:soort; align-self:start;
+  font-size:9px; padding:.18rem .5rem; letter-spacing:.02em;
+}
+.klus-slide .voorbeeldstapel{ grid-area:stapel; margin-top:.5rem; }
 
 .statrij{ display:grid; grid-template-columns:1fr 1fr; gap:.7rem; margin:1.2rem 0; }
 .statkaart{
