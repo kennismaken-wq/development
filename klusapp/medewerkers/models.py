@@ -18,7 +18,34 @@ class Medewerker(AbstractUser):
     # staat naast zijn naam in het klusdossier. De rol hierboven bepaalt de
     # rechten; dit veld bepaalt niets en is puur ter herkenning.
     functie = models.CharField(max_length=60, blank=True)
-    telefoon = models.CharField(max_length=20, blank=True)
+
+    # ── contact ───────────────────────────────────────────────────────────
+    telefoon = models.CharField("mobiel nummer", max_length=20, blank=True)
+    adres = models.CharField(max_length=120, blank=True)
+    postcode = models.CharField(max_length=10, blank=True)
+    woonplaats = models.CharField(max_length=80, blank=True)
+
+    # Bij wie je belt als er op een klus iets gebeurt. In dit werk wordt met
+    # machines gewerkt; dan wil je niet gaan zoeken.
+    noodcontact_naam = models.CharField(max_length=80, blank=True)
+    noodcontact_relatie = models.CharField(
+        max_length=40, blank=True, help_text="Bijvoorbeeld partner, moeder, broer."
+    )
+    noodcontact_telefoon = models.CharField(max_length=20, blank=True)
+
+    # ── rijbewijs ─────────────────────────────────────────────────────────
+    # Bepaalt wie met de bus, de kipper of de aanhanger met de minigraver weg
+    # mag. Alleen de categorie en de aanhanger; certificaten die verlopen
+    # houden we er bewust buiten.
+    class Rijbewijs(models.TextChoices):
+        GEEN = "", "Geen"
+        B = "B", "B — personenauto"
+        C = "C", "C — vrachtwagen"
+
+    rijbewijs = models.CharField(max_length=2, choices=Rijbewijs.choices, blank=True)
+    aanhanger = models.BooleanField(
+        "aanhanger (BE)", default=False, help_text="Mag met een zware aanhanger rijden."
+    )
     kleur = models.CharField(
         max_length=7,
         blank=True,
@@ -43,6 +70,15 @@ class Medewerker(AbstractUser):
     def naam(self):
         volledig = f"{self.first_name} {self.last_name}".strip()
         return volledig or self.username
+
+    def save(self, *args, **kwargs):
+        # TIJDELIJK — september 2026. Er is nog geen superuser aangemaakt, dus
+        # zonder dit komt niemand in /beheer/. Een eigenaar krijgt daarom
+        # voorlopig toegang tot het Django-beheerscherm. Zodra er een eigen
+        # beheeraccount is, moet dit eruit en hangt /beheer/ weer aan een
+        # aparte rol; zie de gesprekken over de rol "systeembeheerder".
+        self.is_staff = self.rol == self.Rol.EIGENAAR or self.is_superuser
+        super().save(*args, **kwargs)
 
     @property
     def is_eigenaar(self):

@@ -43,13 +43,12 @@ TEGELS = [
 # blijven — getoond als knoppenlijst op het profielscherm (templates/profiel.html).
 PROFIEL_TEGELS = [
     {"titel": "Overzichten", "icoon": "export", "url_naam": "urenexport", "rollen": ["eigenaar"]},
+    # Niet in de balk: je mensen beheer je af en toe, niet dagelijks.
+    {"titel": "Medewerkers", "icoon": "medewerkers", "url_naam": "medewerkers", "rollen": ["eigenaar"]},
     {"titel": "Loonstrook", "icoon": "loonstrook", "url_naam": "loonstrook", "rollen": ["medewerker", "eigenaar"]},
-    # Het Django-beheerscherm is geen scherm voor de klant: het toont alle
-    # velden en verwijdert zonder vangnet. Alleen wie het systeem beheert
-    # (is_staff) ziet deze tegel — de rol "eigenaar" geeft er geen toegang toe.
-    # Hangt aan is_staff, niet aan een rol: wie het systeem beheert hoeft in
-    # de app geen eigenaar te zijn.
-    {"titel": "Beheer", "icoon": "beheer", "url": "/beheer/", "rollen": ["medewerker", "eigenaar"], "alleen_beheerder": True},
+    # TIJDELIJK — zolang er geen apart beheeraccount is, komt de eigenaar hier
+    # ook in. Zie de opmerking bij Medewerker.save().
+    {"titel": "Beheer", "icoon": "beheer", "url": "/beheer/", "rollen": ["eigenaar"]},
 ]
 
 # Planbord is op 17-09-2026 op verzoek van Thijmen uit de navigatie gehaald
@@ -65,8 +64,6 @@ def _zichtbaar(lijst, user):
     tegels = []
     for tegel in lijst:
         if rol not in tegel["rollen"]:
-            continue
-        if tegel.get("alleen_beheerder") and not user.is_staff:
             continue
         tegel = dict(tegel)
         if "url_naam" in tegel:

@@ -181,23 +181,14 @@ class ProfielschermTest(TestCase):
         self.assertIn(f'href="{reverse("loonstrook")}"', html)
         self.assertNotIn("mijn.loondossier.nl", html)
 
-    def test_eigenaar_zonder_beheerrecht_ziet_geen_beheertegel(self):
-        # De klant is eigenaar in de app, maar beheert het systeem niet.
-        self.client.force_login(self.eigenaar)
-        self.assertNotIn("Beheer", tegeltitels(self.client.get(reverse("mijn_profiel")).content.decode()))
-
-    def test_systeembeheerder_ziet_de_beheertegel_wel(self):
-        self.eigenaar.is_staff = True
-        self.eigenaar.save()
+    def test_eigenaar_ziet_de_beheertegel_en_een_medewerker_niet(self):
+        # Tijdelijk: zolang er geen apart beheeraccount is, komt de eigenaar
+        # in /beheer/. Zie de opmerking bij Medewerker.save().
         self.client.force_login(self.eigenaar)
         self.assertIn("Beheer", tegeltitels(self.client.get(reverse("mijn_profiel")).content.decode()))
 
-    def test_beheerder_met_rol_medewerker_ziet_de_tegel_ook(self):
-        # createsuperuser geeft geen rol mee; die staat dan op medewerker.
-        self.medewerker.is_staff = True
-        self.medewerker.save()
         self.client.force_login(self.medewerker)
-        self.assertIn("Beheer", tegeltitels(self.client.get(reverse("mijn_profiel")).content.decode()))
+        self.assertNotIn("Beheer", tegeltitels(self.client.get(reverse("mijn_profiel")).content.decode()))
 
     def test_uitloggen_staat_op_het_profielscherm(self):
         self.client.force_login(self.medewerker)
@@ -208,3 +199,86 @@ class ProfielschermTest(TestCase):
         antwoord = self.client.get(reverse("mijn_profiel"))
         self.assertEqual(antwoord.status_code, 302)
         self.assertIn(reverse("inloggen"), antwoord.headers["Location"])
+
+class MedewerkersBeherenTest(TestCase):
+    """Het eigen beheerscherm voor medewerkers, zodat de klant niet in het
+    Django-beheerscherm hoeft."""
+
+    def setUp(self):
+        self.eigenaar = Medewerker.objects.create_user(
+            "maarten", password="test1234", first_name="Maarten", rol=Medewerker.Rol.EIGENAAR
+        )
+        self.sam = Medewerker.objects.create_user(
+            "sam", password="test1234", first_name="Sam", rol=Medewerker.Rol.MEDEWERKER
+        )
+        self.client.force_login(self.eigenaar)
+
+    def test_medewerker_komt_er_niet_in(self):
+        self.client.force_login(self.sam)
+        for adres in (
+            reverse("medewerkers"),
+            reverse("medewerker_nieuw"),
+            reverse("medewerker_bewerken", args=[self.eigenaar.pk]),
+        ):
+            self.assertEqual(self.client.get(adres).status_code, 404, adres)
+
+    def test_eigenaar_maakt_een_medewerker_aan(self):
+        antwoord = self.client.post(
+            reverse("medewerker_nieuw"),
+            {
+                "first_name": "Joep", "last_name": "Bakker", "username": "joep",
+                "functie": "Hovenier", "telefoon": "", "rol": Medewerker.Rol.MEDEWERKER,
+                "kleur": "#5B8FA8", "in_dienst_sinds": "2026-09-01",
+                "wachtwoord": "tuinbaas2026",
+            },
+        )
+        self.assertEqual(antwoord.status_code, 302)
+        joep = Medewerker.objects.get(username="joep")
+        self.assertEqual(joep.rol, Medewerker.Rol.MEDEWERKER)
+        # en kan er meteen mee inloggen
+        self.assertTrue(self.client.login(username="joep", password="tuinbaas2026"))
+
+    def test_wachtwoord_opnieuw_instellen(self):
+        self.client.post(
+            reverse("medewerker_wachtwoord", args=[self.sam.pk]), {"wachtwoord": "nieuwezomer26"}
+        )
+        self.assertTrue(self.client.login(username="sam", password="nieuwezomer26"))
+
+    def test_te_zwak_wachtwoord_wordt_geweigerd(self):
+        self.client.post(reverse("medewerker_wachtwoord", args=[self.sam.pk]), {"wachtwoord": "1234"})
+        self.sam.refresh_from_db()
+        self.assertTrue(self.sam.check_password("test1234"))
+
+    def test_uit_dienst_bewaart_de_persoon(self):
+        self.client.post(reverse("medewerker_dienst", args=[self.sam.pk]))
+        self.sam.refresh_from_db()
+        self.assertIsNotNone(self.sam.uit_dienst_sinds)
+        self.assertFalse(self.sam.is_active)
+        # de persoon zelf blijft bestaan, met zijn uren en foto's
+        self.assertTrue(Medewerker.objects.filter(pk=self.sam.pk).exists())
+
+        # en kan weer terug
+        self.client.post(reverse("medewerker_dienst", args=[self.sam.pk]))
+        self.sam.refresh_from_db()
+        self.assertIsNone(self.sam.uit_dienst_sinds)
+        self.assertTrue(self.sam.is_active)
+
+    def test_jezelf_uit_dienst_zetten_kan_niet(self):
+        self.client.post(reverse("medewerker_dienst", args=[self.eigenaar.pk]))
+        self.eigenaar.refresh_from_db()
+        self.assertIsNone(self.eigenaar.uit_dienst_sinds)
+        self.assertTrue(self.eigenaar.is_active)
+
+    def test_de_wachtwoordeisen_staan_bij_het_veld(self):
+        # Een eis die je pas leest nadat je hem overtreedt is geen hulp.
+        for adres in (reverse("medewerker_nieuw"), reverse("medewerker_wachtwoord", args=[self.sam.pk])):
+            html = self.client.get(adres).content.decode()
+            self.assertIn("Minstens 8 tekens", html, adres)
+            self.assertIn("Niet alleen cijfers", html, adres)
+
+    def test_wachtwoord_dat_lijkt_op_de_naam_wordt_geweigerd(self):
+        self.client.post(reverse("medewerker_wachtwoord", args=[self.sam.pk]), {"wachtwoord": "sam"})
+        self.sam.refresh_from_db()
+        self.assertTrue(self.sam.check_password("test1234"))
+
+
