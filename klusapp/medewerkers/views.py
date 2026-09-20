@@ -8,13 +8,13 @@ from django.shortcuts import get_object_or_404, redirect, render
 
 from klussen import voorbeeld
 from klussen.models import Bijlage, Klus
+from uren.models import Aanwezigheid
 from uren import totalen
-
-from .tegels import zichtbare_profieltegels
 
 from .forms import MedewerkerForm, NieuweMedewerkerForm, WachtwoordForm
 from .models import Medewerker
 from .rechten import alleen_eigenaar
+from .tegels import zichtbare_profieltegels, zichtbare_tegels
 
 # Loondossier heeft twee ingangen. Op Android staat in hun assetlinks.json
 # dat de app elk adres van mijn.loondossier.nl mag afvangen, dus daar opent
@@ -223,3 +223,45 @@ def medewerker_dienst(request, pk):
     medewerker.save()
     messages.success(request, bericht)
     return redirect("medewerkers")
+
+
+# ══════════ TIJDELIJK: tweede beginscherm als vergelijking ══════════
+# Een rasterweergave van de onderdelen, elk met een cijfer erbij, zodat we
+# kunnen zien of dat prettiger werkt dan het huidige startscherm. Staat als
+# tweede huisje in de zijbalk. Weghalen = deze view, templates/menu.html, de
+# route in medewerkers/urls.py en het tweede huisje in basis.html.
+
+
+@login_required
+def menu_demo(request):
+    vandaag = date.today()
+    maandag = vandaag - timedelta(days=vandaag.weekday())
+    zondag = maandag + timedelta(days=6)
+
+    uren = totalen.totaal_en_week(request.user, maandag, zondag)
+    actieve_klussen = Klus.objects.filter(actief=True).count()
+    fotos = Bijlage.objects.filter(soort=Bijlage.Soort.FOTO).count()
+
+    # Per onderdeel één regel die iets zegt wat je anders had moeten opzoeken.
+    info = {
+        "mijn_uren": f"{uren['week']} deze week",
+        "klussen": f"{actieve_klussen} lopend",
+        "fotos": f"{fotos} foto's",
+        "loonstrook": "bij Loondossier",
+    }
+
+    if request.user.is_eigenaar:
+        in_dienst = Medewerker.objects.filter(uit_dienst_sinds__isnull=True).count()
+        aanwezig = Aanwezigheid.objects.filter(datum=vandaag, aanwezig=True).count()
+        info["medewerkers"] = f"{in_dienst} in dienst"
+        info["aanwezigheid"] = f"{aanwezig} van {in_dienst} aanwezig"
+        info["urenexport"] = f"{vandaag:%B}".lower()
+
+    onderdelen = zichtbare_tegels(request.user) + zichtbare_profieltegels(request.user)
+    for onderdeel in onderdelen:
+        onderdeel["info"] = info.get(onderdeel.get("url_naam"), "")
+
+    # Het profielscherm en dit menu zelf hoeven hier niet als tegel te staan.
+    onderdelen = [o for o in onderdelen if o.get("url_naam") not in ("mijn_profiel", "menu_demo")]
+
+    return render(request, "menu.html", {"onderdelen": onderdelen, "vandaag": vandaag})
