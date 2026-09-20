@@ -282,3 +282,12 @@ class MedewerkersBeherenTest(TestCase):
         self.assertTrue(self.sam.check_password("test1234"))
 
 
+
+    def test_volgorde_eerst_eigenaars_dan_op_voornaam(self):
+        Medewerker.objects.create_user("zoe", password="x", first_name="Zoë", rol=Medewerker.Rol.EIGENAAR)
+        Medewerker.objects.create_user("anna", password="x", first_name="anna")
+        Medewerker.objects.create_user("bram", password="x", first_name="Bram")
+        namen = [mw.first_name for mw in self.client.get(reverse("medewerkers")).context["in_dienst"]]
+        # Maarten is eigenaar en Sam medewerker (zie setUp); "anna" met kleine
+        # letter hoort gewoon tussen de rest, niet er los voor of achter.
+        self.assertEqual(namen, ["Maarten", "Zoë", "anna", "Bram", "Sam"])

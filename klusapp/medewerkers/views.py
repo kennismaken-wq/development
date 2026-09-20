@@ -2,7 +2,8 @@ from datetime import date, timedelta
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
-from django.db.models import Max, Prefetch, Q
+from django.db.models import Case, IntegerField, Max, Prefetch, Q, Value, When
+from django.db.models.functions import Lower
 from django.shortcuts import get_object_or_404, redirect, render
 
 from klussen import voorbeeld
@@ -108,8 +109,24 @@ def loonstrook(request):
 
 
 def _te_beheren(gebruiker):
-    """Wie deze gebruiker mag zien en bewerken."""
-    return Medewerker.objects.all()
+    """Wie deze gebruiker mag zien en bewerken, in de volgorde waarin je een
+    ploeg leest: eerst de eigenaars, daarna de medewerkers, en binnen die
+    twee op voornaam.
+
+    De volgorde staat expliciet in een Case en leunt niet op de alfabetische
+    volgorde van de rolnamen zelf — anders verschuift de lijst zodra er ooit
+    een rol bijkomt of er een anders gaat heten.
+    """
+    return (
+        Medewerker.objects.annotate(
+            rolvolgorde=Case(
+                When(rol=Medewerker.Rol.EIGENAAR, then=Value(0)),
+                default=Value(1),
+                output_field=IntegerField(),
+            )
+        )
+        .order_by("rolvolgorde", Lower("first_name"), Lower("last_name"), "username")
+    )
 
 
 @alleen_eigenaar
