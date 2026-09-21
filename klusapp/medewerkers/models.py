@@ -71,6 +71,12 @@ class Medewerker(AbstractUser):
         volledig = f"{self.first_name} {self.last_name}".strip()
         return volledig or self.username
 
+    @property
+    def initialen(self):
+        """Twee letters voor het rondje op het planbord."""
+        letters = [deel[0] for deel in (self.first_name, self.last_name) if deel]
+        return "".join(letters).upper() or self.username[:2].upper()
+
     def save(self, *args, **kwargs):
         # TIJDELIJK — september 2026. Er is nog geen superuser aangemaakt, dus
         # zonder dit komt niemand in /beheer/. Een eigenaar krijgt daarom

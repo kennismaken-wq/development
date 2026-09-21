@@ -2,9 +2,10 @@
 {% block titel %}Loonstrook{% endblock %}
 {% block kop %}Loonstrook{% endblock %}
 {% block inhoud %}
-  {# Op een iPhone opent de app alleen als iemand zelf op de link tikt; een
-     automatische doorverwijzing telt voor iOS niet als een tik. Daarom deze
-     tussenstap, en daarom onthouden we de keuze op het toestel. #}
+  {% comment %} Op een iPhone opent de app alleen als iemand zelf op de link
+     tikt; een automatische doorverwijzing telt voor iOS niet als een tik.
+     Daarom deze tussenstap, en daarom onthouden we de keuze op het toestel.
+  {% endcomment %}
   <p style="font-size:13.5px; color:rgba(255,255,255,0.7); margin:0 0 1.2rem">
     Heb je de Loondossier-app op je telefoon?
   </p>

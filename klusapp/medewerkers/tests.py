@@ -374,3 +374,14 @@ class TestgegevensTest(TestCase):
         # de echte accounts blijven
         self.assertTrue(Medewerker.objects.filter(username="maarten").exists())
         self.assertTrue(Medewerker.objects.filter(username="sam").exists())
+
+    def test_geen_broncommentaar_op_het_scherm(self):
+        # Een {# #}-commentaar over meerdere regels is geen commentaar en
+        # belandt zichtbaar op de pagina.
+        self.client.force_login(self.sam)
+        html = self.client.get(
+            reverse("loonstrook"),
+            headers={"user-agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) Safari/604.1"},
+        ).content.decode()
+        self.assertNotIn("{#", html)
+        self.assertNotIn("automatische doorverwijzing", html)

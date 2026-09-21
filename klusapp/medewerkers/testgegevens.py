@@ -23,7 +23,7 @@ from .models import Medewerker
 VOORVOEGSEL = "demo-"
 
 PLOEG = [
-    ("Sam", "de Wit", "Voorman", "#95BF1D"),
+    ("Tom", "Verhoef", "Voorman", "#95BF1D"),
     ("Joep", "Bakker", "Hovenier", "#5B8FA8"),
     ("Youssef", "el Amrani", "Hovenier", "#E07B5F"),
     ("Nick", "Molenaar", "Machinist", "#C9A227"),

@@ -29,6 +29,18 @@ def als_uren(totaal_minuten):
     return f"{totaal_minuten // 60}:{totaal_minuten % 60:02d}"
 
 
+def als_decimaal(totaal_minuten):
+    """Uren als getal in plaats van als klok: 8, 8,5, 3,25.
+
+    Op het planbord staat naast elke klusnaam hoeveel uur eraan is gewerkt.
+    "8,5" leest daar sneller dan "8:30", dat je makkelijk voor een tijdstip
+    aanziet in een rooster vol begintijden.
+    """
+    uren = totaal_minuten / 60
+    tekst = f"{uren:.2f}".rstrip("0").rstrip(".")
+    return tekst.replace(".", ",")
+
+
 def kleur_van(klus):
     return klus.kleur or PALET[(klus.pk - 1) % len(PALET)]
 
