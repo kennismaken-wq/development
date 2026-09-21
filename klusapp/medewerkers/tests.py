@@ -395,3 +395,18 @@ class TestgegevensTest(TestCase):
         self.client.force_login(self.sam)
         titels = [t["titel"] for t in self.client.get(reverse("start")).context["onderdelen"]]
         self.assertNotIn("Planbord", titels)
+
+    def test_geen_aanmaakformulier_meer_op_het_startscherm(self):
+        self.client.force_login(self.eigenaar)
+        html = self.client.get(reverse("start")).content.decode()
+        self.assertNotIn("Testgegevens aanmaken", html)
+
+    def test_opruimknop_verschijnt_en_verdwijnt_vanzelf(self):
+        self.client.force_login(self.eigenaar)
+        self.assertNotIn("Testgegevens verwijderen", self.client.get(reverse("start")).content.decode())
+
+        self.client.post(reverse("testgegevens"), {"week": "2026-09-16"})
+        self.assertIn("Testgegevens verwijderen", self.client.get(reverse("start")).content.decode())
+
+        self.client.post(reverse("testgegevens"), {"actie": "opruimen"})
+        self.assertNotIn("Testgegevens verwijderen", self.client.get(reverse("start")).content.decode())

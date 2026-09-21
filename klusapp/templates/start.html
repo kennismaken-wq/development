@@ -115,21 +115,10 @@
     <p class="leeg">Nog geen foto's toegevoegd.</p>
   {% endif %}
 
-  {% if user.is_eigenaar %}
-    {% comment %} TIJDELIJK — nepmedewerkers met uren, om schermen mee te
-       beoordelen. Zie medewerkers/testgegevens.py voor hoe je dit weghaalt.
+  {% if testgegevens_aanwezig %}
+    {% comment %} TIJDELIJK — staat er alleen zolang er testmedewerkers zijn,
+       en verdwijnt zodra je ze opruimt. Zie medewerkers/testgegevens.py.
     {% endcomment %}
-    <h2 class="sectiekop">Testgegevens</h2>
-    <p class="uitleg">
-      Vijf nepmedewerkers met uren over een hele week, om de schermen mee te
-      kunnen beoordelen. Ze kunnen niet inloggen en zijn met één knop weer weg.
-    </p>
-    <form method="post" action="{% url 'testgegevens' %}">
-      {% csrf_token %}
-      <label for="week">Week van</label>
-      <input type="date" id="week" name="week" value="{{ vandaag|date:'Y-m-d' }}">
-      <p style="margin-top:1rem"><button type="submit" class="knop">Testgegevens aanmaken</button></p>
-    </form>
     <form method="post" action="{% url 'testgegevens' %}" class="verwijder"
           onsubmit="return confirm('Alle testmedewerkers en hun uren verwijderen?');">
       {% csrf_token %}

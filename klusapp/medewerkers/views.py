@@ -126,6 +126,12 @@ def start(request):
         {
             "vandaag": vandaag,
             "onderdelen": _onderdelen_met_cijfers(request.user, vandaag, maandag, zondag, uren_stats),
+            # TIJDELIJK: de opruimknop verschijnt alleen zolang er
+            # testmedewerkers in de database staan.
+            "testgegevens_aanwezig": request.user.is_eigenaar
+            and Medewerker.objects.filter(
+                username__startswith=demo_gegevens.VOORVOEGSEL
+            ).exists(),
             "klussen_recent": klussen_recent,
             "uren_stats": uren_stats,
             "recente_fotos": recente_fotos,
