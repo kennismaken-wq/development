@@ -293,8 +293,8 @@ class MedewerkersBeherenTest(TestCase):
         self.assertEqual(namen, ["Maarten", "Zoë", "anna", "Bram", "Sam"])
 
 
-class MenuDemoTest(TestCase):
-    """Tijdelijk tweede beginscherm; zie medewerkers.views.menu_demo."""
+class StarttegelsTest(TestCase):
+    """De onderdelen als tegels bovenaan het startscherm."""
 
     def setUp(self):
         self.eigenaar = Medewerker.objects.create_user(
@@ -304,7 +304,7 @@ class MenuDemoTest(TestCase):
 
     def test_medewerker_ziet_zijn_eigen_onderdelen(self):
         self.client.force_login(self.sam)
-        html = self.client.get(reverse("menu_demo")).content.decode()
+        html = self.client.get(reverse("start")).content.decode()
         self.assertIn("Uren schrijven", html)
         self.assertIn("Klussen", html)
         for alleen_voor_de_baas in ("Aanwezigheid", "Overzichten", "Medewerkers"):
@@ -313,13 +313,13 @@ class MenuDemoTest(TestCase):
     def test_eigenaar_ziet_ook_zijn_eigen_schermen_met_cijfers(self):
         Klus.objects.create(naam="Tuin Vermeer")
         self.client.force_login(self.eigenaar)
-        html = self.client.get(reverse("menu_demo")).content.decode()
+        html = self.client.get(reverse("start")).content.decode()
         self.assertIn("Medewerkers", html)
         self.assertIn("2 in dienst", html)
         self.assertIn("1 lopend", html)
 
     def test_vereist_inloggen(self):
-        antwoord = self.client.get(reverse("menu_demo"))
+        antwoord = self.client.get(reverse("start"))
         self.assertEqual(antwoord.status_code, 302)
 
 
@@ -385,3 +385,13 @@ class TestgegevensTest(TestCase):
         ).content.decode()
         self.assertNotIn("{#", html)
         self.assertNotIn("automatische doorverwijzing", html)
+
+    def test_planbord_staat_vooraan_voor_de_eigenaar(self):
+        self.client.force_login(self.eigenaar)
+        titels = [t["titel"] for t in self.client.get(reverse("start")).context["onderdelen"]]
+        self.assertEqual(titels[:2], ["Uren schrijven", "Planbord"])
+
+    def test_medewerker_krijgt_geen_planbord(self):
+        self.client.force_login(self.sam)
+        titels = [t["titel"] for t in self.client.get(reverse("start")).context["onderdelen"]]
+        self.assertNotIn("Planbord", titels)

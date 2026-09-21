@@ -44,13 +44,6 @@ PICTOGRAMMEN = {
         '<circle cx="12" cy="12" r="9"/>'
         '<path d="M8 12.5l2.5 2.5L16 9.5"/>'
     ),
-    # TIJDELIJK: hoort bij het tweede beginscherm (views.menu_demo)
-    "raster": (
-        '<rect x="3.5" y="3.5" width="7" height="7" rx="1.8"/>'
-        '<rect x="13.5" y="3.5" width="7" height="7" rx="1.8"/>'
-        '<rect x="3.5" y="13.5" width="7" height="7" rx="1.8"/>'
-        '<rect x="13.5" y="13.5" width="7" height="7" rx="1.8"/>'
-    ),
     "medewerkers": (
         '<circle cx="9" cy="8" r="3.2"/>'
         '<path d="M3.5 19.5c0-3 2.5-5 5.5-5s5.5 2 5.5 5"/>'

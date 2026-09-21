@@ -1,8 +1,34 @@
 {% extends "basis.html" %}
+{% load pictogrammen %}
 {% block titel %}Start{% endblock %}
 {% block kop %}Hai, {{ user.first_name|default:user.naam }}{% endblock %}
 {% block sub %}{{ vandaag|date:"l j F Y"|capfirst }}{% endblock %}
 {% block inhoud %}
+  {% comment %} De onderdelen bovenaan: waar je heen wilt is de eerste vraag
+     bij het openen van de app. Wat daaronder staat — je klussen, je uren,
+     de foto's — is waar je naar kijkt als je toch al hier bent.
+  {% endcomment %}
+  <div class="appgrid">
+    {% for onderdeel in onderdelen %}
+      {% if onderdeel.url %}
+        <a class="apptegel" href="{{ onderdeel.url }}"{% if onderdeel.extern %} target="_blank" rel="noopener"{% endif %}>
+          <span class="apptegel-icoon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">{{ onderdeel.icoon|pictogram }}</svg>
+          </span>
+          <span class="apptegel-titel">{{ onderdeel.titel }}</span>
+          {% if onderdeel.info %}<span class="apptegel-info">{{ onderdeel.info }}</span>{% endif %}
+        </a>
+      {% else %}
+        <span class="apptegel nog-niet">
+          <span class="apptegel-icoon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">{{ onderdeel.icoon|pictogram }}</svg>
+          </span>
+          <span class="apptegel-titel">{{ onderdeel.titel }}</span>
+        </span>
+      {% endif %}
+    {% endfor %}
+  </div>
+
   <h2 class="sectiekop">Jouw klussen</h2>
   {% if klussen_recent %}
     <div class="klussen-slider">
@@ -87,5 +113,28 @@
     </script>
   {% else %}
     <p class="leeg">Nog geen foto's toegevoegd.</p>
+  {% endif %}
+
+  {% if user.is_eigenaar %}
+    {% comment %} TIJDELIJK — nepmedewerkers met uren, om schermen mee te
+       beoordelen. Zie medewerkers/testgegevens.py voor hoe je dit weghaalt.
+    {% endcomment %}
+    <h2 class="sectiekop">Testgegevens</h2>
+    <p class="uitleg">
+      Vijf nepmedewerkers met uren over een hele week, om de schermen mee te
+      kunnen beoordelen. Ze kunnen niet inloggen en zijn met één knop weer weg.
+    </p>
+    <form method="post" action="{% url 'testgegevens' %}">
+      {% csrf_token %}
+      <label for="week">Week van</label>
+      <input type="date" id="week" name="week" value="{{ vandaag|date:'Y-m-d' }}">
+      <p style="margin-top:1rem"><button type="submit" class="knop">Testgegevens aanmaken</button></p>
+    </form>
+    <form method="post" action="{% url 'testgegevens' %}" class="verwijder"
+          onsubmit="return confirm('Alle testmedewerkers en hun uren verwijderen?');">
+      {% csrf_token %}
+      <input type="hidden" name="actie" value="opruimen">
+      <button type="submit">Testgegevens verwijderen</button>
+    </form>
   {% endif %}
 {% endblock %}

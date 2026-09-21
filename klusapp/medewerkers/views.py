@@ -28,6 +28,58 @@ LOONDOSSIER_WEB = "https://mijn.loondossier.nl/Aanmelden"
 LOONDOSSIER_APP = "https://mijn.loondossier.nl/open-app/"
 
 
+def _onderdelen_met_cijfers(gebruiker, vandaag, maandag, zondag, uren):
+    """De tegels voor het startscherm, elk met één regel die iets zegt wat je
+    anders had moeten opzoeken: hoeveel klussen er lopen, wie er vandaag is.
+
+    De lijsten komen uit medewerkers/tegels.py, dezelfde bron als de
+    navigatiebalk — wie wat mag zien staat dus op één plek.
+    """
+    actieve_klussen = Klus.objects.filter(actief=True).count()
+    fotos = Bijlage.objects.filter(soort=Bijlage.Soort.FOTO).count()
+
+    info = {
+        "mijn_uren": f"{uren['week']} deze week",
+        "klussen": f"{actieve_klussen} lopend",
+        "fotos": f"{fotos} foto's",
+        "loonstrook": "bij Loondossier",
+    }
+
+    if gebruiker.is_eigenaar:
+        in_dienst = Medewerker.objects.filter(uit_dienst_sinds__isnull=True).count()
+        aanwezig = Aanwezigheid.objects.filter(datum=vandaag, aanwezig=True).count()
+        gewerkt_deze_week = (
+            Uurblok.objects.filter(datum__range=(maandag, zondag))
+            .values("medewerker")
+            .distinct()
+            .count()
+        )
+        info["medewerkers"] = f"{in_dienst} in dienst"
+        info["aanwezigheid"] = f"{aanwezig} van {in_dienst} aanwezig"
+        info["urenexport"] = f"{vandaag:%B}".lower()
+        info["planbord"] = f"{gewerkt_deze_week} aan het werk"
+
+    onderdelen = zichtbare_tegels(gebruiker) + zichtbare_profieltegels(gebruiker)
+
+    # Het planbord staat sinds 17-09 niet in de navigatiebalk (zie
+    # medewerkers/tegels.py), maar hoort wel op het startscherm: het is het
+    # scherm dat Maarten 's ochtends opent.
+    if gebruiker.is_eigenaar:
+        # Op plek twee, niet achteraan: dit is het scherm dat de eigenaar
+        # 's ochtends als eerste opent na zijn eigen uren.
+        onderdelen.insert(
+            1,
+            {"titel": "Planbord", "icoon": "planbord", "url_naam": "planbord",
+             "url": reverse("planbord"), "extern": False},
+        )
+
+    for onderdeel in onderdelen:
+        onderdeel["info"] = info.get(onderdeel.get("url_naam"), "")
+
+    # Start en Mijn profiel staan al in de balk; die hoeven hier niet ook nog.
+    return [o for o in onderdelen if o.get("url_naam") not in ("mijn_profiel", "start")]
+
+
 @login_required
 def start(request):
     """Het beginscherm: een begroeting, de klussen waar je het laatst uren op
@@ -73,6 +125,7 @@ def start(request):
         "start.html",
         {
             "vandaag": vandaag,
+            "onderdelen": _onderdelen_met_cijfers(request.user, vandaag, maandag, zondag, uren_stats),
             "klussen_recent": klussen_recent,
             "uren_stats": uren_stats,
             "recente_fotos": recente_fotos,
@@ -227,69 +280,6 @@ def medewerker_dienst(request, pk):
     return redirect("medewerkers")
 
 
-# ══════════ TIJDELIJK: tweede beginscherm als vergelijking ══════════
-# Een rasterweergave van de onderdelen, elk met een cijfer erbij, zodat we
-# kunnen zien of dat prettiger werkt dan het huidige startscherm. Staat als
-# tweede huisje in de zijbalk. Weghalen = deze view, templates/menu.html, de
-# route in medewerkers/urls.py en het tweede huisje in basis.html.
-
-
-@login_required
-def menu_demo(request):
-    vandaag = date.today()
-    maandag = vandaag - timedelta(days=vandaag.weekday())
-    zondag = maandag + timedelta(days=6)
-
-    uren = totalen.totaal_en_week(request.user, maandag, zondag)
-    actieve_klussen = Klus.objects.filter(actief=True).count()
-    fotos = Bijlage.objects.filter(soort=Bijlage.Soort.FOTO).count()
-
-    # Per onderdeel één regel die iets zegt wat je anders had moeten opzoeken.
-    info = {
-        "mijn_uren": f"{uren['week']} deze week",
-        "klussen": f"{actieve_klussen} lopend",
-        "fotos": f"{fotos} foto's",
-        "loonstrook": "bij Loondossier",
-    }
-
-    if request.user.is_eigenaar:
-        in_dienst = Medewerker.objects.filter(uit_dienst_sinds__isnull=True).count()
-        aanwezig = Aanwezigheid.objects.filter(datum=vandaag, aanwezig=True).count()
-        info["medewerkers"] = f"{in_dienst} in dienst"
-        info["aanwezigheid"] = f"{aanwezig} van {in_dienst} aanwezig"
-        info["urenexport"] = f"{vandaag:%B}".lower()
-        gewerkt_deze_week = (
-            Uurblok.objects.filter(datum__range=(maandag, zondag))
-            .values("medewerker")
-            .distinct()
-            .count()
-        )
-        info["planbord"] = f"{gewerkt_deze_week} aan het werk"
-
-    onderdelen = zichtbare_tegels(request.user) + zichtbare_profieltegels(request.user)
-
-    # Het planbord staat sinds 17-09 niet meer in de navigatiebalk (zie
-    # medewerkers/tegels.py), maar is precies het scherm dat dit menu moet
-    # laten zien: alle uren van alle medewerkers in één week. Hier dus wel.
-    if request.user.is_eigenaar:
-        onderdelen.append(
-            {
-                "titel": "Planbord",
-                "icoon": "planbord",
-                "url_naam": "planbord",
-                "url": reverse("planbord"),
-                "extern": False,
-            }
-        )
-    for onderdeel in onderdelen:
-        onderdeel["info"] = info.get(onderdeel.get("url_naam"), "")
-
-    # Het profielscherm en dit menu zelf hoeven hier niet als tegel te staan.
-    onderdelen = [o for o in onderdelen if o.get("url_naam") not in ("mijn_profiel", "menu_demo")]
-
-    return render(request, "menu.html", {"onderdelen": onderdelen, "vandaag": vandaag})
-
-
 @alleen_eigenaar
 def testgegevens(request):
     """TIJDELIJK — nepmedewerkers met uren aanmaken of weghalen.
@@ -297,12 +287,12 @@ def testgegevens(request):
     Staat onderaan het rastermenu. Zie medewerkers/testgegevens.py.
     """
     if request.method != "POST":
-        return redirect("menu_demo")
+        return redirect("start")
 
     if request.POST.get("actie") == "opruimen":
         aantal = demo_gegevens.opruimen()
         messages.success(request, f"{aantal} testmedewerkers en hun uren zijn verwijderd.")
-        return redirect("menu_demo")
+        return redirect("start")
 
     gekozen = request.POST.get("week")
     try:
@@ -320,4 +310,4 @@ def testgegevens(request):
         f"{mensen} testmedewerkers met {blokken} uurblokken in de week van "
         f"{kort(maandag)} tot {kort(zondag)}.",
     )
-    return redirect("menu_demo")
+    return redirect("start")
