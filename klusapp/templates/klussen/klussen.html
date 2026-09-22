@@ -8,6 +8,18 @@
     {% if toon_alles %}<input type="hidden" name="alles" value="1">{% endif %}
   </form>
 
+  <div class="foto-filterrij">
+    <div class="klus-kiezer" id="klus-kiezer">
+      <select name="klus" id="klus-select" form="klus-zoekform" class="klus-kiezer-select" onchange="this.form.submit()">
+        <option value="" data-scope="altijd">Alle klussen</option>
+        {% for klus in alle_klussen %}
+          <option value="{{ klus.pk }}" data-scope="{% if klus.actief %}actief{% else %}inactief{% endif %}"{% if klus_pk == klus.pk|stringformat:"s" %} selected{% endif %}>{{ klus.naam }}{% if not klus.actief %} (afgerond){% endif %}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <noscript><button type="submit" form="klus-zoekform" class="knop-stil">Filteren</button></noscript>
+  </div>
+
   <label class="wisselaar-rij">
     <span class="wisselaar-label">Ook afgeronde klussen tonen</span>
     <span class="wisselaar">
@@ -25,5 +37,6 @@
   {% endif %}
 
   {% load static %}
+  <script src="{% static 'js/kluskiezer.js' %}"></script>
   <script src="{% static 'js/klussenzoeken.js' %}"></script>
 {% endblock %}

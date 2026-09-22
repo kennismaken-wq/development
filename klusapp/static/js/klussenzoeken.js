@@ -5,11 +5,16 @@
 
    Bewust géén los JSON/fragment-endpoint: dit haalt gewoon de normale
    klussen-pagina op en pakt er client-side het lijstdeel uit. Zonder JS (of
-   zonder verbinding) werkt het gewone <form method=get> gewoon nog steeds. */
+   zonder verbinding) werkt het gewone <form method=get> gewoon nog steeds.
+
+   De zoekbare klus-kiezer zelf (knop + popover) zit in static/js/kluskiezer.js,
+   gedeeld met de foto's-pagina — dit bestand laadt dat script en luistert
+   alleen naar het change-event van de onderliggende <select>. */
 (function () {
   const form = document.getElementById("klus-zoekform");
   const zoekveld = form && form.querySelector('input[name="q"]');
   const wisselaar = document.getElementById("klus-alles-wisselaar");
+  const klusKeuze = document.querySelector('select[name="klus"]');
   if (!form || !zoekveld) return;
 
   let volgnummer = 0;
@@ -70,9 +75,17 @@
     });
   }
 
+  if (klusKeuze) {
+    // Was this.form.submit() (zie klussen.html); dat gaf een volledige reload.
+    klusKeuze.removeAttribute("onchange");
+    klusKeuze.addEventListener("change", verversen);
+  }
+
   form.addEventListener("submit", function (e) {
     e.preventDefault();
     clearTimeout(timer);
     verversen();
   });
+
+  initKlusKiezer("klus-kiezer", "klus-select");
 })();

@@ -232,11 +232,21 @@ def klus_lijst(request):
     """
     toon_alles = request.GET.get("alles") == "1"
     zoek = request.GET.get("q", "").strip()
-    klussen = Klus.objects.all() if toon_alles else Klus.objects.filter(actief=True)
+    klus_pk = request.GET.get("klus", "").strip()
+    if not klus_pk.isdigit():
+        klus_pk = ""
+    alle_klussen = Klus.objects.all()  # opties voor de klus-kiezer; Meta.ordering = ["-actief", "naam"]
+
+    # Een specifieke klus kiezen in de kiezer wint van de "ook afgeronde
+    # tonen"-wisselaar: je vroeg om precies die klus, dus die moet ook
+    # verschijnen als hij afgerond is en de wisselaar uitstaat.
+    klussen = Klus.objects.all() if (toon_alles or klus_pk) else Klus.objects.filter(actief=True)
     if zoek:
         klussen = klussen.filter(
             Q(naam__icontains=zoek) | Q(adres__icontains=zoek) | Q(plaats__icontains=zoek)
         )
+    if klus_pk:
+        klussen = klussen.filter(pk=klus_pk)
     # Zelfde gewaaierde voorproefje als op het startscherm en het foto's-scherm.
     # De prefetch hoort erbij: zonder to_attr haalt items_voor_stapel() de
     # bijlagen per klus apart op en wordt een lijst van tien klussen elf queries.
@@ -254,7 +264,13 @@ def klus_lijst(request):
     return render(
         request,
         "klussen/klussen.html",
-        {"klussen": klussen, "toon_alles": toon_alles, "zoek": zoek},
+        {
+            "klussen": klussen,
+            "toon_alles": toon_alles,
+            "zoek": zoek,
+            "klus_pk": klus_pk,
+            "alle_klussen": alle_klussen,
+        },
     )
 
 
