@@ -169,10 +169,14 @@
         vasthoudTimer = null;
         van = tot = startVak;
         // Pas nú, en niet vooraf, naar "none": zo mag een gewone swipe die
-        // nooit lang genoeg stilhoudt gewoon scrollen. preventDefault()
-        // alleen is hiervoor niet genoeg — zolang touch-action pannen
-        // toestaat mag de browser dat los van JavaScript afhandelen.
+        // nooit lang genoeg stilhoudt gewoon scrollen. touch-action alleen
+        // veranderen is niet genoeg zolang de vinger nog impliciet "vastzit"
+        // aan het vak van de eerste aanraking (waar hij bij binnenkomst pan-x
+        // pan-y had): expliciet setPointerCapture naar de kolom verplaatsen
+        // dwingt de browser touch-action opnieuw te bepalen, nu op basis van
+        // de kolom i.p.v. het oorspronkelijke vak.
         kolom.style.touchAction = "none";
+        try { kolom.setPointerCapture(vingerId); } catch (fout) { /* niet ondersteund: preventDefault hieronder blijft over */ }
         verf();
         if (navigator.vibrate) navigator.vibrate(10);   // voelbare bevestiging dat slepen nu kan
       }, VASTHOUD_MS);
@@ -222,6 +226,7 @@
 
       if (gebeurtenis.pointerId !== vingerId) return;
       wisVasthoudTimer();
+      try { kolom.releasePointerCapture(gebeurtenis.pointerId); } catch (fout) { /* was nooit gezet, geen probleem */ }
       vingerId = null;
       if (van === null) return;   // gewone tik: dat handelt de click-listener hieronder af
       const vanVak = van, totVak = tot;
@@ -237,6 +242,7 @@
       }
       if (gebeurtenis.pointerId !== vingerId) return;
       wisVasthoudTimer();
+      try { kolom.releasePointerCapture(gebeurtenis.pointerId); } catch (fout) { /* was nooit gezet, geen probleem */ }
       vingerId = null;
       wis();
     });
