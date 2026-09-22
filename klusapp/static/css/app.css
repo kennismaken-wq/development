@@ -395,6 +395,15 @@ input[type=time]::-webkit-calendar-picker-indicator{ filter:invert(1); opacity:.
 /* dagweergave: één kolom, geen vaste breedte — dit is de regel die het
    horizontaal scrollen op een telefoon opheft. */
 .raster.raster-dag{ grid-template-columns:48px 1fr; min-width:0; }
+/* Weekweergave op een telefoon: alle zeven dagen tegelijk in beeld i.p.v.
+   scrollen, zoals Google Calendar — smallere kolommen i.p.v. horizontaal
+   vegen. Dit mag hier wél, anders dan bij het planbord (SPEC §5, daar
+   expliciet vastgelegd als "wordt onleesbaar zodra zes mensen op één dag
+   staan"): op dit scherm staat nooit meer dan één persoon — jijzelf — per
+   dag, een kolom hoeft dus nooit verder te splitsen. */
+@media (max-width:700px){
+  .raster:not(.raster-dag){ grid-template-columns:34px repeat(7, minmax(0,1fr)); min-width:0; }
+}
 
 .kolomkop{ font-size:11px; text-align:center; padding-bottom:.5rem; color:rgba(255,255,255,0.7); }
 .kolomkop .dag{ font-weight:600; text-transform:capitalize; }
