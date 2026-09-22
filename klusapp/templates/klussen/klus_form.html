@@ -1,14 +1,17 @@
 {% extends "basis.html" %}
 {% load static %}
 {% block titel %}{% if nieuw %}Nieuwe klus{% else %}{{ klus.naam }} bewerken{% endif %}{% endblock %}
-{% block kop %}{% if nieuw %}Nieuwe klus{% else %}Klus bewerken{% endif %}{% endblock %}
-{% block sub %}
-  {% if nieuw %}
-    <a href="{% url 'klussen' %}" style="color:rgba(255,255,255,0.6)">‹ Klussen</a>
-  {% else %}
-    <a href="{{ klus.get_absolute_url }}" style="color:rgba(255,255,255,0.6)">‹ {{ klus.naam }}</a>
-  {% endif %}
+{% block terug %}
+  {% comment %} Een echte .terug-pijl i.p.v. de tekstlink die hier stond: dat
+     geeft dit scherm ook de rechts-naar-links inschuifanimatie die een klus
+     openen al had (zie .kaart:has(.terug-pijl) in app.css) — puur door hem
+     hier neer te zetten, zonder dat klus-overgang.js iets hoeft te weten van
+     "bewerken" specifiek. {% endcomment %}
+  <a class="terug-pijl" href="{% if nieuw %}{% url 'klussen' %}{% else %}{{ klus.get_absolute_url }}{% endif %}" aria-label="Terug">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+  </a>
 {% endblock %}
+{% block kop %}{% if nieuw %}Nieuwe klus{% else %}Klus bewerken{% endif %}{% endblock %}
 {% block inhoud %}
   <form method="post" enctype="multipart/form-data">
     {% csrf_token %}
