@@ -1,8 +1,11 @@
 /* Slepen in de weekkalender.
 
-   Met een muis sleep je over de halfuurvakken en laat je los; met een vinger
-   is slepen niet te onderscheiden van scrollen, dus daar is een tik op één
-   vak genoeg — de eindtijd vul je dan in het formulier in. */
+   Met een muis sleep je meteen over de halfuurvakken en laat je los. Met een
+   vinger kan dat niet meteen: een sleepbeweging is dan niet te onderscheiden
+   van scrollen. Daarom eerst even vasthouden (net als Google Calendar) — pas
+   ná die korte vertraging blokkeert het gebaar de paginascroll en kun je
+   verticaal slepen om een tijdvak te tekenen. Een gewone, korte tik blijft
+   gewoon het formulier openen met alleen een begintijd. */
 (function () {
   const script = document.currentScript;
   const nieuwUrl = script.dataset.nieuwUrl;
@@ -96,8 +99,16 @@
     }
   }
 
+  const VASTHOUD_MS = 450;       // ms stilhouden voordat een vinger mag slepen
+  const BEWEEG_DREMPEL = 10;     // px — hierboven is het een swipe, geen vasthouden
+
   document.querySelectorAll(".dagkolom").forEach(function (kolom) {
     let van = null, tot = null;
+    let langePersAfgehandeld = false;
+
+    let vasthoudTimer = null;
+    let vingerId = null;
+    let startX = null, startY = null;
 
     function verf() {
       kolom.querySelectorAll(".vak").forEach(function (vak) {
@@ -114,35 +125,129 @@
       });
     }
 
+    function wisVasthoudTimer() {
+      if (vasthoudTimer !== null) {
+        clearTimeout(vasthoudTimer);
+        vasthoudTimer = null;
+      }
+    }
+
+    // Zoekt het vak onder een schermpositie, ongeacht welk element de vinger
+    // ooit als target had — bij een vinger blijft event.target namelijk
+    // "vastgeplakt" aan het vak van de eerste aanraking (impliciete pointer
+    // capture), terwijl de muis dat gewoon bijwerkt via closest() hieronder.
+    function vakOpPositie(x, y) {
+      const el = document.elementFromPoint(x, y);
+      const vak = el && el.closest(".vak");
+      return vak && vak.closest(".dagkolom") === kolom ? vak : null;
+    }
+
     kolom.addEventListener("pointerdown", function (gebeurtenis) {
-      if (gebeurtenis.pointerType !== "mouse") return;   // vingers scrollen
-      muisGebruikt = true;
+      if (gebeurtenis.pointerType === "mouse") {
+        muisGebruikt = true;
+        const vak = gebeurtenis.target.closest(".vak");
+        if (!vak) return;
+        van = tot = Number(vak.dataset.vak);
+        verf();
+        return;
+      }
+
+      // Vinger: nog niets blokkeren, anders kan er ook niet meer gescrold
+      // worden zolang we niet zeker weten dat dit een vasthouden wordt.
+      if (vingerId !== null) return;   // al een andere vinger aan het volgen
       const vak = gebeurtenis.target.closest(".vak");
       if (!vak) return;
-      van = tot = Number(vak.dataset.vak);
-      verf();
+      vingerId = gebeurtenis.pointerId;
+      startX = gebeurtenis.clientX;
+      startY = gebeurtenis.clientY;
+      const startVak = Number(vak.dataset.vak);
+      wisVasthoudTimer();
+      vasthoudTimer = setTimeout(function () {
+        vasthoudTimer = null;
+        van = tot = startVak;
+        verf();
+        if (navigator.vibrate) navigator.vibrate(10);   // voelbare bevestiging dat slepen nu kan
+      }, VASTHOUD_MS);
     });
 
     kolom.addEventListener("pointermove", function (gebeurtenis) {
-      if (van === null) return;
-      const vak = gebeurtenis.target.closest(".vak");
-      if (!vak) return;
-      tot = Number(vak.dataset.vak);
-      verf();
+      if (gebeurtenis.pointerType === "mouse") {
+        if (van === null) return;
+        const vak = gebeurtenis.target.closest(".vak");
+        if (!vak) return;
+        tot = Number(vak.dataset.vak);
+        verf();
+        return;
+      }
+
+      if (gebeurtenis.pointerId !== vingerId) return;
+
+      if (vasthoudTimer !== null) {
+        // Nog aan het wachten: bij genoeg beweging is dit een swipe/scroll,
+        // geen vasthouden — dan laten we het gewoon aan de browser over.
+        const dx = gebeurtenis.clientX - startX;
+        const dy = gebeurtenis.clientY - startY;
+        if (Math.abs(dx) > BEWEEG_DREMPEL || Math.abs(dy) > BEWEEG_DREMPEL) {
+          wisVasthoudTimer();
+          vingerId = null;
+        }
+        return;
+      }
+
+      if (van === null) return;   // vasthouden is nooit bevestigd
+      gebeurtenis.preventDefault();   // vanaf hier geen paginascroll meer
+      const vak = vakOpPositie(gebeurtenis.clientX, gebeurtenis.clientY);
+      if (vak) {
+        tot = Number(vak.dataset.vak);
+        verf();
+      }
     });
 
-    kolom.addEventListener("pointerup", function () {
-      if (van === null) return;
+    kolom.addEventListener("pointerup", function (gebeurtenis) {
+      if (gebeurtenis.pointerType === "mouse") {
+        if (van === null) return;
+        const vanVak = van, totVak = tot;
+        wis();
+        openFormulier(kolom.dataset.dag, vanVak, totVak);
+        return;
+      }
+
+      if (gebeurtenis.pointerId !== vingerId) return;
+      wisVasthoudTimer();
+      vingerId = null;
+      if (van === null) return;   // gewone tik: dat handelt de click-listener hieronder af
       const vanVak = van, totVak = tot;
       wis();
+      langePersAfgehandeld = true;   // voorkomt dat de click hieronder het formulier nog eens opent
       openFormulier(kolom.dataset.dag, vanVak, totVak);
     });
 
-    kolom.addEventListener("pointerleave", wis);
+    kolom.addEventListener("pointercancel", function (gebeurtenis) {
+      if (gebeurtenis.pointerType === "mouse") {
+        wis();
+        return;
+      }
+      if (gebeurtenis.pointerId !== vingerId) return;
+      wisVasthoudTimer();
+      vingerId = null;
+      wis();
+    });
 
-    // Op een aanraakscherm: een tik op een vak opent het formulier met dat
-    // halfuur als begintijd.
+    // Alleen relevant voor de muis: een vinger "verlaat" het vak tijdens het
+    // slepen niet op dezelfde manier (impliciete pointer capture), dus die
+    // zou hier onterecht de selectie wissen.
+    kolom.addEventListener("pointerleave", function (gebeurtenis) {
+      if (gebeurtenis.pointerType === "mouse") wis();
+    });
+
+    // Op een aanraakscherm: een korte tik (geen vasthouden) opent het
+    // formulier met dat halfuur als begintijd; na een sleep heeft pointerup
+    // hierboven dat al gedaan.
     kolom.addEventListener("click", function (gebeurtenis) {
+      if (langePersAfgehandeld) {
+        langePersAfgehandeld = false;
+        return;
+      }
       if (muisGebruikt) return;   // de muis heeft het al via pointerup gedaan
       const vak = gebeurtenis.target.closest(".vak");
       if (!vak) return;
