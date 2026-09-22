@@ -15,7 +15,7 @@ from medewerkers.rechten import alleen_eigenaar
 from uren import totalen
 
 from . import afbeeldingen, kleuren, voorbeeld
-from .forms import BijlageForm, KlusForm, NieuweKlusBijlagenForm
+from .forms import AlleenFotosForm, BijlageForm, KlusForm, NieuweKlusBijlagenForm
 from .models import Bijlage, Klus
 
 
@@ -94,8 +94,15 @@ def bijlage_toevoegen(request):
 
     datum = formulier.cleaned_data["datum"] or timezone.localdate()
     toelichting = formulier.cleaned_data["toelichting"]
+    # Geen klus en geen uurblok: dit is de fotodropbox (de "+" op de foto tab).
+    # Daar mag geen document meer bij, want die heeft sinds het verdwijnen van
+    # de documentenlijst op dat scherm nergens een plek om terug te vinden.
+    alleen_fotos = klus is None and uurblok is None
     gelukt = 0
     for bestand in formulier.cleaned_data["bestanden"]:
+        if alleen_fotos and not afbeeldingen.lijkt_afbeelding(bestand.name):
+            messages.error(request, f"{bestand.name}: hier kan alleen een foto bij, geen document.")
+            continue
         try:
             _bewaar(bestand, datum, toelichting, klus, uurblok, request.user)
         except afbeeldingen.BestandNietLeesbaar as probleem:
@@ -162,22 +169,36 @@ def fotos(request):
     (klussen/klus_detail.html) of bij het uurblok waar ze aan hangen."""
     zoek = request.GET.get("q", "").strip()
     klus_pk = request.GET.get("klus", "").strip()
-    if not klus_pk.isdigit():
+    # "algemeen" is geen klus-pk maar het aparte filter voor foto's zonder klus
+    # (de fotodropbox) — elke andere onbekende waarde valt terug op "alle klussen".
+    if klus_pk not in ("", "algemeen") and not klus_pk.isdigit():
         klus_pk = ""
 
     context = {
         "zoek": zoek,
         "klus_pk": klus_pk,
         "klussen": Klus.objects.all(),  # Meta.ordering = ["-actief", "naam"]
-        "formulier": BijlageForm(),
+        "alleen_fotos": True,
+        "formulier": AlleenFotosForm(),
         "upload_url": reverse("bijlage_toevoegen"),
         "terug": request.get_full_path(),
     }
 
     bijlagen = Bijlage.objects.select_related("toegevoegd_door", "klus").order_by("-datum", "-toegevoegd_op")
     if zoek:
-        bijlagen = bijlagen.filter(Q(toelichting__icontains=zoek) | Q(originele_naam__icontains=zoek))
-    if klus_pk:
+        # Zelfde belofte als de placeholder in de zoekbalk: "omschrijving, klus
+        # of adres" — dus ook de klus waar de foto aan hangt doorzoeken, niet
+        # alleen de foto's eigen toelichting/bestandsnaam.
+        bijlagen = bijlagen.filter(
+            Q(toelichting__icontains=zoek)
+            | Q(originele_naam__icontains=zoek)
+            | Q(klus__naam__icontains=zoek)
+            | Q(klus__adres__icontains=zoek)
+            | Q(klus__plaats__icontains=zoek)
+        )
+    if klus_pk == "algemeen":
+        bijlagen = bijlagen.filter(klus__isnull=True)
+    elif klus_pk:
         bijlagen = bijlagen.filter(klus_id=klus_pk)
     context["foto_bijlagen"] = [b for b in bijlagen if b.is_foto]
     return render(request, "klussen/fotos.html", context)

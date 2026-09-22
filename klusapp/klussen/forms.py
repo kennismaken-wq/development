@@ -137,6 +137,19 @@ class BijlageForm(forms.Form):
     )
 
 
+class AlleenFotosForm(BijlageForm):
+    """Zelfde uploadveld als BijlageForm, maar voor de fotodropbox: een
+    document zonder klus eronder heeft sinds de foto tab geen documentenlijst
+    meer toont nergens een plek om terug te vinden (zie klussen/views.py:fotos
+    en bijlage_toevoegen). Het bestandenveld biedt daarom alleen foto's aan;
+    de server wijst een document hier alsnog af, mocht iemand het via de
+    bestandenkiezer toch selecteren."""
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["bestanden"].widget.attrs["accept"] = "image/*"
+
+
 class NieuweKlusBijlagenForm(BijlageForm):
     """Zelfde uploadveld als BijlageForm, maar dan naast het aanmaakformulier
     van een klus: bestanden kiezen is daar geen verplichte stap — een klus

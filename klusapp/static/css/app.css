@@ -135,6 +135,18 @@ a, button, .knop, .knop-stil, .pil, .side-icon, .klusregel, .profielregel,
 .kop .merk{ width:34px; height:auto; flex-shrink:0; margin-top:.1rem; }
 .kop .koptekst{ flex:1 1 auto; min-width:0; }
 
+/* Terugpijltje op de plek van het logo (klusdossier e.d.): zelfde 34px zodat
+   de kop niet springt tussen schermen met en zonder logo. */
+.terug-pijl{
+  width:34px; height:34px; flex-shrink:0; margin-top:.1rem;
+  display:flex; align-items:center; justify-content:center; border-radius:50%;
+  background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.16);
+  color:rgba(255,255,255,0.85); transition:background .12s;
+}
+.terug-pijl svg{ width:19px; height:19px; }
+.terug-pijl:active{ background:rgba(255,255,255,0.18); }
+@media (hover:hover){ .terug-pijl:hover{ background:rgba(255,255,255,0.14); color:#fff; } }
+
 /* Inlogscherm: daar is het blad geen bijzaak maar het eerste dat je ziet. */
 .kaart.inloggen{ max-width:420px; }
 .kaart.inloggen .kop{ flex-direction:column; align-items:center; text-align:center; gap:.9rem; }
@@ -704,6 +716,11 @@ input[type=file]:focus-visible + .bestandsknop{
   background:rgba(255,255,255,0.07); border:1px solid rgba(255,255,255,0.14);
   break-inside:avoid; display:inline-block; width:100%;
 }
+/* de thumbnail-knop die de popup opent, was een <a target=_blank>: zelfde
+   reset als .fotoslide button, anders krijgt hij standaard knopopmaak. */
+.fotokaart button{
+  display:block; width:100%; padding:0; margin:0; border:0; background:none; cursor:pointer;
+}
 .fotokaart img{
   display:block; width:100%; height:auto;
   background:rgba(0,0,0,0.2);
@@ -914,7 +931,7 @@ dialog.foto-invoegen .uploadveld, dialog.uren-invoegen .uurblokformulier{
    letter, en een naam in een lijst is gegevens, geen kop. */
 .mwlijst{ list-style:none; margin:0; padding:0; display:grid; gap:.5rem; }
 .mwregel{
-  display:grid; grid-template-columns:minmax(0,1fr) auto; gap:1rem;
+  display:grid; grid-template-columns:auto minmax(0,1fr) auto; gap:.8rem;
   align-items:center;
   border-radius:16px; padding:.85rem 1rem;
   background:rgba(255,255,255,0.07); border:1px solid rgba(255,255,255,0.14);
@@ -922,6 +939,15 @@ dialog.foto-invoegen .uploadveld, dialog.uren-invoegen .uurblokformulier{
 }
 @media (hover:hover){ .mwregel:hover{ background:rgba(255,255,255,0.13); } }
 .mwregel.afgerond{ opacity:.55; }
+/* Zelfde idee als .bord-naam .bol op het planbord (initialen op de eigen
+   kleur van de medewerker), maar groter: hier is het de hoofdfoto van de
+   rij, niet een klein herkenningspuntje ernaast. */
+.mw-bol{
+  flex-shrink:0; width:40px; height:40px; border-radius:999px; border:1px solid;
+  display:flex; align-items:center; justify-content:center;
+  font-size:13px; font-weight:700; color:#fff; letter-spacing:.02em;
+}
+.mwregel.afgerond .mw-bol{ opacity:.7; }
 .mwregel-tekst{ display:grid; gap:.15rem; min-width:0; }
 .mwregel .naam{ font-size:15px; font-weight:600; }
 .mwregel .meta{
@@ -1026,15 +1052,54 @@ dialog.foto-invoegen .uploadveld, dialog.uren-invoegen .uurblokformulier{
 }
 .fotoslide img{ display:block; width:100%; height:150px; object-fit:cover; background:rgba(0,0,0,0.2); }
 
-/* popup: de foto zelf op een donkere backdrop, klik ernaast sluit 'm */
+/* popup: de foto op een donkere backdrop, als glaskaart met titel, wie/
+   wanneer en downloaden/delen/sluiten eronder — in plaats van rechtstreeks
+   naar het kale mediabestand te linken. Klik naast de kaart sluit 'm, zie
+   _fotopopup.html voor de open/sluit-animatie. */
 dialog.foto-popup{
-  border:0; padding:0; background:transparent;
-  max-width:min(90vw, 900px); max-height:90vh;
+  border:0; padding:0; background:transparent; color:inherit;
+  max-width:min(92vw, 480px); width:calc(100% - 2.4rem);
+  max-height:calc(100vh - 2rem); max-height:calc(100dvh - 2rem);
+  margin-top:max(1rem, env(safe-area-inset-top));
+  margin-bottom:max(1rem, env(safe-area-inset-bottom));
+  overflow:visible;
+  /* "komt naar voren": begint iets kleiner en doorzichtig, schaalt open
+     zodra _fotopopup.html na showModal() .open-anim toevoegt. showModal()
+     zet display synchroon om, dus zonder die omweg (en het dubbele-frame-
+     wachten in JS) is er niets om te animeren, zelfde als dialog.uren-invoegen. */
+  transform:scale(.92) translateY(10px); opacity:0;
+  transition:transform .22s ease-out, opacity .22s ease-out;
 }
+dialog.foto-popup.open-anim{ transform:scale(1) translateY(0); opacity:1; }
 dialog.foto-popup::backdrop{ background:rgba(10,10,8,0.75); backdrop-filter:blur(3px); }
-dialog.foto-popup img{
-  display:block; max-width:100%; max-height:90vh; border-radius:16px;
+
+.foto-popup-kaart{
+  display:flex; flex-direction:column; border-radius:20px; overflow-y:auto;
+  overscroll-behavior:contain;
+  max-height:calc(100vh - 3rem); max-height:calc(100dvh - 3rem);
 }
+.foto-popup-kaart img{
+  display:block; width:100%; max-height:55vh; max-height:55dvh;
+  object-fit:contain; background:rgba(0,0,0,0.3);
+}
+.foto-popup-info{ padding:.9rem 1.1rem .2rem; display:grid; gap:.2rem; }
+.foto-popup-titel{ font-size:14.5px; font-weight:600; overflow-wrap:break-word; }
+.foto-popup-meta{ font-size:11.5px; color:rgba(255,255,255,0.55); }
+/* rechtsonderin, zelfde rondje-vormtaal als .weg en .dialog-sluiten */
+.foto-popup-acties{
+  display:flex; justify-content:flex-end; gap:.5rem;
+  padding:.8rem 1.1rem calc(.9rem + env(safe-area-inset-bottom));
+}
+.foto-popup-knop{
+  position:relative;
+  width:40px; height:40px; border-radius:50%; cursor:pointer;
+  display:flex; align-items:center; justify-content:center;
+  font-family:'Inter',sans-serif; font-size:19px; line-height:1;
+  background:rgba(255,255,255,0.10); color:#fff; border:1px solid rgba(255,255,255,0.24);
+}
+.foto-popup-knop::after{ content:''; position:absolute; inset:-4px; border-radius:50%; }
+.foto-popup-knop svg{ width:19px; height:19px; }
+@media (hover:hover){ .foto-popup-knop:hover{ background:rgba(255,255,255,0.18); } }
 
 .soort-badge{
   display:inline-flex; align-items:center; width:fit-content;
@@ -1389,3 +1454,27 @@ label:has(> input[type=checkbox]), input[type=checkbox] + label{ cursor:pointer;
   color:rgba(255,255,255,0.55);
 }
 .aanwezig-rij .opmerking{ font-size:12.5px; color:rgba(255,255,255,0.7); }
+
+/* ══════════ PAGINA-OVERGANG: KLUS OPENEN/SLUITEN ══════════
+   Native cross-document View Transition, geen JS-framework nodig. Zonder
+   ondersteuning (oudere browsers) navigeert de link gewoon zonder animatie —
+   er is dus geen aparte vangnet-styling nodig. De richting (open/terug) komt
+   uit static/js/klus-overgang.js, dat op elke pagina meeloopt. */
+@view-transition{ navigation:auto; }
+
+:root:active-view-transition-type(klus-open)::view-transition-old(root){
+  animation:klus-overgang-stilstaan .32s both;
+}
+:root:active-view-transition-type(klus-open)::view-transition-new(root){
+  animation:klus-overgang-in .32s cubic-bezier(.32,.72,0,1) both;
+}
+:root:active-view-transition-type(klus-terug)::view-transition-old(root){
+  animation:klus-overgang-uit .32s cubic-bezier(.32,.72,0,1) both;
+  z-index:1;
+}
+:root:active-view-transition-type(klus-terug)::view-transition-new(root){
+  animation:klus-overgang-stilstaan .32s both;
+}
+@keyframes klus-overgang-in{ from{ transform:translateX(100%); } to{ transform:translateX(0); } }
+@keyframes klus-overgang-uit{ from{ transform:translateX(0); } to{ transform:translateX(100%); } }
+@keyframes klus-overgang-stilstaan{ from{ opacity:1; } to{ opacity:1; } }

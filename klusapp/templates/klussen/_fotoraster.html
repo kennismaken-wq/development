@@ -8,36 +8,43 @@
    De thumbnail staat in het raster, de klik opent de volle versie. Beide gaan
    langs media_bestand, dus ook hier geldt: zonder inloggen geen bestand. {% endcomment %}
 {% load bijlagen %}
-<div class="fotoraster">
-  <button type="button" class="fotokaart-nieuw" onclick="document.getElementById('foto-invoegen').showModal()" aria-label="Foto of document toevoegen">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-  </button>
-  {% for bijlage in foto_bijlagen %}
-    <figure class="fotokaart">
-      <a href="{% url 'media_bestand' bijlage.bestand.name %}" target="_blank" rel="noopener">
-        <img src="{% url 'media_bestand' bijlage.thumbnail.name|default:bijlage.bestand.name %}"
-             alt="{{ bijlage.toonnaam }}" loading="lazy">
-      </a>
-      <figcaption>
-        {% if toon_klus and bijlage.klus %}
-          <a href="{{ bijlage.klus.get_absolute_url }}" class="klus-badge">{{ bijlage.klus.naam }}</a>
+{% comment %} De wrapper eromheen is het aangrijpunt voor het live zoeken op de
+   foto tab (static/js/fotozoeken.js): die vervangt bij elke toetsaanslag
+   alleen dit stuk, en laat de uploaddialoog erbuiten met rust. Op een
+   klusdossier of uurblok (waar dat script niet geladen wordt) doet de div
+   verder niets. {% endcomment %}
+<div class="fotoraster-resultaten">
+  <div class="fotoraster">
+    <button type="button" class="fotokaart-nieuw" onclick="document.getElementById('foto-invoegen').showModal()" aria-label="{% if alleen_fotos %}Foto toevoegen{% else %}Foto of document toevoegen{% endif %}">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+    </button>
+    {% for bijlage in foto_bijlagen %}
+      <figure class="fotokaart">
+        <a href="{% url 'media_bestand' bijlage.bestand.name %}" target="_blank" rel="noopener">
+          <img src="{% url 'media_bestand' bijlage.thumbnail.name|default:bijlage.bestand.name %}"
+               alt="{{ bijlage.toonnaam }}" loading="lazy">
+        </a>
+        <figcaption>
+          {% if toon_klus and bijlage.klus %}
+            <a href="{{ bijlage.klus.get_absolute_url }}" class="klus-badge">{{ bijlage.klus.naam }}</a>
+          {% endif %}
+          {% if bijlage.toelichting %}<span class="wat">{{ bijlage.toelichting }}</span>{% endif %}
+          <span class="wie">{{ bijlage.toegevoegd_door.naam|default:"onbekend" }} · {{ bijlage.datum|date:"j M" }}</span>
+        </figcaption>
+        {% if bijlage|mag_weg:user %}
+          <form method="post" action="{% url 'bijlage_verwijderen' bijlage.pk %}" class="weg"
+                onsubmit="return confirm('Deze foto verwijderen?');">
+            {% csrf_token %}
+            <input type="hidden" name="terug" value="{{ terug }}">
+            <button type="submit" title="Verwijderen" aria-label="Verwijderen">×</button>
+          </form>
         {% endif %}
-        {% if bijlage.toelichting %}<span class="wat">{{ bijlage.toelichting }}</span>{% endif %}
-        <span class="wie">{{ bijlage.toegevoegd_door.naam|default:"onbekend" }} · {{ bijlage.datum|date:"j M" }}</span>
-      </figcaption>
-      {% if bijlage|mag_weg:user %}
-        <form method="post" action="{% url 'bijlage_verwijderen' bijlage.pk %}" class="weg"
-              onsubmit="return confirm('Deze foto verwijderen?');">
-          {% csrf_token %}
-          <input type="hidden" name="terug" value="{{ terug }}">
-          <button type="submit" title="Verwijderen" aria-label="Verwijderen">×</button>
-        </form>
-      {% endif %}
-    </figure>
-  {% endfor %}
+      </figure>
+    {% endfor %}
+  </div>
+  {% if not foto_bijlagen %}
+    <p class="leeg">{% if zoek %}Niets gevonden voor "{{ zoek }}".{% else %}Nog geen foto's.{% endif %}</p>
+  {% endif %}
 </div>
-{% if not foto_bijlagen %}
-  <p class="leeg">{% if zoek %}Niets gevonden voor "{{ zoek }}".{% else %}Nog geen foto's.{% endif %}</p>
-{% endif %}
 
 {% include "klussen/_fotodialoog.html" %}

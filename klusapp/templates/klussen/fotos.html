@@ -11,6 +11,7 @@
     <label class="weergave-kiezer">
       <select name="klus" form="foto-zoekform" onchange="this.form.submit()">
         <option value="">Alle klussen</option>
+        <option value="algemeen"{% if klus_pk == "algemeen" %} selected{% endif %}>Algemeen</option>
         {% for klus in klussen %}
           <option value="{{ klus.pk }}"{% if klus_pk == klus.pk|stringformat:"s" %} selected{% endif %}>{{ klus.naam }}{% if not klus.actief %} (afgerond){% endif %}</option>
         {% endfor %}
@@ -21,4 +22,7 @@
   </div>
 
   {% include "klussen/_fotoraster.html" with toon_klus=True %}
+
+  {% load static %}
+  <script src="{% static 'js/fotozoeken.js' %}"></script>
 {% endblock %}

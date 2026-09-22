@@ -149,13 +149,28 @@ class BijlageUploadTest(TestCase):
     def test_document_houdt_zijn_naam_en_krijgt_geen_thumbnail(self):
         self.client.post(
             reverse("bijlage_toevoegen"),
-            {"bestanden": upload("Tuinontwerp definitief.pdf", b"%PDF-1.4", "application/pdf")},
+            {
+                "bestanden": upload("Tuinontwerp definitief.pdf", b"%PDF-1.4", "application/pdf"),
+                "klus": self.klus.pk,
+            },
         )
         bijlage = Bijlage.objects.get()
         self.assertEqual(bijlage.soort, Bijlage.Soort.DOCUMENT)
         self.assertEqual(bijlage.originele_naam, "Tuinontwerp definitief.pdf")
         self.assertEqual(bijlage.toonnaam, "Tuinontwerp definitief.pdf")
         self.assertFalse(bijlage.thumbnail)
+
+    def test_document_zonder_klus_of_uurblok_wordt_geweigerd(self):
+        # De fotodropbox (de "+" op de foto tab) is foto's-only: een document
+        # zonder klus eronder kon vroeger alleen via de documentenlijst op dat
+        # scherm teruggevonden worden, en die lijst is daar weg (zie fotos.html).
+        antwoord = self.client.post(
+            reverse("bijlage_toevoegen"),
+            {"bestanden": upload("Tuinontwerp.pdf", b"%PDF-1.4", "application/pdf")},
+            follow=True,
+        )
+        self.assertFalse(Bijlage.objects.exists())
+        self.assertContains(antwoord, "geen document")
 
     def test_zonder_bestand_geen_bijlage(self):
         self.client.post(reverse("bijlage_toevoegen"), {"toelichting": "vergeten"})
@@ -336,9 +351,10 @@ class MediaTest(TestCase):
         # Zonder dit forceert de browser een downloaddialoog in plaats van de
         # pdf te tonen, en daarmee is er geen preview "in de app zelf".
         self.client.force_login(self.sam)
+        klus = Klus.objects.create(naam="Tuin Vermeer")
         self.client.post(
             reverse("bijlage_toevoegen"),
-            {"bestanden": upload("Offerte.pdf", b"%PDF-1.4", "application/pdf")},
+            {"bestanden": upload("Offerte.pdf", b"%PDF-1.4", "application/pdf"), "klus": klus.pk},
         )
         bijlage = Bijlage.objects.get()
         antwoord = self.client.get(reverse("media_bestand", args=[bijlage.bestand.name]))

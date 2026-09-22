@@ -12,7 +12,7 @@
   {% if uurblok_pk %}<input type="hidden" name="uurblok" value="{{ uurblok_pk }}">{% endif %}
   <input type="hidden" name="terug" value="{{ terug }}">
 
-  <label for="{{ formulier.bestanden.id_for_label }}">Foto's of documenten</label>
+  <label for="{{ formulier.bestanden.id_for_label }}">{% if alleen_fotos %}Foto's{% else %}Foto's of documenten{% endif %}</label>
   {{ formulier.bestanden }}
 
   <label for="{{ formulier.datum.id_for_label }}">Datum</label>
