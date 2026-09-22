@@ -18,7 +18,7 @@ from medewerkers.models import Medewerker
 from uren import totalen
 from uren.models import Uurblok
 
-from . import afbeeldingen, fotoposts, kleuren, pdf_thumbnails, views, voorbeeld
+from . import afbeeldingen, fotoposts, kleuren, opdrachtgevers, pdf_thumbnails, views, voorbeeld
 from .models import Bijlage, Klus
 
 TIJDELIJKE_MEDIA = tempfile.mkdtemp()
@@ -686,12 +686,41 @@ class KlusBeheerTest(TestCase):
         self.assertEqual(antwoord.status_code, 302)
         self.assertIn(reverse("inloggen"), antwoord.headers["Location"])
 
-    def test_aanlegklus_zonder_startdatum_wordt_geweigerd(self):
+    def test_eenmalige_klus_zonder_startdatum_wordt_geweigerd(self):
         self.client.force_login(self.maarten)
         antwoord = self.client.post(reverse("klus_nieuw"), self.geldig(startdatum=""))
         self.assertEqual(antwoord.status_code, 200)
-        self.assertContains(antwoord, "startdatum van de aanlegklus")
+        self.assertContains(antwoord, "startdatum van de eenmalige klus")
         self.assertFalse(Klus.objects.exists())
+
+    def test_klus_zonder_opdrachtgever_wordt_geweigerd(self):
+        # Zonder opdrachtgever valt een klus buiten elke suggestie en elke
+        # waarschuwing, en is "Onderhoud vaste klanten" weer de bak waarin
+        # alles verdwijnt. Het modelveld blijft blank=True, dit formulier niet.
+        self.client.force_login(self.maarten)
+        antwoord = self.client.post(reverse("klus_nieuw"), self.geldig(opdrachtgever=""))
+        self.assertEqual(antwoord.status_code, 200)
+        self.assertFalse(Klus.objects.exists())
+
+    def test_soort_staat_als_keuzepillen_bovenaan(self):
+        # Geen <select> tussen de velden: dit is de keuze die bepaalt wat de
+        # rest van het formulier betekent (SPEC §1, aanleg versus onderhoud).
+        self.client.force_login(self.maarten)
+        inhoud = self.client.get(reverse("klus_nieuw")).content.decode()
+        self.assertIn('type="radio" name="soort"', inhoud)
+        self.assertIn("Eenmalig", inhoud)
+        self.assertIn("Onderhoud", inhoud)
+        # ritme → wie → waar → naam, niet het alfabet en niet de modelvolgorde
+        self.assertLess(inhoud.index('name="soort"'), inhoud.index('name="opdrachtgever"'))
+        self.assertLess(inhoud.index('name="opdrachtgever"'), inhoud.index('name="adres"'))
+        self.assertLess(inhoud.index('name="adres"'), inhoud.index('name="naam"'))
+
+    def test_label_van_aanleg_is_eenmalig(self):
+        # De databasewaarde blijft "aanleg"; alleen wat Maarten leest verandert,
+        # want de as die dit veld beschrijft is ritme en geen soort werk.
+        klus = Klus.objects.create(naam="Tuin Vermeer", soort=Klus.Soort.AANLEG)
+        self.assertEqual(klus.soort, "aanleg")
+        self.assertEqual(klus.get_soort_display(), "Eenmalig")
 
     def test_onderhoudsklant_heeft_geen_startdatum(self):
         # Een onderhoudsklant is een terugkerende afspraak zonder begin.
@@ -718,12 +747,16 @@ class KlusBeheerTest(TestCase):
 
     def test_alleen_de_eigenaar_ziet_de_knoppen(self):
         klus = Klus.objects.create(naam="Tuin Vermeer")
+        # Op de url en niet op het woord "Bewerken": de knop op het dossier is
+        # een potlood met een aria-label (zie _klushero.html), dus een test op
+        # de tekst gaat stuk zodra het icoon verandert.
+        bewerken = reverse("klus_bewerken", args=[klus.pk])
         self.client.force_login(self.sam)
         self.assertNotContains(self.client.get(reverse("klussen")), "Nieuwe klus")
-        self.assertNotContains(self.client.get(klus.get_absolute_url()), "Bewerken")
+        self.assertNotContains(self.client.get(klus.get_absolute_url()), bewerken)
         self.client.force_login(self.maarten)
         self.assertContains(self.client.get(reverse("klussen")), "Nieuwe klus")
-        self.assertContains(self.client.get(klus.get_absolute_url()), "Bewerken")
+        self.assertContains(self.client.get(klus.get_absolute_url()), bewerken)
 
 
 @override_settings(MEDIA_ROOT=TIJDELIJKE_MEDIA)
@@ -747,6 +780,7 @@ class KlusBijlagenBijAanmakenTest(TestCase):
             "naam": "Tuin Vermeer",
             "soort": Klus.Soort.AANLEG,
             "startdatum": "2026-09-14",
+            "opdrachtgever": "Fam. Vermeer",
             "adres": "Dijkweg 12",
             "plaats": "Maasdijk",
             "actief": "on",
@@ -766,13 +800,66 @@ class KlusBijlagenBijAanmakenTest(TestCase):
         self.client.force_login(self.maarten)
         self.client.post(
             reverse("klus_nieuw"),
-            self.geldig(bestanden=upload("Offerte.pdf", b"%PDF-1.4", "application/pdf")),
+            self.geldig(documenten=upload("Offerte.pdf", pdf(), "application/pdf")),
         )
         klus = Klus.objects.get()
         bijlage = klus.bijlagen.get()
         self.assertEqual(bijlage.soort, Bijlage.Soort.DOCUMENT)
         self.assertEqual(bijlage.originele_naam, "Offerte.pdf")
         self.assertEqual(bijlage.toegevoegd_door, self.maarten)
+
+    def test_gefotografeerde_tekening_blijft_een_document(self):
+        # Dit is waarom er twee velden zijn: een foto van een tekening hoort in
+        # de documentenlijst en niet tussen de werkfoto's in het fotoraster.
+        # Het bestand is een echte jpeg, alleen de bestemming verschilt.
+        self.client.force_login(self.maarten)
+        self.client.post(
+            reverse("klus_nieuw"), self.geldig(documenten=upload("tekening.jpg"))
+        )
+        bijlage = Klus.objects.get().bijlagen.get()
+        self.assertEqual(bijlage.soort, Bijlage.Soort.DOCUMENT)
+        self.assertFalse(bijlage.is_foto)
+
+    def test_foto_in_het_fotoveld_blijft_een_foto(self):
+        self.client.force_login(self.maarten)
+        self.client.post(reverse("klus_nieuw"), self.geldig(bestanden=upload("tuin.jpg")))
+        bijlage = Klus.objects.get().bijlagen.get()
+        self.assertEqual(bijlage.soort, Bijlage.Soort.FOTO)
+        self.assertTrue(bijlage.thumbnail)
+
+    def test_document_in_het_fotoveld_gaat_niet_verloren(self):
+        # De offerte in het verkeerde vakje: die schuift naar de documenten in
+        # plaats van geweigerd te worden. De klus staat op dat moment al, dus
+        # weigeren zou betekenen dat het bestand weg is en Maarten 'm opnieuw
+        # moet opzoeken.
+        self.client.force_login(self.maarten)
+        antwoord = self.client.post(
+            reverse("klus_nieuw"),
+            self.geldig(bestanden=upload("Offerte.pdf", pdf(), "application/pdf")),
+            follow=True,
+        )
+        bijlage = Klus.objects.get().bijlagen.get()
+        self.assertEqual(bijlage.soort, Bijlage.Soort.DOCUMENT)
+        self.assertContains(antwoord, "Offerte.pdf staat bij de documenten")
+
+    def test_fotos_en_documenten_tegelijk(self):
+        self.client.force_login(self.maarten)
+        self.client.post(
+            reverse("klus_nieuw"),
+            self.geldig(
+                bestanden=[upload("een.jpg"), upload("twee.jpg")],
+                documenten=upload("Tekening.pdf", pdf(), "application/pdf"),
+            ),
+        )
+        klus = Klus.objects.get()
+        self.assertEqual(klus.bijlagen.filter(soort=Bijlage.Soort.FOTO).count(), 2)
+        self.assertEqual(klus.bijlagen.filter(soort=Bijlage.Soort.DOCUMENT).count(), 1)
+        # Eigen batch per stapel: het fotoraster toont een upload van meerdere
+        # bestanden als één post, en de tekening hoort daar niet in te zitten.
+        fotobatches = set(klus.bijlagen.filter(soort=Bijlage.Soort.FOTO).values_list("batch", flat=True))
+        document = klus.bijlagen.get(soort=Bijlage.Soort.DOCUMENT)
+        self.assertEqual(len(fotobatches), 1)
+        self.assertNotIn(document.batch, fotobatches)
 
     def test_meerdere_bestanden_tegelijk_bij_het_aanmaken(self):
         self.client.force_login(self.maarten)
@@ -878,6 +965,7 @@ class KlusKleurTest(TestCase):
             "naam": "Tuin Vermeer",
             "soort": Klus.Soort.AANLEG,
             "startdatum": "2026-09-14",
+            "opdrachtgever": "Fam. Vermeer",
             "adres": "Dijkweg 12",
             "plaats": "Maasdijk",
             "actief": "on",
@@ -1065,3 +1153,84 @@ class GewerkteUrenOpKlusTest(TestCase):
         antwoord = self.client.get(self.klus.get_absolute_url())
         self.assertContains(antwoord, "Sam de Wit")
         self.assertContains(antwoord, "Voorman")
+
+
+class BekendeOpdrachtgeversTest(TestCase):
+    """Wat het aanmaakformulier al weet (klussen.opdrachtgevers).
+
+    Het adres hoort bij de klus en niet bij de opdrachtgever — bij een
+    particulier valt dat samen, bij een VvE met drie terreinen niet. Deze
+    module levert daarom suggesties en geen overerving.
+    """
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.maarten = Medewerker.objects.create_user(
+            "maarten", password="x", rol=Medewerker.Rol.EIGENAAR
+        )
+
+    def test_adressen_staan_bij_hun_opdrachtgever(self):
+        Klus.objects.create(
+            naam="Onderhoud Dijkweg", soort=Klus.Soort.ONDERHOUD,
+            opdrachtgever="VvE Parkzicht", adres="Dijkweg 12", plaats="Maasdijk",
+        )
+        Klus.objects.create(
+            naam="Onderhoud Parklaan", soort=Klus.Soort.ONDERHOUD,
+            opdrachtgever="VvE Parkzicht", adres="Parklaan 4", plaats="Naaldwijk",
+        )
+        groepen = opdrachtgevers.bekende_opdrachtgevers()
+        self.assertEqual([groep["naam"] for groep in groepen], ["VvE Parkzicht"])
+        self.assertEqual(
+            sorted(plek["adres"] for plek in groepen[0]["adressen"]),
+            ["Dijkweg 12", "Parklaan 4"],
+        )
+
+    def test_spelling_verschilt_maar_het_is_dezelfde_klant(self):
+        # Zonder dit is het de ene keer "Fam. Vermeer" en de andere keer
+        # "fam.  vermeer", en is er geen koppeling meer tussen de klussen.
+        Klus.objects.create(naam="Tuin", opdrachtgever="Fam. Vermeer", adres="Dijkweg 12")
+        Klus.objects.create(naam="Haag", opdrachtgever="fam.  vermeer", adres="Dijkweg 99")
+        groepen = opdrachtgevers.bekende_opdrachtgevers()
+        self.assertEqual(len(groepen), 1)
+        self.assertEqual(len(groepen[0]["adressen"]), 2)
+
+    def test_klussen_op_een_adres_komen_mee_met_hun_label_en_link(self):
+        klus = Klus.objects.create(
+            naam="Onderhoud Dijkweg", soort=Klus.Soort.ONDERHOUD,
+            opdrachtgever="Fam. Vermeer", adres="Dijkweg 12", plaats="Maasdijk",
+        )
+        plek = opdrachtgevers.bekende_opdrachtgevers()[0]["adressen"][0]
+        self.assertEqual(
+            plek["klussen"],
+            [{"naam": "Onderhoud Dijkweg", "soort": "Onderhoud",
+              "url": klus.get_absolute_url(), "actief": True}],
+        )
+
+    def test_de_klus_die_je_bewerkt_waarschuwt_niet_over_zichzelf(self):
+        klus = Klus.objects.create(
+            naam="Onderhoud Dijkweg", opdrachtgever="Fam. Vermeer", adres="Dijkweg 12"
+        )
+        self.assertEqual(opdrachtgevers.bekende_opdrachtgevers(uitgezonderd=klus), [])
+
+    def test_klus_zonder_opdrachtgever_doet_niet_mee(self):
+        Klus.objects.create(naam="Los", adres="Dijkweg 12")
+        self.assertEqual(opdrachtgevers.bekende_opdrachtgevers(), [])
+
+    def test_het_formulier_krijgt_de_gegevens_mee(self):
+        # In één blok in de pagina, dus geen tweede verzoek en geen HTMX.
+        Klus.objects.create(naam="Onderhoud Dijkweg", opdrachtgever="Fam. Vermeer", adres="Dijkweg 12")
+        self.client.force_login(self.maarten)
+        antwoord = self.client.get(reverse("klus_nieuw"))
+        self.assertContains(antwoord, 'id="bekende-opdrachtgevers"')
+        self.assertContains(antwoord, "Fam. Vermeer")
+
+    def test_een_klus_met_veel_klussen_kost_een_vaste_hoeveelheid_queries(self):
+        # get_absolute_url en get_soort_display mogen niet per klus een query
+        # doen; met veertig onderhoudsklanten loopt dat anders hard op.
+        for nummer in range(20):
+            Klus.objects.create(
+                naam=f"Onderhoud {nummer}", opdrachtgever=f"Klant {nummer}", adres=f"Weg {nummer}"
+            )
+        with CaptureQueriesContext(connection) as queries:
+            opdrachtgevers.bekende_opdrachtgevers()
+        self.assertEqual(len(queries), 1)

@@ -9,12 +9,31 @@ class KlusForm(forms.ModelForm):
 
     Bewust weinig velden: SPEC §3 zet het uitgebreide klantbestand
     (contracttype, factuurperiode) in fase 2. Meer dan dit hoeft nu niet.
+
+    De veldvolgorde is de beslisboom van het scherm en geen alfabet:
+
+        1. soort          — ritme: eenmalig of doorlopend
+        2. opdrachtgever  — wie (verplicht, met suggesties uit wat er al staat)
+        3. adres/plaats   — waar (voorgevuld uit de klussen die deze
+                            opdrachtgever al heeft, zie klussen.opdrachtgevers)
+        4. naam           — volgt uit 2 en 3, dus komt erna
+        5. startdatum     — alleen bij eenmalig
+
+    Stap 3 en 4 worden voorgesteld door static/js/klusformulier.js; zonder
+    javascript blijft het een gewoon formulier waarin je alles zelf typt en
+    valideert de server hetzelfde.
     """
 
     class Meta:
         model = Klus
-        fields = ["naam", "soort", "startdatum", "opdrachtgever", "adres", "plaats", "beschrijving", "kleur", "actief"]
+        fields = ["soort", "opdrachtgever", "adres", "plaats", "naam", "startdatum", "beschrijving", "kleur", "actief"]
         widgets = {
+            # Twee keuzepillen in plaats van een <select>: dit is de keuze die
+            # bepaalt wat de rest van het formulier betekent, en die hoort er
+            # niet uit te zien als het minst belangrijke veld op het scherm.
+            # De opmaak zit in .keuzepil (app.css), hetzelfde component als de
+            # standen op het aanwezigheidsscherm.
+            "soort": forms.RadioSelect,
             # format="%Y-%m-%d" is verplicht bij type="date": zonder dat rendert
             # Django een bestaande datum in het Nederlandse formaat en toont de
             # browser een leeg veld.
@@ -47,6 +66,12 @@ class KlusForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        # Verplicht in dít formulier, terwijl het modelveld blank=True blijft:
+        # bestaande klussen zonder opdrachtgever moeten nog te bewerken zijn en
+        # /beheer/ mag 'm leeg laten. Zonder opdrachtgever valt een klus buiten
+        # elke suggestie en elke waarschuwing hieronder — dan is "Onderhoud
+        # vaste klanten" weer de bak waarin alles verdwijnt.
+        self.fields["opdrachtgever"].required = True
         if not self.instance.pk:
             # Nieuwe klus: de kleur wordt automatisch toegewezen (zie
             # klussen.views.klus_nieuw / klussen.kleuren.volgende_kleur), dus
@@ -65,7 +90,7 @@ class KlusForm(forms.ModelForm):
         if gegevens.get("soort") == Klus.Soort.ONDERHOUD:
             gegevens["startdatum"] = None
         elif not gegevens.get("startdatum"):
-            self.add_error("startdatum", "Vul de startdatum van de aanlegklus in.")
+            self.add_error("startdatum", "Vul de startdatum van de eenmalige klus in.")
         return gegevens
 
 
@@ -196,10 +221,34 @@ class KlusFotoForm(BijlageForm):
 
 
 class NieuweKlusBijlagenForm(BijlageForm):
-    """Zelfde uploadveld als BijlageForm, maar dan naast het aanmaakformulier
-    van een klus: bestanden kiezen is daar geen verplichte stap — een klus
-    zonder foto's of documenten moet gewoon aan te maken zijn."""
+    """De twee uploadvelden naast het aanmaakformulier van een klus.
+
+    Twee en niet één, want bij het aanmaken heb je sowieso twee stapels: foto's
+    van hoe het er nu bij ligt, en de tekening of offerte die je van de klant
+    kreeg. Met één veld plus een vinkje moet Maarten nadenken over de
+    categorie; met twee velden wordt die vraag niet gesteld — en dat past bij
+    "geen hinttekst" uit SPEC §5.
+
+    Het verschil zit niet in het bestandstype maar in waar het terechtkomt:
+    `documenten` slaat op met forceer_document (zie klussen.views), dus ook een
+    gefotografeerde tekening blijft een document en verschijnt niet tussen de
+    werkfoto's in het fotoraster. Precies waarom die vlag bestaat.
+
+    Kiezen is bij beide geen verplichte stap: een klus zonder bijlagen moet
+    gewoon aan te maken zijn."""
+
+    documenten = MeerdereBestandenVeld(label="Technische documenten", required=False)
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.fields["bestanden"].required = False
+        self.fields["bestanden"].label = "Foto's"
+        # Alleen foto's aanbieden in dit veld. Een document dat hier toch
+        # gekozen wordt gaat niet verloren: de view zet het bij de documenten
+        # en zegt dat ook (zie klussen.views.klus_nieuw). Weigeren zou hier
+        # betekenen dat de klus al bestaat maar de offerte weg is.
+        self.fields["bestanden"].widget.attrs["accept"] = "image/*"
+        self.fields["bestanden"].widget.attrs.update(
+            {"data-knoptekst": "Foto's kiezen", "data-knopicoon": "foto"}
+        )
+        self.fields["documenten"].widget.attrs["data-knoptekst"] = "Documenten kiezen"

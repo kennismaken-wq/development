@@ -13,26 +13,109 @@
 {% endblock %}
 {% block kop %}{% if nieuw %}Nieuwe klus{% else %}Klus bewerken{% endif %}{% endblock %}
 {% block inhoud %}
-  <form method="post" enctype="multipart/form-data">
+  {% comment %} De velden staan hier expliciet en niet meer in een lus over het
+     formulier. Dat is nodig omdat er tussen de velden dingen staan die geen
+     veld zijn: de bekende adressen van deze opdrachtgever, en de waarschuwing
+     dat er op dit adres al een klus staat. Beide worden gevuld door
+     static/js/klusformulier.js uit het json_script onderaan.
+
+     De volgorde is de beslisboom van het scherm: ritme → wie → waar → naam.
+     Zie de docstring van klussen.forms.KlusForm.
+
+     Zonder javascript blijft dit een gewoon formulier: alle velden staan er,
+     je typt zelf wat je weet, en de server valideert precies hetzelfde. De
+     twee lege containers blijven dan leeg. {% endcomment %}
+  <form method="post" enctype="multipart/form-data" id="klusformulier">
     {% csrf_token %}
-    {% for veld in formulier %}
-      {% if veld.is_hidden %}
-        {{ veld }}
-      {% else %}
-        <label for="{{ veld.id_for_label }}">{{ veld.label }}</label>
-        {{ veld }}
-      {% endif %}
-      {% for fout in veld.errors %}<p class="fout">{{ fout }}</p>{% endfor %}
-    {% endfor %}
+
+    {% comment %} ── 1. Ritme. Keuzepillen, geen select: dit is de keuze die bepaalt wat
+          de rest van het formulier betekent (zie forms.KlusForm). ── {% endcomment %}
+    <label id="soort-label">{{ formulier.soort.label }}</label>
+    <div class="keuzes" role="radiogroup" aria-labelledby="soort-label">
+      {% for keuze in formulier.soort %}
+        <label class="keuzepil kies">{{ keuze.tag }}<span class="vlak">{{ keuze.choice_label }}</span></label>
+      {% endfor %}
+    </div>
+    {% for fout in formulier.soort.errors %}<p class="fout">{{ fout }}</p>{% endfor %}
+
+    {# ── 2. Wie ── #}
+    <label for="{{ formulier.opdrachtgever.id_for_label }}">{{ formulier.opdrachtgever.label }}</label>
+    {{ formulier.opdrachtgever }}
+    {% for fout in formulier.opdrachtgever.errors %}<p class="fout">{{ fout }}</p>{% endfor %}
+
+    {% comment %} ── 3. Waar. De adressen die deze opdrachtgever al heeft komen hierboven
+          te staan als pillen; het adres zelf blijft een veld, want het hoort
+          bij de klus en niet bij de klant. ── {% endcomment %}
+    <div id="bekende-adressen" hidden></div>
+
+    <label for="{{ formulier.adres.id_for_label }}">{{ formulier.adres.label }}</label>
+    {{ formulier.adres }}
+    {% for fout in formulier.adres.errors %}<p class="fout">{{ fout }}</p>{% endfor %}
+
+    <label for="{{ formulier.plaats.id_for_label }}">{{ formulier.plaats.label }}</label>
+    {{ formulier.plaats }}
+    {% for fout in formulier.plaats.errors %}<p class="fout">{{ fout }}</p>{% endfor %}
+
+    {% comment %} Staat er op deze opdrachtgever + dit adres al een klus, dan komt dat
+       hier te staan — met een link erheen en de keuze om er alsnog een aparte
+       naast te zetten. Een waarschuwing, geen blokkade: twee afspraken op één
+       adres is een geldig geval, per ongeluk een tweede dossier maken niet. {% endcomment %}
+    <div id="klusbotsing" hidden></div>
+
+    {% comment %} ── 4. Naam. Volgt uit 2 en 3, dus staat erna; klusformulier.js stelt er
+          een naam voor zolang je zelf niets hebt getypt. ── {% endcomment %}
+    <label for="{{ formulier.naam.id_for_label }}">{{ formulier.naam.label }}</label>
+    {{ formulier.naam }}
+    {% for fout in formulier.naam.errors %}<p class="fout">{{ fout }}</p>{% endfor %}
+
+    {% comment %} ── 5. Alleen bij een eenmalige klus. Een onderhoudsklant is een
+          terugkerende afspraak zonder begin (SPEC §1), dus verbergt
+          klusformulier.js dit blok zodra Onderhoud gekozen is. De server gooit
+          de waarde daar hoe dan ook weg, zie forms.KlusForm.clean. ── {% endcomment %}
+    <div id="veld-startdatum">
+      <label for="{{ formulier.startdatum.id_for_label }}">{{ formulier.startdatum.label }}</label>
+      {{ formulier.startdatum }}
+      {% for fout in formulier.startdatum.errors %}<p class="fout">{{ fout }}</p>{% endfor %}
+    </div>
+
+    <label for="{{ formulier.beschrijving.id_for_label }}">{{ formulier.beschrijving.label }}</label>
+    {{ formulier.beschrijving }}
+    {% for fout in formulier.beschrijving.errors %}<p class="fout">{{ fout }}</p>{% endfor %}
+
+    {% comment %} Verborgen bij een nieuwe klus (de kleur wordt dan automatisch bepaald),
+       een kleurkiezer bij het bewerken. Zie forms.KlusForm.__init__. {% endcomment %}
+    {% if formulier.kleur.is_hidden %}
+      {{ formulier.kleur }}
+    {% else %}
+      <label for="{{ formulier.kleur.id_for_label }}">{{ formulier.kleur.label }}</label>
+      {{ formulier.kleur }}
+    {% endif %}
+    {% for fout in formulier.kleur.errors %}<p class="fout">{{ fout }}</p>{% endfor %}
+
+    <label for="{{ formulier.actief.id_for_label }}">{{ formulier.actief.label }}</label>
+    {{ formulier.actief }}
+    {% for fout in formulier.actief.errors %}<p class="fout">{{ fout }}</p>{% endfor %}
 
     {% if bijlagenformulier %}
-      <label for="{{ bijlagenformulier.bestanden.id_for_label }}">Foto's of documenten</label>
+      {% comment %} Twee stapels, twee velden: foto's van de situatie, en de
+         tekening of offerte. Het verschil is niet het bestandstype maar waar
+         het terechtkomt — wat in "Technische documenten" gaat blijft een
+         document, ook een gefotografeerde tekening. Zie
+         klussen.forms.NieuweKlusBijlagenForm. {% endcomment %}
+      <label for="{{ bijlagenformulier.bestanden.id_for_label }}">{{ bijlagenformulier.bestanden.label }}</label>
       {{ bijlagenformulier.bestanden }}
       {% for fout in bijlagenformulier.bestanden.errors %}<p class="fout">{{ fout }}</p>{% endfor %}
+
+      <label for="{{ bijlagenformulier.documenten.id_for_label }}">{{ bijlagenformulier.documenten.label }}</label>
+      {{ bijlagenformulier.documenten }}
+      {% for fout in bijlagenformulier.documenten.errors %}<p class="fout">{{ fout }}</p>{% endfor %}
     {% endif %}
 
     <p style="margin-top:1.8rem"><button type="submit" class="knop">Opslaan</button></p>
   </form>
+
+  {{ opdrachtgevers|json_script:"bekende-opdrachtgevers" }}
+  <script src="{% static 'js/klusformulier.js' %}"></script>
   <script src="{% static 'js/adres-zoeken.js' %}"></script>
   {% if bijlagenformulier %}<script src="{% static 'js/bestandsveld.js' %}"></script>{% endif %}
 {% endblock %}

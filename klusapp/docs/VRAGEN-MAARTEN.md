@@ -133,6 +133,44 @@ wordt; dan weten we ook meteen hoe lang "te lang" is.
 
 ---
 
+## 8. Mag "Aanleg" voortaan "Eenmalig" heten?
+
+**Vraag:** In de app staat bij elke klus of het aanleg of onderhoud is. Klopt het woord
+"aanleg" voor álles wat eenmalig is — ook een snoeibeurt, of stormschade opruimen?
+
+**Waarom het uitmaakt:** het veld beschrijft eigenlijk het *ritme* (eenmalig of
+doorlopend), niet het soort werk. Een snoeiklus is eenmalig maar geen aanleg, en met het
+woord "aanleg" is niet duidelijk waar die dan thuishoort. Sinds 23-09-2026 staat het
+label op **Eenmalig**; de databasewaarde is ongewijzigd `aanleg`, dus terugdraaien is
+één regel.
+
+**Als er geen antwoord komt:** het blijft "Eenmalig". Maar "aanleg versus onderhoud" is
+Maartens eigen taal (zo staat het ook in SPEC §1), dus het is het vragen waard of het
+woord uit het scherm halen niet verwarrender is dan het probleem dat het oplost.
+
+**Antwoord:**
+
+---
+
+## 9. Hoe fijn moet een onderhoudsklus worden opgeknipt?
+
+**Vraag:** Als je bij dezelfde klant op hetzelfde adres twee losse afspraken hebt — zeg
+het groenonderhoud en apart de bestrating — wil je die dan als twee klussen zien, of als
+één met verschillende werkzaamheden erin?
+
+**Waarom het uitmaakt:** de app splitst op "wat wil je apart optellen". Twee klussen
+betekent twee dossiers, twee totalen, en twee regels in de keuzelijst waar de medewerker
+'''s avonds uit kiest. Eén klus betekent één totaal, met het verschil in de toelichting op
+het uurblok. Het formulier waarschuwt sinds 23-09-2026 wel als er op een adres al een
+klus staat, maar laat je bewust doorgaan — de keuze is aan Maarten, niet aan ons.
+
+**Als er geen antwoord komt:** zo laten. De waarschuwing vangt het geval waar het
+misgaat (per ongeluk een tweede dossier), en de rest blijft zijn beslissing.
+
+**Antwoord:**
+
+---
+
 ## Niet vragen, wel vertellen
 
 - **Back-ups gaan off-site.** De verwerkersovereenkomst belooft dagelijkse back-ups maar

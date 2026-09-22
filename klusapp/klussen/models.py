@@ -8,12 +8,24 @@ from django.utils import timezone
 
 
 class Klus(models.Model):
-    """Een aanlegklus (een adres, weken werk) of een onderhoudsklant
-    (terugkerend, zonder einddatum). Dat onderscheid bepaalt hoe de klus in
-    het planbord en in de overzichten terugkomt."""
+    """Een eenmalige klus (een adres, een begin en een eind) of een
+    onderhoudsklant (terugkerend, zonder einddatum). Dat onderscheid bepaalt
+    hoe de klus in het planbord en in de overzichten terugkomt.
+
+    De eenheid is bewust "wat je apart wil optellen", niet "ander werk": een
+    tweede adres van dezelfde opdrachtgever is een eigen klus, en een aparte
+    afspraak op hetzelfde adres ook — maar maaien en snoeien binnen één
+    onderhoudsafspraak zijn hetzelfde klus met een andere toelichting op het
+    uurblok. Zonder die regel staan er straks vier regels "Dijkweg 12" in de
+    keuzelijst waar de medewerker 's avonds uit moet kiezen.
+    """
 
     class Soort(models.TextChoices):
-        AANLEG = "aanleg", "Aanleg"
+        # Databasewaarde blijft "aanleg" (zo staat het in SPEC §1 en in alle
+        # bestaande rijen); het label is "Eenmalig" omdat de as die dit veld
+        # beschrijft ritme is en geen soort werk — een snoeiklus of het
+        # opruimen van stormschade is eenmalig, maar geen aanleg.
+        AANLEG = "aanleg", "Eenmalig"
         ONDERHOUD = "onderhoud", "Onderhoud"
 
     naam = models.CharField(max_length=120)

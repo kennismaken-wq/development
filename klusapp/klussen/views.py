@@ -17,7 +17,7 @@ from medewerkers.rechten import alleen_eigenaar
 from uren import export as uren_export
 from uren import totalen
 
-from . import afbeeldingen, kleuren, pdf_thumbnails, voorbeeld
+from . import afbeeldingen, kleuren, opdrachtgevers, pdf_thumbnails, voorbeeld
 from .forms import AlleenFotosForm, BijlageForm, KlusForm, KlusFotoForm, NieuweKlusBijlagenForm
 from .fotoposts import groepeer_in_posts
 from .models import Bijlage, Klus
@@ -427,20 +427,47 @@ def klus_nieuw(request):
 
         datum = bijlagenformulier.cleaned_data["datum"] or timezone.localdate()
         toelichting = bijlagenformulier.cleaned_data["toelichting"]
-        batch = batch_van_upload(bijlagenformulier.cleaned_data["bestanden"])
+
+        # Twee velden, twee bestemmingen (zie NieuweKlusBijlagenForm): het ene
+        # wordt een foto in het raster, het andere een document in de
+        # documentenlijst — ook als dat document een gefotografeerde tekening
+        # is. Wat in het fotoveld zit maar geen foto is (een offerte in het
+        # verkeerde vakje) schuift mee naar de documenten in plaats van
+        # geweigerd te worden: de klus staat op dit punt al, dus weigeren
+        # betekent dat de offerte weg is en Maarten 'm opnieuw moet zoeken.
+        fotos, documenten = [], list(bijlagenformulier.cleaned_data["documenten"])
         for bestand in bijlagenformulier.cleaned_data["bestanden"]:
-            try:
-                bewaar_bijlage(bestand, datum, toelichting, klus, None, request.user, batch)
-            except afbeeldingen.BestandNietLeesbaar as probleem:
-                # De klus staat er al; alleen het ene bestand mislukt, niet de rest.
-                messages.error(request, f"{bestand.name}: {probleem}")
+            if afbeeldingen.lijkt_afbeelding(bestand.name):
+                fotos.append(bestand)
+            else:
+                documenten.append(bestand)
+                messages.info(request, f"{bestand.name} staat bij de documenten.")
+
+        for stapel, als_document in ((fotos, False), (documenten, True)):
+            # Eigen batch per stapel: het fotoraster groepeert een upload van
+            # meerdere bestanden als één post, en de documenten horen daar niet
+            # bij te zitten.
+            batch = batch_van_upload(stapel)
+            for bestand in stapel:
+                try:
+                    bewaar_bijlage(
+                        bestand, datum, toelichting, klus, None, request.user, batch, als_document
+                    )
+                except afbeeldingen.BestandNietLeesbaar as probleem:
+                    # De klus staat er al; alleen het ene bestand mislukt, niet de rest.
+                    messages.error(request, f"{bestand.name}: {probleem}")
 
         messages.success(request, f"Klus '{klus.naam}' aangemaakt.")
         return redirect(klus)
     return render(
         request,
         "klussen/klus_form.html",
-        {"formulier": formulier, "bijlagenformulier": bijlagenformulier, "nieuw": True},
+        {
+            "formulier": formulier,
+            "bijlagenformulier": bijlagenformulier,
+            "nieuw": True,
+            "opdrachtgevers": opdrachtgevers.bekende_opdrachtgevers(),
+        },
     )
 
 
@@ -453,5 +480,14 @@ def klus_bewerken(request, pk):
         messages.success(request, "Opgeslagen.")
         return redirect(klus)
     return render(
-        request, "klussen/klus_form.html", {"formulier": formulier, "klus": klus, "nieuw": False}
+        request,
+        "klussen/klus_form.html",
+        {
+            "formulier": formulier,
+            "klus": klus,
+            "nieuw": False,
+            # Zonder deze klus zelf: anders waarschuwt het formulier bij het
+            # bewerken dat er op dit adres al een klus staat — namelijk deze.
+            "opdrachtgevers": opdrachtgevers.bekende_opdrachtgevers(uitgezonderd=klus),
+        },
     )

@@ -31,6 +31,41 @@ Thijmen weer volledig verwijderd — route, view, template, menutegel, tests en 
 Contractpunt 3 heeft dus weer geen scherm; zie SPEC.md voor wat artikel 2 daar
 verplicht.
 
+**Bijgewerkt 23-09-2026: het aanmaakformulier van een klus volgt nu het onderscheid
+eenmalig/onderhoud.** Tot nu toe was `Klus.soort` alleen een badge — het stond in het
+model vanaf migratie 0001, maar geen enkel scherm deed er iets mee behalve het tonen
+ervan. SPEC §1 zegt dat aanleg versus onderhoud bijna elke ontwerpkeuze bepaalt, dus
+stuurt dat veld nu ook echt het formulier (`klussen/forms.py`,
+`templates/klussen/klus_form.html`, `static/js/klusformulier.js`):
+
+- **Label "Aanleg" heet "Eenmalig"**; de databasewaarde blijft `aanleg`. De as die dit
+  veld beschrijft is ritme en geen soort werk — stormschade opruimen is eenmalig maar
+  geen aanleg. **Nog te bevestigen bij Maarten**, "aanleg versus onderhoud" is zijn
+  taal (staat als vraag 8 in docs/VRAGEN-MAARTEN.md).
+- **Veldvolgorde is de beslisboom**: ritme → wie → waar → naam. Soort staat bovenaan als
+  twee keuzepillen (`.keuzepil`, hetzelfde component als het aanwezigheidsscherm) in
+  plaats van een `<select>` tussen de velden.
+- **Opdrachtgever is verplicht** in dit formulier (het modelveld blijft `blank=True` voor
+  bestaande rijen en `/beheer/`), met suggesties uit de namen die er al zijn — zodat het
+  niet de ene keer "Fam. Vermeer" en de andere keer "vermeer" wordt.
+- **Adressen worden voorgesteld, niet overgeërfd.** Het adres blijft van de klus: één
+  opdrachtgever kan meerdere terreinen hebben (een VvE, een gemeente). Heeft een klant
+  één bekend adres, dan vult het zich in; heeft hij er meer, dan komt er een rij pillen.
+  Zie `klussen/opdrachtgevers.py`.
+- **Waarschuwing bij een botsing**: staat er op deze opdrachtgever + dit adres al een
+  klus, dan komt die in beeld met een link erheen en de knop "Toch een aparte klus".
+  Geen blokkade — twee afspraken op één adres is een geldig geval, per ongeluk een
+  tweede dossier maken niet.
+- **Twee uploadvelden** in plaats van één: "Foto's" en "Technische documenten". Het
+  verschil is niet het bestandstype maar de bestemming — wat in het documentenveld gaat
+  blijft een document (Floris' `forceer_document`), ook een gefotografeerde tekening.
+
+De regel waarop een klus wordt gesplitst staat in de docstring van `Klus`: één klus is
+wat je apart wil optellen. Ander adres → aparte klus. Aparte afspraak op hetzelfde adres
+→ aparte klus. Maaien versus snoeien binnen dezelfde afspraak → één klus, verschil in de
+toelichting op het uurblok. Meer structuur dan dat (contracttype, factuurperiode) is
+fase 2, SPEC §3.
+
 | # | Contractpunt | Status | Wat ontbreekt |
 |---|---|---|---|
 | 1 | Urenregistratie (klus, tijdblok, toelichting, **foto's**) | 🟢 100% | — foto's bij het uurblok en view-first detail zijn af (F1) |
