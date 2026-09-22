@@ -915,8 +915,13 @@ input[type=file]:focus-visible + .bestandsknop{
 .fotokaart button{
   display:block; width:100%; padding:0; margin:0; border:0; background:none; cursor:pointer;
 }
+/* max-height + cover: bij een rijen-raster wordt een rij zo hoog als de
+   hoogste tegel erin, dus een staande foto naast een liggende trok anders
+   een groot leeg stuk open naast de liggende. Normale foto's (breder dan
+   hoog, of licht staand) blijven onaangeroerd; alleen een uitschieter wordt
+   bovenaan/onderaan bijgesneden. */
 .fotokaart img{
-  display:block; width:100%; height:auto;
+  display:block; width:100%; height:auto; max-height:240px; object-fit:cover;
   background:rgba(0,0,0,0.2);
 }
 .fotokaart figcaption{ padding:.5rem .65rem .6rem; display:grid; gap:.15rem; }
