@@ -194,7 +194,9 @@ def fotos(request):
         "klus_pk": klus_pk,
         "klussen": Klus.objects.all(),  # Meta.ordering = ["-actief", "naam"]
         "alleen_fotos": True,
-        "formulier": AlleenFotosForm(),
+        # Sta je al op een klus gefilterd, dan staat de uploaddialoog daar vast
+        # op — anders is "Algemeen" (leeg) de standaard.
+        "formulier": AlleenFotosForm(initial={"klus": klus_pk} if klus_pk.isdigit() else None),
         "upload_url": reverse("bijlage_toevoegen"),
         "terug": request.get_full_path(),
     }

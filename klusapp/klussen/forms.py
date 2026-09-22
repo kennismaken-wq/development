@@ -143,11 +143,29 @@ class AlleenFotosForm(BijlageForm):
     meer toont nergens een plek om terug te vinden (zie klussen/views.py:fotos
     en bijlage_toevoegen). Het bestandenveld biedt daarom alleen foto's aan;
     de server wijst een document hier alsnog af, mocht iemand het via de
-    bestandenkiezer toch selecteren."""
+    bestandenkiezer toch selecteren.
+
+    Optioneel keuzeveld "klus": blijft leeg, dan landt de foto in de
+    fotodropbox zoals altijd. Kies je er een bij, dan gaat de bijlage
+    meteen naar dat klusdossier — zelfde route als _doel_van() in
+    klussen/views.py al kent voor het klusdossier zelf, alleen nu ook
+    zichtbaar vanuit de dropbox."""
+
+    klus = forms.ModelChoiceField(
+        label="Klus",
+        queryset=Klus.objects.all(),  # Meta.ordering = ["-actief", "naam"]
+        required=False,
+        empty_label="Algemeen",
+    )
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.fields["bestanden"].widget.attrs["accept"] = "image/*"
+        # Zelfde "(afgerond)"-label als de klus-filter op /fotos/, zodat een
+        # afgeronde klus in deze lijst herkenbaar blijft van een lopende.
+        self.fields["klus"].label_from_instance = (
+            lambda klus: f"{klus.naam} (afgerond)" if not klus.actief else klus.naam
+        )
 
 
 class NieuweKlusBijlagenForm(BijlageForm):

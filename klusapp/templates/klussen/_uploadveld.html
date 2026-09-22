@@ -8,7 +8,12 @@
 <form class="uploadveld glas" method="post" action="{{ upload_url }}" enctype="multipart/form-data">
   <button type="button" class="dialog-sluiten" onclick="this.closest('dialog').close()" aria-label="Sluiten">×</button>
   {% csrf_token %}
-  {% if klus_pk %}<input type="hidden" name="klus" value="{{ klus_pk }}">{% endif %}
+  {% if formulier.klus %}
+    <label for="{{ formulier.klus.id_for_label }}">{{ formulier.klus.label }}</label>
+    {{ formulier.klus }}
+  {% elif klus_pk %}
+    <input type="hidden" name="klus" value="{{ klus_pk }}">
+  {% endif %}
   {% if uurblok_pk %}<input type="hidden" name="uurblok" value="{{ uurblok_pk }}">{% endif %}
   <input type="hidden" name="terug" value="{{ terug }}">
 
