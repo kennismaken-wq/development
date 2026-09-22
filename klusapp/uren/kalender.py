@@ -45,6 +45,13 @@ def kleur_van(klus):
     return klus.kleur or PALET[(klus.pk - 1) % len(PALET)]
 
 
+def medewerker_kleur_van(medewerker):
+    """Zelfde terugvalpalet als kleur_van(), nu voor het avatarrondje van een
+    medewerker: een eigen tint in plaats van grijs zolang er in het beheer
+    geen kleur is gekozen."""
+    return medewerker.kleur or PALET[(medewerker.pk - 1) % len(PALET)]
+
+
 def raster_hoogte():
     return VAK_AANTAL * RIJ_H
 

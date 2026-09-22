@@ -313,9 +313,7 @@ def planbord(request):
         rijen.append(
             {
                 "medewerker": medewerker,
-                # Zelfde palet als de klussen, zodat een rij zonder ingestelde
-                # kleur toch een eigen tint heeft in plaats van grijs.
-                "kleur": medewerker.kleur or kalender.PALET[(medewerker.pk - 1) % len(kalender.PALET)],
+                "kleur": kalender.medewerker_kleur_van(medewerker),
                 "dagen": dagen,
                 "weektotaal": kalender.als_uren(weekminuten) if weekminuten else "",
                 "heeft_uren": weekminuten > 0,

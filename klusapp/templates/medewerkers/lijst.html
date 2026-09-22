@@ -1,4 +1,5 @@
 {% extends "basis.html" %}
+{% load kleuren %}
 {% block titel %}Medewerkers{% endblock %}
 {% block kop %}Medewerkers{% endblock %}
 {% block sub %}<a href="{% url 'start' %}" style="color:rgba(255,255,255,0.6)">‹ Terug</a>{% endblock %}
@@ -8,6 +9,7 @@
       {% for mw in in_dienst %}
         <li>
           <a href="{% url 'medewerker_bewerken' mw.pk %}" class="mwregel">
+            <span class="mw-bol" style="background:linear-gradient(150deg, {{ mw|medewerker_kleur }}, {{ mw|medewerker_kleur }}A6); border-color:{{ mw|medewerker_kleur }}">{{ mw.initialen }}</span>
             <span class="mwregel-tekst">
               <span class="naam">{{ mw.naam }}</span>
               <span class="meta">{{ mw.username }}{% if mw.functie %} · {{ mw.functie }}{% endif %}</span>
@@ -31,6 +33,7 @@
       {% for mw in uit_dienst %}
         <li>
           <a href="{% url 'medewerker_bewerken' mw.pk %}" class="mwregel afgerond">
+            <span class="mw-bol" style="background:linear-gradient(150deg, {{ mw|medewerker_kleur }}, {{ mw|medewerker_kleur }}A6); border-color:{{ mw|medewerker_kleur }}">{{ mw.initialen }}</span>
             <span class="mwregel-tekst">
               <span class="naam">{{ mw.naam }}</span>
               <span class="meta">{{ mw.username }} · sinds {{ mw.uit_dienst_sinds|date:"j F Y" }}</span>
