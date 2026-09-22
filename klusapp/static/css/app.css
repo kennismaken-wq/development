@@ -651,6 +651,8 @@ input[type=time]::-webkit-calendar-picker-indicator{ filter:invert(1); opacity:.
   font-family:'Fraunces',serif; font-style:italic; font-weight:600;
   font-size:1.15rem; margin:1.8rem 0 .8rem;
 }
+/* kop met een actie ernaast, bv. de export-knop op het klusdossier */
+.sectiekop-rij{ display:flex; align-items:center; justify-content:space-between; gap:.8rem; }
 /* de wachtwoordeisen, direct onder het invulveld */
 .eisen-blok{ margin:.5rem 0 0; }
 .eisen{
@@ -1667,15 +1669,29 @@ label:has(> input[type=checkbox]), input[type=checkbox] + label{ cursor:pointer;
      als static/js/bottomsheet.js.
    Was eerder een cross-document View Transition (native browser-API); die
    bleek in de praktijk niet overal te animeren, dit werkt zonder
-   afhankigheid van die (nog jonge) API. */
+   afhankigheid van die (nog jonge) API.
+
+   Sinds "bewerken" ook een eigen terugpijl heeft (die teruggaat naar het
+   klusdossier) kan de kaart waar je op uitkomt ZELF ook weer een terugpijl
+   hebben — bijvoorbeeld het klusdossier na "bewerken" afsluiten. Zonder
+   verder onderscheid zou die dan weer van rechts inschuiven, alsof je hem
+   opnieuw "opent" — terwijl je juist terugging. klus-overgang.js zet daarom
+   vlak vóór het navigeren een sessionStorage-vlag; de volgende pagina leest
+   die (nog vóór <body> geparst is, dus zonder flits) en schuift dan
+   omgekeerd in, van links i.p.v. rechts. */
 .kaart:has(.terug-pijl){
   animation:klus-in-van-rechts .32s cubic-bezier(.32,.72,0,1) both;
+}
+html.klus-terug-navigatie .kaart:has(.terug-pijl){
+  animation:klus-in-van-links .32s cubic-bezier(.32,.72,0,1) both;
 }
 .kaart.klus-uit-animatie{
   animation:klus-uit-naar-rechts .26s cubic-bezier(.32,.72,0,1) both;
 }
 @keyframes klus-in-van-rechts{ from{ transform:translateX(100%); } to{ transform:translateX(0); } }
+@keyframes klus-in-van-links{ from{ transform:translateX(-100%); } to{ transform:translateX(0); } }
 @keyframes klus-uit-naar-rechts{ from{ transform:translateX(0); } to{ transform:translateX(100%); } }
 @media (prefers-reduced-motion: reduce){
-  .kaart:has(.terug-pijl), .kaart.klus-uit-animatie{ animation:none; }
+  .kaart:has(.terug-pijl), html.klus-terug-navigatie .kaart:has(.terug-pijl),
+  .kaart.klus-uit-animatie{ animation:none; }
 }

@@ -3,7 +3,18 @@
    animeren. Dit onderschept de klik, speelt de uitschuifanimatie af op de
    kaart en navigeert pas daarna, zelfde opzet als bottomsheet.js
    (klasse toevoegen, op animationend wachten, met een vangnet-timeout voor
-   het geval die niet vuurt). */
+   het geval die niet vuurt).
+
+   Vóór (deze regel staat als eerste, dus loopt vóór <body> is geparst — geen
+   flits): als de vórige klik een terugpijl was, schuift deze kaart nu
+   omgekeerd in (van links, zie html.klus-terug-navigatie in app.css)
+   i.p.v. steeds van rechts, wat er anders uitziet alsof je een klus opnieuw
+   "opent" terwijl je juist terugging. */
+if (sessionStorage.getItem("klus-terug-navigatie")) {
+  sessionStorage.removeItem("klus-terug-navigatie");
+  document.documentElement.classList.add("klus-terug-navigatie");
+}
+
 document.addEventListener("click", function (gebeurtenis) {
   var pijl = gebeurtenis.target.closest(".terug-pijl");
   if (!pijl) return;
@@ -17,6 +28,7 @@ document.addEventListener("click", function (gebeurtenis) {
   var weg = function () {
     kaart.removeEventListener("animationend", weg);
     clearTimeout(vangnet);
+    sessionStorage.setItem("klus-terug-navigatie", "1");
     window.location.href = doel;
   };
   kaart.addEventListener("animationend", weg);
