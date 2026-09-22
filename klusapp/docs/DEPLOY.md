@@ -141,6 +141,7 @@ ExecStart=/srv/handigerai/develop-tool/auto-deploy.sh
 ```nginx
 server {
     server_name develop.handigerai.nl;
+    client_max_body_size 50M;
     location / {
         proxy_pass http://127.0.0.1:5001;
         proxy_set_header Host $host;
@@ -151,6 +152,22 @@ server {
     listen 443 ssl;   # certbot vult de certificaatregels aan
 }
 ```
+
+`client_max_body_size` is niet optioneel en niet cosmetisch. Zonder die regel staat
+nginx op zijn standaard van 1 MB en wordt elke upload van een telefoonfoto geweigerd
+vóórdat Django hem ziet. Django zelf legt géén grens op bestandsgrootte —
+`DATA_UPLOAD_MAX_MEMORY_SIZE` in `settings.py` rekent expliciet buiten geüploade
+bestanden om, en `FILE_UPLOAD_MAX_MEMORY_SIZE` is alleen het schakelpunt tussen
+geheugen en een tijdelijk bestand. Deze regel is dus de enige echte bovengrens, en
+wie hem weghaalt of verlaagt breekt het uploaden zonder dat er iets in de app te zien
+is: de gebruiker krijgt de kale `413`-pagina van nginx.
+
+Waarom 50M en niet 20M (de waarde die er tot 22-09-2026 stond): de grens geldt per
+*request*, niet per bestand, en het uploadveld neemt bewust meerdere bestanden tegelijk
+(`MeerdereBestandenInvoer` in `klussen/forms.py`). Acht telefoonfoto's van 4 MB is dus
+één verzoek van 32 MB, en dat klapte er in zijn geheel uit — niet één foto, alles. Met
+50M past zo'n selectie én een A0-tekening als PDF. Het is een plafond, geen reservering:
+nginx streamt de body naar schijf.
 
 ## Back-ups
 
