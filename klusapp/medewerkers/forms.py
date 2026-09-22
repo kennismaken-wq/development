@@ -145,3 +145,73 @@ class WachtwoordForm(forms.Form):
         wachtwoord = self.cleaned_data["wachtwoord"]
         validate_password(wachtwoord)
         return wachtwoord
+
+
+class EigenGegevensForm(forms.ModelForm):
+    """Wat je van jezelf mag wijzigen op /mijn-profiel/.
+
+    Niet je rol, gebruikersnaam, functie of datum in dienst: dat zijn
+    gegevens van de werkgever over jou, niet van jou over jezelf. Wat je hier
+    wél verandert is waar jij als enige de juiste waarde van kent — je
+    nummer, je adres, wie ze bellen als er iets gebeurt.
+    """
+
+    class Meta:
+        model = Medewerker
+        fields = [
+            "first_name", "last_name",
+            "telefoon", "email", "adres", "postcode", "woonplaats",
+            "noodcontact_naam", "noodcontact_relatie", "noodcontact_telefoon",
+            "rijbewijs", "aanhanger", "kleur",
+        ]
+        widgets = MedewerkerForm.Meta.widgets
+        labels = MedewerkerForm.Meta.labels
+        help_texts = {veld: "" for veld in fields if veld != "noodcontact_relatie"}
+
+    GROEPEN = [
+        ("", ["first_name", "last_name"]),
+        ("Contact", ["telefoon", "email", "adres", "postcode", "woonplaats"]),
+        ("Bij nood bellen", ["noodcontact_naam", "noodcontact_relatie", "noodcontact_telefoon"]),
+        ("Rijbewijs", ["rijbewijs", "aanhanger"]),
+        ("In de app", ["kleur"]),
+    ]
+
+    groepen = MedewerkerForm.groepen
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["first_name"].required = True
+        if not self.initial.get("kleur"):
+            self.initial["kleur"] = "#5B8FA8"
+
+
+class EigenWachtwoordForm(forms.Form):
+    """Je eigen wachtwoord wijzigen. Het oude erbij, want wie even bij een
+    ingelogd toestel staat mag het niet zomaar kunnen overnemen."""
+
+    huidig = forms.CharField(label="Huidig wachtwoord", widget=forms.PasswordInput, strip=False)
+    nieuw = forms.CharField(
+        label="Nieuw wachtwoord",
+        widget=forms.PasswordInput,
+        strip=False,
+        help_text=WACHTWOORD_EISEN,
+    )
+
+    def __init__(self, gebruiker, *args, **kwargs):
+        self.gebruiker = gebruiker
+        super().__init__(*args, **kwargs)
+
+    def clean_huidig(self):
+        huidig = self.cleaned_data["huidig"]
+        if not self.gebruiker.check_password(huidig):
+            raise forms.ValidationError("Dat is niet je huidige wachtwoord.")
+        return huidig
+
+    def clean_nieuw(self):
+        nieuw = self.cleaned_data["nieuw"]
+        validate_password(nieuw, self.gebruiker)
+        return nieuw
+
+    def opslaan(self):
+        self.gebruiker.set_password(self.cleaned_data["nieuw"])
+        self.gebruiker.save()
