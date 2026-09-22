@@ -1426,8 +1426,19 @@ label:has(> input[type=checkbox]), input[type=checkbox] + label{ cursor:pointer;
   display:grid; gap:.55rem;
 }
 .aanwezig-rij.onbekend{ background:rgba(255,255,255,0.035); border-color:rgba(255,255,255,0.10); }
-.aanwezig-rij .wie{ font-size:13.5px; font-weight:600; }
+.aanwezig-rij .wie{
+  font-size:13.5px; font-weight:600;
+  display:flex; align-items:center; gap:.6rem;
+}
 .aanwezig-rij.onbekend .wie{ color:rgba(255,255,255,0.6); font-weight:500; }
+/* Zelfde avatarrondje als bij de medewerkerslijst en de gewerkte uren
+   (initialen op de eigen/palet-kleur van de medewerker). */
+.aanwezig-rij .aw-bol{
+  flex-shrink:0; width:30px; height:30px; border-radius:999px; border:1px solid;
+  display:flex; align-items:center; justify-content:center;
+  font-size:10.5px; font-weight:700; color:#fff; letter-spacing:.02em;
+}
+.aanwezig-rij.onbekend .aw-bol{ opacity:.55; }
 .aanwezig-rij .functie{
   margin-left:.45rem; font-size:10.5px; font-weight:500; padding:.1rem .5rem;
   border-radius:999px; color:var(--hi);

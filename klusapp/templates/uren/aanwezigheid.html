@@ -1,4 +1,5 @@
 {% extends "basis.html" %}
+{% load kleuren %}
 {% block titel %}Aanwezigheid{% endblock %}
 {% block kop %}Aanwezigheid{% endblock %}
 {% block inhoud %}
@@ -27,8 +28,11 @@
         {% for rij in rijen %}
           <li class="aanwezig-rij{% if not rij.registratie %} onbekend{% endif %}">
             <div class="wie">
-              {{ rij.medewerker.naam }}
-              {% if rij.medewerker.functie %}<span class="functie">{{ rij.medewerker.functie }}</span>{% endif %}
+              <span class="aw-bol" style="background:linear-gradient(150deg, {{ rij.medewerker|medewerker_kleur }}, {{ rij.medewerker|medewerker_kleur }}A6); border-color:{{ rij.medewerker|medewerker_kleur }}">{{ rij.medewerker.initialen }}</span>
+              <span class="wie-tekst">
+                {{ rij.medewerker.naam }}
+                {% if rij.medewerker.functie %}<span class="functie">{{ rij.medewerker.functie }}</span>{% endif %}
+              </span>
             </div>
             <div class="keuzes">
               <label class="keuzepil ja">
@@ -68,8 +72,11 @@
       {% for rij in rijen %}
         <li class="aanwezig-rij{% if not rij.registratie %} onbekend{% endif %}">
           <div class="wie">
-            {{ rij.medewerker.naam }}
-            {% if rij.medewerker.functie %}<span class="functie">{{ rij.medewerker.functie }}</span>{% endif %}
+            <span class="aw-bol" style="background:linear-gradient(150deg, {{ rij.medewerker|medewerker_kleur }}, {{ rij.medewerker|medewerker_kleur }}A6); border-color:{{ rij.medewerker|medewerker_kleur }}">{{ rij.medewerker.initialen }}</span>
+            <span class="wie-tekst">
+              {{ rij.medewerker.naam }}
+              {% if rij.medewerker.functie %}<span class="functie">{{ rij.medewerker.functie }}</span>{% endif %}
+            </span>
           </div>
           {% if not rij.registratie %}
             <span class="stand onbekend">Niet ingevuld</span>
