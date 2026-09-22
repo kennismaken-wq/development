@@ -123,6 +123,9 @@
       kolom.querySelectorAll(".vak").forEach(function (vak) {
         vak.classList.remove("kiezen");
       });
+      // Terug naar de CSS-waarde (pan-x pan-y): anders blijft scrollen op
+      // deze kolom geblokkeerd nadat het slepen is afgerond.
+      kolom.style.touchAction = "";
     }
 
     function wisVasthoudTimer() {
@@ -165,6 +168,11 @@
       vasthoudTimer = setTimeout(function () {
         vasthoudTimer = null;
         van = tot = startVak;
+        // Pas nú, en niet vooraf, naar "none": zo mag een gewone swipe die
+        // nooit lang genoeg stilhoudt gewoon scrollen. preventDefault()
+        // alleen is hiervoor niet genoeg — zolang touch-action pannen
+        // toestaat mag de browser dat los van JavaScript afhandelen.
+        kolom.style.touchAction = "none";
         verf();
         if (navigator.vibrate) navigator.vibrate(10);   // voelbare bevestiging dat slepen nu kan
       }, VASTHOUD_MS);
@@ -254,4 +262,22 @@
       openFormulier(kolom.dataset.dag, Number(vak.dataset.vak), null);
     });
   });
+
+  // Klik op een bestaand blok: het detail als sheet tonen (net als "uren
+  // toevoegen") in plaats van naar uurblok_detail te navigeren. Alleen de
+  // gewone, ongewijzigde klik onderscheppen we — ctrl/cmd/shift/middelste
+  // knop laten we intact, zodat "open in nieuw tabblad" e.d. blijft werken.
+  const detailDialoog = document.getElementById("uurblok-detail");
+  if (detailDialoog) {
+    document.querySelectorAll("a.blok[data-paneel-url]").forEach(function (blok) {
+      blok.addEventListener("click", function (gebeurtenis) {
+        if (gebeurtenis.defaultPrevented || gebeurtenis.button !== 0 ||
+            gebeurtenis.metaKey || gebeurtenis.ctrlKey || gebeurtenis.shiftKey || gebeurtenis.altKey) {
+          return;
+        }
+        gebeurtenis.preventDefault();
+        window.laadEnOpenSheet(detailDialoog, blok.dataset.paneelUrl, blok.href);
+      });
+    });
+  }
 })();
