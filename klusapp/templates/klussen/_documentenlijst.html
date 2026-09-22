@@ -1,14 +1,16 @@
-{% comment %} Tekeningen, offertes, pdf's. Verwacht `document_bijlagen` en `terug`.
+{% comment %} Tekeningen, offertes, pdf's — en foto's die technisch van aard
+   zijn (bv. een gefotografeerde tekening). Verwacht `document_bijlagen` en
+   `terug`, en voor de eigen uploaddialoog dezelfde context als
+   _uploadveld.html (evt. `klus_pk`/`uurblok_pk`).
 
-   Moet ná _fotoraster.html op de pagina staan: de "+"-knop hieronder opent
-   dezelfde uploaddialoog (#foto-invoegen) die _fotoraster.html insluit, in
-   plaats van een eigen dialoog te tekenen. Zonder deze knop was er geen
-   zichtbare manier om een document toe te voegen zolang er nog geen enkel
-   document bestond — de sectie stond er dan simpelweg niet. {% endcomment %}
+   Heeft een eigen dialoog (#document-invoegen, zie _documentdialoog.html)
+   los van #foto-invoegen: wat hier geüpload wordt moet altijd als document
+   gelden, ook een foto, en dus niet in het fotoraster/de foto-posts
+   verschijnen. {% endcomment %}
 {% load bijlagen %}
 <ul class="doclijst">
   <li class="nieuw">
-    <button type="button" class="nieuw-knop" onclick="document.getElementById('foto-invoegen').showModal()">
+    <button type="button" class="nieuw-knop" onclick="document.getElementById('document-invoegen').showModal()">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
       Document toevoegen
     </button>
@@ -43,3 +45,4 @@
 {% if not document_bijlagen %}
   <p class="leeg">Nog geen documenten.</p>
 {% endif %}
+{% include "klussen/_documentdialoog.html" %}

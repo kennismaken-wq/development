@@ -4,7 +4,11 @@
               upload_url  waar het formulier heen post
               terug       pad waar je na het uploaden weer belandt
    Optioneel: klus_pk / uurblok_pk  waar de bijlage aan hangt; zonder beide
-                                    komt hij in de fotodropbox terecht {% endcomment %}
+                                    komt hij in de fotodropbox terecht
+              forceer_document      dit is de documentendialoog: wat hier
+                                    gekozen wordt (ook een foto) wordt altijd
+                                    als document opgeslagen, zie
+                                    klussen/_documentdialoog.html {% endcomment %}
 <form class="uploadveld glas" method="post" action="{{ upload_url }}" enctype="multipart/form-data">
   <button type="button" class="dialog-sluiten" onclick="this.closest('dialog').close()" aria-label="Sluiten">×</button>
   {% csrf_token %}
@@ -16,9 +20,13 @@
   {% endif %}
   {% if uurblok_pk %}<input type="hidden" name="uurblok" value="{{ uurblok_pk }}">{% endif %}
   <input type="hidden" name="terug" value="{{ terug }}">
+  {% if forceer_document %}<input type="hidden" name="forceer_document" value="1">{% endif %}
 
-  <label for="{{ formulier.bestanden.id_for_label }}">{% if alleen_fotos %}Foto's{% else %}Foto's of documenten{% endif %}</label>
+  <label for="{{ formulier.bestanden.id_for_label }}">{% if forceer_document %}Documenten{% elif alleen_fotos %}Foto's{% else %}Foto's of documenten{% endif %}</label>
   {{ formulier.bestanden }}
+  {% if forceer_document %}
+    <p class="uitleg">Ook een foto mag, bijvoorbeeld van een tekening — die komt dan niet bij de foto's te staan.</p>
+  {% endif %}
 
   <label for="{{ formulier.datum.id_for_label }}">Datum</label>
   {{ formulier.datum }}

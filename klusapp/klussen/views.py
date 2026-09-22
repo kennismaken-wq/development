@@ -56,18 +56,25 @@ def _doel_van(request):
     return klus, uurblok
 
 
-def bewaar_bijlage(bestand, datum, toelichting, klus, uurblok, gebruiker, batch=None):
+def bewaar_bijlage(bestand, datum, toelichting, klus, uurblok, gebruiker, batch=None, forceer_document=False):
     """Eén geüpload bestand wegschrijven. Foto's verkleind, documenten zoals ze zijn.
 
     `batch` is het gedeelde kenmerk van een upload met meerdere bestanden
     tegelijk (zie batch_van_upload hieronder) — daarmee kan het fotoraster ze
     als één post tonen. Leeg bij een upload van één bestand.
 
+    `forceer_document` slaat het bestand altijd op als document, ook als het
+    er als foto uitziet — voor de documentenlijst van een klusdossier/uurblok,
+    waar bijvoorbeeld een foto van een tekening thuishoort en niet tussen de
+    werkfoto's in het fotoraster moet verschijnen (zie
+    klussen.views.bijlage_toevoegen). Zo'n bestand blijft dan ook ongemoeid
+    zoals elk ander document, in plaats van verkleind te worden.
+
     Publiek (geen underscore): ook het uren-toevoegformulier hangt hier een
     foto mee op (zie uren.views.uurblok_nieuw), niet alleen deze module.
     """
     naam = bestand.name
-    hoofd, thumbnail = afbeeldingen.versies_van(bestand, naam)
+    hoofd, thumbnail = (None, None) if forceer_document else afbeeldingen.versies_van(bestand, naam)
 
     bijlage = Bijlage(
         soort=Bijlage.Soort.FOTO if hoofd else Bijlage.Soort.DOCUMENT,
@@ -84,7 +91,7 @@ def bewaar_bijlage(bestand, datum, toelichting, klus, uurblok, gebruiker, batch=
         bijlage.bestand.save(f"{basis}.jpg", hoofd, save=False)
         bijlage.thumbnail.save(f"{basis}.jpg", thumbnail, save=False)
     else:
-        document_thumbnail = pdf_thumbnails.thumbnail_van(bestand, naam)
+        document_thumbnail = pdf_thumbnails.thumbnail_van(bestand, naam) or afbeeldingen.thumbnail_van(bestand, naam)
         bestand.seek(0)
         bijlage.bestand.save(naam, ContentFile(bestand.read()), save=False)
         if document_thumbnail:
@@ -121,6 +128,10 @@ def bijlage_toevoegen(request):
     # Daar mag geen document meer bij, want die heeft sinds het verdwijnen van
     # de documentenlijst op dat scherm nergens een plek om terug te vinden.
     alleen_fotos = klus is None and uurblok is None
+    # Gezet door _documentdialoog.html: die upload hoort in de documentenlijst,
+    # ook als het bestand een foto is. Kan dus nooit samen met alleen_fotos
+    # gelden — de fotodropbox toont die dialoog niet.
+    forceer_document = not alleen_fotos and request.POST.get("forceer_document") == "1"
     batch = batch_van_upload(formulier.cleaned_data["bestanden"])
     gelukt = 0
     for bestand in formulier.cleaned_data["bestanden"]:
@@ -128,7 +139,7 @@ def bijlage_toevoegen(request):
             messages.error(request, f"{bestand.name}: hier kan alleen een foto bij, geen document.")
             continue
         try:
-            bewaar_bijlage(bestand, datum, toelichting, klus, uurblok, request.user, batch)
+            bewaar_bijlage(bestand, datum, toelichting, klus, uurblok, request.user, batch, forceer_document)
         except afbeeldingen.BestandNietLeesbaar as probleem:
             # De rest van de selectie wel doorzetten: wie acht foto's uploadt
             # wil niet alles opnieuw doen omdat er één niet deugt.
@@ -150,6 +161,24 @@ def bijlage_verwijderen(request, pk):
         raise Http404
     standaard = bijlage.klus.get_absolute_url() if bijlage.klus else reverse("fotos")
     bijlage.delete()
+    messages.success(request, "Verwijderd.")
+    return _terug_naar(request, standaard)
+
+
+@login_required
+def post_verwijderen(request, batch):
+    """Het kruisje op een collagekaart in het fotoraster: verwijdert in één
+    keer alle foto's van die post (zelfde batch). Ze komen uit dezelfde
+    upload en hebben dus dezelfde toegevoegd_door, dus rechten checken op de
+    eerste foto geldt voor de hele post."""
+    if request.method != "POST":
+        return HttpResponseNotAllowed(["POST"])
+    bijlagen = list(Bijlage.objects.filter(batch=batch))
+    if not bijlagen or not bijlagen[0].mag_verwijderen(request.user):
+        raise Http404
+    standaard = bijlagen[0].klus.get_absolute_url() if bijlagen[0].klus else reverse("fotos")
+    for bijlage in bijlagen:
+        bijlage.delete()
     messages.success(request, "Verwijderd.")
     return _terug_naar(request, standaard)
 
@@ -203,10 +232,14 @@ def fotos(request):
     # (de fotodropbox) — elke andere onbekende waarde valt terug op "alle klussen".
     if klus_pk not in ("", "algemeen") and not klus_pk.isdigit():
         klus_pk = ""
+    scope = request.GET.get("scope", "altijd")
+    if scope not in ("actief", "inactief", "altijd"):
+        scope = "altijd"
 
     context = {
         "zoek": zoek,
         "klus_pk": klus_pk,
+        "scope": scope,
         "klussen": Klus.objects.all(),  # Meta.ordering = ["-actief", "naam"]
         "alleen_fotos": True,
         # Sta je al op een klus gefilterd, dan staat de uploaddialoog daar vast
@@ -228,10 +261,16 @@ def fotos(request):
             | Q(klus__adres__icontains=zoek)
             | Q(klus__plaats__icontains=zoek)
         )
+    # Een specifieke klus (of "algemeen") kiezen wint van de scope-pil: je
+    # vroeg expliciet om die foto's, ook als de klus niet in die scope valt.
     if klus_pk == "algemeen":
         bijlagen = bijlagen.filter(klus__isnull=True)
     elif klus_pk:
         bijlagen = bijlagen.filter(klus_id=klus_pk)
+    elif scope == "actief":
+        bijlagen = bijlagen.filter(klus__actief=True)
+    elif scope == "inactief":
+        bijlagen = bijlagen.filter(klus__actief=False)
     context["foto_posts"] = groepeer_in_posts(b for b in bijlagen if b.is_foto)
     return render(request, "klussen/fotos.html", context)
 

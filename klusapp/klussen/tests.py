@@ -86,6 +86,20 @@ class AfbeeldingenTest(TestCase):
         with self.assertRaises(afbeeldingen.BestandNietLeesbaar):
             afbeeldingen.versies_van(BytesIO(b"dit is geen plaatje"), "stuk.jpg")
 
+    def test_thumbnail_van_geeft_voorbeeld_voor_een_foto_als_document(self):
+        # bewaar_bijlage roept dit alleen aan met forceer_document=True: het
+        # bestand zelf blijft dan ongemoeid, alleen dit voorbeeldplaatje wordt
+        # gemaakt (zie klussen.views.bewaar_bijlage).
+        thumbnail = afbeeldingen.thumbnail_van(BytesIO(jpeg()), "tekening.jpg")
+        with Image.open(thumbnail) as klein:
+            self.assertEqual(max(klein.size), afbeeldingen.THUMB_ZIJDE)
+
+    def test_thumbnail_van_geeft_niets_voor_een_pdf(self):
+        self.assertIsNone(afbeeldingen.thumbnail_van(BytesIO(b"%PDF-1.4"), "offerte.pdf"))
+
+    def test_thumbnail_van_geeft_niets_voor_onleesbare_afbeelding(self):
+        self.assertIsNone(afbeeldingen.thumbnail_van(BytesIO(b"dit is geen plaatje"), "stuk.jpg"))
+
 
 class PdfThumbnailsTest(TestCase):
     """De PDF-voorbeeldplaatjes los, zonder database (zie AfbeeldingenTest)."""
@@ -173,6 +187,34 @@ class BijlageUploadTest(TestCase):
         # Niets om mee te groeperen, dus geen kenmerk nodig.
         self.client.post(reverse("bijlage_toevoegen"), {"bestanden": upload()})
         self.assertIsNone(Bijlage.objects.get().batch)
+
+    def test_forceer_document_maakt_van_een_foto_toch_een_document(self):
+        # De documentendialoog op een klusdossier (_documentdialoog.html):
+        # een foto van bijvoorbeeld een tekening hoort hier ook, en moet dan
+        # niet tussen de werkfoto's in het fotoraster verschijnen.
+        self.client.post(
+            reverse("bijlage_toevoegen"),
+            {"bestanden": upload("tekening.jpg"), "klus": self.klus.pk, "forceer_document": "1"},
+        )
+        bijlage = Bijlage.objects.get()
+        self.assertEqual(bijlage.soort, Bijlage.Soort.DOCUMENT)
+        self.assertFalse(bijlage.is_foto)
+        # Het bestand zelf blijft ongemoeid, net als elk ander document —
+        # niet verkleind zoals een gewone foto-upload.
+        with Image.open(bijlage.bestand) as bewaard:
+            self.assertEqual(bewaard.size, Image.open(BytesIO(jpeg())).size)
+        # Wel een thumbnail, zodat de documentenlijst een voorbeeld toont.
+        self.assertTrue(bijlage.thumbnail)
+
+    def test_forceer_document_geldt_niet_in_de_fotodropbox(self):
+        # Zonder klus/uurblok is dit de fotodropbox, die geen documenten
+        # toont — forceer_document mag daar dus niet stiekem toch een
+        # document van maken (zie klussen.views.bijlage_toevoegen).
+        self.client.post(
+            reverse("bijlage_toevoegen"),
+            {"bestanden": upload("tekening.jpg"), "forceer_document": "1"},
+        )
+        self.assertEqual(Bijlage.objects.get().soort, Bijlage.Soort.FOTO)
 
     def test_twee_losse_uploads_delen_geen_batch(self):
         self.client.post(
@@ -427,6 +469,62 @@ class BijlageVerwijderenTest(TestCase):
 
 
 @override_settings(MEDIA_ROOT=TIJDELIJKE_MEDIA)
+class PostVerwijderenTest(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        cls.sam = Medewerker.objects.create_user("sam", password="x")
+        cls.joep = Medewerker.objects.create_user("joep", password="x")
+        cls.maarten = Medewerker.objects.create_user(
+            "maarten", password="x", rol=Medewerker.Rol.EIGENAAR
+        )
+
+    @classmethod
+    def tearDownClass(cls):
+        shutil.rmtree(TIJDELIJKE_MEDIA, ignore_errors=True)
+        super().tearDownClass()
+
+    def post_van_sam(self):
+        self.client.force_login(self.sam)
+        self.client.post(
+            reverse("bijlage_toevoegen"),
+            {"bestanden": [upload("een.jpg"), upload("twee.jpg"), upload("drie.jpg")]},
+        )
+        return Bijlage.objects.first().batch
+
+    def test_verwijdert_alle_fotos_van_de_post(self):
+        batch = self.post_van_sam()
+        self.client.post(reverse("post_verwijderen", args=[batch]))
+        self.assertFalse(Bijlage.objects.filter(batch=batch).exists())
+
+    def test_ander_mag_andermans_post_niet_verwijderen(self):
+        batch = self.post_van_sam()
+        self.client.force_login(self.joep)
+        self.assertEqual(
+            self.client.post(reverse("post_verwijderen", args=[batch])).status_code, 404
+        )
+        self.assertEqual(Bijlage.objects.filter(batch=batch).count(), 3)
+
+    def test_eigenaar_mag_andermans_post_wel_verwijderen(self):
+        batch = self.post_van_sam()
+        self.client.force_login(self.maarten)
+        self.client.post(reverse("post_verwijderen", args=[batch]))
+        self.assertFalse(Bijlage.objects.filter(batch=batch).exists())
+
+    def test_verwijderen_kan_niet_met_een_gewone_link(self):
+        batch = self.post_van_sam()
+        self.assertEqual(
+            self.client.get(reverse("post_verwijderen", args=[batch])).status_code, 405
+        )
+        self.assertEqual(Bijlage.objects.filter(batch=batch).count(), 3)
+
+    def test_onbekende_batch_geeft_404(self):
+        self.client.force_login(self.sam)
+        self.assertEqual(
+            self.client.post(reverse("post_verwijderen", args=[uuid.uuid4()])).status_code, 404
+        )
+
+
+@override_settings(MEDIA_ROOT=TIJDELIJKE_MEDIA)
 class MediaTest(TestCase):
     @classmethod
     def setUpTestData(cls):
@@ -504,9 +602,9 @@ class MediaTest(TestCase):
 
 @override_settings(MEDIA_ROOT=TIJDELIJKE_MEDIA)
 class DocumentToevoegenKnopTest(TestCase):
-    """De "Documenten"-sectie en de knop erin moeten er staan vóórdat er ooit
-    een document is geweest — anders is er geen zichtbare manier om de eerste
-    pdf toe te voegen (zie klussen/_documentenlijst.html)."""
+    """De "Technische documenten"-sectie en de knop erin moeten er staan
+    vóórdat er ooit een document is geweest — anders is er geen zichtbare
+    manier om de eerste pdf toe te voegen (zie klussen/_documentenlijst.html)."""
 
     @classmethod
     def setUpTestData(cls):
@@ -523,7 +621,7 @@ class DocumentToevoegenKnopTest(TestCase):
 
     def test_documentknop_staat_er_ook_zonder_bestaande_documenten(self):
         antwoord = self.client.get(self.klus.get_absolute_url())
-        self.assertContains(antwoord, "Documenten")
+        self.assertContains(antwoord, "Technische documenten")
         self.assertContains(antwoord, "Document toevoegen")
         self.assertContains(antwoord, "Nog geen documenten.")
 

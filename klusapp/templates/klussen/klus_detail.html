@@ -25,6 +25,9 @@
     {% endif %}
   </div>
 
+  <h2 class="sectiekop">Technische documenten</h2>
+  {% include "klussen/_documentenlijst.html" with klus_pk=klus.pk %}
+
   <div class="sectiekop-rij">
     <h2 class="sectiekop">Gewerkte uren</h2>
     {% if gewerkt %}
@@ -63,7 +66,4 @@
 
   <h2 class="sectiekop">Foto's</h2>
   {% include "klussen/_fotoraster.html" with klus_pk=klus.pk %}
-
-  <h2 class="sectiekop">Documenten</h2>
-  {% include "klussen/_documentenlijst.html" %}
 {% endblock %}

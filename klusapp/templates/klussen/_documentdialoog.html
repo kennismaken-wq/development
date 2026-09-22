@@ -1,0 +1,15 @@
+{% comment %} Uploaddialoog voor een technisch document. Los van _fotodialoog.html
+   zodat een bestand dat hier gekozen wordt altijd als document wordt
+   opgeslagen — ook een foto, bijvoorbeeld van een tekening — en dus nooit
+   tussen de werkfoto's in _fotoraster.html verschijnt (zie
+   klussen.views.bijlage_toevoegen, forceer_document). Verwacht dezelfde
+   BijlageForm-context als _uploadveld.html (formulier/upload_url/terug, evt.
+   klus_pk/uurblok_pk). {% endcomment %}
+<dialog id="document-invoegen" class="foto-invoegen">
+  {% include "klussen/_uploadveld.html" with forceer_document=True %}
+</dialog>
+<script>
+  document.getElementById("document-invoegen").addEventListener("click", function (e) {
+    if (e.target === this) this.close();
+  });
+</script>
