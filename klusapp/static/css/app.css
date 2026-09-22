@@ -886,22 +886,29 @@ input[type=file]:focus-visible + .bestandsknop{
   margin:.5rem 0 0; font-size:12.5px; color:rgba(255,255,255,0.6);
   text-align:center; overflow-wrap:break-word;
 }
+/* De statusregel heeft zelf geen ondermarge — normaal komt er een label
+   achteraan, en dat brengt zijn eigen 1.1rem mee. In de documentendialoog
+   (klussen/_uploadveld.html met forceer_document) staat er eerst nog een
+   .uitleg, en die begint met margin-top:0: dan plakken de twee regels aan
+   elkaar en lezen ze als één alinea, terwijl de ene bij de knop hoort en de
+   andere bij het veld. */
+.bestandsstatus + .uitleg{ margin-top:.9rem; }
 
-/* Pinterest-achtig metselwerk-raster: kolommen i.p.v. rijen, zodat elke foto
-   zijn eigen hoogte houdt in plaats van uniform bijgesneden te worden. Kan
-   omdat afbeeldingen.py de beeldverhouding al intact laat (THUMB_ZIJDE past
-   binnen een vierkant, snijdt niet bij). */
-/* 200px als minimale kolombreedte klonk breed genoeg, maar op een telefoon
-   (~320-340px content-breedte na de kaart-padding) past dat maar net één
-   kolom: precies het "alles onder elkaar"-effect dat het raster moest
-   voorkomen. 140px past er ruim twee. */
-.fotoraster{ columns:2 140px; column-gap:.7rem; }
-@media (min-width:620px){ .fotoraster{ columns:4 160px; } }
+/* Raster in echte leesvolgorde: links-boven naar rechts, dan de volgende
+   rij — met CSS columns (kolom voor kolom vullen i.p.v. rij voor rij) stond
+   de nieuwste foto soms rechts naast de plus-tegel en de twee daarna eronder
+   in de linkerkolom, omdat de browser de kolommen qua hoogte probeerde te
+   balanceren. Rijen zijn dus niet meer per se even hoog (elke foto houdt wel
+   zijn eigen beeldverhouding, afbeeldingen.py snijdt niet bij), maar de
+   volgorde klopt altijd met de uploaddatum. */
+/* 140px als minimale kolombreedte: op een telefoon (~320-340px
+   content-breedte na de kaart-padding) passen er zo ruim twee. */
+.fotoraster{ display:grid; grid-template-columns:repeat(2, minmax(140px,1fr)); gap:.7rem; align-items:start; }
+@media (min-width:620px){ .fotoraster{ grid-template-columns:repeat(4, minmax(160px,1fr)); } }
 
 .fotokaart{
-  position:relative; margin:0 0 .7rem; border-radius:20px; overflow:hidden;
+  position:relative; margin:0; border-radius:20px; overflow:hidden;
   background:rgba(255,255,255,0.07); border:1px solid rgba(255,255,255,0.14);
-  break-inside:avoid; display:inline-block; width:100%;
 }
 /* de thumbnail-knop die de popup opent, was een <a target=_blank>: zelfde
    reset als .fotoslide button, anders krijgt hij standaard knopopmaak. */
@@ -930,11 +937,11 @@ input[type=file]:focus-visible + .bestandsknop{
 }
 
 /* eerste tegel in het raster: lege plek met een plus, opent de invoegdialoog.
-   max-width erop, anders wordt hij bij een enkel (leeg) raster net zo breed
-   als de hele kolom en dus een onnodig grote vierkante tegel. */
+   Grid-kolommen hebben altijd dezelfde breedte (ook als dit de enige tegel
+   is), dus geen aparte max-width meer nodig zoals bij de oude columns-layout. */
 .fotokaart-nieuw{
-  margin:0 0 .7rem; border-radius:20px; break-inside:avoid;
-  width:100%; max-width:160px; aspect-ratio:1; cursor:pointer;
+  margin:0; border-radius:20px;
+  width:100%; aspect-ratio:1; cursor:pointer;
   display:flex; align-items:center; justify-content:center;
   background:rgba(255,255,255,0.05); border:1px dashed rgba(255,255,255,0.28);
   color:rgba(255,255,255,0.6);
