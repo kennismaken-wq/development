@@ -932,9 +932,14 @@ input[type=file]:focus-visible + .bestandsknop{
   background:rgba(0,0,0,0.2);
 }
 .fotokaart figcaption{ padding:.5rem .65rem .6rem; display:grid; gap:.15rem; }
+/* max 2 regels: een lange standaard-bestandsnaam (WhatsApp-downloads heten
+   bijvoorbeeld "Afbeelding van WhatsApp op 2024-08-30 om 22.10.09_xxx.jpg")
+   wrapte anders naar 3+ regels en trok zo'n tegel torenhoog boven de rest
+   van de rij uit. */
 .fotokaart .wat{
   font-size:12px; line-height:1.3;
   overflow-wrap:break-word; word-break:break-word;
+  display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;
 }
 .fotokaart .wie{
   font-size:10.5px; color:rgba(255,255,255,0.5);
