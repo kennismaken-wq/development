@@ -823,9 +823,16 @@ input[type=time]::-webkit-calendar-picker-indicator{ filter:invert(1); opacity:.
    onderaan het (mogelijk lange, scrollende) formulier — op een telefoon met
    het toetsenbord open was die knop anders niet te bereiken zonder eerst
    weg te tikken. Het kruisje verliest hier zijn eigen absolute positie: die
-   plek is nu voor Opslaan. */
+   plek is nu voor Opslaan. `relative` i.p.v. `static`: het knopje blijft zo
+   nog altijd gewoon in de flex-flow van .sheet-kop staan (er is geen
+   top/left gezet), maar blijft ook de containing block van zijn eigen
+   ::after (het opgerekte aanraakgebied, inset:-5px hieronder). Met `static`
+   viel die ::after terug op de eerstvolgende position:relative-ouder — hier
+   de hele .uurblokformulier.glas — waardoor het "kruisje" bijna het hele
+   formulier overdekte en je nergens anders meer kon klikken zonder de sheet
+   te sluiten. */
 .sheet-kop{ display:flex; align-items:center; justify-content:space-between; margin:0 0 .3rem; }
-.sheet-kop .dialog-sluiten{ position:static; }
+.sheet-kop .dialog-sluiten{ position:relative; }
 /* kruisje en prullenbak samen links, potlood/Opslaan samen rechts — anders
    verspreidt justify-content:space-between alle vier de knoppen gelijk over
    de rij zodra de prullenbak zichtbaar wordt, en zwerft die los in het
