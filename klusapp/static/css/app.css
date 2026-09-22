@@ -631,8 +631,12 @@ input[type=file]:focus-visible + .bestandsknop{
    zijn eigen hoogte houdt in plaats van uniform bijgesneden te worden. Kan
    omdat afbeeldingen.py de beeldverhouding al intact laat (THUMB_ZIJDE past
    binnen een vierkant, snijdt niet bij). */
-.fotoraster{ columns:2 200px; column-gap:.7rem; }
-@media (min-width:620px){ .fotoraster{ columns:4 200px; } }
+/* 200px als minimale kolombreedte klonk breed genoeg, maar op een telefoon
+   (~320-340px content-breedte na de kaart-padding) past dat maar net één
+   kolom: precies het "alles onder elkaar"-effect dat het raster moest
+   voorkomen. 140px past er ruim twee. */
+.fotoraster{ columns:2 140px; column-gap:.7rem; }
+@media (min-width:620px){ .fotoraster{ columns:4 160px; } }
 
 .fotokaart{
   position:relative; margin:0 0 .7rem; border-radius:20px; overflow:hidden;
