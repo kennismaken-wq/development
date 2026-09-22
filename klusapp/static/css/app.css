@@ -225,9 +225,11 @@ h1{
     flex-direction:row; max-width:calc(100% - 1.4rem); max-height:none;
     overflow-x:auto; overflow-y:visible;
     /* er passen meestal niet alle iconen op 375px; deze rand-vervaging is
-       het enige signaal dat de balk nog verder scrolt */
-    mask-image:linear-gradient(to right, transparent 0, #000 14px, #000 calc(100% - 22px), transparent 100%);
-    -webkit-mask-image:linear-gradient(to right, transparent 0, #000 14px, #000 calc(100% - 22px), transparent 100%);
+       het enige signaal dat de balk nog verder scrolt. Smal houden: bij 14px/22px
+       op een icoon van 44px doofde de rand zelf grotendeels mee, ook als alles
+       gewoon past (geen overflow) en er dus niets te verbergen viel. */
+    mask-image:linear-gradient(to right, transparent 0, #000 6px, #000 calc(100% - 6px), transparent 100%);
+    -webkit-mask-image:linear-gradient(to right, transparent 0, #000 6px, #000 calc(100% - 6px), transparent 100%);
   }
 }
 
