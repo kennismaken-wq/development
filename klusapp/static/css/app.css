@@ -1207,22 +1207,31 @@ dialog.foto-popup::backdrop{ background:rgba(10,10,8,0.75); backdrop-filter:blur
 
 .urenlijst{ list-style:none; margin:0; padding:0; display:grid; gap:.4rem; }
 .urenlijst li{
-  display:grid; grid-template-columns:1fr auto; gap:.15rem .8rem;
-  align-items:baseline;
+  display:grid; grid-template-columns:auto 1fr auto; gap:.15rem .7rem;
+  align-items:center;
   border-radius:14px; padding:.7rem .95rem;
   background:rgba(255,255,255,0.07); border:1px solid rgba(255,255,255,0.14);
 }
-.urenlijst .wie{ font-size:13.5px; font-weight:500; }
+/* Zelfde avatarrondje als op de medewerkerslijst (.mw-bol), hier kleiner
+   omdat de rij zelf compacter is en er al een naam + functie-badge staat. */
+.urenlijst .ur-bol{
+  grid-column:1; grid-row:1 / span 2;
+  flex-shrink:0; width:32px; height:32px; border-radius:999px; border:1px solid;
+  display:flex; align-items:center; justify-content:center;
+  font-size:11px; font-weight:700; color:#fff; letter-spacing:.02em;
+}
+.urenlijst .ur-bol.leeg-bol{ background:none; border-color:transparent; }
+.urenlijst .wie{ grid-column:2; font-size:13.5px; font-weight:500; }
 .urenlijst .functie{
   margin-left:.45rem; font-size:10.5px; font-weight:500; padding:.1rem .5rem;
   border-radius:999px; color:var(--hi);
   background:rgba(var(--accent-rgb),0.16); border:1px solid rgba(var(--accent-rgb),0.34);
 }
 .urenlijst .wanneer{
-  grid-column:1; font-size:11px; color:rgba(255,255,255,0.5);
+  grid-column:2; font-size:11px; color:rgba(255,255,255,0.5);
 }
 .urenlijst .uren{
-  grid-column:2; grid-row:1 / span 2;
+  grid-column:3; grid-row:1 / span 2;
   font-family:'Fraunces',serif; font-style:italic; font-weight:600;
   font-size:1.05rem; color:var(--hi); font-variant-numeric:tabular-nums;
 }
