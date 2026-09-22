@@ -901,17 +901,24 @@ input[type=file]:focus-visible + .bestandsknop{
    andere bij het veld. */
 .bestandsstatus + .uitleg{ margin-top:.9rem; }
 
-/* Raster in echte leesvolgorde: links-boven naar rechts, dan de volgende
-   rij — met CSS columns (kolom voor kolom vullen i.p.v. rij voor rij) stond
-   de nieuwste foto soms rechts naast de plus-tegel en de twee daarna eronder
-   in de linkerkolom, omdat de browser de kolommen qua hoogte probeerde te
-   balanceren. Rijen zijn dus niet meer per se even hoog (elke foto houdt wel
-   zijn eigen beeldverhouding, afbeeldingen.py snijdt niet bij), maar de
-   volgorde klopt altijd met de uploaddatum. */
-/* 140px als minimale kolombreedte: op een telefoon (~320-340px
-   content-breedte na de kaart-padding) passen er zo ruim twee. */
-.fotoraster{ display:grid; grid-template-columns:repeat(2, minmax(140px,1fr)); gap:.7rem; align-items:start; }
-@media (min-width:620px){ .fotoraster{ grid-template-columns:repeat(4, minmax(160px,1fr)); } }
+/* Masonry-raster: elke kolom stapelt zijn eigen tegels met een vaste
+   tussenruimte, onafhankelijk van hoe lang de andere kolommen zijn — dus
+   geen rij die op de hoogste tegel moet wachten voor de volgende begint.
+   Een echte CSS-grid met rijen (wat hier eerst stond) gaf precies dat
+   probleem: een rij werd zo hoog als de hoogste tegel erin, dus een kortere
+   buurtegel liet een lelijk stuk lucht achter voor de volgende rij begon.
+   CSS `columns` lost de tussenruimte wel op, maar vult daarbij kolom 1
+   helemaal vol vóór kolom 2 begint (of balanceert op hoogte) — dat gaf
+   destijds de rommelige volgorde waar dit raster ooit last van had.
+
+   Daarom verdeelt static/js/fotoraster.js de tegels hier zelf over
+   `.fotoraster-kolom`-divs, telkens rond-robin (tegel i naar kolom
+   i % aantal): de volgorde blijft dus altijd exact de uploadvolgorde, wat
+   er ook met de hoogte van een kolom gebeurt. Zonder JS blijft dit gewoon
+   één kolom (flex-direction:column hieronder is de basisstand, het script
+   zet 'm op row zodra het de tegels verdeeld heeft). */
+.fotoraster{ display:flex; flex-direction:column; gap:.7rem; }
+.fotoraster-kolom{ display:flex; flex-direction:column; gap:.7rem; flex:1 1 0; min-width:0; }
 
 .fotokaart{
   position:relative; margin:0; border-radius:20px; overflow:hidden;

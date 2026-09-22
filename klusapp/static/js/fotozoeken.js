@@ -40,6 +40,10 @@
           .querySelector(".fotoraster-resultaten");
         const oudRaster = huidigRaster();
         if (nieuwRaster && oudRaster) oudRaster.replaceWith(nieuwRaster);
+        // .fotoraster-resultaten wordt hier vervangen, maar het <script>-tag
+        // van fotoraster.js zit daarbuiten (zie _fotoraster.html) en wordt
+        // dus niet opnieuw uitgevoerd — daarom hier expliciet aanroepen.
+        if (window.fotoRasterHerverdelen) window.fotoRasterHerverdelen();
         history.replaceState(null, "", url);
       })
       .catch(function () {

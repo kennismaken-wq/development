@@ -24,6 +24,7 @@
    langs media_bestand, dus ook hier geldt: zonder inloggen geen bestand. {% endcomment %}
 {% load bijlagen %}
 {% load kleuren %}
+{% load static %}
 {% comment %} De wrapper eromheen is het aangrijpunt voor het live zoeken op de
    foto tab (static/js/fotozoeken.js): die vervangt bij elke toetsaanslag
    alleen dit stuk, en laat de uploaddialoog erbuiten met rust. Op een
@@ -114,3 +115,12 @@
 
 {% include "klussen/_fotodialoog.html" with formulier=foto_formulier|default:formulier %}
 {% include "klussen/_fotopopup.html" %}
+{% comment %} Verdeelt de tegels hierboven over kolommen (masonry, zie de
+   uitleg bij .fotoraster in app.css). Staat hier en niet los in elke pagina
+   die dit include't, zodat 'm nooit vergeten wordt. Bij het live zoeken
+   (static/js/fotozoeken.js) wordt alleen .fotoraster-resultaten vervangen —
+   dit script-tag zelf dus niet opnieuw uitgevoerd — vandaar de expliciete
+   aanroep van window.fotoRasterHerverdelen() daar. In de uurblok-bottomsheet
+   (bottomsheet.js) wordt dit tag wél opnieuw via voerScriptsUit uitgevoerd,
+   en dat volstaat daar. {% endcomment %}
+<script src="{% static 'js/fotoraster.js' %}"></script>
