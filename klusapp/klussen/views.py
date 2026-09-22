@@ -251,8 +251,12 @@ def klus_detail(request, pk):
         pk=pk,
     )
     # Zelfde gewaaierde voorproefje als op de klussenlijst, nu als hero
-    # bovenaan het dossier — zie klussen/_klusvoorbeeld.html.
+    # bovenaan het dossier. Daar moet de vorm altijd kloppen — dus opgevuld
+    # tot precies 3 lagen met lege plekken vooraan (achter de echte inhoud),
+    # in plaats van het aantal lagen te laten meebewegen met wat er in de
+    # klus zit. Zie klussen/_klushero.html.
     klus.voorbeeld_items, klus.voorbeeld_meer = voorbeeld.items_voor_stapel(klus)
+    klus.hero_items = [None] * (3 - len(klus.voorbeeld_items)) + klus.voorbeeld_items
     bijlagen = klus.bijlagen.select_related("toegevoegd_door").order_by("-toegevoegd_op")
     gewerkt = totalen.per_medewerker_op_klus(klus)
     return render(

@@ -471,7 +471,12 @@ input[type=time]::-webkit-calendar-picker-indicator{ filter:invert(1); opacity:.
 @media (hover:hover){ .dagkolom:hover{ background:rgba(255,255,255,0.05); } }
 /* zelfde tint als .bord-cel.vandaag bij het planbord */
 .dagkolom.vandaag{ background:rgba(var(--accent-rgb),0.07); }
-.vak{ height:26px; border-top:1px solid rgba(255,255,255,0.06); cursor:pointer; }
+.vak{
+  height:26px; border-top:1px solid rgba(255,255,255,0.06); cursor:pointer;
+  /* anders toont iOS bij het vasthouden (voor het sleepgebaar) een
+     selectie-magnifier over dit lege vak */
+  -webkit-touch-callout:none; -webkit-user-select:none; user-select:none;
+}
 .vak.uurlijn{ border-top:1px solid rgba(255,255,255,0.14); }
 .vak.kiezen{ background:rgba(var(--accent-rgb),0.35); }
 
@@ -730,7 +735,17 @@ input[type=file]:focus-visible + .bestandsknop{
   font-size:12px; line-height:1.3;
   overflow-wrap:break-word; word-break:break-word;
 }
-.fotokaart .wie{ font-size:10.5px; color:rgba(255,255,255,0.5); }
+.fotokaart .wie{
+  font-size:10.5px; color:rgba(255,255,255,0.5);
+  display:flex; align-items:center; gap:.3rem;
+}
+/* Zelfde avatarrondje als elders (initialen op de eigen/palet-kleur), hier
+   piepklein omdat de hele bijschrift-regel al 10.5px is. */
+.fotokaart .fk-bol{
+  flex-shrink:0; width:15px; height:15px; border-radius:999px; border:1px solid;
+  display:flex; align-items:center; justify-content:center;
+  font-size:7px; font-weight:700; color:#fff; letter-spacing:.01em;
+}
 
 /* eerste tegel in het raster: lege plek met een plus, opent de invoegdialoog.
    max-width erop, anders wordt hij bij een enkel (leeg) raster net zo breed
@@ -1134,34 +1149,33 @@ dialog.foto-popup::backdrop{ background:rgba(10,10,8,0.75); backdrop-filter:blur
   box-shadow:0 10px 22px rgba(0,0,0,0.28);
   transition:transform .18s ease;
 }
-/* Offsets in % (van de eigen laag), niet in px: zo schaalt dezelfde stapel
-   zonder aanpassing mee van het 78px-vierkantje hier tot de volle-breedte
-   hero op het klusdossier (zie .klus-hero hieronder). */
 .laag-voor-1{ z-index:3; transform:rotate(0deg) translate(0, 0) scale(1); }
-.laag-voor-2{ z-index:2; transform:rotate(8deg) translate(14%, 6.5%) scale(0.95); }
-.laag-voor-3{ z-index:1; transform:rotate(-10deg) translate(-14%, 11.5%) scale(0.90); }
-@media (hover:hover){ .klus-slide:hover .laag-voor-2, .klusregel:hover .laag-voor-2{ transform:rotate(11deg) translate(19%, 9%) scale(0.95); } }
-@media (hover:hover){ .klus-slide:hover .laag-voor-3, .klusregel:hover .laag-voor-3{ transform:rotate(-13deg) translate(-19%, 15.5%) scale(0.90); } }
+.laag-voor-2{ z-index:2; transform:rotate(8deg) translate(11px, 5px) scale(0.95); }
+.laag-voor-3{ z-index:1; transform:rotate(-10deg) translate(-11px, 9px) scale(0.90); }
+@media (hover:hover){ .klus-slide:hover .laag-voor-2, .klusregel:hover .laag-voor-2{ transform:rotate(11deg) translate(15px, 7px) scale(0.95); } }
+@media (hover:hover){ .klus-slide:hover .laag-voor-3, .klusregel:hover .laag-voor-3{ transform:rotate(-13deg) translate(-15px, 12px) scale(0.90); } }
 
 .voorbeeldlaag-foto img{ display:block; width:100%; height:100%; object-fit:cover; background:rgba(0,0,0,0.2); }
 .voorbeeldlaag-document .voorbeeldlaag-inhoud,
-.voorbeeldlaag-notitie .voorbeeldlaag-inhoud{
+.voorbeeldlaag-notitie .voorbeeldlaag-inhoud,
+.klus-hero-laag-document .voorbeeldlaag-inhoud,
+.klus-hero-laag-notitie .voorbeeldlaag-inhoud{
   height:100%; padding:.4rem; display:flex; flex-direction:column;
   align-items:center; justify-content:center; gap:.2rem; text-align:center;
 }
-.voorbeeldlaag-document{ background:rgba(255,255,255,0.05); }
-.voorbeeldlaag-document svg{ width:20px; height:20px; color:rgba(255,255,255,0.55); }
-.voorbeeldlaag-document .naam{
+.voorbeeldlaag-document, .klus-hero-laag-document{ background:rgba(255,255,255,0.05); }
+.voorbeeldlaag-document svg, .klus-hero-laag-document svg{ width:20px; height:20px; color:rgba(255,255,255,0.55); }
+.voorbeeldlaag-document .naam, .klus-hero-laag-document .naam{
   font-size:9px; color:rgba(255,255,255,0.6); line-height:1.15;
   overflow:hidden; text-overflow:ellipsis; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical;
 }
-.voorbeeldlaag-notitie{ background:rgba(var(--accent-rgb),0.14); border-color:rgba(var(--accent-rgb),0.30); }
+.voorbeeldlaag-notitie, .klus-hero-laag-notitie{ background:rgba(var(--accent-rgb),0.14); border-color:rgba(var(--accent-rgb),0.30); }
 /* line-clamp i.p.v. alleen op tekens afkappen: bij een klus zonder foto's of
    documenten wordt dit de voorste, niet-gedraaide laag (dus volledig
    leesbaar in plaats van half achter iets anders verstopt), en dan moet een
    lange beschrijving netjes op een paar regels stoppen in plaats van in
    piepkleine regeltjes te worden geknipt. */
-.voorbeeldlaag-notitie .notitietekst{
+.voorbeeldlaag-notitie .notitietekst, .klus-hero-laag-notitie .notitietekst{
   margin:0; font-family:'Fraunces',serif; font-style:italic; font-size:10.5px; line-height:1.3; color:var(--hi);
   display:-webkit-box; -webkit-line-clamp:4; -webkit-box-orient:vertical; overflow:hidden;
 }
@@ -1178,18 +1192,39 @@ dialog.foto-popup::backdrop{ background:rgba(10,10,8,0.75); backdrop-filter:blur
 }
 
 /* ══════════ KLUSDOSSIER: HERO BOVENAAN ══════════
-   Zelfde gewaaierde stapel als hierboven, nu breed bovenaan het klusdossier
-   i.p.v. als klein vierkantje ernaast — de laag-offsets staan daarom in %,
-   zie de .laag-voor-* regels hierboven. De terugpijl verhuist van de kop
-   naar hier overheen, met een donkere glasstint erachter zodat hij op elke
-   foto (licht of donker) leesbaar blijft. */
-.klus-hero{ position:relative; margin-bottom:1.4rem; }
-.klus-hero .voorbeeldstapel{
-  width:100%; height:auto; aspect-ratio:16/9; margin-top:0;
+   Eigen, vaste waaier i.p.v. de .voorbeeldstapel hierboven hergebruikt: die
+   is een vierkantje van 78px waar een rotatie van een paar px nauwelijks
+   opvalt, maar op een brede hero (volle kaartbreedte, kort) duwt diezelfde
+   rotatie de hoeken van de achterste lagen ver buiten de eigen doos — vooral
+   verticaal, omdat de doos veel breder dan hoog is. Vandaar: altijd exact
+   drie lagen (klus_detail vult ontbrekende foto's/documenten/notitie aan met
+   lege lagen, zie klussen/views.py), elke laag met een vaste rand van 16px
+   t.o.v. de hero zelf waarin de gedraaide achterlagen mogen uitsteken, en
+   `overflow:hidden` op de hero als vangnet daarbuiten — niets kan ooit over
+   de titel eronder heen steken, wat er ook in de klus zit of hoe smal het
+   scherm is. (Let op: `inset` op de laag zelf, niet `padding` op `.klus-hero`
+   — padding op de container doet niets voor een absoluut gepositioneerd
+   kind, dat volgt de rand-doos, niet de padding-doos.) */
+.klus-hero{
+  position:relative; margin-bottom:1.4rem; aspect-ratio:16/10;
+  border-radius:24px; overflow:hidden; background:rgba(255,255,255,0.05);
 }
-.klus-hero .voorbeeldlaag{ border-radius:24px; }
-.klus-hero .voorbeeldstapel-meer{
-  bottom:.6rem; right:.6rem; font-size:12px; padding:.25rem .65rem;
+.klus-hero-laag{
+  position:absolute; inset:16px; border-radius:20px; overflow:hidden;
+  background:rgba(255,255,255,0.09); border:1px solid rgba(255,255,255,0.20);
+  box-shadow:0 10px 22px rgba(0,0,0,0.28);
+}
+.klus-hero-laag-1{ z-index:3; }
+.klus-hero-laag-2{ z-index:2; transform:rotate(-6deg) translate(-6%, 3%); }
+.klus-hero-laag-3{ z-index:1; transform:rotate(7deg) translate(6%, 6%); }
+.klus-hero-laag img{ display:block; width:100%; height:100%; object-fit:cover; background:rgba(0,0,0,0.2); }
+.klus-hero-laag-document svg{ width:26px; height:26px; }
+.klus-hero-laag-document .naam{ font-size:11px; }
+.klus-hero-laag-notitie .notitietekst{ font-size:13px; }
+.klus-hero-leeg{ background:rgba(255,255,255,0.04); border:1px dashed rgba(255,255,255,0.20); box-shadow:none; }
+.klus-hero-meer{
+  position:absolute; bottom:.6rem; right:.6rem; z-index:4;
+  font-size:12px; padding:.25rem .65rem;
 }
 .terug-pijl.klus-hero-terug{
   position:absolute; top:.7rem; left:.7rem; z-index:5;
