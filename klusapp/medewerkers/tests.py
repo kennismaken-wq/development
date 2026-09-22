@@ -148,8 +148,9 @@ class NavigatieTest(TestCase):
 
 
 class ProfielschermTest(TestCase):
-    """De schermen die niet in de navigatiebalk passen staan als knoppenlijst
-    op /mijn-profiel/ — zie medewerkers/tegels.py: PROFIEL_TEGELS."""
+    """Wie welk onderdeel ziet. De lijst staat sinds 22-09 op het startscherm
+    (zie medewerkers/tegels.py: TEGELS en PROFIEL_TEGELS); het profielscherm
+    gaat alleen nog over je eigen gegevens."""
 
     @classmethod
     def setUpTestData(cls):
@@ -161,23 +162,25 @@ class ProfielschermTest(TestCase):
         )
 
     def test_medewerker_ziet_loonstrook_niet_overzichten_of_beheer(self):
+        # De onderdelen staan sinds 22-09 op het startscherm, niet meer als
+        # "Meer"-lijst op het profiel.
         self.client.force_login(self.medewerker)
-        titels = tegeltitels(self.client.get(reverse("mijn_profiel")).content.decode())
+        titels = [t["titel"] for t in self.client.get(reverse("start")).context["onderdelen"]]
         self.assertIn("Loonstrook", titels)
         for verboden in ("Overzichten", "Beheer", "Planbord"):
             self.assertNotIn(verboden, titels)
 
     def test_eigenaar_ziet_ook_overzichten(self):
         self.client.force_login(self.eigenaar)
-        titels = tegeltitels(self.client.get(reverse("mijn_profiel")).content.decode())
+        titels = [t["titel"] for t in self.client.get(reverse("start")).context["onderdelen"]]
         self.assertIn("Overzichten", titels)
-        self.assertNotIn("Planbord", titels)
+        self.assertIn("Planbord", titels)
 
     def test_loonstrooktegel_gaat_via_de_app_zelf(self):
         # De tegel wijst naar ons eigen adres; daar wordt pas bepaald of
         # iemand naar de app of naar de website moet.
         self.client.force_login(self.medewerker)
-        html = self.client.get(reverse("mijn_profiel")).content.decode()
+        html = self.client.get(reverse("start")).content.decode()
         self.assertIn(f'href="{reverse("loonstrook")}"', html)
         self.assertNotIn("mijn.loondossier.nl", html)
 
@@ -185,10 +188,12 @@ class ProfielschermTest(TestCase):
         # Tijdelijk: zolang er geen apart beheeraccount is, komt de eigenaar
         # in /beheer/. Zie de opmerking bij Medewerker.save().
         self.client.force_login(self.eigenaar)
-        self.assertIn("Beheer", tegeltitels(self.client.get(reverse("mijn_profiel")).content.decode()))
+        titels = [t["titel"] for t in self.client.get(reverse("start")).context["onderdelen"]]
+        self.assertIn("Beheer", titels)
 
         self.client.force_login(self.medewerker)
-        self.assertNotIn("Beheer", tegeltitels(self.client.get(reverse("mijn_profiel")).content.decode()))
+        titels = [t["titel"] for t in self.client.get(reverse("start")).context["onderdelen"]]
+        self.assertNotIn("Beheer", titels)
 
     def test_uitloggen_staat_op_het_profielscherm(self):
         self.client.force_login(self.medewerker)
@@ -422,12 +427,26 @@ class MijnProfielTest(TestCase):
         )
         self.client.force_login(self.sam)
 
-    def test_toont_je_eigen_gegevens(self):
+    def test_toont_je_eigen_gegevens_op_slot(self):
         self.sam.telefoon = "0612345678"
         self.sam.save()
         html = self.client.get(reverse("mijn_profiel")).content.decode()
         self.assertIn("Sam de Wit", html)
         self.assertIn("0612345678", html)
+        # dezelfde velden, maar niet bewerkbaar tot je op de knop klikt
+        self.assertIn("disabled", html)
+        self.assertIn("Gegevens wijzigen", html)
+
+    def test_zonder_javascript_openen_de_velden_via_de_link(self):
+        html = self.client.get(reverse("mijn_profiel") + "?bewerken=1").content.decode()
+        self.assertIn('name="telefoon"', html)
+        self.assertNotIn('name="telefoon" disabled', html)
+        self.assertIn("Opslaan", html)
+
+    def test_meer_lijst_staat_er_niet_meer(self):
+        # die onderdelen staan op het startscherm
+        html = self.client.get(reverse("mijn_profiel")).content.decode()
+        self.assertNotIn("profiellijst", html)
 
     def test_wijzigen_blijft_op_hetzelfde_adres(self):
         antwoord = self.client.post(

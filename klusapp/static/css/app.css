@@ -21,6 +21,10 @@
 }
 
 *{ box-sizing:border-box; }
+/* Een eigen display-regel (flex, grid, inline-flex) wint van het standaard
+   verbergen door de browser, waardoor een element met hidden tóch zichtbaar
+   blijft. Daarom hier één keer hard gezet. */
+[hidden]{ display:none !important; }
 html,body{ height:100%; }
 body{
   margin:0;
@@ -549,6 +553,34 @@ input[type=time]::-webkit-calendar-picker-indicator{ filter:invert(1); opacity:.
 }
 .eisen li::marker{ color:rgba(var(--accent-rgb),0.7); }
 .eisen em{ font-style:normal; color:rgba(255,255,255,0.75); }
+
+/* Profiel: dezelfde velden voor lezen en wijzigen. Op slot zien ze eruit als
+   gegevens (geen rand, geen invulvak), open als een gewoon formulier — zo
+   verspringt er niets als je op wijzigen klikt. */
+.gegevens-blok{ margin:0; display:grid; gap:.2rem; }
+.gegeven{ display:grid; gap:.1rem; padding:.45rem 0; border-bottom:1px solid rgba(255,255,255,0.07); }
+.gegeven:last-child{ border-bottom:0; }
+.gegeven dt label{
+  margin:0; font-size:10.5px; font-weight:600; letter-spacing:.07em;
+  text-transform:uppercase; color:rgba(255,255,255,0.5);
+}
+.gegeven dd{ margin:0; }
+/* De algemene invoerregel hierboven telt vier :not()-voorwaarden en weegt
+   daardoor zwaarder dan een losse klasse; die voorwaarden staan hier dus ook,
+   anders wint hij en houd je toch een invulvak. */
+.gegeven input:disabled:not([type=checkbox]):not([type=radio]):not([type=color]):not([type=file]),
+.gegeven select:disabled,
+.gegeven textarea:disabled{
+  background:none; border-color:transparent; padding-left:0; padding-right:0;
+  color:#fff; opacity:1; -webkit-text-fill-color:#fff;   /* Safari dimt anders */
+  cursor:default;
+}
+.gegeven input[type=checkbox]:disabled{ opacity:.6; }
+.gegeven input[type=color]:disabled{ width:44px; padding:0; border:1px solid rgba(255,255,255,0.2); }
+
+.profielknop{ margin:0 0 .6rem; }
+.opslaanrij{ display:flex; align-items:center; gap:.6rem; margin-top:1.6rem; }
+.opslaanrij .knop{ width:auto; }
 
 /* Uitklapbaar blok met een formulier erin: het staat op dezelfde pagina en
    verstuurt naar hetzelfde adres, zodat je niet naar een apart scherm hoeft
