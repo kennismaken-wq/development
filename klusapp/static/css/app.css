@@ -311,6 +311,82 @@ input[type=time]::-webkit-calendar-picker-indicator{ filter:invert(1); opacity:.
   width:13px; height:13px; color:rgba(255,255,255,0.6); pointer-events:none;
 }
 
+/* ══════════ FOTO'S: ZOEKBARE KLUS-KIEZER ══════════
+   Bij een paar opties volstaat de kale <select> hierboven, maar met
+   tientallen klussen moet je kunnen typen om er één te vinden. static/js/
+   fotozoeken.js bouwt hier in JS een zoekbare knop + lijst overheen; de
+   <select> blijft de bron van waarheid voor het formulier (form=
+   "foto-zoekform") en is het volledige element zolang JS niet is geladen. */
+.klus-kiezer{ position:relative; flex-shrink:1; min-width:0; }
+/* pas verstopt zodra JS 'm daadwerkelijk vervangen heeft door de knop
+   hieronder — anders is de select bij een falende/trage script-load
+   onbereikbaar */
+.klus-kiezer.js-klaar .klus-kiezer-select{
+  position:absolute; width:1px; height:1px; padding:0; margin:-1px;
+  overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0;
+}
+.klus-kiezer-trigger{
+  display:none; align-items:center; gap:.5rem; max-width:100%;
+  padding:.4rem 1.8rem .4rem .85rem; font-size:12.5px; font-weight:600;
+  font-family:'Inter',sans-serif; border-radius:999px; cursor:pointer;
+  background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.20);
+  color:#fff; position:relative;
+}
+.klus-kiezer.js-klaar .klus-kiezer-trigger{ display:inline-flex; }
+.klus-kiezer-trigger .label{
+  overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:44vw;
+}
+.klus-kiezer-trigger svg{
+  position:absolute; top:50%; right:.6rem; transform:translateY(-50%);
+  width:13px; height:13px; color:rgba(255,255,255,0.6); pointer-events:none;
+}
+
+.klus-kiezer-popover{
+  position:absolute; z-index:30; top:calc(100% + .5rem); left:0;
+  width:290px; max-width:min(290px, 88vw); border-radius:18px; padding:.8rem;
+  display:flex; flex-direction:column; gap:.6rem;
+}
+.klus-kiezer-zoek{
+  display:flex; align-items:center; gap:.5rem;
+  background:rgba(255,255,255,0.10); border:1px solid rgba(255,255,255,0.18);
+  border-radius:999px; padding:.55rem .85rem;
+}
+.klus-kiezer-zoek svg{ width:14px; height:14px; color:rgba(255,255,255,0.5); flex-shrink:0; }
+.klus-kiezer-zoek input{
+  -webkit-appearance:none; appearance:none;
+  background:none; border:none; outline:none; flex:1 1 auto; min-width:0;
+  font-family:'Inter',sans-serif; font-size:13.5px; color:#fff;
+}
+.klus-kiezer-zoek input::placeholder{ color:rgba(255,255,255,0.45); }
+.klus-kiezer-zoek input::-webkit-search-cancel-button{ -webkit-appearance:none; }
+
+/* de drie-standenknop "Alle / Actief / Niet actief" die de lijst hieronder
+   filtert — zelfde .keuzepil-vormtaal als de aanwezigheidsregistratie, maar
+   neutraal: elke gekozen stand krijgt dezelfde accenttint, geen semantiek
+   per kleur zoals bij ja/nee/onbekend. */
+.klus-kiezer-scope{ gap:.35rem; }
+.klus-kiezer-scope .vlak{ min-height:30px; padding:.3rem .7rem; font-size:11.5px; }
+.keuzepil.scope input:checked + .vlak{
+  background:rgba(var(--accent-rgb),0.32); border-color:rgba(var(--accent-rgb),0.6); color:var(--hi);
+}
+
+.klus-kiezer-lijst{
+  list-style:none; margin:0; padding:0; max-height:250px; overflow-y:auto;
+  display:flex; flex-direction:column; gap:.15rem;
+}
+.klus-kiezer-item{
+  display:block; width:100%; text-align:left; border:0; cursor:pointer;
+  background:none; color:rgba(255,255,255,0.8); font-family:'Inter',sans-serif;
+  font-size:13.5px; padding:.55rem .7rem; border-radius:12px;
+}
+@media (hover:hover){ .klus-kiezer-item:hover{ background:rgba(255,255,255,0.10); color:#fff; } }
+.klus-kiezer-item[aria-selected="true"]{
+  background:rgba(var(--accent-rgb),0.28); color:var(--hi); font-weight:600;
+}
+.klus-kiezer-leeg{
+  color:rgba(255,255,255,0.5); font-size:12.5px; text-align:center; padding:.9rem .5rem; margin:0;
+}
+
 .urensub{ display:flex; align-items:center; gap:.5rem; margin-bottom:1rem; }
 .totaal-chip-klein{
   display:inline-flex; align-items:baseline; gap:.35rem;

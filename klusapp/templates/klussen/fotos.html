@@ -8,16 +8,15 @@
   </form>
 
   <div class="foto-filterrij">
-    <label class="weergave-kiezer">
-      <select name="klus" form="foto-zoekform" onchange="this.form.submit()">
-        <option value="">Alle klussen</option>
-        <option value="algemeen"{% if klus_pk == "algemeen" %} selected{% endif %}>Algemeen</option>
+    <div class="klus-kiezer" id="klus-kiezer">
+      <select name="klus" id="klus-select" form="foto-zoekform" class="klus-kiezer-select" onchange="this.form.submit()">
+        <option value="" data-scope="altijd">Alle klussen</option>
+        <option value="algemeen" data-scope="altijd"{% if klus_pk == "algemeen" %} selected{% endif %}>Algemeen</option>
         {% for klus in klussen %}
-          <option value="{{ klus.pk }}"{% if klus_pk == klus.pk|stringformat:"s" %} selected{% endif %}>{{ klus.naam }}{% if not klus.actief %} (afgerond){% endif %}</option>
+          <option value="{{ klus.pk }}" data-scope="{% if klus.actief %}actief{% else %}inactief{% endif %}"{% if klus_pk == klus.pk|stringformat:"s" %} selected{% endif %}>{{ klus.naam }}{% if not klus.actief %} (afgerond){% endif %}</option>
         {% endfor %}
       </select>
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
-    </label>
+    </div>
     <noscript><button type="submit" form="foto-zoekform" class="knop-stil">Filteren</button></noscript>
   </div>
 
