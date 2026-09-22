@@ -34,7 +34,7 @@ LOONDOSSIER_WEB = "https://mijn.loondossier.nl/Aanmelden"
 TEGELS = [
     {"titel": "Uren schrijven", "icoon": "uren", "url_naam": "mijn_uren", "rollen": ["medewerker", "eigenaar"]},
     {"titel": "Klussen", "icoon": "klussen", "url_naam": "klussen", "rollen": ["medewerker", "eigenaar"]},
-    {"titel": "Foto's", "icoon": "fotos", "url_naam": "fotos", "rollen": ["medewerker", "eigenaar"]},
+    {"titel": "Galerij", "icoon": "fotos", "url_naam": "fotos", "rollen": ["medewerker", "eigenaar"]},
     {"titel": "Aanwezigheid", "icoon": "aanwezigheid", "url_naam": "aanwezigheid", "rollen": ["eigenaar"]},
     {"titel": "Mijn profiel", "icoon": "profiel", "url_naam": "mijn_profiel", "rollen": ["medewerker", "eigenaar"]},
 ]

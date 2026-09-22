@@ -51,12 +51,12 @@ class UurblokFotosForm(AlleenFotosForm):
     documenten), maar optioneel: bestanden kiezen is geen verplichte stap en
     mag het opslaan van de uren nooit blokkeren (zie uren.views.uurblok_nieuw).
     De data-attributen sturen het bestandsknopje (static/js/bestandsveld.js)
-    naar dezelfde "+"-knop als bij het toevoegen van een foto elders in de
-    app, in plaats van de generieke "Bestanden kiezen"-knop."""
+    naar hetzelfde galerij-icoon als de "Galerij"-tegel in de zijbalk, in
+    plaats van het generieke document-icoon van de "Bestanden kiezen"-knop."""
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.fields["bestanden"].required = False
         self.fields["bestanden"].widget.attrs.update(
-            {"data-knoptekst": "Foto toevoegen", "data-knopicoon": "plus"}
+            {"data-knoptekst": "Foto toevoegen", "data-knopicoon": "foto"}
         )
