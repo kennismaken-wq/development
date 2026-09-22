@@ -52,11 +52,11 @@
     </div>
 
     <div class="tabblad-paneel" data-tab="uren" hidden>
-      <div class="sectiekop-rij" style="justify-content:flex-end">
-        {% if gewerkt %}
+      {% if gewerkt %}
+        <div class="sectiekop-rij alleen-actie" style="justify-content:flex-end">
           <a class="knop-stil" href="{% url 'klus_uren_export' klus.pk %}">Exporteren</a>
-        {% endif %}
-      </div>
+        </div>
+      {% endif %}
       {% if gewerkt %}
         {% comment %} Wie hier staat is afgeleid uit de geschreven uren, niet uit een
            toewijzing: er is geen veld waarin staat wie op een klus hoort. Zie

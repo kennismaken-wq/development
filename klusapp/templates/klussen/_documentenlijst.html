@@ -16,7 +16,7 @@
    gelden, ook een foto, en dus niet in het fotoraster/de foto-posts
    verschijnen. {% endcomment %}
 {% load bijlagen %}
-<div class="sectiekop-rij"{% if geen_kop %} style="justify-content:flex-end"{% endif %}>
+<div class="sectiekop-rij{% if geen_kop %} alleen-actie{% endif %}"{% if geen_kop %} style="justify-content:flex-end"{% endif %}>
   {% if not geen_kop %}<h2 class="sectiekop">Technische documenten</h2>{% endif %}
   <button type="button" class="knop-stil" onclick="document.getElementById('document-invoegen').showModal()">Document toevoegen</button>
 </div>
