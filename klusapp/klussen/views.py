@@ -14,7 +14,7 @@ from django.utils.http import url_has_allowed_host_and_scheme
 from medewerkers.rechten import alleen_eigenaar
 from uren import totalen
 
-from . import afbeeldingen, kleuren, voorbeeld
+from . import afbeeldingen, kleuren, pdf_thumbnails, voorbeeld
 from .forms import AlleenFotosForm, BijlageForm, KlusForm, NieuweKlusBijlagenForm
 from .models import Bijlage, Klus
 
@@ -52,8 +52,12 @@ def _doel_van(request):
     return klus, uurblok
 
 
-def _bewaar(bestand, datum, toelichting, klus, uurblok, gebruiker):
-    """Eén geüpload bestand wegschrijven. Foto's verkleind, documenten zoals ze zijn."""
+def bewaar_bijlage(bestand, datum, toelichting, klus, uurblok, gebruiker):
+    """Eén geüpload bestand wegschrijven. Foto's verkleind, documenten zoals ze zijn.
+
+    Publiek (geen underscore): ook het uren-toevoegformulier hangt hier een
+    foto mee op (zie uren.views.uurblok_nieuw), niet alleen deze module.
+    """
     naam = bestand.name
     hoofd, thumbnail = afbeeldingen.versies_van(bestand, naam)
 
@@ -71,8 +75,11 @@ def _bewaar(bestand, datum, toelichting, klus, uurblok, gebruiker):
         bijlage.bestand.save(f"{basis}.jpg", hoofd, save=False)
         bijlage.thumbnail.save(f"{basis}.jpg", thumbnail, save=False)
     else:
+        document_thumbnail = pdf_thumbnails.thumbnail_van(bestand, naam)
         bestand.seek(0)
         bijlage.bestand.save(naam, ContentFile(bestand.read()), save=False)
+        if document_thumbnail:
+            bijlage.thumbnail.save(f"{Path(naam).stem}.jpg", document_thumbnail, save=False)
     bijlage.save()
     return bijlage
 
@@ -104,7 +111,7 @@ def bijlage_toevoegen(request):
             messages.error(request, f"{bestand.name}: hier kan alleen een foto bij, geen document.")
             continue
         try:
-            _bewaar(bestand, datum, toelichting, klus, uurblok, request.user)
+            bewaar_bijlage(bestand, datum, toelichting, klus, uurblok, request.user)
         except afbeeldingen.BestandNietLeesbaar as probleem:
             # De rest van de selectie wel doorzetten: wie acht foto's uploadt
             # wil niet alles opnieuw doen omdat er één niet deugt.
@@ -294,7 +301,7 @@ def klus_nieuw(request):
         toelichting = bijlagenformulier.cleaned_data["toelichting"]
         for bestand in bijlagenformulier.cleaned_data["bestanden"]:
             try:
-                _bewaar(bestand, datum, toelichting, klus, None, request.user)
+                bewaar_bijlage(bestand, datum, toelichting, klus, None, request.user)
             except afbeeldingen.BestandNietLeesbaar as probleem:
                 # De klus staat er al; alleen het ene bestand mislukt, niet de rest.
                 messages.error(request, f"{bestand.name}: {probleem}")

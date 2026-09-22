@@ -3,6 +3,7 @@ import tempfile
 from datetime import date, time, timedelta
 from io import BytesIO
 
+import pymupdf
 from django.contrib.auth.models import AnonymousUser
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.db import connection
@@ -16,7 +17,7 @@ from medewerkers.models import Medewerker
 from uren import totalen
 from uren.models import Uurblok
 
-from . import afbeeldingen, kleuren, views, voorbeeld
+from . import afbeeldingen, kleuren, pdf_thumbnails, views, voorbeeld
 from .models import Bijlage, Klus
 
 TIJDELIJKE_MEDIA = tempfile.mkdtemp()
@@ -38,6 +39,13 @@ def jpeg(breedte=3000, hoogte=2000, orientatie=None, kleur=(90, 140, 60)):
 
 def upload(naam="tuin.jpg", inhoud=None, type_="image/jpeg"):
     return SimpleUploadedFile(naam, inhoud if inhoud is not None else jpeg(), content_type=type_)
+
+
+def pdf(breedte=200, hoogte=280):
+    """Een geldige PDF van één pagina, zoals een offerte of tekening."""
+    with pymupdf.open() as document:
+        document.new_page(width=breedte, height=hoogte)
+        return document.tobytes()
 
 
 @override_settings(MEDIA_ROOT=TIJDELIJKE_MEDIA)
@@ -76,6 +84,24 @@ class AfbeeldingenTest(TestCase):
     def test_kapotte_afbeelding_geeft_geen_serverfout(self):
         with self.assertRaises(afbeeldingen.BestandNietLeesbaar):
             afbeeldingen.versies_van(BytesIO(b"dit is geen plaatje"), "stuk.jpg")
+
+
+class PdfThumbnailsTest(TestCase):
+    """De PDF-voorbeeldplaatjes los, zonder database (zie AfbeeldingenTest)."""
+
+    def test_eerste_pagina_wordt_een_thumbnail(self):
+        thumbnail = pdf_thumbnails.thumbnail_van(BytesIO(pdf()), "tekening.pdf")
+        with Image.open(thumbnail) as klein:
+            self.assertEqual(max(klein.size), afbeeldingen.THUMB_ZIJDE)
+
+    def test_geen_pdf_geeft_geen_thumbnail(self):
+        self.assertIsNone(pdf_thumbnails.thumbnail_van(BytesIO(jpeg()), "tuin.jpg"))
+
+    def test_onleesbare_pdf_geeft_geen_thumbnail(self):
+        # Een half bestand (afgebroken upload, of gewoon geen echte PDF) mag
+        # niet als 500 eindigen — het document wordt dan zonder voorbeeld
+        # opgeslagen, precies zoals een document er tot nu toe uitzag.
+        self.assertIsNone(pdf_thumbnails.thumbnail_van(BytesIO(b"%PDF-1.4"), "stuk.pdf"))
 
 
 @override_settings(MEDIA_ROOT=TIJDELIJKE_MEDIA)

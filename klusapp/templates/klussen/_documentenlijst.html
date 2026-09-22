@@ -15,9 +15,20 @@
   </li>
   {% for bijlage in document_bijlagen %}
     <li>
-      <a href="{% url 'media_bestand' bijlage.bestand.name %}" target="_blank" rel="noopener">{{ bijlage.toonnaam }}</a>
-      {% if bijlage.toelichting %}<span class="wat">{{ bijlage.toelichting }}</span>{% endif %}
-      <span class="wie">{{ bijlage.toegevoegd_door.naam|default:"onbekend" }} · {{ bijlage.datum|date:"j M Y" }}</span>
+      <a class="doc-rij" href="{% url 'media_bestand' bijlage.bestand.name %}" target="_blank" rel="noopener">
+        {% if bijlage.thumbnail %}
+          <img class="doc-thumb" src="{% url 'media_bestand' bijlage.thumbnail.name %}" alt="" loading="lazy">
+        {% else %}
+          <span class="doc-thumb doc-icoon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7 3h7l4 4v13a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z"/><path d="M14 3v4h4"/></svg>
+          </span>
+        {% endif %}
+        <span class="doc-tekst">
+          <span class="doc-naam">{{ bijlage.toonnaam }}</span>
+          {% if bijlage.toelichting %}<span class="wat">{{ bijlage.toelichting }}</span>{% endif %}
+          <span class="wie">{{ bijlage.toegevoegd_door.naam|default:"onbekend" }} · {{ bijlage.datum|date:"j M Y" }}</span>
+        </span>
+      </a>
       {% if bijlage|mag_weg:user %}
         <form method="post" action="{% url 'bijlage_verwijderen' bijlage.pk %}" class="weg"
               onsubmit="return confirm('Dit document verwijderen?');">
