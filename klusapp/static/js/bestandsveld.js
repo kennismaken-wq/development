@@ -61,4 +61,60 @@
       }
     });
   });
+
+  /* Te veel bytes tegelijk tegenhouden vóórdat ze de deur uit gaan.
+
+     nginx staat op de VPS op client_max_body_size 50M (zie docs/DEPLOY.md), en
+     die grens geldt per verzoek en niet per bestand. Acht telefoonfoto's van
+     4 MB is dus één verzoek van 32 MB, en zit je erboven dan weigert nginx de
+     hele upload met een kale 413-pagina — niet één foto, alles, en zonder dat
+     de app er iets over kan zeggen. Dit is de enige plek waar er nog een
+     Nederlandse melding van te maken is.
+
+     Django legt zelf geen bovengrens op bestandsgrootte:
+     DATA_UPLOAD_MAX_MEMORY_SIZE rekent expliciet buiten geüploade bestanden om
+     en FILE_UPLOAD_MAX_MEMORY_SIZE is alleen het schakelpunt tussen geheugen en
+     een tijdelijk bestand. Deze controle vervangt dus niets, ze vult aan. */
+  const MAX_BYTES = 48 * 1024 * 1024; // iets onder de 50M van nginx: multipart-overhead
+
+  function megabytes(bytes) {
+    return (bytes / (1024 * 1024)).toFixed(0);
+  }
+
+  const formulieren = new Set();
+  velden.forEach(function (veld) {
+    if (veld.form) formulieren.add(veld.form);
+  });
+
+  formulieren.forEach(function (formulier) {
+    let melding = null;
+
+    formulier.addEventListener("submit", function (gebeurtenis) {
+      let totaal = 0;
+      formulier.querySelectorAll('input[type="file"]').forEach(function (veld) {
+        Array.prototype.forEach.call(veld.files || [], function (bestand) {
+          totaal += bestand.size || 0;
+        });
+      });
+      if (totaal <= MAX_BYTES) {
+        if (melding) melding.hidden = true;
+        return;
+      }
+
+      gebeurtenis.preventDefault();
+      if (!melding) {
+        melding = document.createElement("p");
+        melding.className = "fout";
+        formulier.appendChild(melding);
+      }
+      melding.textContent =
+        "Samen " +
+        megabytes(totaal) +
+        " MB gekozen; er kan maximaal " +
+        megabytes(MAX_BYTES) +
+        " MB in één keer bij. Verstuur ze in twee keer.";
+      melding.hidden = false;
+      melding.scrollIntoView({ block: "center" });
+    });
+  });
 })();
