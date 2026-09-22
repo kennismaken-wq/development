@@ -238,24 +238,23 @@ def fotos(request):
 
 @login_required
 def klus_lijst(request):
-    """Overzicht van klussen. Standaard alleen actief, ?alles=1 toont ook afgeronde.
+    """Overzicht van klussen. Standaard alleen actief; een afgeronde klus vind
+    je via de klus-kiezer (die doorzoekt altijd alle klussen, ook afgeronde).
 
     Iedereen die inlogt ziet alle klussen: er is geen "toegewezen aan"-veld op
     Klus (dat loopt via Uurblok, per werkdag), dus een medewerker moet elke
     klus kunnen openen om er een foto aan te hangen, ook eentje waar hij
     vandaag niet op staat.
     """
-    toon_alles = request.GET.get("alles") == "1"
     zoek = request.GET.get("q", "").strip()
     klus_pk = request.GET.get("klus", "").strip()
     if not klus_pk.isdigit():
         klus_pk = ""
     alle_klussen = Klus.objects.all()  # opties voor de klus-kiezer; Meta.ordering = ["-actief", "naam"]
 
-    # Een specifieke klus kiezen in de kiezer wint van de "ook afgeronde
-    # tonen"-wisselaar: je vroeg om precies die klus, dus die moet ook
-    # verschijnen als hij afgerond is en de wisselaar uitstaat.
-    klussen = Klus.objects.all() if (toon_alles or klus_pk) else Klus.objects.filter(actief=True)
+    # Een specifieke klus kiezen in de kiezer laat 'm ook zien als hij
+    # afgerond is: je vroeg expliciet om precies die klus.
+    klussen = Klus.objects.all() if klus_pk else Klus.objects.filter(actief=True)
     if zoek:
         klussen = klussen.filter(
             Q(naam__icontains=zoek) | Q(adres__icontains=zoek) | Q(plaats__icontains=zoek)
@@ -281,7 +280,6 @@ def klus_lijst(request):
         "klussen/klussen.html",
         {
             "klussen": klussen,
-            "toon_alles": toon_alles,
             "zoek": zoek,
             "klus_pk": klus_pk,
             "alle_klussen": alle_klussen,

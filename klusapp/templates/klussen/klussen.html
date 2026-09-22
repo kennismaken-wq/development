@@ -5,7 +5,6 @@
   <form method="get" class="foto-zoekbalk" id="klus-zoekform">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.6" y2="16.6"/></svg>
     <input type="search" name="q" value="{{ zoek }}" placeholder="Zoek op naam of adres…">
-    {% if toon_alles %}<input type="hidden" name="alles" value="1">{% endif %}
   </form>
 
   <div class="foto-filterrij">
@@ -19,14 +18,6 @@
     </div>
     <noscript><button type="submit" form="klus-zoekform" class="knop-stil">Filteren</button></noscript>
   </div>
-
-  <label class="wisselaar-rij">
-    <span class="wisselaar-label">Ook afgeronde klussen tonen</span>
-    <span class="wisselaar">
-      <input type="checkbox" id="klus-alles-wisselaar" {% if toon_alles %}checked{% endif %}>
-      <span class="wisselaar-track"></span>
-    </span>
-  </label>
 
   {% include "klussen/_klussenlijst.html" %}
 

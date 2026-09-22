@@ -1,7 +1,7 @@
 /* Live zoeken op het klussenscherm: zelfde aanpak als static/js/fotozoeken.js
    voor de foto tab — bij elke toetsaanslag (met een korte pauze erin) en bij
-   het wisselen van de "ook afgeronde tonen"-wisselaar haalt dit script
-   dezelfde pagina opnieuw op en vervangt alleen de klussenlijst.
+   het kiezen van een klus haalt dit script dezelfde pagina opnieuw op en
+   vervangt alleen de klussenlijst.
 
    Bewust géén los JSON/fragment-endpoint: dit haalt gewoon de normale
    klussen-pagina op en pakt er client-side het lijstdeel uit. Zonder JS (of
@@ -13,7 +13,6 @@
 (function () {
   const form = document.getElementById("klus-zoekform");
   const zoekveld = form && form.querySelector('input[name="q"]');
-  const wisselaar = document.getElementById("klus-alles-wisselaar");
   const klusKeuze = document.querySelector('select[name="klus"]');
   if (!form || !zoekveld) return;
 
@@ -21,18 +20,6 @@
 
   function huidigeLijst() {
     return document.querySelector(".klussenlijst-resultaten");
-  }
-
-  function allesVeld() {
-    let veld = form.querySelector('input[name="alles"]');
-    if (!veld) {
-      veld = document.createElement("input");
-      veld.type = "hidden";
-      veld.name = "alles";
-      veld.value = "1";
-      form.appendChild(veld);
-    }
-    return veld;
   }
 
   function verversen() {
@@ -62,18 +49,6 @@
     clearTimeout(timer);
     timer = setTimeout(verversen, 300);
   });
-
-  if (wisselaar) {
-    wisselaar.addEventListener("change", function () {
-      if (wisselaar.checked) {
-        allesVeld().value = "1";
-      } else {
-        const veld = form.querySelector('input[name="alles"]');
-        if (veld) veld.remove();
-      }
-      verversen();
-    });
-  }
 
   if (klusKeuze) {
     // Was this.form.submit() (zie klussen.html); dat gaf een volledige reload.
