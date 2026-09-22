@@ -602,9 +602,9 @@ class MediaTest(TestCase):
 
 @override_settings(MEDIA_ROOT=TIJDELIJKE_MEDIA)
 class DocumentToevoegenKnopTest(TestCase):
-    """De "Technische documenten"-sectie en de knop erin moeten er staan
-    vóórdat er ooit een document is geweest — anders is er geen zichtbare
-    manier om de eerste pdf toe te voegen (zie klussen/_documentenlijst.html)."""
+    """Het "Documenten"-tabblad en de knop erin moeten er staan vóórdat er
+    ooit een document is geweest — anders is er geen zichtbare manier om de
+    eerste pdf toe te voegen (zie klussen/_documentenlijst.html)."""
 
     @classmethod
     def setUpTestData(cls):
@@ -621,7 +621,7 @@ class DocumentToevoegenKnopTest(TestCase):
 
     def test_documentknop_staat_er_ook_zonder_bestaande_documenten(self):
         antwoord = self.client.get(self.klus.get_absolute_url())
-        self.assertContains(antwoord, "Technische documenten")
+        self.assertContains(antwoord, "Documenten")
         self.assertContains(antwoord, "Document toevoegen")
         self.assertContains(antwoord, "Nog geen documenten.")
 

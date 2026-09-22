@@ -1,5 +1,7 @@
 {% extends "basis.html" %}
 {% load kleuren %}
+{% load pictogrammen %}
+{% load static %}
 {% block titel %}{{ klus.naam }}{% endblock %}
 {% block kaartklasse %}klus-dossier{% endblock %}
 {% block kop %}<span class="vlek" style="background:linear-gradient(150deg, {{ klus|kleur_van }}D9, {{ klus|kleur_van }}73); border-color:{{ klus|kleur_van }}"></span>{{ klus.naam }}{% endblock %}
@@ -25,44 +27,70 @@
     {% endif %}
   </div>
 
-  {% include "klussen/_documentenlijst.html" with klus_pk=klus.pk %}
+  {% comment %} Documenten/Uren/Foto's als tabbladen: drie volle secties onder
+     elkaar was op een telefoon een lange scroll voor je bij Foto's was.
+     static/js/klustabs.js wisselt op een klik; de eerste tab staat hier al
+     open zodat de pagina ook zonder JS iets zinnigs toont. {% endcomment %}
+  <div class="tabbladen">
+    <div class="tabbladen-kop">
+      <button type="button" class="tabblad actief" data-tab="documenten">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">{{ "documenten"|pictogram }}</svg>
+        Documenten
+      </button>
+      <button type="button" class="tabblad" data-tab="uren">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">{{ "uren"|pictogram }}</svg>
+        Uren
+      </button>
+      <button type="button" class="tabblad" data-tab="fotos">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">{{ "fotos"|pictogram }}</svg>
+        Foto's
+      </button>
+    </div>
 
-  <div class="sectiekop-rij">
-    <h2 class="sectiekop">Gewerkte uren</h2>
-    {% if gewerkt %}
-      <a class="knop-stil" href="{% url 'klus_uren_export' klus.pk %}">Exporteren</a>
-    {% endif %}
+    <div class="tabblad-paneel" data-tab="documenten">
+      {% include "klussen/_documentenlijst.html" with klus_pk=klus.pk geen_kop=True %}
+    </div>
+
+    <div class="tabblad-paneel" data-tab="uren" hidden>
+      <div class="sectiekop-rij" style="justify-content:flex-end">
+        {% if gewerkt %}
+          <a class="knop-stil" href="{% url 'klus_uren_export' klus.pk %}">Exporteren</a>
+        {% endif %}
+      </div>
+      {% if gewerkt %}
+        {% comment %} Wie hier staat is afgeleid uit de geschreven uren, niet uit een
+           toewijzing: er is geen veld waarin staat wie op een klus hoort. Zie
+           uren/totalen.py. {% endcomment %}
+        <ul class="urenlijst">
+          {% for rij in gewerkt %}
+            <li>
+              <span class="ur-bol" style="background:linear-gradient(150deg, {{ rij.medewerker|medewerker_kleur }}, {{ rij.medewerker|medewerker_kleur }}A6); border-color:{{ rij.medewerker|medewerker_kleur }}">{{ rij.medewerker.initialen }}</span>
+              <span class="wie">
+                {{ rij.medewerker.naam }}
+                {% if rij.medewerker.functie %}<span class="functie">{{ rij.medewerker.functie }}</span>{% endif %}
+              </span>
+              <span class="wanneer">
+                {{ rij.aantal_dagen }} dag{{ rij.aantal_dagen|pluralize:"en" }} ·
+                {{ rij.eerste_dag|date:"j M" }}{% if rij.eerste_dag != rij.laatste_dag %} – {{ rij.laatste_dag|date:"j M" }}{% endif %}
+              </span>
+              <span class="uren">{{ rij.uren }}</span>
+            </li>
+          {% endfor %}
+          <li class="totaalregel">
+            <span class="ur-bol leeg-bol"></span>
+            <span class="wie">Totaal</span>
+            <span class="wanneer"></span>
+            <span class="uren">{{ totaal.uren }}</span>
+          </li>
+        </ul>
+      {% else %}
+        <p class="leeg">Nog niemand heeft uren op deze klus geschreven.</p>
+      {% endif %}
+    </div>
+
+    <div class="tabblad-paneel" data-tab="fotos" hidden>
+      {% include "klussen/_fotoraster.html" with klus_pk=klus.pk %}
+    </div>
   </div>
-  {% if gewerkt %}
-    {% comment %} Wie hier staat is afgeleid uit de geschreven uren, niet uit een
-       toewijzing: er is geen veld waarin staat wie op een klus hoort. Zie
-       uren/totalen.py. {% endcomment %}
-    <ul class="urenlijst">
-      {% for rij in gewerkt %}
-        <li>
-          <span class="ur-bol" style="background:linear-gradient(150deg, {{ rij.medewerker|medewerker_kleur }}, {{ rij.medewerker|medewerker_kleur }}A6); border-color:{{ rij.medewerker|medewerker_kleur }}">{{ rij.medewerker.initialen }}</span>
-          <span class="wie">
-            {{ rij.medewerker.naam }}
-            {% if rij.medewerker.functie %}<span class="functie">{{ rij.medewerker.functie }}</span>{% endif %}
-          </span>
-          <span class="wanneer">
-            {{ rij.aantal_dagen }} dag{{ rij.aantal_dagen|pluralize:"en" }} ·
-            {{ rij.eerste_dag|date:"j M" }}{% if rij.eerste_dag != rij.laatste_dag %} – {{ rij.laatste_dag|date:"j M" }}{% endif %}
-          </span>
-          <span class="uren">{{ rij.uren }}</span>
-        </li>
-      {% endfor %}
-      <li class="totaalregel">
-        <span class="ur-bol leeg-bol"></span>
-        <span class="wie">Totaal</span>
-        <span class="wanneer"></span>
-        <span class="uren">{{ totaal.uren }}</span>
-      </li>
-    </ul>
-  {% else %}
-    <p class="leeg">Nog niemand heeft uren op deze klus geschreven.</p>
-  {% endif %}
-
-  <h2 class="sectiekop">Foto's</h2>
-  {% include "klussen/_fotoraster.html" with klus_pk=klus.pk %}
+  <script src="{% static 'js/klustabs.js' %}"></script>
 {% endblock %}

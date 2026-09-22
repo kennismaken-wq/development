@@ -55,6 +55,11 @@ PICTOGRAMMEN = {
         '<circle cx="8.5" cy="9.5" r="1.7"/>'
         '<path d="M4 17l5-5 3 3 3-3.5 5 5.5"/>'
     ),
+    # zelfde tekening als het documentpictogram in _documentenlijst.html
+    "documenten": (
+        '<path d="M7 3h7l4 4v13a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z"/>'
+        '<path d="M14 3v4h4"/>'
+    ),
     "loonstrook": (
         '<circle cx="12" cy="12" r="9"/>'
         '<path d="M15 8.7c-.7-.6-1.6-1-2.7-1-2.2 0-4 1.9-4 4.3s1.8 4.3 4 4.3c1.1 0 2-.4 2.7-1"/>'

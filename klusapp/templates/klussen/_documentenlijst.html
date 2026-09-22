@@ -1,7 +1,10 @@
 {% comment %} Tekeningen, offertes, pdf's — en foto's die technisch van aard
    zijn (bv. een gefotografeerde tekening). Verwacht `document_bijlagen` en
    `terug`, en voor de eigen uploaddialoog dezelfde context als
-   _uploadveld.html (evt. `klus_pk`/`uurblok_pk`).
+   _uploadveld.html (evt. `klus_pk`/`uurblok_pk`). Optioneel `geen_kop`: laat
+   de "Technische documenten"-kop weg, voor het klusdossier waar het
+   "Documenten"-tabblad zelf al als kop dient (zie klussen/klus_detail.html)
+   — de toevoegknop blijft dan wel staan, rechts uitgelijnd.
 
    Tekent zelf de kop met de toevoegknop (zelfde .sectiekop-rij als "Gewerkte
    uren"/Exporteren op het klusdossier): los in de lijst als eigen
@@ -13,8 +16,8 @@
    gelden, ook een foto, en dus niet in het fotoraster/de foto-posts
    verschijnen. {% endcomment %}
 {% load bijlagen %}
-<div class="sectiekop-rij">
-  <h2 class="sectiekop">Technische documenten</h2>
+<div class="sectiekop-rij"{% if geen_kop %} style="justify-content:flex-end"{% endif %}>
+  {% if not geen_kop %}<h2 class="sectiekop">Technische documenten</h2>{% endif %}
   <button type="button" class="knop-stil" onclick="document.getElementById('document-invoegen').showModal()">Document toevoegen</button>
 </div>
 <ul class="doclijst">
