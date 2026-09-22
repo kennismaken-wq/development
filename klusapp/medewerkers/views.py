@@ -155,6 +155,10 @@ def mijn_profiel(request):
     springen tussen schermen. Na opslaan een omleiding naar dezelfde pagina,
     zodat verversen niet opnieuw opslaat.
     """
+    # De gegevens staan er altijd als formulier, alleen niet bewerkbaar. Met
+    # "Gegevens wijzigen" gaan dezelfde velden open, zodat het scherm niet
+    # verspringt tussen een lees- en een schrijfversie.
+    bewerken = request.GET.get("bewerken") == "1"
     gegevens = EigenGegevensForm(instance=request.user)
     wachtwoord = EigenWachtwoordForm(request.user)
 
@@ -174,15 +178,23 @@ def mijn_profiel(request):
                 messages.success(request, "Je gegevens zijn bijgewerkt.")
                 return redirect("mijn_profiel")
 
+    # Bij een fout blijft het formulier open staan, anders zie je niet waarom
+    # er niets is opgeslagen.
+    bewerken = bewerken or bool(gegevens.errors)
+    if not bewerken:
+        for veld in gegevens.fields.values():
+            veld.widget.attrs["disabled"] = True
+            # Een streepje bij wat niet is ingevuld; anders staat er een kopje
+            # met niets eronder en lijkt het scherm half geladen.
+            veld.widget.attrs.setdefault("placeholder", "—")
+
     return render(
         request,
         "profiel.html",
         {
-            "profiel_tegels": zichtbare_profieltegels(request.user),
             "formulier": gegevens,
+            "bewerken": bewerken,
             "wachtwoordformulier": wachtwoord,
-            # Openklappen als er iets mis ging, anders zie je de foutmelding niet.
-            "open_gegevens": gegevens.errors,
             "open_wachtwoord": wachtwoord.errors,
         },
     )

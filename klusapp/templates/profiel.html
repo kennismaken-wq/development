@@ -1,53 +1,48 @@
 {% extends "basis.html" %}
-{% load pictogrammen %}
 {% block titel %}Mijn profiel{% endblock %}
 {% block kop %}{{ user.naam }}{% endblock %}
 {% block sub %}{{ user.get_rol_display }}{% if user.functie %} · {{ user.functie }}{% endif %}{% endblock %}
 {% block inhoud %}
-  <dl class="gegevens">
-    <dt>Gebruikersnaam</dt><dd>{{ user.username }}</dd>
-    {% if user.telefoon %}<dt>Mobiel</dt><dd><a href="tel:{{ user.telefoon }}">{{ user.telefoon }}</a></dd>{% endif %}
-    {% if user.email %}<dt>E-mail</dt><dd>{{ user.email }}</dd>{% endif %}
-    {% if user.adres or user.woonplaats %}
-      <dt>Adres</dt>
-      <dd>{{ user.adres }}{% if user.adres and user.woonplaats %}, {% endif %}{{ user.postcode }} {{ user.woonplaats }}</dd>
-    {% endif %}
-    {% if user.noodcontact_naam or user.noodcontact_telefoon %}
-      <dt>Bij nood</dt>
-      <dd>
-        {{ user.noodcontact_naam }}{% if user.noodcontact_relatie %} ({{ user.noodcontact_relatie }}){% endif %}
-        {% if user.noodcontact_telefoon %} · <a href="tel:{{ user.noodcontact_telefoon }}">{{ user.noodcontact_telefoon }}</a>{% endif %}
-      </dd>
-    {% endif %}
-    {% if user.rijbewijs or user.aanhanger %}
-      <dt>Rijbewijs</dt>
-      <dd>
-        {% if user.rijbewijs %}{{ user.get_rijbewijs_display }}{% else %}geen{% endif %}
-        {% if user.aanhanger %} · mag met aanhanger (BE){% endif %}
-      </dd>
-    {% endif %}
-    {% if user.in_dienst_sinds %}<dt>In dienst sinds</dt><dd>{{ user.in_dienst_sinds|date:"j F Y" }}</dd>{% endif %}
-  </dl>
-
-  {% comment %} Allebei de formulieren staan ingeklapt op deze pagina en
-     versturen hierheen: zo blijf je op hetzelfde adres in plaats van heen en
-     weer te springen tussen schermen. <details> doet dat zonder script.
+  {% comment %} Eén weergave voor lezen en wijzigen: de velden staan er altijd,
+     alleen niet bewerkbaar. De knop hierboven zet ze open — met javascript
+     meteen, en zonder javascript via ?bewerken=1, zodat het scherm in beide
+     gevallen op dit adres blijft.
   {% endcomment %}
-  <details class="vouw" {% if open_gegevens %}open{% endif %}>
-    <summary>Gegevens wijzigen</summary>
-    <form method="post">
-      {% csrf_token %}
-      {% for kop, velden in formulier.groepen %}
-        {% if kop %}<h2 class="sectiekop">{{ kop }}</h2>{% endif %}
+  <p class="profielknop">
+    <a class="knop-stil" id="wijzig-knop" href="?bewerken=1"{% if bewerken %} hidden{% endif %}>
+      Gegevens wijzigen
+    </a>
+  </p>
+
+  <form method="post" id="gegevensformulier">
+    {% csrf_token %}
+    <dl class="gegevens-blok">
+      <div class="gegeven">
+        <dt><label>Gebruikersnaam</label></dt>
+        <dd><input type="text" value="{{ user.username }}" disabled></dd>
+      </div>
+    </dl>
+
+    {% for kop, velden in formulier.groepen %}
+      {% if kop %}<h2 class="sectiekop">{{ kop }}</h2>{% endif %}
+      <dl class="gegevens-blok">
         {% for veld in velden %}
-          <label for="{{ veld.id_for_label }}">{{ veld.label }}</label>
-          {{ veld }}
-          {% for fout in veld.errors %}<p class="fout">{{ fout }}</p>{% endfor %}
+          <div class="gegeven">
+            <dt><label for="{{ veld.id_for_label }}">{{ veld.label }}</label></dt>
+            <dd>
+              {{ veld }}
+              {% for fout in veld.errors %}<p class="fout">{{ fout }}</p>{% endfor %}
+            </dd>
+          </div>
         {% endfor %}
-      {% endfor %}
-      <p style="margin-top:1.6rem"><button type="submit" class="knop">Opslaan</button></p>
-    </form>
-  </details>
+      </dl>
+    {% endfor %}
+
+    <p class="opslaanrij" id="opslaanrij"{% if not bewerken %} hidden{% endif %}>
+      <button type="submit" class="knop">Opslaan</button>
+      <a class="knop-stil" href="{% url 'mijn_profiel' %}">Annuleren</a>
+    </p>
+  </form>
 
   <details class="vouw" {% if open_wachtwoord %}open{% endif %}>
     <summary>Wachtwoord wijzigen</summary>
@@ -64,22 +59,31 @@
     </form>
   </details>
 
-  {% if profiel_tegels %}
-    <h2 class="sectiekop">Meer</h2>
-    <ul class="profiellijst">
-      {% for tegel in profiel_tegels %}
-        <li>
-          <a class="profielregel" href="{{ tegel.url }}"{% if tegel.extern %} target="_blank" rel="noopener"{% endif %}>
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">{{ tegel.icoon|pictogram }}</svg>
-            <span class="titel">{{ tegel.titel }}</span>
-          </a>
-        </li>
-      {% endfor %}
-    </ul>
-  {% endif %}
-
   <form method="post" action="{% url 'uitloggen' %}" style="margin-top:1.6rem">
     {% csrf_token %}
     <button type="submit" class="knop-stil">Uitloggen</button>
   </form>
+
+  <script>
+    // De knop is een gewone link naar ?bewerken=1; met javascript openen we de
+    // velden meteen, zodat de pagina niet opnieuw hoeft te laden.
+    (function () {
+      var knop = document.getElementById('wijzig-knop');
+      var formulier = document.getElementById('gegevensformulier');
+      var opslaan = document.getElementById('opslaanrij');
+      if (!knop || !formulier) return;
+
+      knop.addEventListener('click', function (gebeurtenis) {
+        gebeurtenis.preventDefault();
+        formulier.querySelectorAll('[disabled]').forEach(function (veld) {
+          // de gebruikersnaam blijft op slot: die verandert de werkgever
+          if (veld.name) { veld.disabled = false; }
+        });
+        knop.hidden = true;
+        opslaan.hidden = false;
+        var eerste = formulier.querySelector('input:not([disabled])');
+        if (eerste) { eerste.focus(); }
+      });
+    })();
+  </script>
 {% endblock %}
