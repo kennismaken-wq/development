@@ -167,6 +167,25 @@ h1{
   font-size:1.6rem; margin:0; line-height:1.15;
 }
 .kop .sub{ font-size:11.5px; color:rgba(255,255,255,0.6); margin:.25rem 0 0; }
+
+/* Klusdossier: titel gecentreerd onder de hero-waaier (zie .klus-hero-blok
+   hierboven), i.p.v. links uitgelijnd naast een logo/pijl die er niet meer
+   staat. */
+.kaart.klus-dossier .kop{ justify-content:center; }
+.kaart.klus-dossier .koptekst{ flex:0 1 auto; text-align:center; }
+/* Klein "potlood"-knopje naast de titel i.p.v. een aparte "Bewerken"-pil
+   verderop — zelfde rondje-vormtaal als .terug-pijl, maar kleiner omdat hij
+   hier bíj de tekst hoort in plaats van op zichzelf te staan. */
+.bewerk-knop{
+  display:inline-flex; align-items:center; justify-content:center;
+  width:28px; height:28px; border-radius:50%; vertical-align:middle;
+  margin:0 0 0 .5rem;
+  background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.16);
+  color:rgba(255,255,255,0.75); transition:background .12s;
+}
+.bewerk-knop svg{ width:15px; height:15px; }
+.bewerk-knop:active{ background:rgba(255,255,255,0.18); }
+@media (hover:hover){ .bewerk-knop:hover{ background:rgba(255,255,255,0.14); color:#fff; } }
 /* De terugverwijzing in .sub is op bijna elk scherm de enige weg terug, en
    was een regel tekst van 11,5px zonder ruimte eromheen — met een duim raak
    je die half. De tekst blijft even klein, de tikruimte eromheen niet. */
@@ -1314,9 +1333,7 @@ dialog.foto-popup::backdrop{ background:rgba(10,10,8,0.75); backdrop-filter:blur
   position:relative; margin-bottom:1.4rem;
   display:flex; justify-content:center;
 }
-.klus-hero-blok .terug-pijl{
-  position:absolute; left:0; top:50%; transform:translateY(-50%); margin:0;
-}
+.klus-hero-blok .terug-pijl{ position:absolute; left:0; top:0; margin:0; }
 .klus-hero{
   position:relative; width:58%; max-width:230px; aspect-ratio:1/1;
   border-radius:22px; overflow:hidden; background:rgba(255,255,255,0.05);
