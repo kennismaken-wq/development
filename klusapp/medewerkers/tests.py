@@ -410,3 +410,72 @@ class TestgegevensTest(TestCase):
 
         self.client.post(reverse("testgegevens"), {"actie": "opruimen"})
         self.assertNotIn("Testgegevens verwijderen", self.client.get(reverse("start")).content.decode())
+
+
+class MijnProfielTest(TestCase):
+    """Je eigen gegevens bekijken en wijzigen, zonder het scherm te verlaten."""
+
+    def setUp(self):
+        self.sam = Medewerker.objects.create_user(
+            "sam", password="tuinbaas2026", first_name="Sam", last_name="de Wit",
+            functie="Hovenier", rol=Medewerker.Rol.MEDEWERKER,
+        )
+        self.client.force_login(self.sam)
+
+    def test_toont_je_eigen_gegevens(self):
+        self.sam.telefoon = "0612345678"
+        self.sam.save()
+        html = self.client.get(reverse("mijn_profiel")).content.decode()
+        self.assertIn("Sam de Wit", html)
+        self.assertIn("0612345678", html)
+
+    def test_wijzigen_blijft_op_hetzelfde_adres(self):
+        antwoord = self.client.post(
+            reverse("mijn_profiel"),
+            {"first_name": "Sam", "last_name": "de Wit", "telefoon": "0687654321",
+             "kleur": "#5B8FA8", "rijbewijs": "B"},
+        )
+        self.assertEqual(antwoord.status_code, 302)
+        self.assertEqual(antwoord.headers["Location"], reverse("mijn_profiel"))
+        self.sam.refresh_from_db()
+        self.assertEqual(self.sam.telefoon, "0687654321")
+        self.assertEqual(self.sam.rijbewijs, "B")
+
+    def test_je_kunt_jezelf_geen_andere_rol_geven(self):
+        self.client.post(
+            reverse("mijn_profiel"),
+            {"first_name": "Sam", "kleur": "#5B8FA8",
+             "rol": Medewerker.Rol.EIGENAAR, "username": "baas", "functie": "Directeur"},
+        )
+        self.sam.refresh_from_db()
+        self.assertEqual(self.sam.rol, Medewerker.Rol.MEDEWERKER)
+        self.assertEqual(self.sam.username, "sam")
+        self.assertEqual(self.sam.functie, "Hovenier")
+
+    def test_eigen_wachtwoord_wijzigen(self):
+        antwoord = self.client.post(
+            reverse("mijn_profiel"),
+            {"actie": "wachtwoord", "huidig": "tuinbaas2026", "nieuw": "nieuwezomer26"},
+        )
+        self.assertEqual(antwoord.status_code, 302)
+        self.sam.refresh_from_db()
+        self.assertTrue(self.sam.check_password("nieuwezomer26"))
+        # je blijft ingelogd na het wijzigen
+        self.assertEqual(self.client.get(reverse("mijn_profiel")).status_code, 200)
+
+    def test_verkeerd_huidig_wachtwoord_wijzigt_niets(self):
+        antwoord = self.client.post(
+            reverse("mijn_profiel"),
+            {"actie": "wachtwoord", "huidig": "fout", "nieuw": "nieuwezomer26"},
+        )
+        self.assertContains(antwoord, "niet je huidige wachtwoord")
+        self.sam.refresh_from_db()
+        self.assertTrue(self.sam.check_password("tuinbaas2026"))
+
+    def test_te_zwak_nieuw_wachtwoord_wordt_geweigerd(self):
+        self.client.post(
+            reverse("mijn_profiel"),
+            {"actie": "wachtwoord", "huidig": "tuinbaas2026", "nieuw": "1234"},
+        )
+        self.sam.refresh_from_db()
+        self.assertTrue(self.sam.check_password("tuinbaas2026"))

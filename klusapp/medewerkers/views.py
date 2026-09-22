@@ -1,6 +1,7 @@
 from datetime import date, timedelta
 
 from django.contrib import messages
+from django.contrib.auth import update_session_auth_hash
 from django.contrib.auth.decorators import login_required
 from django.db.models import Case, IntegerField, Max, Prefetch, Q, Value, When
 from django.db.models.functions import Lower
@@ -12,7 +13,13 @@ from klussen.models import Bijlage, Klus
 from uren.models import Aanwezigheid, Uurblok
 from uren import totalen
 
-from .forms import MedewerkerForm, NieuweMedewerkerForm, WachtwoordForm
+from .forms import (
+    EigenGegevensForm,
+    EigenWachtwoordForm,
+    MedewerkerForm,
+    NieuweMedewerkerForm,
+    WachtwoordForm,
+)
 from .models import Medewerker
 from . import testgegevens as demo_gegevens
 from .rechten import alleen_eigenaar
@@ -141,9 +148,44 @@ def start(request):
 
 @login_required
 def mijn_profiel(request):
-    """Naam, rol en uitloggen, met daaronder de schermen die niet in de
-    vaste navigatiebalk passen (zie medewerkers/tegels.py)."""
-    return render(request, "profiel.html", {"profiel_tegels": zichtbare_profieltegels(request.user)})
+    """Je eigen gegevens: bekijken en wijzigen, plus wachtwoord en uitloggen.
+
+    Allebei de formulieren staan ingeklapt op deze pagina en versturen naar
+    dit adres; je blijft dus op /mijn-profiel/ in plaats van heen en weer te
+    springen tussen schermen. Na opslaan een omleiding naar dezelfde pagina,
+    zodat verversen niet opnieuw opslaat.
+    """
+    gegevens = EigenGegevensForm(instance=request.user)
+    wachtwoord = EigenWachtwoordForm(request.user)
+
+    if request.method == "POST":
+        if request.POST.get("actie") == "wachtwoord":
+            wachtwoord = EigenWachtwoordForm(request.user, request.POST)
+            if wachtwoord.is_valid():
+                wachtwoord.opslaan()
+                # Zonder dit ben je na het wijzigen je eigen sessie kwijt.
+                update_session_auth_hash(request, request.user)
+                messages.success(request, "Je wachtwoord is gewijzigd.")
+                return redirect("mijn_profiel")
+        else:
+            gegevens = EigenGegevensForm(request.POST, instance=request.user)
+            if gegevens.is_valid():
+                gegevens.save()
+                messages.success(request, "Je gegevens zijn bijgewerkt.")
+                return redirect("mijn_profiel")
+
+    return render(
+        request,
+        "profiel.html",
+        {
+            "profiel_tegels": zichtbare_profieltegels(request.user),
+            "formulier": gegevens,
+            "wachtwoordformulier": wachtwoord,
+            # Openklappen als er iets mis ging, anders zie je de foutmelding niet.
+            "open_gegevens": gegevens.errors,
+            "open_wachtwoord": wachtwoord.errors,
+        },
+    )
 
 
 @login_required
