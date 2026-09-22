@@ -150,11 +150,17 @@ def media_bestand(request, pad):
     if not volledig.is_relative_to(wortel) or not volledig.is_file():
         raise Http404
 
-    bijlage = Bijlage.objects.filter(bestand=pad).first() or Bijlage.objects.filter(thumbnail=pad).first()
+    hoofdbijlage = Bijlage.objects.filter(bestand=pad).first()
     # inline, niet attachment: een pdf moet in de browser te bekijken zijn
     # zonder eerst gedownload te worden. naam blijft gezet zodat "bewaren als"
     # in de browser een leesbare naam voorstelt in plaats van de opslag-uuid.
-    naam = bijlage.originele_naam if bijlage and not bijlage.is_foto else None
+    #
+    # Alleen voor het hoofdbestand, niet voor een thumbnail: een
+    # documentthumbnail is altijd een jpg, ook van een pdf. Zonder deze knip
+    # stuurt FileResponse voor zo'n thumbnail de originele .pdf-naam mee,
+    # leidt daar Content-Type: application/pdf uit af terwijl de bytes een
+    # jpeg zijn, en laten sommige mobiele browsers het plaatje dan leeg.
+    naam = hoofdbijlage.originele_naam if hoofdbijlage and not hoofdbijlage.is_foto else None
 
     if settings.GEBRUIK_X_ACCEL:
         # nginx levert het bestand uit; Django doet alleen de rechtencontrole.

@@ -9,10 +9,14 @@
         {% if item.soort == 'foto' %}
           <img src="{% url 'media_bestand' item.thumbnail.name|default:item.bestand.name %}" alt="" loading="lazy">
         {% elif item.soort == 'document' %}
-          <div class="voorbeeldlaag-inhoud">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M7 2h7l4 4v15a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1z"/><path d="M14 2v4h4"/></svg>
-            <span class="naam">{{ item.originele_naam|default:"Document" }}</span>
-          </div>
+          {% if item.thumbnail %}
+            <img src="{% url 'media_bestand' item.thumbnail.name %}" alt="" loading="lazy">
+          {% else %}
+            <div class="voorbeeldlaag-inhoud">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M7 2h7l4 4v15a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1z"/><path d="M14 2v4h4"/></svg>
+              <span class="naam">{{ item.originele_naam|default:"Document" }}</span>
+            </div>
+          {% endif %}
         {% else %}
           <div class="voorbeeldlaag-inhoud">
             <p class="notitietekst">{{ item.tekst|truncatechars:160 }}</p>

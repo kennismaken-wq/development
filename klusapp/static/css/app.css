@@ -1270,7 +1270,7 @@ dialog.foto-popup::backdrop{ background:rgba(10,10,8,0.75); backdrop-filter:blur
 @media (hover:hover){ .klus-slide:hover .laag-voor-2, .klusregel:hover .laag-voor-2{ transform:rotate(11deg) translate(15px, 7px) scale(0.95); } }
 @media (hover:hover){ .klus-slide:hover .laag-voor-3, .klusregel:hover .laag-voor-3{ transform:rotate(-13deg) translate(-15px, 12px) scale(0.90); } }
 
-.voorbeeldlaag-foto img{ display:block; width:100%; height:100%; object-fit:cover; background:rgba(0,0,0,0.2); }
+.voorbeeldlaag-foto img, .voorbeeldlaag-document img{ display:block; width:100%; height:100%; object-fit:cover; background:rgba(0,0,0,0.2); }
 .voorbeeldlaag-document .voorbeeldlaag-inhoud,
 .voorbeeldlaag-notitie .voorbeeldlaag-inhoud,
 .klus-hero-laag-document .voorbeeldlaag-inhoud,

@@ -387,6 +387,24 @@ class MediaTest(TestCase):
         self.assertIn("inline", antwoord.headers["Content-Disposition"])
         self.assertIn("Offerte.pdf", antwoord.headers["Content-Disposition"])
 
+    def test_document_thumbnail_krijgt_zijn_eigen_jpeg_content_type(self):
+        # De thumbnail is altijd een jpg, ook van een pdf. Zonder de knip in
+        # media_bestand tussen hoofdbestand en thumbnail leidt Django het
+        # Content-Type af van de originele .pdf-naam ("application/pdf") in
+        # plaats van van de echte, geserveerde bytes — met als gevolg dat
+        # sommige mobiele browsers het plaatje niet tonen (het claimt een pdf
+        # te zijn), ook al laadt het prima op de meeste desktopbrowsers.
+        self.client.force_login(self.sam)
+        klus = Klus.objects.create(naam="Tuin Vermeer")
+        self.client.post(
+            reverse("bijlage_toevoegen"),
+            {"bestanden": upload("Offerte.pdf", pdf(), "application/pdf"), "klus": klus.pk},
+        )
+        bijlage = Bijlage.objects.get()
+        self.assertTrue(bijlage.thumbnail)
+        antwoord = self.client.get(reverse("media_bestand", args=[bijlage.thumbnail.name]))
+        self.assertEqual(antwoord.headers["Content-Type"], "image/jpeg")
+
 
 @override_settings(MEDIA_ROOT=TIJDELIJKE_MEDIA)
 class DocumentToevoegenKnopTest(TestCase):
