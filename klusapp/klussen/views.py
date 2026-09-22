@@ -240,7 +240,19 @@ def klus_detail(request, pk):
     collega's, want "wie op welke klus heeft gewerkt" is precies wat dit
     scherm moet laten zien. Zijn eigen urenoverzicht blijft een ander scherm.
     """
-    klus = get_object_or_404(Klus, pk=pk)
+    klus = get_object_or_404(
+        Klus.objects.prefetch_related(
+            Prefetch(
+                "bijlagen",
+                queryset=Bijlage.objects.order_by("-datum", "-toegevoegd_op"),
+                to_attr="voorbeeld_bijlagen",
+            )
+        ),
+        pk=pk,
+    )
+    # Zelfde gewaaierde voorproefje als op de klussenlijst, nu als hero
+    # bovenaan het dossier — zie klussen/_klusvoorbeeld.html.
+    klus.voorbeeld_items, klus.voorbeeld_meer = voorbeeld.items_voor_stapel(klus)
     bijlagen = klus.bijlagen.select_related("toegevoegd_door").order_by("-toegevoegd_op")
     gewerkt = totalen.per_medewerker_op_klus(klus)
     return render(

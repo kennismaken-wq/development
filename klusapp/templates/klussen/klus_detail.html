@@ -2,10 +2,14 @@
 {% load kleuren %}
 {% block titel %}{{ klus.naam }}{% endblock %}
 {% block kop %}<span class="vlek" style="background:linear-gradient(150deg, {{ klus|kleur_van }}D9, {{ klus|kleur_van }}73); border-color:{{ klus|kleur_van }}"></span>{{ klus.naam }}{% endblock %}
-{% block terug %}
-  <a class="terug-pijl" href="{% url 'klussen' %}" aria-label="Terug naar klussen">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
-  </a>
+{% block terug %}{% endblock %}
+{% block hero %}
+  <div class="klus-hero">
+    <a class="terug-pijl klus-hero-terug" href="{% url 'klussen' %}" aria-label="Terug naar klussen">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+    </a>
+    {% include "klussen/_klusvoorbeeld.html" %}
+  </div>
 {% endblock %}
 {% block inhoud %}
   <div class="klusinfo">

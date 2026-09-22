@@ -37,6 +37,7 @@
   {% endif %}
 
   <div class="kaart glas {% block kaartklasse %}{% endblock %}">
+    {% block hero %}{% endblock %}
     <div class="kop">
       {% block terug %}
         <a href="{% url 'start' %}"><img class="merk" src="{% static 'img/logo-de-groene-m-licht.png' %}" alt="" width="512" height="437"></a>
