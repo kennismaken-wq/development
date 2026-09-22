@@ -25,11 +25,12 @@
           <img src="{% url 'media_bestand' bijlage.thumbnail.name|default:bijlage.bestand.name %}"
                alt="{{ bijlage.toonnaam }}" loading="lazy">
         </button>
+        {% comment %} Geen klus-badge (link) meer hier: die zat naast/over de
+           knop die de popup opent, en een klik erop navigeerde meteen weg
+           i.p.v. de foto te tonen. "Naar de klus" kan alleen nog vanuit de
+           popup zelf, via de knop daar (_fotopopup.html). {% endcomment %}
         <figcaption>
-          {% if toon_klus and bijlage.klus %}
-            <a href="{{ bijlage.klus.get_absolute_url }}" class="klus-badge">{{ bijlage.klus.naam }}</a>
-          {% endif %}
-          {% if bijlage.toelichting %}<span class="wat">{{ bijlage.toelichting }}</span>{% endif %}
+          <span class="wat">{{ bijlage.toonnaam }}</span>
           <span class="wie">{{ bijlage.toegevoegd_door.naam|default:"onbekend" }} · {{ bijlage.datum|date:"j M" }}</span>
         </figcaption>
         {% if bijlage|mag_weg:user %}

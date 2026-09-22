@@ -1197,12 +1197,6 @@ dialog.foto-popup::backdrop{ background:rgba(10,10,8,0.75); backdrop-filter:blur
   backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px);
 }
 
-.fotokaart .klus-badge{
-  display:inline-block; font-size:10.5px; font-weight:600; color:var(--hi);
-  text-decoration:none; margin-bottom:.1rem;
-}
-@media (hover:hover){ .fotokaart .klus-badge:hover{ text-decoration:underline; } }
-
 /* ══════════ KLUSDOSSIER: GEWERKTE UREN ══════════
    Wie er in deze lijst staat is afgeleid uit de geschreven uren, niet uit een
    toewijzing. Zie uren/totalen.py. */
