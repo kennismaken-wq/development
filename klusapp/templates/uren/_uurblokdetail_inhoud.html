@@ -59,7 +59,6 @@
   <h2 class="sectiekop">Foto's</h2>
   {% include "klussen/_fotoraster.html" with uurblok_pk=blok.pk %}
 
-  <h2 class="sectiekop">Technische documenten</h2>
   {% include "klussen/_documentenlijst.html" with uurblok_pk=blok.pk %}
 </div>
 {% if mag_bewerken %}<script src="{% static 'js/uurblokbewerken.js' %}"></script>{% endif %}

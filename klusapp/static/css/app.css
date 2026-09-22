@@ -107,13 +107,13 @@ body.met-navigatie{ padding-left:6.6rem; }
       knoppen en rijen; dat scheelt de vertraging vóór een tik "aankomt". */
 a, button, .knop, .knop-stil, .pil, .side-icon, .klusregel, .profielregel,
 .klus-slide, .klustegel, .maanddag, .fotokaart-nieuw, .keuzepil .vlak,
-.doclijst .nieuw-knop, .dialog-sluiten, .weg button, .legenda a{
+.dialog-sluiten, .weg button, .legenda a{
   -webkit-tap-highlight-color:transparent;
   touch-action:manipulation;
 }
 
 .knop:active, .knop-stil:active, .pil:active, .legenda a:active,
-.fotokaart-nieuw:active, .doclijst .nieuw-knop:active, .keuzepil .vlak:active{
+.fotokaart-nieuw:active, .keuzepil .vlak:active{
   filter:brightness(.92);
 }
 .klusregel:active, .profielregel:active, .klus-slide:active,
@@ -1045,19 +1045,6 @@ dialog.foto-invoegen .uploadveld, dialog.uren-invoegen .uurblokformulier, dialog
 .doclijst .wat{ font-size:12px; color:rgba(255,255,255,0.7); }
 .doclijst .wie{ font-size:10.5px; color:rgba(255,255,255,0.5); }
 .doclijst .weg{ top:50%; transform:translateY(-50%); right:.7rem; }
-
-/* eerste rij in de documentenlijst: altijd aanwezig, ook zonder documenten —
-   zelfde idee als .fotokaart-nieuw in het fotoraster, maar als lijstregel */
-.doclijst li.nieuw{ padding:0; background:none; border:none; }
-.doclijst .nieuw-knop{
-  display:flex; align-items:center; gap:.6rem; width:100%;
-  padding:.8rem 1rem; border-radius:16px; cursor:pointer;
-  font-family:'Inter',sans-serif; font-size:13.5px; font-weight:500;
-  background:rgba(255,255,255,0.05); border:1px dashed rgba(255,255,255,0.28);
-  color:rgba(255,255,255,0.7);
-}
-@media (hover:hover){ .doclijst .nieuw-knop:hover{ background:rgba(255,255,255,0.10); color:#fff; } }
-.doclijst .nieuw-knop svg{ width:18px; height:18px; flex-shrink:0; }
 
 /* ══════════ KLUSSENLIJST EN KLUSDETAIL ══════════ */
 .klussenlijst{ list-style:none; margin:0; padding:0; display:grid; gap:.5rem; }

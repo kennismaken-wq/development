@@ -3,18 +3,21 @@
    `terug`, en voor de eigen uploaddialoog dezelfde context als
    _uploadveld.html (evt. `klus_pk`/`uurblok_pk`).
 
+   Tekent zelf de kop met de toevoegknop (zelfde .sectiekop-rij als "Gewerkte
+   uren"/Exporteren op het klusdossier): los in de lijst als eigen
+   raster-tegel viel de knop bij een gevulde lijst weg tussen de documenten.
+   Zo blijft 'm altijd zichtbaar, ook zonder documenten.
+
    Heeft een eigen dialoog (#document-invoegen, zie _documentdialoog.html)
    los van #foto-invoegen: wat hier geüpload wordt moet altijd als document
    gelden, ook een foto, en dus niet in het fotoraster/de foto-posts
    verschijnen. {% endcomment %}
 {% load bijlagen %}
+<div class="sectiekop-rij">
+  <h2 class="sectiekop">Technische documenten</h2>
+  <button type="button" class="knop-stil" onclick="document.getElementById('document-invoegen').showModal()">Document toevoegen</button>
+</div>
 <ul class="doclijst">
-  <li class="nieuw">
-    <button type="button" class="nieuw-knop" onclick="document.getElementById('document-invoegen').showModal()">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-      Document toevoegen
-    </button>
-  </li>
   {% for bijlage in document_bijlagen %}
     <li>
       <a class="doc-rij" href="{% url 'media_bestand' bijlage.bestand.name %}" target="_blank" rel="noopener">
