@@ -156,54 +156,35 @@ def media_bestand(request, pad):
 
 @login_required
 def fotos(request):
-    """Foto's: alle foto's/documenten op één hoop, of per klus als tegel.
-
-    Twee weergaven achter dezelfde zoekbalk, zelfde ?weergave=-patroon als
-    de dag/week/maand-pillen bij de uren (templates/uren/mijn_uren.html):
-    "los" toont alles plat op datum, "klus" toont elke klus als tegel met
-    een voorproefje van zijn inhoud.
-    """
+    """Foto's: alle foto's/documenten op één hoop, met een dropdown om op klus te filteren."""
     zoek = request.GET.get("q", "").strip()
-    weergave = request.GET.get("weergave") if request.GET.get("weergave") in ("los", "klus") else "los"
+    klus_pk = request.GET.get("klus", "").strip()
+    if not klus_pk.isdigit():
+        klus_pk = ""
 
     context = {
         "zoek": zoek,
-        "weergave": weergave,
+        "klus_pk": klus_pk,
+        "klussen": Klus.objects.all(),  # Meta.ordering = ["-actief", "naam"]
         "formulier": BijlageForm(),
         "upload_url": reverse("bijlage_toevoegen"),
         "terug": request.get_full_path(),
     }
 
-    if weergave == "klus":
-        klussen = Klus.objects.prefetch_related(
-            Prefetch(
-                "bijlagen",
-                queryset=Bijlage.objects.order_by("-datum", "-toegevoegd_op"),
-                to_attr="voorbeeld_bijlagen",
-            )
-        )
-        if zoek:
-            klussen = klussen.filter(
-                Q(naam__icontains=zoek)
-                | Q(opdrachtgever__icontains=zoek)
-                | Q(adres__icontains=zoek)
-                | Q(plaats__icontains=zoek)
-            )
-        klussen = list(klussen)  # Meta.ordering = ["-actief", "naam"] blijft gelden
-        for klus in klussen:
-            klus.voorbeeld_items, klus.voorbeeld_meer = voorbeeld.items_voor_stapel(klus)
-        context["klus_tegels"] = klussen
-        return render(request, "klussen/fotos.html", context)
-
     bijlagen = Bijlage.objects.select_related("toegevoegd_door", "klus").order_by("-datum", "-toegevoegd_op")
     if zoek:
         bijlagen = bijlagen.filter(Q(toelichting__icontains=zoek) | Q(originele_naam__icontains=zoek))
+    if klus_pk:
+        bijlagen = bijlagen.filter(klus_id=klus_pk)
     bijlagen = list(bijlagen)
     context["foto_bijlagen"] = [b for b in bijlagen if b.is_foto]
-    # Documenten blijven beperkt tot losse (geen klus): klus-documenten zijn
-    # al te zien via de gewaaierde stapel op de klustegel ("per klus"). Wil je
-    # ze hier ook: haal "and b.klus_id is None" hieronder weg.
-    context["document_bijlagen"] = [b for b in bijlagen if not b.is_foto and b.klus_id is None]
+    if klus_pk:
+        # Met een klus geselecteerd horen diens documenten er ook bij.
+        context["document_bijlagen"] = [b for b in bijlagen if not b.is_foto]
+    else:
+        # Zonder filter blijven het de losse documenten: klus-documenten zijn
+        # al te zien op het klusdossier zelf.
+        context["document_bijlagen"] = [b for b in bijlagen if not b.is_foto and b.klus_id is None]
     return render(request, "klussen/fotos.html", context)
 
 

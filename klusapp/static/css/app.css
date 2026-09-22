@@ -155,12 +155,6 @@ h1{
    was een regel tekst van 11,5px zonder ruimte eromheen — met een duim raak
    je die half. De tekst blijft even klein, de tikruimte eromheen niet. */
 .kop .sub a{ display:inline-block; padding:.45rem .6rem .45rem 0; margin:-.45rem 0; }
-.uitlogknop{
-  background:none; border:0; color:rgba(255,255,255,0.6);
-  font-family:'Inter',sans-serif; font-size:11.5px; cursor:pointer;
-  padding:.55rem 0 .55rem .6rem; margin:-.55rem 0; text-decoration:underline; white-space:nowrap;
-}
-@media (hover:hover){ .uitlogknop:hover{ color:#fff; } }
 
 /* ══════════ NAVIGATIE: ZWEVENDE ZIJBALK / ONDERBALK ══════════
    Eén nav-element, alleen ingelogd getoond (basis.html). Op een breed
@@ -238,9 +232,10 @@ label{
   text-transform:uppercase; color:rgba(255,255,255,0.5);
   margin:1.1rem 0 .35rem;
 }
-/* alles behalve de vinkjes en de kleurkiezer: die hebben hun eigen vorm.
-   Zo valt een nieuw soort veld — tel, email, number — nooit meer wit uit. */
-input:not([type=checkbox]):not([type=radio]):not([type=color]):not([type=file]),select,textarea{
+/* alles behalve de vinkjes, de kleurkiezer en het zoekveld: die hebben hun
+   eigen vorm (het zoekveld leeft in de pil van .foto-zoekbalk). Zo valt een
+   nieuw soort veld — tel, email, number — nooit meer wit uit. */
+input:not([type=checkbox]):not([type=radio]):not([type=color]):not([type=file]):not([type=search]),select,textarea{
   width:100%; padding:.8rem .9rem; font-size:16px;
   font-family:'Inter',sans-serif; color:#fff;
   background:rgba(255,255,255,0.10); border:1px solid rgba(255,255,255,0.20);
@@ -512,7 +507,8 @@ input[type=time]::-webkit-calendar-picker-indicator{ filter:invert(1); opacity:.
 }
 .foto-zoekbalk svg{ width:16px; height:16px; color:rgba(255,255,255,0.5); flex-shrink:0; }
 .foto-zoekbalk input{
-  background:none; border:none; outline:none; width:100%;
+  -webkit-appearance:none; appearance:none;
+  background:none; border:none; outline:none; flex:1 1 auto; min-width:0;
   font-family:'Inter',sans-serif; font-size:13.5px; color:#fff;
 }
 .foto-zoekbalk input::placeholder{ color:rgba(255,255,255,0.45); }
@@ -520,6 +516,7 @@ input[type=time]::-webkit-calendar-picker-indicator{ filter:invert(1); opacity:.
 .foto-zoekbalk input::-webkit-search-cancel-button{ -webkit-appearance:none; }
 
 .weergave-pillen{ display:flex; gap:.5rem; margin-bottom:1.4rem; }
+.foto-filterrij{ display:flex; margin-bottom:1.4rem; }
 .pil{
   font-family:'Inter',sans-serif; font-size:12px; font-weight:600;
   padding:.45rem 1rem; border-radius:999px; text-decoration:none;
@@ -992,29 +989,6 @@ dialog.foto-popup img{
   letter-spacing:.05em; text-transform:uppercase; color:rgba(255,255,255,0.45);
 }
 
-/* "Per klus": elke klus is nu een front-of-card, geen fotogalerij meer, en
-   zonder één grote omslagfoto zijn de tegels vrij uniform van hoogte — dus
-   een gewoon grid i.p.v. het Pinterest-metselwerk van .fotoraster (dat
-   bestond juist om wisselende beeldverhoudingen op te vangen). Grid leest
-   ook van boven naar onder / links naar rechts; CSS-columns vult eerst een
-   hele kolom, wat voor een lijst klussen onnatuurlijk aanvoelt. */
-.klustegels{
-  display:grid; grid-template-columns:repeat(auto-fill, minmax(220px, 1fr)); gap:.8rem;
-}
-.klustegel{
-  display:flex; flex-direction:column; gap:.6rem;
-  border-radius:20px; padding:1rem 1rem 1.1rem;
-  background:rgba(255,255,255,0.07); border:1px solid rgba(255,255,255,0.14);
-  color:#fff; text-decoration:none; transition:transform .12s, background .12s;
-}
-@media (hover:hover){ .klustegel:hover{ transform:translateY(-2px); background:rgba(255,255,255,0.11); } }
-.klustegel.afgerond{ opacity:.6; }
-
-.klustegel-kop{ display:grid; gap:.2rem; }
-.klustegel-kop .badges{ display:flex; gap:.3rem; margin-bottom:.1rem; }
-.klustegel-kop .naam{ font-family:'Fraunces',serif; font-style:italic; font-weight:600; font-size:1rem; }
-.klustegel-kop .adres{ font-size:12px; color:rgba(255,255,255,0.6); }
-
 /* Gewaaierde stapel, naar het "Poetry"-voorbeeld: 2-3 lagen licht gedraaid
    en verschoven achter een voorste laag die recht staat. Nieuw idioom in
    deze app (nergens anders staat iets gekanteld) — daarom bewust ingetogen:
@@ -1030,8 +1004,8 @@ dialog.foto-popup img{
 .laag-voor-1{ z-index:3; transform:rotate(0deg) translate(0, 0) scale(1); }
 .laag-voor-2{ z-index:2; transform:rotate(8deg) translate(11px, 5px) scale(0.95); }
 .laag-voor-3{ z-index:1; transform:rotate(-10deg) translate(-11px, 9px) scale(0.90); }
-@media (hover:hover){ .klustegel:hover .laag-voor-2, .klus-slide:hover .laag-voor-2, .klusregel:hover .laag-voor-2{ transform:rotate(11deg) translate(15px, 7px) scale(0.95); } }
-@media (hover:hover){ .klustegel:hover .laag-voor-3, .klus-slide:hover .laag-voor-3, .klusregel:hover .laag-voor-3{ transform:rotate(-13deg) translate(-15px, 12px) scale(0.90); } }
+@media (hover:hover){ .klus-slide:hover .laag-voor-2, .klusregel:hover .laag-voor-2{ transform:rotate(11deg) translate(15px, 7px) scale(0.95); } }
+@media (hover:hover){ .klus-slide:hover .laag-voor-3, .klusregel:hover .laag-voor-3{ transform:rotate(-13deg) translate(-15px, 12px) scale(0.90); } }
 
 .voorbeeldlaag-foto img{ display:block; width:100%; height:100%; object-fit:cover; background:rgba(0,0,0,0.2); }
 .voorbeeldlaag-document .voorbeeldlaag-inhoud,

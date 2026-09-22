@@ -42,9 +42,6 @@
         <h1>{% block kop %}De Groene M{% endblock %}</h1>
         <p class="sub">{% block sub %}{% endblock %}</p>
       </div>
-      {% if user.is_authenticated %}
-        <a href="{% url 'mijn_profiel' %}" class="uitlogknop">Mijn profiel</a>
-      {% endif %}
     </div>
 
     {% if messages %}

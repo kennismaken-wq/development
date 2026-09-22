@@ -170,9 +170,9 @@ class BijlageUploadTest(TestCase):
 
 
 @override_settings(MEDIA_ROOT=TIJDELIJKE_MEDIA)
-class FotosWeergaveTest(TestCase):
-    """De schakelaar op /fotos/: "los" toont alles plat, "klus" toont elke
-    klus als tegel — ook zonder inhoud (zie klussen/views.py:fotos)."""
+class FotosKlusfilterTest(TestCase):
+    """De klus-dropdown op /fotos/: standaard alles plat, filteren op klus
+    beperkt tot die ene klus (zie klussen/views.py:fotos)."""
 
     @classmethod
     def setUpTestData(cls):
@@ -194,30 +194,27 @@ class FotosWeergaveTest(TestCase):
     def setUp(self):
         self.client.force_login(self.sam)
 
-    def test_zonder_weergave_valt_terug_op_los(self):
+    def test_zonder_filter_toont_alle_fotos(self):
         antwoord = self.client.get(reverse("fotos"))
-        self.assertEqual(antwoord.context["weergave"], "los")
-
-    def test_onbekende_weergave_valt_terug_op_los(self):
-        antwoord = self.client.get(reverse("fotos"), {"weergave": "onzin"})
-        self.assertEqual(antwoord.context["weergave"], "los")
-
-    def test_losse_fotos_toont_ook_fotos_van_een_klus(self):
-        # Vóór deze wijziging liet "los" alleen bijlagen zonder klus zien.
-        antwoord = self.client.get(reverse("fotos"), {"weergave": "los"})
+        self.assertEqual(antwoord.context["klus_pk"], "")
         self.assertIn(self.foto_op_klus, antwoord.context["foto_bijlagen"])
         self.assertIn(self.losse_foto, antwoord.context["foto_bijlagen"])
 
-    def test_elke_klus_krijgt_een_tegel_ook_zonder_inhoud(self):
-        # Vóór deze wijziging verborg aantal_fotos__gt=0 een kale klus.
-        antwoord = self.client.get(reverse("fotos"), {"weergave": "klus"})
-        namen = [klus.naam for klus in antwoord.context["klus_tegels"]]
+    def test_onbekende_klus_valt_terug_op_alles(self):
+        antwoord = self.client.get(reverse("fotos"), {"klus": "onzin"})
+        self.assertEqual(antwoord.context["klus_pk"], "")
+        self.assertIn(self.losse_foto, antwoord.context["foto_bijlagen"])
+
+    def test_filter_op_klus_toont_alleen_die_klus(self):
+        antwoord = self.client.get(reverse("fotos"), {"klus": self.klus.pk})
+        self.assertIn(self.foto_op_klus, antwoord.context["foto_bijlagen"])
+        self.assertNotIn(self.losse_foto, antwoord.context["foto_bijlagen"])
+
+    def test_dropdown_bevat_elke_klus_ook_zonder_inhoud(self):
+        antwoord = self.client.get(reverse("fotos"))
+        namen = [klus.naam for klus in antwoord.context["klussen"]]
         self.assertIn(self.klus.naam, namen)
         self.assertIn(self.lege_klus.naam, namen)
-
-    def test_klus_zonder_inhoud_toont_lege_stapel(self):
-        antwoord = self.client.get(reverse("fotos"), {"weergave": "klus"})
-        self.assertContains(antwoord, "Nog geen inhoud")
 
 
 @override_settings(MEDIA_ROOT=TIJDELIJKE_MEDIA)

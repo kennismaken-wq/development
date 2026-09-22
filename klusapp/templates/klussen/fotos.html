@@ -2,44 +2,27 @@
 {% block titel %}Foto's{% endblock %}
 {% block kop %}Foto's{% endblock %}
 {% block inhoud %}
-  <form method="get" class="foto-zoekbalk">
+  <form method="get" class="foto-zoekbalk" id="foto-zoekform">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.6" y2="16.6"/></svg>
     <input type="search" name="q" value="{{ zoek }}" placeholder="Zoek op omschrijving, klus of adres…">
-    <input type="hidden" name="weergave" value="{{ weergave }}">
   </form>
 
-  <div class="weergave-pillen">
-    <a href="?weergave=los{% if zoek %}&q={{ zoek|urlencode }}{% endif %}" class="pil{% if weergave == 'los' %} actief{% endif %}">Losse foto's</a>
-    <a href="?weergave=klus{% if zoek %}&q={{ zoek|urlencode }}{% endif %}" class="pil{% if weergave == 'klus' %} actief{% endif %}">Per klus</a>
+  <div class="foto-filterrij">
+    <label class="weergave-kiezer">
+      <select name="klus" form="foto-zoekform" onchange="this.form.submit()">
+        <option value="">Alle klussen</option>
+        {% for klus in klussen %}
+          <option value="{{ klus.pk }}"{% if klus_pk == klus.pk|stringformat:"s" %} selected{% endif %}>{{ klus.naam }}{% if not klus.actief %} (afgerond){% endif %}</option>
+        {% endfor %}
+      </select>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
+    </label>
+    <noscript><button type="submit" form="foto-zoekform" class="knop-stil">Filteren</button></noscript>
   </div>
 
-  {% if weergave == 'klus' %}
-    {% if klus_tegels %}
-      <div class="klustegels">
-        {% for klus in klus_tegels %}
-          <a href="{{ klus.get_absolute_url }}" class="klustegel{% if not klus.actief %} afgerond{% endif %}">
-            <div class="klustegel-kop">
-              <div class="badges">
-                <span class="soort-badge">{{ klus.get_soort_display }}</span>
-                {% if not klus.actief %}<span class="soort-badge afgerond-badge">Afgerond</span>{% endif %}
-              </div>
-              <span class="naam">{{ klus.naam }}</span>
-              {% if klus.adres or klus.plaats %}
-                <span class="adres">{{ klus.adres }}{% if klus.adres and klus.plaats %}, {% endif %}{{ klus.plaats }}</span>
-              {% endif %}
-            </div>
-            {% include "klussen/_klusvoorbeeld.html" %}
-          </a>
-        {% endfor %}
-      </div>
-    {% else %}
-      <p class="leeg">{% if zoek %}Niets gevonden voor "{{ zoek }}".{% else %}Nog geen klussen.{% endif %}</p>
-    {% endif %}
-  {% else %}
-    <h2 class="sectiekop">Losse foto's</h2>
-    {% include "klussen/_fotoraster.html" with toon_klus=True %}
+  <h2 class="sectiekop">Foto's</h2>
+  {% include "klussen/_fotoraster.html" with toon_klus=True %}
 
-    <h2 class="sectiekop">Losse documenten</h2>
-    {% include "klussen/_documentenlijst.html" %}
-  {% endif %}
+  <h2 class="sectiekop">Documenten</h2>
+  {% include "klussen/_documentenlijst.html" %}
 {% endblock %}
