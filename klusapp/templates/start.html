@@ -12,7 +12,7 @@
   {% if klussen_recent %}
     <div class="klussen-slider">
       {% for klus in klussen_recent %}
-        <a href="{{ klus.get_absolute_url }}" class="klus-slide{% if not klus.actief %} afgerond{% endif %}">
+        <a href="{{ klus.get_absolute_url }}" class="klus-slide">
           <span class="soort-badge">{{ klus.get_soort_display }}</span>
           <span class="naam">{{ klus.naam }}</span>
           {% if klus.adres or klus.plaats %}

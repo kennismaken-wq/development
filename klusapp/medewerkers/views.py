@@ -100,12 +100,13 @@ def start(request):
     zondag = maandag + timedelta(days=6)
 
     # Niet beperkt tot deze week: de klus waar je het laatst aan werkte staat
-    # vooraan, ook als dat vorige week was.
+    # vooraan, ook als dat vorige week was. Alleen actieve klussen: een
+    # afgeronde klus hoort niet meer bovenaan het startscherm.
     klussen_recent = list(
         Klus.objects.annotate(
             laatste_uur=Max("uurblokken__datum", filter=Q(uurblokken__medewerker=request.user))
         )
-        .filter(laatste_uur__isnull=False)
+        .filter(laatste_uur__isnull=False, actief=True)
         .prefetch_related(
             Prefetch(
                 "bijlagen",

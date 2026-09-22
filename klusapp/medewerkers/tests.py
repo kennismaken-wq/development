@@ -315,13 +315,12 @@ class StarttegelsTest(TestCase):
         for alleen_voor_de_baas in ("Aanwezigheid", "Overzichten", "Medewerkers"):
             self.assertNotIn(alleen_voor_de_baas, html)
 
-    def test_eigenaar_ziet_ook_zijn_eigen_schermen_met_cijfers(self):
-        Klus.objects.create(naam="Tuin Vermeer")
+    def test_eigenaar_ziet_ook_zijn_eigen_schermen(self):
+        # Sinds 22-09 staan de tegels als compacte app-iconen zonder cijfer
+        # erbij (zie templates/start.html); alleen de titel is nog te checken.
         self.client.force_login(self.eigenaar)
         html = self.client.get(reverse("start")).content.decode()
         self.assertIn("Medewerkers", html)
-        self.assertIn("2 in dienst", html)
-        self.assertIn("1 lopend", html)
 
     def test_vereist_inloggen(self):
         antwoord = self.client.get(reverse("start"))

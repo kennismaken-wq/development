@@ -676,6 +676,11 @@ input[type=time]::-webkit-calendar-picker-indicator{ filter:invert(1); opacity:.
 }
 /* kop met een actie ernaast, bv. de export-knop op het klusdossier */
 .sectiekop-rij{ display:flex; align-items:center; justify-content:space-between; gap:.8rem; }
+/* zonder kop-tekst (het "Documenten"/"Uren"-tabblad, waar de tabnaam al als
+   kop dient — zie klussen/klus_detail.html) mist deze rij de marge die
+   .sectiekop anders via zijn eigen margin zou geven, en plakt de knop tegen
+   de lijst eronder. */
+.sectiekop-rij.alleen-actie{ margin-bottom:.8rem; }
 
 /* Tabbladen: Documenten/Uren/Foto's op het klusdossier, één zichtbaar
    tegelijk i.p.v. alle drie onder elkaar (static/js/klustabs.js zet
@@ -789,11 +794,14 @@ input[type=time]::-webkit-calendar-picker-indicator{ filter:invert(1); opacity:.
    elkaar aan zodra het raster nog maar één (leeg) tegeltje breed is */
 .fotoraster + .leeg{ margin-top:.9rem; }
 
-.uploadveld{ position:relative; border-radius:20px; padding:1.1rem 1.2rem 1.3rem; }
-/* Geen margin-top:0 op het eerste label (zoals .uurblokformulier hieronder
-   ook niet doet): de padding van het formulier alleen is te weinig ruimte
-   voor het sluitknopje hierna — bij een boxed eerste veld (de klus-select in
-   AlleenFotosForm) overlapt dat anders met de rand van dat veld. */
+/* Ruime padding-top: het kruisje staat hier linksboven (zie
+   .uploadveld > .dialog-sluiten hieronder) en botst dus met het begin van het
+   eerste label — met 1.1rem padding liep "Klus" dwars door het rondje heen.
+   2.2rem + de 1.1rem margin van het label zet dat label net onder de 34px van
+   het knopje. Geen margin-top:0 op dat eerste label (zoals .uurblokformulier
+   hieronder ook niet doet): bij een boxed eerste veld (de klus-select in
+   AlleenFotosForm) plakt dat vak anders tegen het kruisje aan. */
+.uploadveld{ position:relative; border-radius:20px; padding:2.2rem 1.2rem 1.3rem; }
 /* sluitknopje rechtsboven op de dialoog, zelfde vormtaal als .weg bij een foto */
 .dialog-sluiten{
   position:absolute; top:.7rem; right:.7rem;
@@ -1225,7 +1233,6 @@ dialog.foto-invoegen .uploadveld, dialog.uren-invoegen .uurblokformulier, dialog
   color:#fff; text-decoration:none; transition:background .12s;
 }
 @media (hover:hover){ .klus-slide:hover{ background:rgba(255,255,255,0.13); } }
-.klus-slide.afgerond{ opacity:.55; }
 /* De naam draagt de kaart: die zoek je, niet het soort werk. Het soort
    staat er als klein etiket boven — je wilt het weten, maar pas nadat je
    hebt gezien wélke klus het is. */
@@ -1832,3 +1839,45 @@ html.klus-terug-navigatie .kaart:has(.terug-pijl){
   .kaart:has(.terug-pijl), html.klus-terug-navigatie .kaart:has(.terug-pijl),
   .kaart.klus-uit-animatie{ animation:none; }
 }
+
+/* ══════════ KLUSFORMULIER — RITME, ADRESSEN, BOTSING ══════════
+   Het aanmaakformulier van een klus (templates/klussen/klus_form.html,
+   static/js/klusformulier.js). Drie kleine dingen bovenop wat er al staat.
+
+   1. .keuzepil.kies — de neutrale aan-stand van de keuzepillen. De pil zelf
+      komt onveranderd van het aanwezigheidsscherm hierboven; daar hebben de
+      standen elk hun eigen kleur (.ja groen, .nee koraal). "Eenmalig" en
+      "Onderhoud" zijn geen goed en fout maar twee gelijkwaardige keuzes, dus
+      krijgen ze allebei dezelfde accentkleur als aan-stand.
+   2. De rij bekende adressen gebruikt diezelfde .keuzes/.keuzepil, dus daar
+      staat hier niets extra's voor.
+   3. .klusbotsing-* — de melding dat er op deze opdrachtgever + dit adres al
+      een klus staat. Bewust in de koraalkleur van een waarschuwing en niet in
+      het rood van een fout: doorgaan is toegestaan, twee afspraken op één
+      adres is een geldig geval. */
+.keuzepil.kies input:checked + .vlak{
+  background:rgba(var(--accent-rgb),0.32); border-color:rgba(var(--accent-rgb),0.6); color:var(--hi);
+}
+
+#bekende-adressen[hidden], #klusbotsing[hidden]{ display:none; }
+
+.klusbotsing-kaart{
+  margin:1.1rem 0 0; padding:.9rem 1rem 1rem; border-radius:18px;
+  background:rgba(224,123,95,0.13); border:1px solid rgba(224,123,95,0.38);
+  display:grid; gap:.55rem;
+}
+.klusbotsing-kop{
+  margin:0; font-size:12.5px; font-weight:600; color:#F6C7B6;
+}
+.klusbotsing-regel{
+  display:flex; align-items:center; gap:.6rem; min-height:40px;
+  padding:.5rem .75rem; border-radius:14px; text-decoration:none;
+  background:rgba(255,255,255,0.07); border:1px solid rgba(255,255,255,0.14);
+  font-size:13.5px; color:#fff;
+}
+@media (hover:hover){
+  .klusbotsing-regel:hover{ background:rgba(255,255,255,0.13); border-color:rgba(255,255,255,0.3); }
+}
+.klusbotsing-regel .naam{ overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+/* de knop staat los onder de regels en hoeft niet de volle breedte */
+.klusbotsing-kaart .knop-stil{ justify-self:start; }
