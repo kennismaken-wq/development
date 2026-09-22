@@ -14,15 +14,28 @@
    als _uurblokformulier.html voor "uren toevoegen"). {% endcomment %}
 <div class="uurblokdetail{% if in_dialoog %} glas{% endif %}">
   {% if in_dialoog %}
-    {# alleen zichtbaar als bottom sheet (<700px, zie app.css) #}
+    {% comment %} alleen zichtbaar als bottom sheet (<700px, zie app.css);
+       zelfde kruisje-links/actie-rechts-indeling als de "uren
+       toevoegen"-sheet (_uurblokformulier.html .sheet-kop), i.p.v. allebei
+       rechts opeen. {% endcomment %}
     <div class="sheet-hendel" aria-hidden="true"></div>
-    <button type="button" class="dialog-sluiten" onclick="window.closeSheet(this.closest('dialog'))" aria-label="Sluiten">×</button>
-  {% endif %}
-  {% if mag_bewerken %}
-    <a class="bewerk-knop uurblokdetail-bewerk-knop{% if in_dialoog %} met-sluiten{% endif %}" id="uurblok-wijzig-knop"
-       href="{{ bewerk_knop_href }}"{% if not alleen_lezen %} hidden{% endif %} aria-label="Uren bewerken">
+    <div class="sheet-kop">
+      <button type="button" class="dialog-sluiten" onclick="window.closeSheet(this.closest('dialog'))" aria-label="Sluiten">×</button>
+      {% if mag_bewerken %}
+        <a class="bewerk-knop" id="uurblok-wijzig-knop" href="{{ bewerk_knop_href }}"{% if not alleen_lezen %} hidden{% endif %} aria-label="Uren bewerken">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+        </a>
+        <button type="submit" form="uurblokdetailformulier" class="knop knop-klein" id="uurblok-opslaan-boven"{% if alleen_lezen %} hidden{% endif %}>Opslaan</button>
+      {% endif %}
+    </div>
+  {% elif mag_bewerken %}
+    {% comment %} geen dialoogkruisje op de losse detailpagina: het
+       bewerk-potlood/Opslaan staat hier los, rechtsboven op de kaart
+       (zelfde plek als het bewerk-potlood op een klusdossier). {% endcomment %}
+    <a class="bewerk-knop uurblokdetail-bewerk-knop" id="uurblok-wijzig-knop" href="{{ bewerk_knop_href }}"{% if not alleen_lezen %} hidden{% endif %} aria-label="Uren bewerken">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
     </a>
+    <button type="submit" form="uurblokdetailformulier" class="knop knop-klein uurblokdetail-bewerk-knop" id="uurblok-opslaan-boven"{% if alleen_lezen %} hidden{% endif %}>Opslaan</button>
   {% endif %}
 
   {% if in_dialoog %}<h2 class="sectiekop" style="margin-top:0">{{ blok.klus.naam }}</h2>{% endif %}
@@ -35,7 +48,7 @@
     {% url 'uurblok_bewerken' blok.pk as uurblok_bewerken_url %}
     {% url 'uurblok_verwijderen' blok.pk as uurblok_verwijderen_url %}
   {% endif %}
-  {% include "uren/_uurblokformulier.html" with formulier=uurblok_formulier actie=uurblok_bewerken_url alleen_lezen=alleen_lezen verwijder_url=uurblok_verwijderen_url formulier_id="uurblokdetailformulier" in_dialoog=False %}
+  {% include "uren/_uurblokformulier.html" with formulier=uurblok_formulier actie=uurblok_bewerken_url alleen_lezen=alleen_lezen verwijder_url=uurblok_verwijderen_url formulier_id="uurblokdetailformulier" in_dialoog=False opslaan_boven=True %}
 
   <h2 class="sectiekop">Foto's</h2>
   {% include "klussen/_fotoraster.html" with uurblok_pk=blok.pk %}

@@ -761,6 +761,8 @@ input[type=time]::-webkit-calendar-picker-indicator{ filter:invert(1); opacity:.
 /* zelfde reden als bij .weg button: zichtbaar rustig, aanraakgebied ~44px */
 .dialog-sluiten::after{ content:''; position:absolute; inset:-5px; border-radius:50%; }
 @media (hover:hover){ .dialog-sluiten:hover{ background:rgba(255,255,255,0.18); } }
+/* op het foto-posten-formulier staat het kruisje linksboven i.p.v. rechtsboven */
+.uploadveld > .dialog-sluiten{ left:.7rem; right:auto; }
 
 /* Kopregel van een bottom sheet (_uurblokformulier.html met in_dialoog): het
    kruisje en de Opslaan-knop naast elkaar bovenin i.p.v. Opslaan helemaal
@@ -924,17 +926,18 @@ dialog.uren-invoegen::backdrop{ background:rgba(10,10,8,0.55); backdrop-filter:b
    achtergrond zichtbaar blijft. De dialoog zelf staat leeg in mijn_uren.html
    en wordt pas gevuld ná een klik op een blok (static/js/kalender.js, via
    laadEnOpenSheet in bottomsheet.js). */
-/* position:relative ook zonder .glas: het bewerk-potlood hieronder is
+/* position:relative ook zonder .glas: het bewerk-potlood/Opslaan hieronder is
    absoluut gepositioneerd, en op de losse detailpagina (niet in een dialoog,
    dus zonder .glas) staat _uurblokdetail_inhoud.html toch nog steeds zelf
-   bovenaan de kaart. */
+   bovenaan de kaart. In een dialoog (sheet) staan diezelfde knoppen niet
+   absoluut maar gewoon in de flex-rij van .sheet-kop, naast het kruisje —
+   zie _uurblokdetail_inhoud.html en .sheet-kop hierboven. */
 .uurblokdetail{ position:relative; }
 .uurblokdetail.glas{ border-radius:20px; padding:1.1rem 1.2rem 1.3rem; }
 /* zelfde rondje-vormtaal/plek als het bewerk-potlood op een klusdossier (zie
-   .klus-hero-blok .bewerk-knop) — hier naast het kruisje i.p.v. naast de
-   terugpijl, want een sheet heeft geen terugpijl. */
+   .klus-hero-blok .bewerk-knop) — hier rechtsboven op de kaart i.p.v. naast
+   de terugpijl, want een detailscherm zonder dialoog heeft geen terugpijl. */
 .uurblokdetail-bewerk-knop{ position:absolute; top:.7rem; right:.7rem; }
-.uurblokdetail-bewerk-knop.met-sluiten{ right:calc(.7rem + 34px + .5rem); }
 dialog.uurblok-detail{
   border:0; padding:0; background:transparent; color:inherit;
   max-width:560px; width:calc(100% - 2.4rem);

@@ -7,7 +7,7 @@
 (function () {
   var knop = document.getElementById("uurblok-wijzig-knop");
   var formulier = document.getElementById("uurblokdetailformulier");
-  var opslaan = document.getElementById("uurblok-opslaanrij");
+  var opslaan = document.getElementById("uurblok-opslaan-boven");
   var verwijderen = document.getElementById("uurblok-verwijderrij");
   if (!knop || !formulier) return;
 

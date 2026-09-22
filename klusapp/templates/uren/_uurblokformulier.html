@@ -10,7 +10,9 @@
    Voor "bekijken vóór bewerken" (SPEC §5, zie uren.views._uurblok_detail_context
    en uren/_uurblokdetail_inhoud.html): `alleen_lezen` (de velden komen al
    disabled binnen op `formulier`, dit stuurt alleen welke knoppen zichtbaar
-   zijn), `verwijder_url` en `formulier_id` (zodat
+   zijn), `verwijder_url`, `opslaan_boven` (Opslaan staat daar al rechtsboven
+   naast het bewerk-potlood/kruisje — zie _uurblokdetail_inhoud.html — dus
+   geen tweede Opslaan meer onderaan) en `formulier_id` (zodat
    static/js/uurblokbewerken.js dít formulier kan vinden — zonder id, zoals
    bij "uren toevoegen", staat er maar één zo'n formulier tegelijk op de
    pagina en is een vaste id overbodig én riskant: de "uren toevoegen"-dialoog
@@ -18,9 +20,16 @@
    ingeladen, dus twee formulieren met dezelfde id zouden botsen). Het
    bewerk-potlood zelf staat niet hier maar op _uurblokdetail_inhoud.html: dat
    scherm is altijd de buitenste glaskaart (met zijn eigen sheet-hendel/
-   dialog-sluiten), dus dit formulier komt daar altijd kaal binnen
-   (`in_dialoog` niet meegegeven) om geen kaart-in-een-kaart te krijgen. {% endcomment %}
-<form class="uurblokformulier{% if in_dialoog %} glas{% endif %}" method="post" enctype="multipart/form-data"{% if actie %} action="{{ actie }}"{% endif %}{% if formulier_id %} id="{{ formulier_id }}"{% endif %}>
+   dialog-sluiten), dus dit formulier komt daar altijd kaal binnen — met
+   `in_dialoog` expliciet op False, want zonder waarde erft een include() nog
+   steeds de `in_dialoog` van de pagina errondom, en dan krijg je een
+   kaart-in-een-kaart.
+
+   `novalidate`: zonder dat blokkeert de browser een misse verplichte klus
+   (b.v.) al vóór de post, met zijn eigen tekstballonnetje i.p.v. de
+   foutpopup hieronder — dan zou "Deze activiteit is niet aan een klus
+   gekoppeld." nooit in beeld komen. {% endcomment %}
+<form class="uurblokformulier{% if in_dialoog %} glas{% endif %}" method="post" enctype="multipart/form-data" novalidate{% if actie %} action="{{ actie }}"{% endif %}{% if formulier_id %} id="{{ formulier_id }}"{% endif %}>
   {% if in_dialoog %}
     {# alleen zichtbaar als bottom sheet (<700px, zie app.css); puur visueel signaal, geen sleepgebaar erachter #}
     <div class="sheet-hendel" aria-hidden="true"></div>
@@ -42,7 +51,7 @@
     {% for fout in bijlagenformulier.bestanden.errors %}<p class="fout">{{ fout }}</p>{% endfor %}
   {% endif %}
 
-  {% if not in_dialoog %}
+  {% if not in_dialoog and not opslaan_boven %}
     <p style="margin-top:1.8rem" id="uurblok-opslaanrij"{% if alleen_lezen %} hidden{% endif %}><button type="submit" class="knop">Opslaan</button></p>
   {% endif %}
 </form>
@@ -55,9 +64,10 @@
 {% endif %}
 
 {% if formulier.errors or bijlagenformulier.errors %}
-  {# Popup met wat er niet klopt, i.p.v. alleen de kleine tekst onder elk veld
-     — die valt op een lang formulier makkelijk weg. Toont dezelfde teksten
-     als de foutjes onder de velden hierboven, alleen gebundeld. #}
+  {% comment %} Popup met wat er niet klopt, i.p.v. alleen de kleine tekst
+     onder elk veld — die valt op een lang formulier makkelijk weg. Toont
+     dezelfde teksten als de foutjes onder de velden hierboven, alleen
+     gebundeld. {% endcomment %}
   <dialog class="foutpopup" id="uurblok-foutpopup">
     <div class="foutpopup-kaart glas">
       <button type="button" class="dialog-sluiten" onclick="this.closest('dialog').close()" aria-label="Sluiten">×</button>
