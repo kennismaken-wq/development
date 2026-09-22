@@ -136,16 +136,20 @@ a, button, .knop, .knop-stil, .pil, .side-icon, .klusregel, .profielregel,
 .kop .koptekst{ flex:1 1 auto; min-width:0; }
 
 /* Terugpijltje op de plek van het logo (klusdossier e.d.): zelfde 34px zodat
-   de kop niet springt tussen schermen met en zonder logo. */
-.terug-pijl{
+   de kop niet springt tussen schermen met en zonder logo. .bewerk-knop (het
+   potlood naast de hero-foto, zie .klus-hero-blok) deelt dezelfde
+   rondje-vormtaal. */
+.terug-pijl, .bewerk-knop{
   width:34px; height:34px; flex-shrink:0; margin-top:.1rem;
   display:flex; align-items:center; justify-content:center; border-radius:50%;
   background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.16);
   color:rgba(255,255,255,0.85); transition:background .12s;
 }
-.terug-pijl svg{ width:19px; height:19px; }
-.terug-pijl:active{ background:rgba(255,255,255,0.18); }
-@media (hover:hover){ .terug-pijl:hover{ background:rgba(255,255,255,0.14); color:#fff; } }
+.terug-pijl svg, .bewerk-knop svg{ width:19px; height:19px; }
+.terug-pijl:active, .bewerk-knop:active{ background:rgba(255,255,255,0.18); }
+@media (hover:hover){
+  .terug-pijl:hover, .bewerk-knop:hover{ background:rgba(255,255,255,0.14); color:#fff; }
+}
 
 /* Inlogscherm: daar is het blad geen bijzaak maar het eerste dat je ziet. */
 .kaart.inloggen{ max-width:420px; }
@@ -173,19 +177,6 @@ h1{
    staat. */
 .kaart.klus-dossier .kop{ justify-content:center; }
 .kaart.klus-dossier .koptekst{ flex:0 1 auto; text-align:center; }
-/* Klein "potlood"-knopje naast de titel i.p.v. een aparte "Bewerken"-pil
-   verderop — zelfde rondje-vormtaal als .terug-pijl, maar kleiner omdat hij
-   hier bíj de tekst hoort in plaats van op zichzelf te staan. */
-.bewerk-knop{
-  display:inline-flex; align-items:center; justify-content:center;
-  width:28px; height:28px; border-radius:50%; vertical-align:middle;
-  margin:0 0 0 .5rem;
-  background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.16);
-  color:rgba(255,255,255,0.75); transition:background .12s;
-}
-.bewerk-knop svg{ width:15px; height:15px; }
-.bewerk-knop:active{ background:rgba(255,255,255,0.18); }
-@media (hover:hover){ .bewerk-knop:hover{ background:rgba(255,255,255,0.14); color:#fff; } }
 /* De terugverwijzing in .sub is op bijna elk scherm de enige weg terug, en
    was een regel tekst van 11,5px zonder ruimte eromheen — met een duim raak
    je die half. De tekst blijft even klein, de tikruimte eromheen niet. */
@@ -1326,14 +1317,18 @@ dialog.foto-popup::backdrop{ background:rgba(10,10,8,0.75); backdrop-filter:blur
    niet de padding-doos.)
 
    De hero zelf is bewust smaller dan de kaart (geen edge-to-edge banner) en
-   staat gecentreerd; de terugpijl zweeft ernaast in de linkermarge, in
-   gewone kaartkleur, in plaats van erboven met een donkere glastint. Zo kan
-   de pijl nooit door een foto geraakt worden, wat er ook in de waaier zit. */
+   staat gecentreerd; de terugpijl en (voor de eigenaar) het bewerk-potlood
+   zweven ernaast als spiegelbeeld van elkaar, in gewone kaartkleur, in
+   plaats van erboven met een donkere glastint. Zo kan geen van beide ooit
+   door een foto geraakt worden, wat er ook in de waaier zit — en het
+   potlood hangt los van de titel eronder, want je bewerkt de hele klus, niet
+   alleen de naam. */
 .klus-hero-blok{
   position:relative; margin-bottom:1.4rem;
   display:flex; justify-content:center;
 }
 .klus-hero-blok .terug-pijl{ position:absolute; left:0; top:0; margin:0; }
+.klus-hero-blok .bewerk-knop{ position:absolute; right:0; top:0; margin:0; }
 .klus-hero{
   position:relative; width:58%; max-width:230px; aspect-ratio:1/1;
   border-radius:22px; overflow:hidden; background:rgba(255,255,255,0.05);
