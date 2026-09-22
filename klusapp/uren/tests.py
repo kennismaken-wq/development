@@ -1,14 +1,16 @@
+import shutil
 from datetime import date, datetime, time, timedelta
 from datetime import timezone as dt_timezone
 from unittest.mock import patch
 
 from django.core.exceptions import ValidationError
 from django.db import IntegrityError, transaction
-from django.test import TestCase
+from django.test import TestCase, override_settings
 
 from . import kalender
 
-from klussen.models import Klus
+from klussen.models import Bijlage, Klus
+from klussen.tests import TIJDELIJKE_MEDIA, upload
 from medewerkers.models import Medewerker
 
 from . import export
@@ -649,3 +651,90 @@ class DecimaleUrenTest(TestCase):
         self.assertEqual(kalender.als_decimaal(510), "8,5")
         self.assertEqual(kalender.als_decimaal(195), "3,25")
         self.assertEqual(kalender.als_decimaal(0), "0")
+
+
+@override_settings(MEDIA_ROOT=TIJDELIJKE_MEDIA)
+class UurblokBijlagenBijAanmakenTest(TestCase):
+    """Een foto meteen bij het invullen van de uren kunnen toevoegen, niet pas
+    erna via het detailscherm (uren.forms.UurblokFotosForm, uren.views.uurblok_nieuw).
+    Alleen foto's, net als de fotodropbox (klussen.forms.AlleenFotosForm) —
+    geen documenten."""
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.sam = Medewerker.objects.create_user("sam", password="x", first_name="Sam")
+        cls.klus = Klus.objects.create(naam="Tuin Vermeer", soort=Klus.Soort.AANLEG)
+
+    @classmethod
+    def tearDownClass(cls):
+        shutil.rmtree(TIJDELIJKE_MEDIA, ignore_errors=True)
+        super().tearDownClass()
+
+    def setUp(self):
+        self.client.force_login(self.sam)
+
+    def geldig(self, **afwijkend):
+        gegevens = {
+            "klus": self.klus.pk,
+            "datum": "2026-09-07",
+            "begintijd": "08:00",
+            "eindtijd": "16:30",
+            "toelichting": "Bestrating uitgevlakt",
+        }
+        gegevens.update(afwijkend)
+        return gegevens
+
+    def test_uren_zonder_foto_werkt_gewoon(self):
+        # Bestanden kiezen is geen verplichte stap.
+        antwoord = self.client.post("/uren/nieuw/", self.geldig())
+        self.assertEqual(antwoord.status_code, 302)
+        blok = Uurblok.objects.get()
+        self.assertFalse(blok.bijlagen.exists())
+
+    def test_foto_bij_de_uren_hangt_aan_het_uurblok_en_de_klus(self):
+        self.client.post("/uren/nieuw/", self.geldig(bestanden=upload("werk.jpg")))
+        blok = Uurblok.objects.get()
+        bijlage = Bijlage.objects.get()
+        self.assertEqual(bijlage.uurblok, blok)
+        self.assertEqual(bijlage.klus, self.klus)
+        self.assertEqual(bijlage.soort, Bijlage.Soort.FOTO)
+        self.assertEqual(bijlage.toegevoegd_door, self.sam)
+
+    def test_meerdere_fotos_tegelijk(self):
+        self.client.post(
+            "/uren/nieuw/", self.geldig(bestanden=[upload("een.jpg"), upload("twee.jpg")])
+        )
+        blok = Uurblok.objects.get()
+        self.assertEqual(blok.bijlagen.count(), 2)
+
+    def test_een_kapot_bestand_blokkeert_de_uren_niet(self):
+        # De uren staan er al; alleen de foto mislukt, niet het hele blok.
+        antwoord = self.client.post(
+            "/uren/nieuw/", self.geldig(bestanden=upload("stuk.jpg", b"geen plaatje")), follow=True
+        )
+        blok = Uurblok.objects.get()
+        self.assertFalse(blok.bijlagen.exists())
+        self.assertContains(antwoord, "stuk.jpg")
+
+    def test_document_wordt_geweigerd(self):
+        # Alleen foto's bij de uren, net als de fotodropbox — een document
+        # hoort hier niet, ook niet als iemand het bestandenveld omzeilt.
+        antwoord = self.client.post(
+            "/uren/nieuw/",
+            self.geldig(bestanden=upload("Offerte.pdf", b"%PDF-1.4", "application/pdf")),
+            follow=True,
+        )
+        blok = Uurblok.objects.get()
+        self.assertFalse(blok.bijlagen.exists())
+        self.assertContains(antwoord, "alleen een foto")
+
+    def test_ongeldige_uren_met_foto_slaat_niets_op(self):
+        # Omgekeerde tijden: het uurblok mag niet aangemaakt worden, dus ook
+        # geen wees-bijlage die nergens aan hangt.
+        antwoord = self.client.post(
+            "/uren/nieuw/",
+            self.geldig(begintijd="16:00", eindtijd="08:00", bestanden=upload("werk.jpg")),
+        )
+        self.assertEqual(antwoord.status_code, 200)
+        self.assertFalse(Uurblok.objects.exists())
+        self.assertFalse(Bijlage.objects.exists())

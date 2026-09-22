@@ -1,5 +1,6 @@
 from django import forms
 
+from klussen.forms import AlleenFotosForm
 from klussen.models import Klus
 
 from .models import Uurblok
@@ -42,3 +43,20 @@ class UurblokForm(forms.ModelForm):
         if begin and eind and eind <= begin:
             self.add_error("eindtijd", "De eindtijd moet na de begintijd liggen.")
         return gegevens
+
+
+class UurblokFotosForm(AlleenFotosForm):
+    """Foto's die je meteen bij het invullen van de uren kunt meesturen —
+    zelfde AlleenFotosForm als de fotodropbox (alleen foto's, geen
+    documenten), maar optioneel: bestanden kiezen is geen verplichte stap en
+    mag het opslaan van de uren nooit blokkeren (zie uren.views.uurblok_nieuw).
+    De data-attributen sturen het bestandsknopje (static/js/bestandsveld.js)
+    naar dezelfde "+"-knop als bij het toevoegen van een foto elders in de
+    app, in plaats van de generieke "Bestanden kiezen"-knop."""
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["bestanden"].required = False
+        self.fields["bestanden"].widget.attrs.update(
+            {"data-knoptekst": "Foto toevoegen", "data-knopicoon": "plus"}
+        )

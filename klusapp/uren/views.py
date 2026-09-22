@@ -1,18 +1,21 @@
 import calendar
 from datetime import date, time, timedelta
 
+from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.http import Http404, HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
 
+from klussen import afbeeldingen
 from klussen.forms import BijlageForm
+from klussen.views import bewaar_bijlage
 from medewerkers.models import Medewerker
 from medewerkers.rechten import alleen_eigenaar
 
 from . import export, kalender, periode, totalen
-from .forms import UurblokForm
+from .forms import UurblokForm, UurblokFotosForm
 from .models import Aanwezigheid, Uurblok
 
 
@@ -92,12 +95,16 @@ def mijn_uren(request):
     formulier = UurblokForm(
         initial={"datum": dag, "begintijd": laatste_van_dag.eindtijd if laatste_van_dag else None}
     )
+    # Zodat je in dezelfde dialoog meteen een foto bij de uren kunt hangen —
+    # zie uurblok_nieuw() voor het wegschrijven ervan.
+    bijlagenformulier = UurblokFotosForm()
 
     context = {
         "weergave": weergave,
         "dag": dag,
         "dagen": dagen,
         "formulier": formulier,
+        "bijlagenformulier": bijlagenformulier,
         # Met ?dag= erbij, zodat een mislukte post (validatiefout) via
         # periode.gekozen_dag() op dezelfde dag terechtkomt als waar je 'm
         # opende — zie uurblok_nieuw().
@@ -175,10 +182,32 @@ def uurblok_nieuw(request):
     dag = periode.gekozen_dag(request)
     if request.method == "POST":
         formulier = UurblokForm(request.POST)
-        if formulier.is_valid():
+        # Bestanden kiezen is optioneel (zie UurblokFotosForm), dus die mogen
+        # het opslaan van de uren zelf nooit blokkeren.
+        bijlagenformulier = UurblokFotosForm(request.POST, request.FILES)
+        if formulier.is_valid() and bijlagenformulier.is_valid():
             blok = formulier.save(commit=False)
             blok.medewerker = request.user
             blok.save()
+
+            # Onbenoemd blijft de dag van het uurblok zelf: een foto die je
+            # bij het invullen meteen toevoegt gaat vrijwel altijd over die
+            # werkdag, niet per se over vandaag.
+            datum = bijlagenformulier.cleaned_data["datum"] or blok.datum
+            toelichting = bijlagenformulier.cleaned_data["toelichting"]
+            for bestand in bijlagenformulier.cleaned_data["bestanden"]:
+                # Het bestandenveld biedt alleen foto's aan (accept="image/*"
+                # op UurblokFotosForm), maar de server moet dat zelf ook
+                # afdwingen: zie klussen.forms.AlleenFotosForm.
+                if not afbeeldingen.lijkt_afbeelding(bestand.name):
+                    messages.error(request, f"{bestand.name}: hier kan alleen een foto bij.")
+                    continue
+                try:
+                    bewaar_bijlage(bestand, datum, toelichting, blok.klus, blok, request.user)
+                except afbeeldingen.BestandNietLeesbaar as probleem:
+                    # Het uurblok staat er al; alleen deze foto mislukt, niet de rest.
+                    messages.error(request, f"{bestand.name}: {probleem}")
+
             return _terug_naar_dag(blok.datum)
     else:
         # Uit de kalender komen begin- en eindtijd mee van het vak waarop je
@@ -193,8 +222,11 @@ def uurblok_nieuw(request):
             )
             van = laatste.eindtijd if laatste else None
         formulier = UurblokForm(initial={"datum": dag, "begintijd": van, "eindtijd": tot})
+        bijlagenformulier = UurblokFotosForm()
     return render(
-        request, "uren/uurblok_form.html", {"formulier": formulier, "dag": dag, "nieuw": True}
+        request,
+        "uren/uurblok_form.html",
+        {"formulier": formulier, "bijlagenformulier": bijlagenformulier, "dag": dag, "nieuw": True},
     )
 
 

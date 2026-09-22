@@ -1,8 +1,11 @@
+{% load static %}
 {% comment %} Het formulier om een uurblok toe te voegen. Verwacht `formulier`
    (UurblokForm). Optioneel `actie` (url om naar te posten; zonder dat gaat
-   hij naar de huidige pagina) en `in_dialoog` (sluitkruisje + glaskaart-look,
-   voor gebruik binnen <dialog id="uren-invoegen"> op de agenda zelf). {% endcomment %}
-<form class="uurblokformulier{% if in_dialoog %} glas{% endif %}" method="post"{% if actie %} action="{{ actie }}"{% endif %}>
+   hij naar de huidige pagina), `in_dialoog` (sluitkruisje + glaskaart-look,
+   voor gebruik binnen <dialog id="uren-invoegen"> op de agenda zelf) en
+   `bijlagenformulier` (UurblokFotosForm, om meteen een foto bij de uren te
+   hangen — zie uren.views.uurblok_nieuw). {% endcomment %}
+<form class="uurblokformulier{% if in_dialoog %} glas{% endif %}" method="post" enctype="multipart/form-data"{% if actie %} action="{{ actie }}"{% endif %}>
   {% if in_dialoog %}
     {# alleen zichtbaar als bottom sheet (<700px, zie app.css); puur visueel signaal, geen sleepgebaar erachter #}
     <div class="sheet-hendel" aria-hidden="true"></div>
@@ -14,5 +17,13 @@
     {{ veld }}
     {% for fout in veld.errors %}<p class="fout">{{ fout }}</p>{% endfor %}
   {% endfor %}
+
+  {% if bijlagenformulier %}
+    <label for="{{ bijlagenformulier.bestanden.id_for_label }}">Foto's</label>
+    {{ bijlagenformulier.bestanden }}
+    {% for fout in bijlagenformulier.bestanden.errors %}<p class="fout">{{ fout }}</p>{% endfor %}
+  {% endif %}
+
   <p style="margin-top:1.8rem"><button type="submit" class="knop">Opslaan</button></p>
 </form>
+{% if bijlagenformulier %}<script src="{% static 'js/bestandsveld.js' %}"></script>{% endif %}
