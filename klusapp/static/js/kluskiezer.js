@@ -9,9 +9,9 @@
 
    `opts.initialScope` zet welke pil al aanstaat als de kiezer opent (default
    "altijd"); `opts.onScopeChange(scope)` is optioneel en wordt aangeroepen
-   als er op een andere pil geklikt wordt — de klussenlijst gebruikt dat om
-   ook de zichtbare lijst op de pagina zelf mee te filteren (niet alleen de
-   opties in de kiezer), de foto's-pagina laat dit weg. */
+   als er op een andere pil geklikt wordt — beide pagina's gebruiken dat om
+   ook hun eigen lijst (klussenlijst resp. fotoraster) mee te filteren, niet
+   alleen de opties in de kiezer zelf. */
 function initKlusKiezer(wrapperId, selectId, opts) {
   const wrapper = document.getElementById(wrapperId);
   const select = document.getElementById(selectId);

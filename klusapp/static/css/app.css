@@ -772,6 +772,11 @@ input[type=time]::-webkit-calendar-picker-indicator{ filter:invert(1); opacity:.
    plek is nu voor Opslaan. */
 .sheet-kop{ display:flex; align-items:center; justify-content:space-between; margin:0 0 .3rem; }
 .sheet-kop .dialog-sluiten{ position:static; }
+/* kruisje en prullenbak samen links, potlood/Opslaan samen rechts — anders
+   verspreidt justify-content:space-between alle vier de knoppen gelijk over
+   de rij zodra de prullenbak zichtbaar wordt, en zwerft die los in het
+   midden i.p.v. naast het kruisje. */
+.sheet-kop-links, .sheet-kop-rechts{ display:flex; align-items:center; gap:.5rem; }
 .knop-klein{
   width:auto; min-height:38px; padding:.5rem 1.15rem; font-size:13.5px;
 }
@@ -926,18 +931,15 @@ dialog.uren-invoegen::backdrop{ background:rgba(10,10,8,0.55); backdrop-filter:b
    achtergrond zichtbaar blijft. De dialoog zelf staat leeg in mijn_uren.html
    en wordt pas gevuld ná een klik op een blok (static/js/kalender.js, via
    laadEnOpenSheet in bottomsheet.js). */
-/* position:relative ook zonder .glas: het bewerk-potlood/Opslaan hieronder is
-   absoluut gepositioneerd, en op de losse detailpagina (niet in een dialoog,
-   dus zonder .glas) staat _uurblokdetail_inhoud.html toch nog steeds zelf
-   bovenaan de kaart. In een dialoog (sheet) staan diezelfde knoppen niet
-   absoluut maar gewoon in de flex-rij van .sheet-kop, naast het kruisje —
-   zie _uurblokdetail_inhoud.html en .sheet-kop hierboven. */
-.uurblokdetail{ position:relative; }
-.uurblokdetail.glas{ border-radius:20px; padding:1.1rem 1.2rem 1.3rem; }
-/* zelfde rondje-vormtaal/plek als het bewerk-potlood op een klusdossier (zie
-   .klus-hero-blok .bewerk-knop) — hier rechtsboven op de kaart i.p.v. naast
-   de terugpijl, want een detailscherm zonder dialoog heeft geen terugpijl. */
-.uurblokdetail-bewerk-knop{ position:absolute; top:.7rem; right:.7rem; }
+.uurblokdetail.glas{ position:relative; border-radius:20px; padding:1.1rem 1.2rem 1.3rem; }
+/* rood getint i.p.v. de neutrale kruisje-kleur, zelfde reden als .fout: dit
+   is een destructieve actie en mag er als zodanig uitzien, niet pas bij
+   hover (zie .weg button, dat wél pas bij hover rood wordt — hier staat de
+   knop expres los van andere content, dus mag hij meteen opvallen). */
+.verwijder-icoonknop{
+  color:var(--rood); border-color:rgba(224,123,95,0.45); background:rgba(224,123,95,0.12);
+}
+@media (hover:hover){ .verwijder-icoonknop:hover{ background:rgba(224,123,95,0.28); } }
 dialog.uurblok-detail{
   border:0; padding:0; background:transparent; color:inherit;
   max-width:560px; width:calc(100% - 2.4rem);
@@ -1278,6 +1280,9 @@ dialog.foto-popup::backdrop{ background:rgba(10,10,8,0.75); backdrop-filter:blur
   display:block; width:100%; max-height:55vh; max-height:55dvh;
   object-fit:contain; background:rgba(0,0,0,0.3);
 }
+/* linksboven op de foto i.p.v. rechtsboven op de dialoog (.dialog-sluiten
+   standaard): zelfde plek als op het uploadformulier, zie .uploadveld boven. */
+.foto-popup-afbeelding > .dialog-sluiten{ left:.7rem; right:auto; }
 /* vorige/volgende: alleen zichtbaar als fotoPopupOpenGalerij een post van
    meer dan één foto opent (_fotoraster.html) — verborgen bij een losse foto. */
 .foto-popup-nav{
@@ -1298,9 +1303,16 @@ dialog.foto-popup::backdrop{ background:rgba(10,10,8,0.75); backdrop-filter:blur
 .foto-popup-info{ padding:.9rem 1.1rem .2rem; display:grid; gap:.2rem; }
 .foto-popup-titel{ font-size:14.5px; font-weight:600; overflow-wrap:break-word; }
 .foto-popup-meta{ font-size:11.5px; color:rgba(255,255,255,0.55); }
-/* los van de .info-grid-gap: een volle knop na de meta-regel heeft meer
-   lucht nodig dan de .2rem tussen titel en meta. */
-.foto-popup-klus-knop{ margin-top:.6rem; }
+/* klusnaam + klein knopje op één regel i.p.v. een volle knop eronder: dit
+   is een link terug, geen hoofdactie van de popup. */
+.foto-popup-klus-regel{
+  display:flex; align-items:center; gap:.6rem; margin-top:.5rem;
+}
+.foto-popup-klus-naam{
+  flex:1; min-width:0; font-size:13px; font-weight:600;
+  color:rgba(255,255,255,0.85); overflow-wrap:break-word;
+}
+.foto-popup-klus-knop{ flex-shrink:0; }
 /* rechtsonderin, zelfde rondje-vormtaal als .weg en .dialog-sluiten */
 .foto-popup-acties{
   display:flex; justify-content:flex-end; gap:.5rem;

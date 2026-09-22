@@ -31,7 +31,7 @@
       {% if aantal == 1 %}
         <figure class="fotokaart">
           <button type="button"
-                  onclick="fotoPopupOpen('{% url 'media_bestand' eerste.bestand.name %}', '{{ eerste.toonnaam|escapejs }}', '{{ eerste.toegevoegd_door.naam|default:"onbekend"|escapejs }} · {{ eerste.datum|date:"j M" }}'{% if toon_klus and eerste.klus %}, '{{ eerste.klus.get_absolute_url }}'{% endif %})">
+                  onclick="fotoPopupOpen('{% url 'media_bestand' eerste.bestand.name %}', '{{ eerste.toonnaam|escapejs }}', '{{ eerste.toegevoegd_door.naam|default:"onbekend"|escapejs }} · {{ eerste.datum|date:"j M" }}'{% if toon_klus and eerste.klus %}, '{{ eerste.klus.get_absolute_url }}', '{{ eerste.klus.naam|escapejs }}'{% endif %})">
             <img src="{% url 'media_bestand' eerste.thumbnail.name|default:eerste.bestand.name %}"
                  alt="{{ eerste.toonnaam }}" loading="lazy">
           </button>
@@ -68,7 +68,7 @@
           <div class="fotokaart-post-grid telt-{% if aantal >= 4 %}4{% else %}{{ aantal }}{% endif %}">
             {% for bijlage in post|slice:":4" %}
               <button type="button"
-                      onclick="fotoPopupOpenGalerij([{% for item in post %}{src:'{% url 'media_bestand' item.bestand.name %}', titel:'{{ item.toonnaam|escapejs }}', meta:'{{ item.toegevoegd_door.naam|default:"onbekend"|escapejs }} · {{ item.datum|date:"j M" }} · {{ forloop.counter }}/{{ aantal }}'{% if item|mag_weg:user %}, verwijderUrl:'{% url 'bijlage_verwijderen' item.pk %}'{% endif %}}{% if not forloop.last %}, {% endif %}{% endfor %}], {{ forloop.counter0 }}{% if toon_klus and eerste.klus %}, '{{ eerste.klus.get_absolute_url }}'{% endif %})">
+                      onclick="fotoPopupOpenGalerij([{% for item in post %}{src:'{% url 'media_bestand' item.bestand.name %}', titel:'{{ item.toonnaam|escapejs }}', meta:'{{ item.toegevoegd_door.naam|default:"onbekend"|escapejs }} · {{ item.datum|date:"j M" }} · {{ forloop.counter }}/{{ aantal }}'{% if item|mag_weg:user %}, verwijderUrl:'{% url 'bijlage_verwijderen' item.pk %}'{% endif %}}{% if not forloop.last %}, {% endif %}{% endfor %}], {{ forloop.counter0 }}{% if toon_klus and eerste.klus %}, '{{ eerste.klus.get_absolute_url }}', '{{ eerste.klus.naam|escapejs }}'{% endif %})">
                 <img src="{% url 'media_bestand' bijlage.thumbnail.name|default:bijlage.bestand.name %}"
                      alt="{{ bijlage.toonnaam }}" loading="lazy">
                 {% if forloop.last and aantal > 4 %}
@@ -86,6 +86,14 @@
               {{ eerste.toegevoegd_door.naam|default:"onbekend" }} · {{ eerste.datum|date:"j M" }} · {{ aantal }} foto's
             </span>
           </figcaption>
+          {% if eerste|mag_weg:user %}
+            <form method="post" action="{% url 'post_verwijderen' eerste.batch %}" class="weg"
+                  onsubmit="return confirm('Deze {{ aantal }} foto\'s verwijderen?');">
+              {% csrf_token %}
+              <input type="hidden" name="terug" value="{{ terug }}">
+              <button type="submit" title="Verwijderen" aria-label="Verwijderen">×</button>
+            </form>
+          {% endif %}
         </figure>
       {% endif %}
       {% endwith %}

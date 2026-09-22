@@ -8,14 +8,22 @@
    springt).
 
    Voor een post van meerdere foto's (_fotoraster.html) roep je in plaats
-   daarvan fotoPopupOpenGalerij(items, index, klusUrl) aan, met items een
-   array van {src, titel, meta, verwijderUrl}: verwijderUrl is optioneel en
-   toont dan de verwijderknop voor precies die foto. Vorige/volgende en de
-   "1/N"-teller verschijnen vanzelf zodra er meer dan één item is. {% endcomment %}
+   daarvan fotoPopupOpenGalerij(items, index, klusUrl, klusNaam) aan, met
+   items een array van {src, titel, meta, verwijderUrl}: verwijderUrl is
+   optioneel en toont dan de verwijderknop voor precies die foto.
+   Vorige/volgende en de "1/N"-teller verschijnen vanzelf zodra er meer dan
+   één item is. klusUrl/klusNaam gelden voor de hele galerij (alle foto's van
+   één post hangen aan dezelfde klus) en tonen samen één regel met de
+   klusnaam en een klein knopje ernaast — geen los blok meer onderaan. {% endcomment %}
 <dialog id="foto-popup" class="foto-popup">
   <div class="foto-popup-kaart glas">
     <div class="foto-popup-afbeelding">
       <img id="foto-popup-img" src="" alt="">
+      {% comment %} Linksboven, zelfde plek als het kruisje op het
+         uploadformulier (.uploadveld > .dialog-sluiten) — niet rechtsboven
+         zoals een gewone dialoog, want daar staat op een telefoon al gauw de
+         notch/systeembalk in de weg van een foto die tot de rand loopt. {% endcomment %}
+      <button type="button" class="dialog-sluiten foto-popup-sluiten" aria-label="Sluiten" title="Sluiten" onclick="fotoPopupSluiten()">×</button>
       <button type="button" id="foto-popup-vorige" class="foto-popup-nav foto-popup-vorige" aria-label="Vorige foto" title="Vorige foto" hidden>
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
       </button>
@@ -27,7 +35,10 @@
     <div class="foto-popup-info">
       <p class="foto-popup-titel" id="foto-popup-titel"></p>
       <p class="foto-popup-meta" id="foto-popup-meta"></p>
-      <a id="foto-popup-klus" class="knop foto-popup-klus-knop" href="" hidden>Bekijk klus</a>
+      <p class="foto-popup-klus-regel" id="foto-popup-klus-regel" hidden>
+        <span class="foto-popup-klus-naam" id="foto-popup-klus-naam"></span>
+        <a id="foto-popup-klus" class="knop knop-klein foto-popup-klus-knop" href="">Bekijk klus</a>
+      </p>
     </div>
     <div class="foto-popup-acties">
       <button type="button" id="foto-popup-verwijderen" class="foto-popup-knop" aria-label="Verwijderen" title="Verwijderen" hidden>
@@ -42,7 +53,6 @@
       <button type="button" id="foto-popup-delen" class="foto-popup-knop" aria-label="Delen" title="Delen" hidden>
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V4"/><path d="M7 8l5-5 5 5"/><path d="M5 12v7a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-7"/></svg>
       </button>
-      <button type="button" class="foto-popup-knop foto-popup-sluiten" aria-label="Sluiten" title="Sluiten" onclick="fotoPopupSluiten()">×</button>
     </div>
   </div>
 </dialog>
@@ -62,6 +72,8 @@
     var metaEl = document.getElementById("foto-popup-meta");
     var download = document.getElementById("foto-popup-download");
     var delenKnop = document.getElementById("foto-popup-delen");
+    var klusRegel = document.getElementById("foto-popup-klus-regel");
+    var klusNaamEl = document.getElementById("foto-popup-klus-naam");
     var klusKnop = document.getElementById("foto-popup-klus");
     var vorigeKnop = document.getElementById("foto-popup-vorige");
     var volgendeKnop = document.getElementById("foto-popup-volgende");
@@ -72,6 +84,7 @@
     var huidigeItems = [];
     var huidigeIndex = 0;
     var huidigeKlusUrl = "";
+    var huidigeKlusNaam = "";
 
     function toonItem(index) {
       huidigeIndex = index;
@@ -97,15 +110,17 @@
 
       if (huidigeKlusUrl) {
         klusKnop.href = huidigeKlusUrl;
-        klusKnop.hidden = false;
+        klusNaamEl.textContent = huidigeKlusNaam;
+        klusRegel.hidden = false;
       } else {
-        klusKnop.hidden = true;
+        klusRegel.hidden = true;
       }
     }
 
-    window.fotoPopupOpenGalerij = function (items, index, klusUrl) {
+    window.fotoPopupOpenGalerij = function (items, index, klusUrl, klusNaam) {
       huidigeItems = items;
       huidigeKlusUrl = klusUrl || "";
+      huidigeKlusNaam = klusNaam || "";
       toonItem(index || 0);
       dialoog.showModal();
       // Twee frames wachten: showModal() zet display synchroon om, dus
@@ -118,8 +133,8 @@
       });
     };
 
-    window.fotoPopupOpen = function (src, titel, meta, klusUrl) {
-      window.fotoPopupOpenGalerij([{ src: src, titel: titel, meta: meta }], 0, klusUrl);
+    window.fotoPopupOpen = function (src, titel, meta, klusUrl, klusNaam) {
+      window.fotoPopupOpenGalerij([{ src: src, titel: titel, meta: meta }], 0, klusUrl, klusNaam);
     };
 
     vorigeKnop.addEventListener("click", function () {

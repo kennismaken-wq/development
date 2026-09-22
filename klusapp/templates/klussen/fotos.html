@@ -5,10 +5,11 @@
   <form method="get" class="foto-zoekbalk" id="foto-zoekform">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.6" y2="16.6"/></svg>
     <input type="search" name="q" value="{{ zoek }}" placeholder="Zoek op omschrijving, klus of adres…">
+    {% if scope != "altijd" %}<input type="hidden" name="scope" value="{{ scope }}">{% endif %}
   </form>
 
   <div class="foto-filterrij">
-    <div class="klus-kiezer" id="klus-kiezer">
+    <div class="klus-kiezer" id="klus-kiezer" data-scope="{{ scope }}">
       <select name="klus" id="klus-select" form="foto-zoekform" class="klus-kiezer-select" onchange="this.form.submit()">
         <option value="" data-scope="altijd">Alle klussen</option>
         <option value="algemeen" data-scope="altijd"{% if klus_pk == "algemeen" %} selected{% endif %}>Algemeen</option>

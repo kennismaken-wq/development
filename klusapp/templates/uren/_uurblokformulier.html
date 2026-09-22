@@ -56,10 +56,13 @@
   {% endif %}
 </form>
 {% if verwijder_url %}
-  <form method="post" action="{{ verwijder_url }}" class="verwijder" id="uurblok-verwijderrij"{% if alleen_lezen %} hidden{% endif %}
+  {% comment %} Geen zichtbare knop hierin: die staat als prullenbak-icoontje
+     boven in _uurblokdetail_inhoud.html, gekoppeld via het form-attribuut
+     (form="uurblok-verwijderrij") in plaats van hier binnenin — dit
+     formulier bestaat alleen om ernaar te posten. {% endcomment %}
+  <form method="post" action="{{ verwijder_url }}" id="uurblok-verwijderrij"
         onsubmit="return confirm('Dit uurblok verwijderen?');">
     {% csrf_token %}
-    <button type="submit">Verwijderen</button>
   </form>
 {% endif %}
 
