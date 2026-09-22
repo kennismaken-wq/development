@@ -4,31 +4,10 @@
 {% block kop %}Hai, {{ user.first_name|default:user.naam }}{% endblock %}
 {% block sub %}{{ vandaag|date:"l j F Y"|capfirst }}{% endblock %}
 {% block inhoud %}
-  {% comment %} De onderdelen bovenaan: waar je heen wilt is de eerste vraag
-     bij het openen van de app. Wat daaronder staat — je klussen, je uren,
-     de foto's — is waar je naar kijkt als je toch al hier bent.
+  {% comment %} Eerst waar je nu al middenin zit — je klussen — daarna pas de
+     apps: dat is waar je naar kijkt als je toch al hier bent, vóór de vraag
+     waar je verder heen wilt.
   {% endcomment %}
-  <div class="appgrid">
-    {% for onderdeel in onderdelen %}
-      {% if onderdeel.url %}
-        <a class="apptegel" href="{{ onderdeel.url }}"{% if onderdeel.extern %} target="_blank" rel="noopener"{% endif %}>
-          <span class="apptegel-icoon">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">{{ onderdeel.icoon|pictogram }}</svg>
-          </span>
-          <span class="apptegel-titel">{{ onderdeel.titel }}</span>
-          {% if onderdeel.info %}<span class="apptegel-info">{{ onderdeel.info }}</span>{% endif %}
-        </a>
-      {% else %}
-        <span class="apptegel nog-niet">
-          <span class="apptegel-icoon">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">{{ onderdeel.icoon|pictogram }}</svg>
-          </span>
-          <span class="apptegel-titel">{{ onderdeel.titel }}</span>
-        </span>
-      {% endif %}
-    {% endfor %}
-  </div>
-
   <h2 class="sectiekop">Jouw klussen</h2>
   {% if klussen_recent %}
     <div class="klussen-slider">
@@ -46,6 +25,27 @@
   {% else %}
     <p class="leeg">Nog geen uren geschreven. <a href="{% url 'mijn_uren' %}">Begin bij uren schrijven</a>.</p>
   {% endif %}
+
+  <h2 class="sectiekop">Apps</h2>
+  <div class="appgrid">
+    {% for onderdeel in onderdelen %}
+      {% if onderdeel.url %}
+        <a class="apptegel" href="{{ onderdeel.url }}"{% if onderdeel.extern %} target="_blank" rel="noopener"{% endif %}>
+          <span class="apptegel-icoon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">{{ onderdeel.icoon|pictogram }}</svg>
+          </span>
+          <span class="apptegel-titel">{{ onderdeel.titel }}</span>
+        </a>
+      {% else %}
+        <span class="apptegel nog-niet">
+          <span class="apptegel-icoon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">{{ onderdeel.icoon|pictogram }}</svg>
+          </span>
+          <span class="apptegel-titel">{{ onderdeel.titel }}</span>
+        </span>
+      {% endif %}
+    {% endfor %}
+  </div>
 
   <div class="statrij">
     <div class="statkaart">

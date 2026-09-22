@@ -113,7 +113,7 @@ a, button, .knop, .knop-stil, .pil, .side-icon, .klusregel, .profielregel,
 }
 
 .knop:active, .knop-stil:active, .pil:active, .legenda a:active,
-.fotokaart-nieuw:active, .keuzepil .vlak:active{
+.fotokaart-nieuw:active, .keuzepil .vlak:active, .tabblad:active{
   filter:brightness(.92);
 }
 .klusregel:active, .profielregel:active, .klus-slide:active,
@@ -676,6 +676,27 @@ input[type=time]::-webkit-calendar-picker-indicator{ filter:invert(1); opacity:.
 }
 /* kop met een actie ernaast, bv. de export-knop op het klusdossier */
 .sectiekop-rij{ display:flex; align-items:center; justify-content:space-between; gap:.8rem; }
+
+/* Tabbladen: Documenten/Uren/Foto's op het klusdossier, één zichtbaar
+   tegelijk i.p.v. alle drie onder elkaar (static/js/klustabs.js zet
+   .actief/[hidden] om bij een klik). Zelfde pil-vormtaal als .keuzepil,
+   maar met knoppen i.p.v. verborgen radio's: hier hoeft geen ander element
+   op de pagina te reageren op de stand, dus een klein scriptje is
+   eenvoudiger dan de aangrenzende-sibling-trucs die .keuzepil nodig heeft. */
+.tabbladen-kop{ display:flex; flex-wrap:wrap; gap:.4rem; margin-bottom:1.1rem; }
+.tabblad{
+  display:inline-flex; align-items:center; gap:.4rem;
+  min-height:38px; padding:.4rem .95rem; border-radius:999px; cursor:pointer;
+  font-family:'Inter',sans-serif; font-size:12.5px; font-weight:600;
+  background:rgba(255,255,255,0.07); border:1px solid rgba(255,255,255,0.16);
+  color:rgba(255,255,255,0.7); transition:background .12s, color .12s, border-color .12s;
+}
+.tabblad svg{ width:16px; height:16px; flex-shrink:0; }
+@media (hover:hover){ .tabblad:hover{ background:rgba(255,255,255,0.14); color:#fff; } }
+.tabblad.actief{
+  background:rgba(var(--accent-rgb),0.32); border-color:rgba(var(--accent-rgb),0.6); color:var(--hi);
+}
+.tabblad:focus-visible{ outline:2px solid rgba(var(--accent-rgb),0.9); outline-offset:2px; }
 /* de wachtwoordeisen, direct onder het invulveld */
 .eisen-blok{ margin:.5rem 0 0; }
 .eisen{
@@ -1103,35 +1124,27 @@ dialog.foto-invoegen .uploadveld, dialog.uren-invoegen .uurblokformulier, dialog
   vertical-align:middle; margin:0 .5rem 0 0;
 }
 
-/* ══════════ TIJDELIJK: RASTERMENU (tweede beginscherm) ══════════
-   Elk onderdeel als los blok met icoon, naam en één cijfer eronder — alsof
-   het losse apps zijn. Twee kolommen op een telefoon, drie zodra het past;
-   zelfde glasvlak, radius en hover als de andere rijen en kaarten. */
-.appgrid{ display:grid; grid-template-columns:repeat(2,1fr); gap:.7rem; }
-@media (min-width:560px){ .appgrid{ grid-template-columns:repeat(3,1fr); } }
+/* ══════════ APPS-RASTER (beginscherm) ══════════
+   Compacte app-iconen zoals op een telefoon-beginscherm: vierkant pictogram
+   met de naam eronder, geen kaart eromheen. Vier per rij op een telefoon. */
+.appgrid{ display:grid; grid-template-columns:repeat(4,1fr); gap:1.1rem .5rem; }
+@media (min-width:560px){ .appgrid{ grid-template-columns:repeat(6,1fr); } }
 
 .apptegel{
-  display:grid; gap:.35rem; align-content:start;
-  border-radius:18px; padding:1rem .9rem 1.1rem; min-height:118px;
-  background:rgba(255,255,255,0.07); border:1px solid rgba(255,255,255,0.14);
-  color:#fff; text-decoration:none; transition:background .12s, transform .1s;
+  display:flex; flex-direction:column; align-items:center; gap:.4rem;
+  text-align:center; color:#fff; text-decoration:none;
 }
-@media (hover:hover){ .apptegel:hover{ background:rgba(255,255,255,0.13); transform:translateY(-1px); } }
 .apptegel.nog-niet{ opacity:.4; }
 .apptegel-icoon{
   display:flex; align-items:center; justify-content:center;
-  width:38px; height:38px; border-radius:12px; margin-bottom:.15rem;
-  background:linear-gradient(135deg, rgba(var(--accent-rgb),0.5), rgba(var(--accent-rgb),0.16));
+  width:52px; height:52px; border-radius:16px;
+  background:linear-gradient(135deg, rgba(var(--accent-rgb),0.55), rgba(var(--accent-rgb),0.18));
   border:1px solid rgba(var(--accent-rgb),0.4); color:var(--hi);
+  transition:background .12s, transform .1s;
 }
-.apptegel-icoon svg{ width:20px; height:20px; }
-.apptegel-titel{ font-size:14px; font-weight:600; line-height:1.2; }
-/* Het cijfer is waarom deze tegel meer is dan een knop: je ziet de stand
-   zonder het scherm te openen. */
-.apptegel-info{
-  font-size:12px; color:var(--hi); font-variant-numeric:tabular-nums;
-  overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
-}
+@media (hover:hover){ .apptegel:hover .apptegel-icoon{ background:rgba(255,255,255,0.13); transform:translateY(-1px); } }
+.apptegel-icoon svg{ width:24px; height:24px; }
+.apptegel-titel{ font-size:11.5px; font-weight:600; line-height:1.2; }
 
 /* ══════════ MEDEWERKERSLIJST ══════════
    Zelfde rijvorm als .klusregel en .profielregel (16px radius, glasvlak,
