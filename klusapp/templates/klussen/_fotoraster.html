@@ -26,7 +26,8 @@
         <span class="wie">{{ bijlage.toegevoegd_door.naam|default:"onbekend" }} · {{ bijlage.datum|date:"j M" }}</span>
       </figcaption>
       {% if bijlage|mag_weg:user %}
-        <form method="post" action="{% url 'bijlage_verwijderen' bijlage.pk %}" class="weg">
+        <form method="post" action="{% url 'bijlage_verwijderen' bijlage.pk %}" class="weg"
+              onsubmit="return confirm('Deze foto verwijderen?');">
           {% csrf_token %}
           <input type="hidden" name="terug" value="{{ terug }}">
           <button type="submit" title="Verwijderen" aria-label="Verwijderen">×</button>
