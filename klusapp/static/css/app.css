@@ -547,11 +547,14 @@ input[type=time]::-webkit-calendar-picker-indicator{ filter:invert(1); opacity:.
 .dagkolom{
   position:relative; border-left:1px solid rgba(255,255,255,0.08);
   background:rgba(255,255,255,0.03);
-  /* pan-y alleen zou een vinger die hier over het rooster beweegt alleen
-     verticaal (de pagina) laten scrollen, en het horizontaal wisselen van
-     dag — de hele reden voor .raster-scroll op een telefoon — juist
-     blokkeren. Beide richtingen toestaan, alleen pinch-zoom blijft uit. */
-  touch-action:pan-x pan-y;
+  /* Was pan-x pan-y (native scrollen toestaan), maar dat zit vast eenmaal
+     bepaald bij het begin van een aanraking — de browser negeert latere
+     JS-wijzigingen daaraan (ook via pointer capture), dus kon nooit alsnog
+     geblokkeerd worden zodra vasthouden-om-te-slepen (kalender.js) bevestigd
+     werd: de pagina bleef gewoon scrollen in plaats van het tijdvak te
+     tekenen. Met "none" staat vast dat de browser híer nooit zelf scrollt,
+     en doet kalender.js dat zelf na voor een gewone swipe. */
+  touch-action:none;
   scroll-snap-align:start;
 }
 @media (hover:hover){ .dagkolom:hover{ background:rgba(255,255,255,0.05); } }

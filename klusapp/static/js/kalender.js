@@ -106,9 +106,28 @@
     let van = null, tot = null;
     let langePersAfgehandeld = false;
 
+    // touch-action op de kolom staat vast op "none" (zie app.css): Chromium
+    // bepaalt bij het begin van een aanraking eens en voor altijd of hij zelf
+    // mag scrollen, en negeert latere CSS- of pointer-capture-wijzigingen
+    // (uitgeprobeerd — geen van beide werkte om een al lopend sleepgebaar
+    // alsnog te blokkeren). Daarom scrollen we een gewone swipe hieronder
+    // zelf na (modus "scrollen"), i.p.v. dat aan de browser over te laten.
     let vasthoudTimer = null;
     let vingerId = null;
-    let startX = null, startY = null;
+    let modus = null;   // "wachten" | "kiezen" | "scrollen" — alleen tijdens een vingergebaar
+    let startX = null, startY = null, laatsteX = null, laatsteY = null;
+    let horizontaleScroller = null;
+    let verticaleScroller = null;
+
+    // html,body staan op height:100% (zie app.css), waardoor niet het venster
+    // maar <body> zelf de scrollende doos is (window.scrollY blijft dan altijd
+    // 0). Zoek daarom het element dat écht overloopt i.p.v. domweg window aan
+    // te nemen — anders scrolt een gewone swipe straks nergens naartoe.
+    function zoekVerticaleScroller() {
+      const el = document.scrollingElement;
+      if (el && el.scrollHeight > el.clientHeight) return el;
+      return document.body;
+    }
 
     function verf() {
       kolom.querySelectorAll(".vak").forEach(function (vak) {
@@ -123,9 +142,6 @@
       kolom.querySelectorAll(".vak").forEach(function (vak) {
         vak.classList.remove("kiezen");
       });
-      // Terug naar de CSS-waarde (pan-x pan-y): anders blijft scrollen op
-      // deze kolom geblokkeerd nadat het slepen is afgerond.
-      kolom.style.touchAction = "";
     }
 
     function wisVasthoudTimer() {
@@ -155,31 +171,29 @@
         return;
       }
 
-      // Vinger: nog niets blokkeren, anders kan er ook niet meer gescrold
-      // worden zolang we niet zeker weten dat dit een vasthouden wordt.
       if (vingerId !== null) return;   // al een andere vinger aan het volgen
-      const vak = gebeurtenis.target.closest(".vak");
-      if (!vak) return;
       vingerId = gebeurtenis.pointerId;
-      startX = gebeurtenis.clientX;
-      startY = gebeurtenis.clientY;
-      const startVak = Number(vak.dataset.vak);
-      wisVasthoudTimer();
-      vasthoudTimer = setTimeout(function () {
-        vasthoudTimer = null;
-        van = tot = startVak;
-        // Pas nú, en niet vooraf, naar "none": zo mag een gewone swipe die
-        // nooit lang genoeg stilhoudt gewoon scrollen. touch-action alleen
-        // veranderen is niet genoeg zolang de vinger nog impliciet "vastzit"
-        // aan het vak van de eerste aanraking (waar hij bij binnenkomst pan-x
-        // pan-y had): expliciet setPointerCapture naar de kolom verplaatsen
-        // dwingt de browser touch-action opnieuw te bepalen, nu op basis van
-        // de kolom i.p.v. het oorspronkelijke vak.
-        kolom.style.touchAction = "none";
-        try { kolom.setPointerCapture(vingerId); } catch (fout) { /* niet ondersteund: preventDefault hieronder blijft over */ }
-        verf();
-        if (navigator.vibrate) navigator.vibrate(10);   // voelbare bevestiging dat slepen nu kan
-      }, VASTHOUD_MS);
+      startX = laatsteX = gebeurtenis.clientX;
+      startY = laatsteY = gebeurtenis.clientY;
+      modus = "wachten";
+      horizontaleScroller = kolom.closest(".raster-scroll");
+      verticaleScroller = zoekVerticaleScroller();
+
+      // Alleen op een leeg vak mag vasthouden een sleep beginnen; op een
+      // bestaand blok (een link naar een uurblok) blijft dit gewoon een tik
+      // of — als er toch bewogen wordt — een scroll, zie pointermove.
+      const vak = gebeurtenis.target.closest(".vak");
+      if (vak) {
+        const startVak = Number(vak.dataset.vak);
+        wisVasthoudTimer();
+        vasthoudTimer = setTimeout(function () {
+          vasthoudTimer = null;
+          modus = "kiezen";
+          van = tot = startVak;
+          verf();
+          if (navigator.vibrate) navigator.vibrate(10);   // voelbare bevestiging dat slepen nu kan
+        }, VASTHOUD_MS);
+      }
     });
 
     kolom.addEventListener("pointermove", function (gebeurtenis) {
@@ -194,20 +208,31 @@
 
       if (gebeurtenis.pointerId !== vingerId) return;
 
-      if (vasthoudTimer !== null) {
-        // Nog aan het wachten: bij genoeg beweging is dit een swipe/scroll,
-        // geen vasthouden — dan laten we het gewoon aan de browser over.
-        const dx = gebeurtenis.clientX - startX;
-        const dy = gebeurtenis.clientY - startY;
-        if (Math.abs(dx) > BEWEEG_DREMPEL || Math.abs(dy) > BEWEEG_DREMPEL) {
-          wisVasthoudTimer();
-          vingerId = null;
+      const dx = gebeurtenis.clientX - laatsteX;
+      const dy = gebeurtenis.clientY - laatsteY;
+      laatsteX = gebeurtenis.clientX;
+      laatsteY = gebeurtenis.clientY;
+
+      if (modus === "wachten") {
+        const totaalDx = gebeurtenis.clientX - startX;
+        const totaalDy = gebeurtenis.clientY - startY;
+        if (Math.abs(totaalDx) <= BEWEEG_DREMPEL && Math.abs(totaalDy) <= BEWEEG_DREMPEL) {
+          return;   // nog te weinig beweging om te weten wat dit wordt
         }
+        // Genoeg beweging vóór het vasthouden bevestigd was: gewone swipe.
+        wisVasthoudTimer();
+        modus = "scrollen";
+        // Bewust doorvallen naar hieronder: anders gaat deze eerste,
+        // drempeloverschrijdende beweging verloren.
+      }
+
+      if (modus === "scrollen") {
+        verticaleScroller.scrollTop -= dy;
+        if (horizontaleScroller) horizontaleScroller.scrollLeft -= dx;
         return;
       }
 
-      if (van === null) return;   // vasthouden is nooit bevestigd
-      gebeurtenis.preventDefault();   // vanaf hier geen paginascroll meer
+      // modus === "kiezen"
       const vak = vakOpPositie(gebeurtenis.clientX, gebeurtenis.clientY);
       if (vak) {
         tot = Number(vak.dataset.vak);
@@ -226,9 +251,10 @@
 
       if (gebeurtenis.pointerId !== vingerId) return;
       wisVasthoudTimer();
-      try { kolom.releasePointerCapture(gebeurtenis.pointerId); } catch (fout) { /* was nooit gezet, geen probleem */ }
+      const eindeModus = modus;
       vingerId = null;
-      if (van === null) return;   // gewone tik: dat handelt de click-listener hieronder af
+      modus = null;
+      if (eindeModus !== "kiezen") return;   // gewone tik of scroll: click-listener/browser regelt de rest
       const vanVak = van, totVak = tot;
       wis();
       langePersAfgehandeld = true;   // voorkomt dat de click hieronder het formulier nog eens opent
@@ -242,8 +268,8 @@
       }
       if (gebeurtenis.pointerId !== vingerId) return;
       wisVasthoudTimer();
-      try { kolom.releasePointerCapture(gebeurtenis.pointerId); } catch (fout) { /* was nooit gezet, geen probleem */ }
       vingerId = null;
+      modus = null;
       wis();
     });
 
