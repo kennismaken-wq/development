@@ -25,7 +25,7 @@
    verbergen door de browser, waardoor een element met hidden tóch zichtbaar
    blijft. Daarom hier één keer hard gezet. */
 [hidden]{ display:none !important; }
-html,body{ height:100%; }
+html,body{ height:100%; overflow-x:hidden; }
 body{
   margin:0;
   font-family:'Inter',system-ui,-apple-system,sans-serif;
@@ -1456,25 +1456,29 @@ label:has(> input[type=checkbox]), input[type=checkbox] + label{ cursor:pointer;
 .aanwezig-rij .opmerking{ font-size:12.5px; color:rgba(255,255,255,0.7); }
 
 /* ══════════ PAGINA-OVERGANG: KLUS OPENEN/SLUITEN ══════════
-   Native cross-document View Transition, geen JS-framework nodig. Zonder
-   ondersteuning (oudere browsers) navigeert de link gewoon zonder animatie —
-   er is dus geen aparte vangnet-styling nodig. De richting (open/terug) komt
-   uit static/js/klus-overgang.js, dat op elke pagina meeloopt. */
-@view-transition{ navigation:auto; }
-
-:root:active-view-transition-type(klus-open)::view-transition-old(root){
-  animation:klus-overgang-stilstaan .32s both;
+   Dit is een gewone server-gerenderde navigatie (geen SPA), dus er bestaat
+   geen document dat beide pagina's tegelijk kent om ze synchroon te
+   schuiven. In plaats daarvan twee losse, onafhankelijke trucs die samen de
+   illusie van één vloeiende overgang geven:
+   - Openen: de nieuwe kaart start buiten beeld rechts en schuift bij het
+     laden naar zijn plek — puur CSS, gekoppeld aan het terugpijltje in de
+     kop (.terug-pijl bestaat alleen op een scherm dat je "in" een klus
+     toont), dus dit hoeft niet los aangezet te worden per pagina.
+   - Teruggaan: static/js/klus-overgang.js onderschept de klik op dat
+     pijltje, speelt de uitschuifanimatie af en navigeert pas daarna —
+     zelfde "animeer, wacht op transitionend, dan pas de echte actie"-opzet
+     als static/js/bottomsheet.js.
+   Was eerder een cross-document View Transition (native browser-API); die
+   bleek in de praktijk niet overal te animeren, dit werkt zonder
+   afhankigheid van die (nog jonge) API. */
+.kaart:has(.terug-pijl){
+  animation:klus-in-van-rechts .32s cubic-bezier(.32,.72,0,1) both;
 }
-:root:active-view-transition-type(klus-open)::view-transition-new(root){
-  animation:klus-overgang-in .32s cubic-bezier(.32,.72,0,1) both;
+.kaart.klus-uit-animatie{
+  animation:klus-uit-naar-rechts .26s cubic-bezier(.32,.72,0,1) both;
 }
-:root:active-view-transition-type(klus-terug)::view-transition-old(root){
-  animation:klus-overgang-uit .32s cubic-bezier(.32,.72,0,1) both;
-  z-index:1;
+@keyframes klus-in-van-rechts{ from{ transform:translateX(100%); } to{ transform:translateX(0); } }
+@keyframes klus-uit-naar-rechts{ from{ transform:translateX(0); } to{ transform:translateX(100%); } }
+@media (prefers-reduced-motion: reduce){
+  .kaart:has(.terug-pijl), .kaart.klus-uit-animatie{ animation:none; }
 }
-:root:active-view-transition-type(klus-terug)::view-transition-new(root){
-  animation:klus-overgang-stilstaan .32s both;
-}
-@keyframes klus-overgang-in{ from{ transform:translateX(100%); } to{ transform:translateX(0); } }
-@keyframes klus-overgang-uit{ from{ transform:translateX(0); } to{ transform:translateX(100%); } }
-@keyframes klus-overgang-stilstaan{ from{ opacity:1; } to{ opacity:1; } }
