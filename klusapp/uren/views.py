@@ -303,6 +303,7 @@ def planbord(request):
                             "blok": blok,
                             "kleur": kalender.kleur_van(blok.klus),
                             "duur": kalender.als_uren(blok.duur_minuten),
+                            "uren": kalender.als_decimaal(blok.duur_minuten),
                         }
                         for blok in cel
                     ],
@@ -312,6 +313,9 @@ def planbord(request):
         rijen.append(
             {
                 "medewerker": medewerker,
+                # Zelfde palet als de klussen, zodat een rij zonder ingestelde
+                # kleur toch een eigen tint heeft in plaats van grijs.
+                "kleur": medewerker.kleur or kalender.PALET[(medewerker.pk - 1) % len(kalender.PALET)],
                 "dagen": dagen,
                 "weektotaal": kalender.als_uren(weekminuten) if weekminuten else "",
                 "heeft_uren": weekminuten > 0,

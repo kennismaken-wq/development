@@ -6,6 +6,8 @@ from django.core.exceptions import ValidationError
 from django.db import IntegrityError, transaction
 from django.test import TestCase
 
+from . import kalender
+
 from klussen.models import Klus
 from medewerkers.models import Medewerker
 
@@ -372,18 +374,27 @@ class PlanbordTest(TestCase):
         antwoord = self.client.get("/planbord/?dag=2026-09-09")
         self.assertContains(antwoord, f'href="/uren/{blok.pk}/"')
 
-    def test_chip_toont_begintijd_en_duur_en_niet_de_omschrijving(self):
-        # SPEC §5: op deze breedte breekt een omschrijving in lettergrepen,
-        # de kleur draagt de klus.
+    def test_chip_toont_de_klus_en_de_uren_en_niet_de_omschrijving(self):
+        # Zoals in de demo: op dit bord is de vraag "waar stond hij", dus de
+        # klusnaam met het aantal uren. De begintijd zit in de tooltip en op
+        # het detailscherm. De toelichting blijft eruit — SPEC §5: die breekt
+        # op deze breedte in lettergrepen.
         Uurblok.objects.create(
             medewerker=self.sam, klus=self.klus, datum=self.maandag,
             begintijd=time(8, 0), eindtijd=time(16, 30), toelichting="Bestrating uitgevlakt",
         )
         self.client.force_login(self.maarten)
         antwoord = self.client.get("/planbord/?dag=2026-09-09")
-        self.assertContains(antwoord, ">08:00<")
-        self.assertContains(antwoord, ">8:30<")
+        self.assertContains(antwoord, f">{self.klus.naam}<")
+        self.assertContains(antwoord, ">8,5<")
+        self.assertContains(antwoord, "08:00–16:30")     # in de tooltip
         self.assertNotContains(antwoord, "Bestrating uitgevlakt")
+
+    def test_lege_dag_krijgt_een_streepje(self):
+        # Een gat laat je je afvragen of het scherm klopt; een streepje zegt
+        # dat er gekeken is en er niets was.
+        self.client.force_login(self.maarten)
+        self.assertContains(self.client.get("/planbord/?dag=2026-09-09"), "bord-leeg")
 
     def test_legenda_noemt_de_klussen_van_die_week(self):
         andere_klus = Klus.objects.create(naam="Haag Jansen", soort=Klus.Soort.ONDERHOUD)
@@ -628,3 +639,13 @@ class UrenexportTest(TestCase):
         antwoord = self.client.get(f"/export/?maand=2026-08&medewerker={self.joep.pk}")
         namen = [rij["medewerker"].username for rij in antwoord.context["totalen"]]
         self.assertEqual(namen, ["joep"])
+
+
+class DecimaleUrenTest(TestCase):
+    """Uren als getal, zoals ze op het planbord naast een klusnaam staan."""
+
+    def test_hele_en_halve_uren(self):
+        self.assertEqual(kalender.als_decimaal(480), "8")
+        self.assertEqual(kalender.als_decimaal(510), "8,5")
+        self.assertEqual(kalender.als_decimaal(195), "3,25")
+        self.assertEqual(kalender.als_decimaal(0), "0")

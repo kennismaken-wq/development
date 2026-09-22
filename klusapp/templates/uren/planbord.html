@@ -30,27 +30,34 @@
 
       {% for rij in rijen %}
         <div class="bord-naam{% if not rij.heeft_uren %} zonder-uren{% endif %}">
-          <div class="wie">{{ rij.medewerker.naam }}</div>
-          {% if rij.medewerker.functie %}<div class="functie">{{ rij.medewerker.functie }}</div>{% endif %}
-          <div class="week">{{ rij.weektotaal }}</div>
+          <span class="bol" style="background:linear-gradient(150deg, {{ rij.kleur }}, {{ rij.kleur }}A6); border-color:{{ rij.kleur }}">{{ rij.medewerker.initialen }}</span>
+          <span class="bord-naam-tekst">
+            <span class="wie">{{ rij.medewerker.naam }}</span>
+            {% if rij.medewerker.functie %}<span class="functie">{{ rij.medewerker.functie }}</span>{% endif %}
+            <span class="week">{{ rij.weektotaal }}</span>
+          </span>
         </div>
         {% for dagcel in rij.dagen %}
           <div class="bord-cel{% if dagcel.is_vandaag %} vandaag{% endif %}">
             {% for getekend in dagcel.blokken %}
-              {# begintijd en duur, niet de omschrijving: die breekt op deze breedte in lettergrepen (SPEC §5) #}
+              {% comment %} Klusnaam en uren, zoals in de demo: op dit bord is
+                 de vraag "waar stond hij" en niet "hoe laat begon hij". De
+                 begintijd staat in de tooltip en op het detailscherm.
+              {% endcomment %}
               <a class="bord-chip" href="{% url 'uurblok_detail' getekend.blok.pk %}"
-                 title="{{ getekend.blok.klus.naam }} · {{ getekend.blok.begintijd|time:'H:i' }}–{{ getekend.blok.eindtijd|time:'H:i' }}"
-                 style="background:linear-gradient(150deg, {{ getekend.kleur }}D9, {{ getekend.kleur }}73);
-                        border-color:{{ getekend.kleur }}">
-                <span class="tijd">{{ getekend.blok.begintijd|time:"H:i" }}</span>
-                <span class="duur">{{ getekend.duur }}</span>
+                 title="{{ getekend.blok.klus.naam }} · {{ getekend.blok.begintijd|time:'H:i' }}–{{ getekend.blok.eindtijd|time:'H:i' }}">
+                <span class="vlek" style="background:linear-gradient(150deg, {{ getekend.kleur }}, {{ getekend.kleur }}80); border-color:{{ getekend.kleur }}"></span>
+                <span class="klus">{{ getekend.blok.klus.naam }}</span>
+                <span class="uren">{{ getekend.uren }}</span>
               </a>
+            {% empty %}
+              <span class="bord-leeg">–</span>
             {% endfor %}
           </div>
         {% endfor %}
       {% endfor %}
 
-      <div class="bord-naam bord-voet"><div class="wie">Totaal</div></div>
+      <div class="bord-naam bord-voet"><span class="wie">Per dag</span></div>
       {% for kopdag in kopdagen %}
         <div class="bord-cel bord-voet{% if kopdag.is_vandaag %} vandaag{% endif %}">
           <span class="dagtotaal">{{ kopdag.totaal }}</span>

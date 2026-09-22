@@ -47,10 +47,14 @@ al af was.
 - De app maakt **geen facturen**. Alleen urenoverzichten die de boekhouder verwerkt.
 - Alles moet werken op een telefoon. De medewerker vult zijn uren 's avonds in de
   bus in, niet achter een bureau.
-- Het Django-beheerscherm op `/beheer/` is voor HandigerAI, niet voor de klant.
-  De rol "eigenaar" geeft er geen toegang toe; daar is `is_staff` voor, en die
-  twee zijn bewust niet aan elkaar geknoopt. Wat Maarten dagelijks moet kunnen
-  krijgt een eigen scherm in de stijl van de app.
+- Het Django-beheerscherm op `/beheer/` is bedoeld voor HandigerAI, niet voor de
+  klant: het toont alle velden en verwijdert zonder vangnet. Wat Maarten
+  dagelijks moet kunnen krijgt daarom een eigen scherm in de stijl van de app —
+  zie `/medewerkers/`.
+  **Tijdelijk (sept. 2026):** er is nog geen apart beheeraccount, dus een
+  eigenaar krijgt voorlopig wél toegang tot `/beheer/`. Dat hangt aan één regel
+  in `Medewerker.save()`. Zodra dat account er is, moet die toegang weer los van
+  de rol "eigenaar" komen te staan.
 
 ## Lokaal draaien
 

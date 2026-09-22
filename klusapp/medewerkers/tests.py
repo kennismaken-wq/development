@@ -181,23 +181,14 @@ class ProfielschermTest(TestCase):
         self.assertIn(f'href="{reverse("loonstrook")}"', html)
         self.assertNotIn("mijn.loondossier.nl", html)
 
-    def test_eigenaar_zonder_beheerrecht_ziet_geen_beheertegel(self):
-        # De klant is eigenaar in de app, maar beheert het systeem niet.
-        self.client.force_login(self.eigenaar)
-        self.assertNotIn("Beheer", tegeltitels(self.client.get(reverse("mijn_profiel")).content.decode()))
-
-    def test_systeembeheerder_ziet_de_beheertegel_wel(self):
-        self.eigenaar.is_staff = True
-        self.eigenaar.save()
+    def test_eigenaar_ziet_de_beheertegel_en_een_medewerker_niet(self):
+        # Tijdelijk: zolang er geen apart beheeraccount is, komt de eigenaar
+        # in /beheer/. Zie de opmerking bij Medewerker.save().
         self.client.force_login(self.eigenaar)
         self.assertIn("Beheer", tegeltitels(self.client.get(reverse("mijn_profiel")).content.decode()))
 
-    def test_beheerder_met_rol_medewerker_ziet_de_tegel_ook(self):
-        # createsuperuser geeft geen rol mee; die staat dan op medewerker.
-        self.medewerker.is_staff = True
-        self.medewerker.save()
         self.client.force_login(self.medewerker)
-        self.assertIn("Beheer", tegeltitels(self.client.get(reverse("mijn_profiel")).content.decode()))
+        self.assertNotIn("Beheer", tegeltitels(self.client.get(reverse("mijn_profiel")).content.decode()))
 
     def test_uitloggen_staat_op_het_profielscherm(self):
         self.client.force_login(self.medewerker)
@@ -208,3 +199,214 @@ class ProfielschermTest(TestCase):
         antwoord = self.client.get(reverse("mijn_profiel"))
         self.assertEqual(antwoord.status_code, 302)
         self.assertIn(reverse("inloggen"), antwoord.headers["Location"])
+
+class MedewerkersBeherenTest(TestCase):
+    """Het eigen beheerscherm voor medewerkers, zodat de klant niet in het
+    Django-beheerscherm hoeft."""
+
+    def setUp(self):
+        self.eigenaar = Medewerker.objects.create_user(
+            "maarten", password="test1234", first_name="Maarten", rol=Medewerker.Rol.EIGENAAR
+        )
+        self.sam = Medewerker.objects.create_user(
+            "sam", password="test1234", first_name="Sam", rol=Medewerker.Rol.MEDEWERKER
+        )
+        self.client.force_login(self.eigenaar)
+
+    def test_medewerker_komt_er_niet_in(self):
+        self.client.force_login(self.sam)
+        for adres in (
+            reverse("medewerkers"),
+            reverse("medewerker_nieuw"),
+            reverse("medewerker_bewerken", args=[self.eigenaar.pk]),
+        ):
+            self.assertEqual(self.client.get(adres).status_code, 404, adres)
+
+    def test_eigenaar_maakt_een_medewerker_aan(self):
+        antwoord = self.client.post(
+            reverse("medewerker_nieuw"),
+            {
+                "first_name": "Joep", "last_name": "Bakker", "username": "joep",
+                "functie": "Hovenier", "telefoon": "", "rol": Medewerker.Rol.MEDEWERKER,
+                "kleur": "#5B8FA8", "in_dienst_sinds": "2026-09-01",
+                "wachtwoord": "tuinbaas2026",
+            },
+        )
+        self.assertEqual(antwoord.status_code, 302)
+        joep = Medewerker.objects.get(username="joep")
+        self.assertEqual(joep.rol, Medewerker.Rol.MEDEWERKER)
+        # en kan er meteen mee inloggen
+        self.assertTrue(self.client.login(username="joep", password="tuinbaas2026"))
+
+    def test_wachtwoord_opnieuw_instellen(self):
+        self.client.post(
+            reverse("medewerker_wachtwoord", args=[self.sam.pk]), {"wachtwoord": "nieuwezomer26"}
+        )
+        self.assertTrue(self.client.login(username="sam", password="nieuwezomer26"))
+
+    def test_te_zwak_wachtwoord_wordt_geweigerd(self):
+        self.client.post(reverse("medewerker_wachtwoord", args=[self.sam.pk]), {"wachtwoord": "1234"})
+        self.sam.refresh_from_db()
+        self.assertTrue(self.sam.check_password("test1234"))
+
+    def test_uit_dienst_bewaart_de_persoon(self):
+        self.client.post(reverse("medewerker_dienst", args=[self.sam.pk]))
+        self.sam.refresh_from_db()
+        self.assertIsNotNone(self.sam.uit_dienst_sinds)
+        self.assertFalse(self.sam.is_active)
+        # de persoon zelf blijft bestaan, met zijn uren en foto's
+        self.assertTrue(Medewerker.objects.filter(pk=self.sam.pk).exists())
+
+        # en kan weer terug
+        self.client.post(reverse("medewerker_dienst", args=[self.sam.pk]))
+        self.sam.refresh_from_db()
+        self.assertIsNone(self.sam.uit_dienst_sinds)
+        self.assertTrue(self.sam.is_active)
+
+    def test_jezelf_uit_dienst_zetten_kan_niet(self):
+        self.client.post(reverse("medewerker_dienst", args=[self.eigenaar.pk]))
+        self.eigenaar.refresh_from_db()
+        self.assertIsNone(self.eigenaar.uit_dienst_sinds)
+        self.assertTrue(self.eigenaar.is_active)
+
+    def test_de_wachtwoordeisen_staan_bij_het_veld(self):
+        # Een eis die je pas leest nadat je hem overtreedt is geen hulp.
+        for adres in (reverse("medewerker_nieuw"), reverse("medewerker_wachtwoord", args=[self.sam.pk])):
+            html = self.client.get(adres).content.decode()
+            self.assertIn("Minstens 8 tekens", html, adres)
+            self.assertIn("Niet alleen cijfers", html, adres)
+
+    def test_wachtwoord_dat_lijkt_op_de_naam_wordt_geweigerd(self):
+        self.client.post(reverse("medewerker_wachtwoord", args=[self.sam.pk]), {"wachtwoord": "sam"})
+        self.sam.refresh_from_db()
+        self.assertTrue(self.sam.check_password("test1234"))
+
+
+
+    def test_volgorde_eerst_eigenaars_dan_op_voornaam(self):
+        Medewerker.objects.create_user("zoe", password="x", first_name="Zoë", rol=Medewerker.Rol.EIGENAAR)
+        Medewerker.objects.create_user("anna", password="x", first_name="anna")
+        Medewerker.objects.create_user("bram", password="x", first_name="Bram")
+        namen = [mw.first_name for mw in self.client.get(reverse("medewerkers")).context["in_dienst"]]
+        # Maarten is eigenaar en Sam medewerker (zie setUp); "anna" met kleine
+        # letter hoort gewoon tussen de rest, niet er los voor of achter.
+        self.assertEqual(namen, ["Maarten", "Zoë", "anna", "Bram", "Sam"])
+
+
+class StarttegelsTest(TestCase):
+    """De onderdelen als tegels bovenaan het startscherm."""
+
+    def setUp(self):
+        self.eigenaar = Medewerker.objects.create_user(
+            "maarten", password="x", first_name="Maarten", rol=Medewerker.Rol.EIGENAAR
+        )
+        self.sam = Medewerker.objects.create_user("sam", password="x", first_name="Sam")
+
+    def test_medewerker_ziet_zijn_eigen_onderdelen(self):
+        self.client.force_login(self.sam)
+        html = self.client.get(reverse("start")).content.decode()
+        self.assertIn("Uren schrijven", html)
+        self.assertIn("Klussen", html)
+        for alleen_voor_de_baas in ("Aanwezigheid", "Overzichten", "Medewerkers"):
+            self.assertNotIn(alleen_voor_de_baas, html)
+
+    def test_eigenaar_ziet_ook_zijn_eigen_schermen_met_cijfers(self):
+        Klus.objects.create(naam="Tuin Vermeer")
+        self.client.force_login(self.eigenaar)
+        html = self.client.get(reverse("start")).content.decode()
+        self.assertIn("Medewerkers", html)
+        self.assertIn("2 in dienst", html)
+        self.assertIn("1 lopend", html)
+
+    def test_vereist_inloggen(self):
+        antwoord = self.client.get(reverse("start"))
+        self.assertEqual(antwoord.status_code, 302)
+
+
+class TestgegevensTest(TestCase):
+    """Tijdelijke knop die nepmedewerkers met uren aanmaakt."""
+
+    def setUp(self):
+        self.eigenaar = Medewerker.objects.create_user(
+            "maarten", password="x", first_name="Maarten", rol=Medewerker.Rol.EIGENAAR
+        )
+        self.sam = Medewerker.objects.create_user("sam", password="x", first_name="Sam")
+
+    def test_medewerker_komt_er_niet_bij(self):
+        self.client.force_login(self.sam)
+        self.client.post(reverse("testgegevens"), {"week": "2026-09-14"})
+        self.assertFalse(Medewerker.objects.filter(username__startswith="demo-").exists())
+
+    def test_aanmaken_geeft_een_week_vol_uren(self):
+        self.client.force_login(self.eigenaar)
+        self.client.post(reverse("testgegevens"), {"week": "2026-09-16"})
+
+        nep = Medewerker.objects.filter(username__startswith="demo-")
+        self.assertEqual(nep.count(), 5)
+        blokken = Uurblok.objects.filter(medewerker__in=nep)
+        self.assertGreater(blokken.count(), 15)
+        # allemaal binnen die ene week, en nooit in het weekend
+        for blok in blokken:
+            self.assertGreaterEqual(blok.datum, date(2026, 9, 14))
+            self.assertLessEqual(blok.datum, date(2026, 9, 20))
+            self.assertLess(blok.datum.weekday(), 5)
+
+    def test_testaccounts_kunnen_niet_inloggen(self):
+        self.client.force_login(self.eigenaar)
+        self.client.post(reverse("testgegevens"), {"week": "2026-09-16"})
+        for nep in Medewerker.objects.filter(username__startswith="demo-"):
+            self.assertFalse(nep.has_usable_password())
+
+    def test_twee_keer_draaien_verdubbelt_de_uren_niet(self):
+        self.client.force_login(self.eigenaar)
+        self.client.post(reverse("testgegevens"), {"week": "2026-09-16"})
+        eerste = Uurblok.objects.count()
+        self.client.post(reverse("testgegevens"), {"week": "2026-09-16"})
+        self.assertEqual(Uurblok.objects.count(), eerste)
+
+    def test_opruimen_haalt_alles_weg_maar_laat_de_rest_staan(self):
+        self.client.force_login(self.eigenaar)
+        self.client.post(reverse("testgegevens"), {"week": "2026-09-16"})
+        self.client.post(reverse("testgegevens"), {"actie": "opruimen"})
+
+        self.assertFalse(Medewerker.objects.filter(username__startswith="demo-").exists())
+        self.assertFalse(Uurblok.objects.exists())
+        # de echte accounts blijven
+        self.assertTrue(Medewerker.objects.filter(username="maarten").exists())
+        self.assertTrue(Medewerker.objects.filter(username="sam").exists())
+
+    def test_geen_broncommentaar_op_het_scherm(self):
+        # Een {# #}-commentaar over meerdere regels is geen commentaar en
+        # belandt zichtbaar op de pagina.
+        self.client.force_login(self.sam)
+        html = self.client.get(
+            reverse("loonstrook"),
+            headers={"user-agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) Safari/604.1"},
+        ).content.decode()
+        self.assertNotIn("{#", html)
+        self.assertNotIn("automatische doorverwijzing", html)
+
+    def test_planbord_staat_vooraan_voor_de_eigenaar(self):
+        self.client.force_login(self.eigenaar)
+        titels = [t["titel"] for t in self.client.get(reverse("start")).context["onderdelen"]]
+        self.assertEqual(titels[:2], ["Uren schrijven", "Planbord"])
+
+    def test_medewerker_krijgt_geen_planbord(self):
+        self.client.force_login(self.sam)
+        titels = [t["titel"] for t in self.client.get(reverse("start")).context["onderdelen"]]
+        self.assertNotIn("Planbord", titels)
+
+    def test_geen_aanmaakformulier_meer_op_het_startscherm(self):
+        self.client.force_login(self.eigenaar)
+        html = self.client.get(reverse("start")).content.decode()
+        self.assertNotIn("Testgegevens aanmaken", html)
+
+    def test_opruimknop_verschijnt_en_verdwijnt_vanzelf(self):
+        self.client.force_login(self.eigenaar)
+        self.assertNotIn("Testgegevens verwijderen", self.client.get(reverse("start")).content.decode())
+
+        self.client.post(reverse("testgegevens"), {"week": "2026-09-16"})
+        self.assertIn("Testgegevens verwijderen", self.client.get(reverse("start")).content.decode())
+
+        self.client.post(reverse("testgegevens"), {"actie": "opruimen"})
+        self.assertNotIn("Testgegevens verwijderen", self.client.get(reverse("start")).content.decode())

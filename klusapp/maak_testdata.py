@@ -13,14 +13,13 @@ def zorg_voor(username, voornaam, achternaam, rol, wachtwoord, staff=False):
         defaults={"first_name": voornaam, "last_name": achternaam, "rol": rol},
     )
     mw.first_name, mw.last_name, mw.rol = voornaam, achternaam, rol
-    mw.is_staff = mw.is_superuser = staff
+    # is_staff volgt automatisch uit de rol; zie Medewerker.save()
+    mw.is_superuser = staff
     mw.set_password(wachtwoord)
     mw.save()
     print(("aangemaakt" if nieuw else "bijgewerkt"), username, rol)
 
-# Maarten is eigenaar in de app, maar geen systeembeheerder: het
-# Django-beheerscherm is voor ons, niet voor de klant. Een eigen
-# beheeraccount maak je met `manage.py createsuperuser`.
+# Een eigenaar komt voorlopig ook in /beheer/; zie Medewerker.save().
 zorg_voor("maarten", "Maarten", "Morée", Medewerker.Rol.EIGENAAR, "test1234")
 zorg_voor("sam", "Sam", "de Wit", Medewerker.Rol.MEDEWERKER, "test1234")
 
