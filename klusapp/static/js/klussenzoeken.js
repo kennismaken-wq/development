@@ -1,15 +1,18 @@
 /* Live zoeken op het klussenscherm: zelfde aanpak als static/js/fotozoeken.js
-   voor de foto tab — bij elke toetsaanslag (met een korte pauze erin) en bij
-   het kiezen van een klus haalt dit script dezelfde pagina opnieuw op en
-   vervangt alleen de klussenlijst.
+   voor de foto tab — bij elke toetsaanslag (met een korte pauze erin), bij
+   het kiezen van een klus en bij het wisselen van scope (Alle/Actief/Niet
+   actief) haalt dit script dezelfde pagina opnieuw op en vervangt alleen de
+   klussenlijst.
 
    Bewust géén los JSON/fragment-endpoint: dit haalt gewoon de normale
    klussen-pagina op en pakt er client-side het lijstdeel uit. Zonder JS (of
    zonder verbinding) werkt het gewone <form method=get> gewoon nog steeds.
 
    De zoekbare klus-kiezer zelf (knop + popover) zit in static/js/kluskiezer.js,
-   gedeeld met de foto's-pagina — dit bestand laadt dat script en luistert
-   alleen naar het change-event van de onderliggende <select>. */
+   gedeeld met de foto's-pagina — dit bestand laadt dat script. Anders dan op
+   de foto's-pagina filtert de scope-pil hier niet alleen de opties in de
+   kiezer, maar ook de klussenlijst zelf (die verving de oude "ook afgeronde
+   tonen"-wisselaar), dus die geeft dit bestand door als onScopeChange. */
 (function () {
   const form = document.getElementById("klus-zoekform");
   const zoekveld = form && form.querySelector('input[name="q"]');
@@ -56,11 +59,29 @@
     klusKeuze.addEventListener("change", verversen);
   }
 
+  function scopeVeld() {
+    let veld = form.querySelector('input[name="scope"]');
+    if (!veld) {
+      veld = document.createElement("input");
+      veld.type = "hidden";
+      veld.name = "scope";
+      form.appendChild(veld);
+    }
+    return veld;
+  }
+
   form.addEventListener("submit", function (e) {
     e.preventDefault();
     clearTimeout(timer);
     verversen();
   });
 
-  initKlusKiezer("klus-kiezer", "klus-select");
+  const kiezerWrapper = document.getElementById("klus-kiezer");
+  initKlusKiezer("klus-kiezer", "klus-select", {
+    initialScope: kiezerWrapper ? kiezerWrapper.dataset.scope : undefined,
+    onScopeChange: function (scope) {
+      scopeVeld().value = scope;
+      verversen();
+    },
+  });
 })();

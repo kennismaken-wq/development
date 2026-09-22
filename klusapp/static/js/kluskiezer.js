@@ -5,11 +5,19 @@
    aanroept hoeft alleen naar dat event te luisteren.
 
    Gedeeld door de foto's-pagina (fotozoeken.js) en de klussenlijst
-   (klussenzoeken.js) — zelfde widget, twee plekken. */
-function initKlusKiezer(wrapperId, selectId) {
+   (klussenzoeken.js) — zelfde widget, twee plekken.
+
+   `opts.initialScope` zet welke pil al aanstaat als de kiezer opent (default
+   "altijd"); `opts.onScopeChange(scope)` is optioneel en wordt aangeroepen
+   als er op een andere pil geklikt wordt — de klussenlijst gebruikt dat om
+   ook de zichtbare lijst op de pagina zelf mee te filteren (niet alleen de
+   opties in de kiezer), de foto's-pagina laat dit weg. */
+function initKlusKiezer(wrapperId, selectId, opts) {
   const wrapper = document.getElementById(wrapperId);
   const select = document.getElementById(selectId);
   if (!wrapper || !select) return;
+  opts = opts || {};
+  const initialScope = opts.initialScope || "altijd";
 
   const opties = Array.from(select.options).map(function (optie) {
     return { waarde: optie.value, tekst: optie.textContent, scope: optie.dataset.scope || "altijd" };
@@ -35,9 +43,9 @@ function initKlusKiezer(wrapperId, selectId) {
       '<input type="search" placeholder="Zoek klus…" aria-label="Zoek klus">' +
     "</div>" +
     '<div class="keuzes klus-kiezer-scope">' +
-      '<label class="keuzepil scope"><input type="radio" name="klus-scope" value="altijd" checked><span class="vlak">Alle</span></label>' +
-      '<label class="keuzepil scope"><input type="radio" name="klus-scope" value="actief"><span class="vlak">Actief</span></label>' +
-      '<label class="keuzepil scope"><input type="radio" name="klus-scope" value="inactief"><span class="vlak">Niet actief</span></label>' +
+      '<label class="keuzepil scope"><input type="radio" name="klus-scope" value="altijd"' + (initialScope === "altijd" ? " checked" : "") + '><span class="vlak">Alle</span></label>' +
+      '<label class="keuzepil scope"><input type="radio" name="klus-scope" value="actief"' + (initialScope === "actief" ? " checked" : "") + '><span class="vlak">Actief</span></label>' +
+      '<label class="keuzepil scope"><input type="radio" name="klus-scope" value="inactief"' + (initialScope === "inactief" ? " checked" : "") + '><span class="vlak">Niet actief</span></label>' +
     "</div>" +
     '<ul class="klus-kiezer-lijst" role="listbox"></ul>' +
     '<p class="klus-kiezer-leeg" hidden>Geen klussen gevonden</p>';
@@ -139,7 +147,12 @@ function initKlusKiezer(wrapperId, selectId) {
       if (eerste) eerste.click();
     }
   });
-  scopeVelden.forEach(function (veld) { veld.addEventListener("change", filteren); });
+  scopeVelden.forEach(function (veld) {
+    veld.addEventListener("change", function () {
+      filteren();
+      if (opts.onScopeChange) opts.onScopeChange(huidigeScope());
+    });
+  });
 
   bijwerkenLabel();
 }

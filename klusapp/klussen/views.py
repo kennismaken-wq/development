@@ -238,8 +238,9 @@ def fotos(request):
 
 @login_required
 def klus_lijst(request):
-    """Overzicht van klussen. Standaard alleen actief; een afgeronde klus vind
-    je via de klus-kiezer (die doorzoekt altijd alle klussen, ook afgeronde).
+    """Overzicht van klussen. Standaard alleen actief; de Alle/Actief/Niet
+    actief-pillen in de klus-kiezer filteren ook deze lijst, niet alleen de
+    opties in de kiezer zelf.
 
     Iedereen die inlogt ziet alle klussen: er is geen "toegewezen aan"-veld op
     Klus (dat loopt via Uurblok, per werkdag), dus een medewerker moet elke
@@ -250,11 +251,21 @@ def klus_lijst(request):
     klus_pk = request.GET.get("klus", "").strip()
     if not klus_pk.isdigit():
         klus_pk = ""
+    scope = request.GET.get("scope", "actief")
+    if scope not in ("actief", "inactief", "altijd"):
+        scope = "actief"
     alle_klussen = Klus.objects.all()  # opties voor de klus-kiezer; Meta.ordering = ["-actief", "naam"]
 
-    # Een specifieke klus kiezen in de kiezer laat 'm ook zien als hij
-    # afgerond is: je vroeg expliciet om precies die klus.
-    klussen = Klus.objects.all() if klus_pk else Klus.objects.filter(actief=True)
+    # Een specifieke klus kiezen in de kiezer wint van de scope-pil: je vroeg
+    # expliciet om precies die klus, ook als die niet in de gekozen scope valt.
+    if klus_pk:
+        klussen = Klus.objects.all()
+    elif scope == "inactief":
+        klussen = Klus.objects.filter(actief=False)
+    elif scope == "altijd":
+        klussen = Klus.objects.all()
+    else:
+        klussen = Klus.objects.filter(actief=True)
     if zoek:
         klussen = klussen.filter(
             Q(naam__icontains=zoek) | Q(adres__icontains=zoek) | Q(plaats__icontains=zoek)
@@ -282,6 +293,7 @@ def klus_lijst(request):
             "klussen": klussen,
             "zoek": zoek,
             "klus_pk": klus_pk,
+            "scope": scope,
             "alle_klussen": alle_klussen,
         },
     )

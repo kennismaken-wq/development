@@ -1,7 +1,8 @@
 {% comment %} De lijst met klussen. Verwacht `klussen` en optioneel `zoek`.
    De wrapper eromheen is het aangrijpunt voor het live zoeken
-   (static/js/klussenzoeken.js): die vervangt bij elke toetsaanslag en bij het
-   wisselen van "ook afgeronde tonen" alleen dit stuk. {% endcomment %}
+   (static/js/klussenzoeken.js): die vervangt bij elke toetsaanslag, bij het
+   kiezen van een klus en bij het wisselen van scope (Alle/Actief/Niet
+   actief) alleen dit stuk. {% endcomment %}
 {% load kleuren %}
 <div class="klussenlijst-resultaten">
   {% if klussen %}
