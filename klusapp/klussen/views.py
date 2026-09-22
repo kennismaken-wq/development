@@ -10,8 +10,10 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
 from django.utils.http import url_has_allowed_host_and_scheme
+from django.utils.text import slugify
 
 from medewerkers.rechten import alleen_eigenaar
+from uren import export as uren_export
 from uren import totalen
 
 from . import afbeeldingen, kleuren, pdf_thumbnails, voorbeeld
@@ -286,6 +288,34 @@ def klus_detail(request, pk):
             "terug": request.get_full_path(),
         },
     )
+
+
+@login_required
+def klus_uren_export(request, pk):
+    """De uren van dit klusdossier als Excel-bestand, per medewerker.
+
+    Zelfde bestandsvorm als de maandelijkse boekhoud-export
+    (uren.views.urenexport), nu gefilterd op één klus in plaats van een
+    periode. Iedereen die het dossier mag zien mag ook dit downloaden — de
+    lijst "Gewerkte uren" op dat dossier toont dezelfde uren al op het scherm.
+    """
+    from uren.models import Uurblok
+
+    klus = get_object_or_404(Klus, pk=pk)
+    blokken = list(
+        Uurblok.objects.filter(klus=klus)
+        .select_related("medewerker")
+        .order_by(
+            "medewerker__first_name", "medewerker__last_name", "medewerker__username", "datum", "begintijd"
+        )
+    )
+    boek = uren_export.werkboek_bouwen(blokken, f"Uren {klus.naam}")
+    antwoord = HttpResponse(
+        uren_export.werkboek_als_bytes(boek),
+        content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    )
+    antwoord["Content-Disposition"] = f'attachment; filename="uren-{slugify(klus.naam)}.xlsx"'
+    return antwoord
 
 
 @alleen_eigenaar

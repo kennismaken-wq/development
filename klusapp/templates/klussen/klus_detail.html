@@ -25,7 +25,12 @@
     {% endif %}
   </div>
 
-  <h2 class="sectiekop">Gewerkte uren</h2>
+  <div class="sectiekop-rij">
+    <h2 class="sectiekop">Gewerkte uren</h2>
+    {% if gewerkt %}
+      <a class="knop-stil" href="{% url 'klus_uren_export' klus.pk %}">Exporteren</a>
+    {% endif %}
+  </div>
   {% if gewerkt %}
     {% comment %} Wie hier staat is afgeleid uit de geschreven uren, niet uit een
        toewijzing: er is geen veld waarin staat wie op een klus hoort. Zie
