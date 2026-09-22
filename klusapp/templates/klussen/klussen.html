@@ -1,47 +1,29 @@
 {% extends "basis.html" %}
 {% block titel %}Klussen{% endblock %}
 {% block kop %}Klussen{% endblock %}
-{% load kleuren %}
 {% block inhoud %}
+  <form method="get" class="foto-zoekbalk" id="klus-zoekform">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.6" y2="16.6"/></svg>
+    <input type="search" name="q" value="{{ zoek }}" placeholder="Zoek op naam of adres…">
+    {% if toon_alles %}<input type="hidden" name="alles" value="1">{% endif %}
+  </form>
+
   <label class="wisselaar-rij">
     <span class="wisselaar-label">Ook afgeronde klussen tonen</span>
     <span class="wisselaar">
-      <input type="checkbox" {% if toon_alles %}checked{% endif %}
-             onchange="window.location.href = this.checked ? '?alles=1' : '{% url 'klussen' %}'">
+      <input type="checkbox" id="klus-alles-wisselaar" {% if toon_alles %}checked{% endif %}>
       <span class="wisselaar-track"></span>
     </span>
   </label>
 
-  {% if klussen %}
-    <ul class="klussenlijst">
-      {% for klus in klussen %}
-        {% with kleur=klus|kleur_van %}
-          <li>
-            <a href="{{ klus.get_absolute_url }}" class="klusregel{% if not klus.actief %} afgerond{% endif %}">
-              <span class="klusregel-tekst">
-                <span class="soort-badge">{{ klus.get_soort_display }}</span>
-                <span class="naam">
-                  <span class="vlek" style="background:linear-gradient(150deg, {{ kleur }}D9, {{ kleur }}73); border-color:{{ kleur }}"></span>
-                  {{ klus.naam }}
-                </span>
-                {% if klus.adres or klus.plaats %}
-                  <span class="adres">{{ klus.adres }}{% if klus.adres and klus.plaats %}, {% endif %}{{ klus.plaats }}</span>
-                {% endif %}
-              </span>
-              {# zelfde gewaaierde stapel als op het startscherm en bij "per klus" #}
-              {% include "klussen/_klusvoorbeeld.html" %}
-            </a>
-          </li>
-        {% endwith %}
-      {% endfor %}
-    </ul>
-  {% else %}
-    <p class="leeg">Nog geen klussen.</p>
-  {% endif %}
+  {% include "klussen/_klussenlijst.html" %}
 
   {% if user.is_eigenaar %}
     <p style="margin-top:1.2rem">
       <a class="knop" href="{% url 'klus_nieuw' %}">Nieuwe klus</a>
     </p>
   {% endif %}
+
+  {% load static %}
+  <script src="{% static 'js/klussenzoeken.js' %}"></script>
 {% endblock %}

@@ -231,7 +231,12 @@ def klus_lijst(request):
     vandaag niet op staat.
     """
     toon_alles = request.GET.get("alles") == "1"
+    zoek = request.GET.get("q", "").strip()
     klussen = Klus.objects.all() if toon_alles else Klus.objects.filter(actief=True)
+    if zoek:
+        klussen = klussen.filter(
+            Q(naam__icontains=zoek) | Q(adres__icontains=zoek) | Q(plaats__icontains=zoek)
+        )
     # Zelfde gewaaierde voorproefje als op het startscherm en het foto's-scherm.
     # De prefetch hoort erbij: zonder to_attr haalt items_voor_stapel() de
     # bijlagen per klus apart op en wordt een lijst van tien klussen elf queries.
@@ -246,7 +251,11 @@ def klus_lijst(request):
     )
     for klus in klussen:
         klus.voorbeeld_items, klus.voorbeeld_meer = voorbeeld.items_voor_stapel(klus)
-    return render(request, "klussen/klussen.html", {"klussen": klussen, "toon_alles": toon_alles})
+    return render(
+        request,
+        "klussen/klussen.html",
+        {"klussen": klussen, "toon_alles": toon_alles, "zoek": zoek},
+    )
 
 
 @login_required
