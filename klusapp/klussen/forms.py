@@ -174,6 +174,27 @@ class AlleenFotosForm(BijlageForm):
         )
 
 
+class KlusFotoForm(BijlageForm):
+    """Zelfde uploadveld als BijlageForm, maar biedt alleen foto's aan: voor
+    het foto-'+'-knopje op een klusdossier/uurblok (_fotoraster.html). Dat
+    scherm heeft al een eigen "Documenten"-tabblad met eigen dialoog
+    (_documentdialoog.html) voor alles wat geen foto is, dus deze knop hoeft
+    nooit iets anders te accepteren.
+
+    Dat is niet alleen netter maar ook nodig: BijlageForm zet accept op
+    "image/*" plus een stapel documentextensies (zie MeerdereBestandenVeld),
+    en die combinatie laat de fotokiezer op sommige Android-toestellen
+    helemaal geen foto's/galerij meer zien — alleen nog de generieke
+    bestandsbrowser. Met accept="image/*" alleen komt de galerij wel terug."""
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["bestanden"].widget.attrs["accept"] = "image/*"
+        self.fields["bestanden"].widget.attrs.update(
+            {"data-knoptekst": "Foto's kiezen", "data-knopicoon": "foto"}
+        )
+
+
 class NieuweKlusBijlagenForm(BijlageForm):
     """Zelfde uploadveld als BijlageForm, maar dan naast het aanmaakformulier
     van een klus: bestanden kiezen is daar geen verplichte stap — een klus

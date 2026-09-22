@@ -9,7 +9,7 @@ from django.urls import reverse
 from django.utils import timezone
 
 from klussen import afbeeldingen
-from klussen.forms import BijlageForm
+from klussen.forms import BijlageForm, KlusFotoForm
 from klussen.fotoposts import groepeer_in_posts
 from klussen.views import batch_van_upload, bewaar_bijlage
 from medewerkers.models import Medewerker
@@ -290,6 +290,7 @@ def _uurblok_detail_context(request, pk, formulier_override=None, bewerken=None)
         "foto_posts": groepeer_in_posts(los for los in bijlagen if los.is_foto),
         "document_bijlagen": [los for los in bijlagen if not los.is_foto],
         "formulier": BijlageForm(),
+        "foto_formulier": KlusFotoForm(),
         "upload_url": reverse("bijlage_toevoegen"),
         "terug": request.get_full_path(),
     }

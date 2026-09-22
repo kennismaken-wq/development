@@ -18,7 +18,7 @@ from uren import export as uren_export
 from uren import totalen
 
 from . import afbeeldingen, kleuren, pdf_thumbnails, voorbeeld
-from .forms import AlleenFotosForm, BijlageForm, KlusForm, NieuweKlusBijlagenForm
+from .forms import AlleenFotosForm, BijlageForm, KlusForm, KlusFotoForm, NieuweKlusBijlagenForm
 from .fotoposts import groepeer_in_posts
 from .models import Bijlage, Klus
 
@@ -375,6 +375,7 @@ def klus_detail(request, pk):
             "foto_posts": groepeer_in_posts(los for los in bijlagen if los.is_foto),
             "document_bijlagen": [los for los in bijlagen if not los.is_foto],
             "formulier": BijlageForm(),
+            "foto_formulier": KlusFotoForm(),
             "upload_url": reverse("bijlage_toevoegen"),
             "terug": request.get_full_path(),
         },

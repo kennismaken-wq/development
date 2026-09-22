@@ -5,6 +5,14 @@
    het foto's-scherm, waar foto's van verschillende klussen tussen elkaar
    staan — op een klusdossier of uurblok is dat al duidelijk uit de context).
 
+   Optioneel `foto_formulier`: een apart formulier alleen voor deze
+   uploaddialoog (accept="image/*"), voor gebruik naast `formulier` als die
+   laatste ook documenten moet accepteren (zie klussen.views.klus_detail en
+   uren.views._uurblok_detail_context) — zonder deze knip krijgt de
+   fotokiezer een gecombineerd accept-attribuut en verdwijnt de galerij-optie
+   op sommige Android-toestellen. Ontbreekt hij, dan valt dit terug op
+   `formulier` (zo op het foto's-scherm, waar dat al AlleenFotosForm is).
+
    `foto_posts` is geen platte lijst bijlagen maar een lijst van lijsten
    (klussen.fotoposts.groepeer_in_posts): alles wat in één upload is gekozen
    vormt samen één post en krijgt één kaart met een mini-collage, net als
@@ -104,5 +112,5 @@
   {% endif %}
 </div>
 
-{% include "klussen/_fotodialoog.html" %}
+{% include "klussen/_fotodialoog.html" with formulier=foto_formulier|default:formulier %}
 {% include "klussen/_fotopopup.html" %}
