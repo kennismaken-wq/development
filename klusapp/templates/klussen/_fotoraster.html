@@ -8,6 +8,7 @@
    De thumbnail staat in het raster, de klik opent de volle versie. Beide gaan
    langs media_bestand, dus ook hier geldt: zonder inloggen geen bestand. {% endcomment %}
 {% load bijlagen %}
+{% load kleuren %}
 {% comment %} De wrapper eromheen is het aangrijpunt voor het live zoeken op de
    foto tab (static/js/fotozoeken.js): die vervangt bij elke toetsaanslag
    alleen dit stuk, en laat de uploaddialoog erbuiten met rust. Op een
@@ -31,7 +32,12 @@
            popup zelf, via de knop daar (_fotopopup.html). {% endcomment %}
         <figcaption>
           <span class="wat">{{ bijlage.toonnaam }}</span>
-          <span class="wie">{{ bijlage.toegevoegd_door.naam|default:"onbekend" }} · {{ bijlage.datum|date:"j M" }}</span>
+          <span class="wie">
+            {% if bijlage.toegevoegd_door %}
+              <span class="fk-bol" style="background:linear-gradient(150deg, {{ bijlage.toegevoegd_door|medewerker_kleur }}, {{ bijlage.toegevoegd_door|medewerker_kleur }}A6); border-color:{{ bijlage.toegevoegd_door|medewerker_kleur }}">{{ bijlage.toegevoegd_door.initialen }}</span>
+            {% endif %}
+            {{ bijlage.toegevoegd_door.naam|default:"onbekend" }} · {{ bijlage.datum|date:"j M" }}
+          </span>
         </figcaption>
         {% if bijlage|mag_weg:user %}
           <form method="post" action="{% url 'bijlage_verwijderen' bijlage.pk %}" class="weg"
