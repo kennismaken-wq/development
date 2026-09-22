@@ -1,14 +1,18 @@
 {% comment %} Popup die een foto uit het raster (of de slider op start.html)
-   vergroot toont: titel, wie/wanneer en downloaden/delen/sluiten eronder, in
-   plaats van rechtstreeks naar het kale mediabestand te linken. Eén gedeelde
-   dialoog per pagina — roep 'm aan met fotoPopupOpen(url, titel, meta) vanuit
-   elke fotoknop. {% endcomment %}
+   vergroot toont: titel, wie/wanneer, evt. "Bekijk klus" en downloaden/delen/
+   sluiten eronder, in plaats van rechtstreeks naar het kale mediabestand te
+   linken. Eén gedeelde dialoog per pagina — roep 'm aan met
+   fotoPopupOpen(url, titel, meta, klusUrl) vanuit elke fotoknop; klusUrl is
+   optioneel en laat de knop weg als 'ie ontbreekt (titel zelf is nooit een
+   link, precies om te voorkomen dat een klik erop per ongeluk naar de klus
+   springt). {% endcomment %}
 <dialog id="foto-popup" class="foto-popup">
   <div class="foto-popup-kaart glas">
     <img id="foto-popup-img" src="" alt="">
     <div class="foto-popup-info">
       <p class="foto-popup-titel" id="foto-popup-titel"></p>
       <p class="foto-popup-meta" id="foto-popup-meta"></p>
+      <a id="foto-popup-klus" class="knop foto-popup-klus-knop" href="" hidden>Bekijk klus</a>
     </div>
     <div class="foto-popup-acties">
       <a id="foto-popup-download" class="foto-popup-knop" href="" download aria-label="Downloaden" title="Downloaden">
@@ -32,13 +36,20 @@
     var metaEl = document.getElementById("foto-popup-meta");
     var download = document.getElementById("foto-popup-download");
     var delenKnop = document.getElementById("foto-popup-delen");
+    var klusKnop = document.getElementById("foto-popup-klus");
 
-    window.fotoPopupOpen = function (src, titel, meta) {
+    window.fotoPopupOpen = function (src, titel, meta, klusUrl) {
       img.src = src;
       img.alt = titel;
       titelEl.textContent = titel;
       metaEl.textContent = meta;
       download.href = src;
+      if (klusUrl) {
+        klusKnop.href = klusUrl;
+        klusKnop.hidden = false;
+      } else {
+        klusKnop.hidden = true;
+      }
       dialoog.showModal();
       // Twee frames wachten: showModal() zet display synchroon om, dus
       // zonder die omweg ziet de browser geen verschil tussen "net getoond"

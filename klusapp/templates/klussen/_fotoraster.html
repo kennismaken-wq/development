@@ -21,7 +21,7 @@
     {% for bijlage in foto_bijlagen %}
       <figure class="fotokaart">
         <button type="button"
-                onclick="fotoPopupOpen('{% url 'media_bestand' bijlage.bestand.name %}', '{{ bijlage.toonnaam|escapejs }}', '{{ bijlage.toegevoegd_door.naam|default:"onbekend"|escapejs }} · {{ bijlage.datum|date:"j M" }}')">
+                onclick="fotoPopupOpen('{% url 'media_bestand' bijlage.bestand.name %}', '{{ bijlage.toonnaam|escapejs }}', '{{ bijlage.toegevoegd_door.naam|default:"onbekend"|escapejs }} · {{ bijlage.datum|date:"j M" }}'{% if toon_klus and bijlage.klus %}, '{{ bijlage.klus.get_absolute_url }}'{% endif %})">
           <img src="{% url 'media_bestand' bijlage.thumbnail.name|default:bijlage.bestand.name %}"
                alt="{{ bijlage.toonnaam }}" loading="lazy">
         </button>

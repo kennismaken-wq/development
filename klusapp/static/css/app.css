@@ -1085,6 +1085,9 @@ dialog.foto-popup::backdrop{ background:rgba(10,10,8,0.75); backdrop-filter:blur
 .foto-popup-info{ padding:.9rem 1.1rem .2rem; display:grid; gap:.2rem; }
 .foto-popup-titel{ font-size:14.5px; font-weight:600; overflow-wrap:break-word; }
 .foto-popup-meta{ font-size:11.5px; color:rgba(255,255,255,0.55); }
+/* los van de .info-grid-gap: een volle knop na de meta-regel heeft meer
+   lucht nodig dan de .2rem tussen titel en meta. */
+.foto-popup-klus-knop{ margin-top:.6rem; }
 /* rechtsonderin, zelfde rondje-vormtaal als .weg en .dialog-sluiten */
 .foto-popup-acties{
   display:flex; justify-content:flex-end; gap:.5rem;
