@@ -1,15 +1,33 @@
 {% load static %}
-{% comment %} Het formulier om een uurblok toe te voegen. Verwacht `formulier`
-   (UurblokForm). Optioneel `actie` (url om naar te posten; zonder dat gaat
-   hij naar de huidige pagina), `in_dialoog` (sluitkruisje + glaskaart-look,
-   voor gebruik binnen <dialog id="uren-invoegen"> op de agenda zelf) en
+{% comment %} Het formulier om een uurblok toe te voegen, te bekijken of te
+   bewerken. Verwacht `formulier` (UurblokForm). Optioneel `actie` (url om
+   naar te posten; zonder dat gaat hij naar de huidige pagina), `in_dialoog`
+   (sluitkruisje + glaskaart-look, voor gebruik binnen <dialog
+   id="uren-invoegen"/"uurblok-detail"> op de agenda zelf) en
    `bijlagenformulier` (UurblokFotosForm, om meteen een foto bij de uren te
-   hangen — zie uren.views.uurblok_nieuw). {% endcomment %}
-<form class="uurblokformulier{% if in_dialoog %} glas{% endif %}" method="post" enctype="multipart/form-data"{% if actie %} action="{{ actie }}"{% endif %}>
+   hangen — alleen bij "uren toevoegen", zie uren.views.uurblok_nieuw).
+
+   Voor "bekijken vóór bewerken" (SPEC §5, zie uren.views._uurblok_detail_context
+   en uren/_uurblokdetail_inhoud.html): `alleen_lezen` (de velden komen al
+   disabled binnen op `formulier`, dit stuurt alleen welke knoppen zichtbaar
+   zijn), `verwijder_url` en `formulier_id` (zodat
+   static/js/uurblokbewerken.js dít formulier kan vinden — zonder id, zoals
+   bij "uren toevoegen", staat er maar één zo'n formulier tegelijk op de
+   pagina en is een vaste id overbodig én riskant: de "uren toevoegen"-dialoog
+   staat al klaar in mijn_uren.html terwijl het uurblok-detail pas later wordt
+   ingeladen, dus twee formulieren met dezelfde id zouden botsen). Het
+   bewerk-potlood zelf staat niet hier maar op _uurblokdetail_inhoud.html: dat
+   scherm is altijd de buitenste glaskaart (met zijn eigen sheet-hendel/
+   dialog-sluiten), dus dit formulier komt daar altijd kaal binnen
+   (`in_dialoog` niet meegegeven) om geen kaart-in-een-kaart te krijgen. {% endcomment %}
+<form class="uurblokformulier{% if in_dialoog %} glas{% endif %}" method="post" enctype="multipart/form-data"{% if actie %} action="{{ actie }}"{% endif %}{% if formulier_id %} id="{{ formulier_id }}"{% endif %}>
   {% if in_dialoog %}
     {# alleen zichtbaar als bottom sheet (<700px, zie app.css); puur visueel signaal, geen sleepgebaar erachter #}
     <div class="sheet-hendel" aria-hidden="true"></div>
-    <button type="button" class="dialog-sluiten" onclick="window.closeSheet(this.closest('dialog'))" aria-label="Sluiten">×</button>
+    <div class="sheet-kop">
+      <button type="button" class="dialog-sluiten" onclick="window.closeSheet(this.closest('dialog'))" aria-label="Sluiten">×</button>
+      <button type="submit" class="knop knop-klein">Opslaan</button>
+    </div>
   {% endif %}
   {% csrf_token %}
   {% for veld in formulier %}
@@ -24,7 +42,45 @@
     {% for fout in bijlagenformulier.bestanden.errors %}<p class="fout">{{ fout }}</p>{% endfor %}
   {% endif %}
 
-  <p style="margin-top:1.8rem"><button type="submit" class="knop">Opslaan</button></p>
+  {% if not in_dialoog %}
+    <p style="margin-top:1.8rem" id="uurblok-opslaanrij"{% if alleen_lezen %} hidden{% endif %}><button type="submit" class="knop">Opslaan</button></p>
+  {% endif %}
 </form>
-<script src="{% static 'js/tijdveld.js' %}"></script>
+{% if verwijder_url %}
+  <form method="post" action="{{ verwijder_url }}" class="verwijder" id="uurblok-verwijderrij"{% if alleen_lezen %} hidden{% endif %}
+        onsubmit="return confirm('Dit uurblok verwijderen?');">
+    {% csrf_token %}
+    <button type="submit">Verwijderen</button>
+  </form>
+{% endif %}
+
+{% if formulier.errors or bijlagenformulier.errors %}
+  {# Popup met wat er niet klopt, i.p.v. alleen de kleine tekst onder elk veld
+     — die valt op een lang formulier makkelijk weg. Toont dezelfde teksten
+     als de foutjes onder de velden hierboven, alleen gebundeld. #}
+  <dialog class="foutpopup" id="uurblok-foutpopup">
+    <div class="foutpopup-kaart glas">
+      <button type="button" class="dialog-sluiten" onclick="this.closest('dialog').close()" aria-label="Sluiten">×</button>
+      <h2 class="sectiekop" style="margin-top:0">Dit klopt nog niet</h2>
+      <ul class="foutpopup-lijst">
+        {% for veld in formulier %}
+          {% for fout in veld.errors %}<li>{{ fout }}</li>{% endfor %}
+        {% endfor %}
+        {% for fout in formulier.non_field_errors %}<li>{{ fout }}</li>{% endfor %}
+        {% for fout in bijlagenformulier.bestanden.errors %}<li>{{ fout }}</li>{% endfor %}
+      </ul>
+    </div>
+  </dialog>
+  <script>
+    (function () {
+      var popup = document.getElementById("uurblok-foutpopup");
+      popup.showModal();
+      requestAnimationFrame(function () {
+        requestAnimationFrame(function () { popup.classList.add("open-anim"); });
+      });
+      popup.addEventListener("click", function (e) { if (e.target === this) this.close(); });
+    })();
+  </script>
+{% endif %}
+
 {% if bijlagenformulier %}<script src="{% static 'js/bestandsveld.js' %}"></script>{% endif %}

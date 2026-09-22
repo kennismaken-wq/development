@@ -2,29 +2,5 @@
 {% block titel %}{{ blok.klus.naam }}{% endblock %}
 {% block kop %}{{ blok.klus.naam }}{% endblock %}
 {% block inhoud %}
-  <div class="klusinfo">
-    <div>
-      <span class="soort-badge" style="background:{{ kleur }}38; border-color:{{ kleur }}; color:#fff">
-        {{ blok.klus.get_soort_display }}
-      </span>
-    </div>
-    <p class="regel"><span class="lbl">Wie</span>{{ blok.medewerker.naam }}</p>
-    <p class="regel"><span class="lbl">Dag</span>{{ blok.datum|date:"l j F Y"|capfirst }}</p>
-    <p class="regel"><span class="lbl">Van — tot</span>{{ blok.begintijd|time:"H:i" }} – {{ blok.eindtijd|time:"H:i" }}</p>
-    <p class="regel"><span class="lbl">Duur</span>{{ duur }}</p>
-    {% if blok.toelichting %}
-      <p class="beschrijving">{{ blok.toelichting|linebreaksbr }}</p>
-    {% endif %}
-    {% if mag_bewerken %}
-      <p style="margin-top:.6rem">
-        <a class="knop-stil" href="{% url 'uurblok_bewerken' blok.pk %}">Bewerken</a>
-      </p>
-    {% endif %}
-  </div>
-
-  <h2 class="sectiekop">Foto's</h2>
-  {% include "klussen/_fotoraster.html" with uurblok_pk=blok.pk %}
-
-  <h2 class="sectiekop">Documenten</h2>
-  {% include "klussen/_documentenlijst.html" %}
+  {% include "uren/_uurblokdetail_inhoud.html" %}
 {% endblock %}

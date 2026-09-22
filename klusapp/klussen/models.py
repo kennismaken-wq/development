@@ -131,6 +131,11 @@ class Bijlage(models.Model):
         related_name="bijlagen",
     )
     toegevoegd_op = models.DateTimeField(auto_now_add=True)
+    # Gezet op alle bijlagen die uit dezelfde upload komen (zie
+    # klussen.views.bewaar_bijlage), zodat het fotoraster ze als één post kan
+    # tonen in plaats van los tussen andere foto's. Leeg bij een upload van
+    # één bestand — daar is niets te groeperen.
+    batch = models.UUIDField(null=True, blank=True, editable=False, db_index=True)
 
     class Meta:
         verbose_name = "bijlage"

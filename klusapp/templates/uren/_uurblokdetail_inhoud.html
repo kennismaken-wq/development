@@ -1,0 +1,44 @@
+{% load static %}
+{% comment %} De binnenkant van het uurblok-detailscherm. Toont hetzelfde
+   formulier als "uren toevoegen" (_uurblokformulier.html), met de bestaande
+   waarden ingevuld en — tenzij het je eigen blok is — op slot met een
+   bewerk-potlood erboven (SPEC §5: view-first, precies hetzelfde scherm als
+   bewerken maar niet bewerkbaar; zelfde plek/vorm als het bewerk-potlood op
+   een klusdossier, zie klussen/_klushero.html). Verwacht `blok`, `duur`,
+   `uurblok_formulier`, `alleen_lezen`, `mag_bewerken`, `bewerk_knop_href` en
+   de BijlageForm-context (`formulier`, `upload_url`, `foto_posts`/
+   `document_bijlagen`/`terug`) die _fotoraster.html/_documentenlijst.html
+   nodig hebben — allemaal gezet in uren/views.py:_uurblok_detail_context.
+   Optioneel `in_dialoog`: sluitkruisje + glaskaart-look + eigen titel, voor
+   gebruik binnen <dialog id="uurblok-detail"> op de agenda zelf (zelfde opzet
+   als _uurblokformulier.html voor "uren toevoegen"). {% endcomment %}
+<div class="uurblokdetail{% if in_dialoog %} glas{% endif %}">
+  {% if in_dialoog %}
+    {# alleen zichtbaar als bottom sheet (<700px, zie app.css) #}
+    <div class="sheet-hendel" aria-hidden="true"></div>
+    <button type="button" class="dialog-sluiten" onclick="window.closeSheet(this.closest('dialog'))" aria-label="Sluiten">×</button>
+  {% endif %}
+  {% if mag_bewerken %}
+    <a class="bewerk-knop uurblokdetail-bewerk-knop{% if in_dialoog %} met-sluiten{% endif %}" id="uurblok-wijzig-knop"
+       href="{{ bewerk_knop_href }}"{% if not alleen_lezen %} hidden{% endif %} aria-label="Uren bewerken">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+    </a>
+  {% endif %}
+
+  {% if in_dialoog %}<h2 class="sectiekop" style="margin-top:0">{{ blok.klus.naam }}</h2>{% endif %}
+  <div class="klusinfo">
+    <p class="regel"><span class="lbl">Wie</span>{{ blok.medewerker.naam }}</p>
+    <p class="regel"><span class="lbl">Duur</span>{{ duur }}</p>
+  </div>
+
+  {% url 'uurblok_bewerken' blok.pk as uurblok_bewerken_url %}
+  {% if mag_bewerken %}{% url 'uurblok_verwijderen' blok.pk as uurblok_verwijderen_url %}{% endif %}
+  {% include "uren/_uurblokformulier.html" with formulier=uurblok_formulier actie=uurblok_bewerken_url alleen_lezen=alleen_lezen verwijder_url=uurblok_verwijderen_url formulier_id="uurblokdetailformulier" %}
+
+  <h2 class="sectiekop">Foto's</h2>
+  {% include "klussen/_fotoraster.html" with uurblok_pk=blok.pk %}
+
+  <h2 class="sectiekop">Documenten</h2>
+  {% include "klussen/_documentenlijst.html" %}
+</div>
+{% if mag_bewerken %}<script src="{% static 'js/uurblokbewerken.js' %}"></script>{% endif %}

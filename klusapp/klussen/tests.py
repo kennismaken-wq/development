@@ -1,5 +1,6 @@
 import shutil
 import tempfile
+import uuid
 from datetime import date, time, timedelta
 from io import BytesIO
 
@@ -17,7 +18,7 @@ from medewerkers.models import Medewerker
 from uren import totalen
 from uren.models import Uurblok
 
-from . import afbeeldingen, kleuren, pdf_thumbnails, views, voorbeeld
+from . import afbeeldingen, fotoposts, kleuren, pdf_thumbnails, views, voorbeeld
 from .models import Bijlage, Klus
 
 TIJDELIJKE_MEDIA = tempfile.mkdtemp()
@@ -160,7 +161,30 @@ class BijlageUploadTest(TestCase):
             reverse("bijlage_toevoegen"),
             {"bestanden": [upload("een.jpg"), upload("twee.jpg"), upload("drie.jpg")]},
         )
-        self.assertEqual(Bijlage.objects.count(), 3)
+        bijlagen = list(Bijlage.objects.all())
+        self.assertEqual(len(bijlagen), 3)
+        # Alle drie uit dezelfde upload delen hun batch, zodat het fotoraster
+        # ze als één post kan tonen (zie klussen.fotoposts.groepeer_in_posts).
+        batches = {bijlage.batch for bijlage in bijlagen}
+        self.assertEqual(len(batches), 1)
+        self.assertIsNotNone(batches.pop())
+
+    def test_los_bestand_krijgt_geen_batch(self):
+        # Niets om mee te groeperen, dus geen kenmerk nodig.
+        self.client.post(reverse("bijlage_toevoegen"), {"bestanden": upload()})
+        self.assertIsNone(Bijlage.objects.get().batch)
+
+    def test_twee_losse_uploads_delen_geen_batch(self):
+        self.client.post(
+            reverse("bijlage_toevoegen"),
+            {"bestanden": [upload("een.jpg"), upload("twee.jpg")]},
+        )
+        self.client.post(
+            reverse("bijlage_toevoegen"),
+            {"bestanden": [upload("drie.jpg"), upload("vier.jpg")]},
+        )
+        batches = {bijlage.batch for bijlage in Bijlage.objects.all()}
+        self.assertEqual(len(batches), 2)
 
     def test_een_kapot_bestand_stopt_de_rest_niet(self):
         # Wie acht foto's uploadt wil niet alles opnieuw doen omdat er een niet deugt.
@@ -235,27 +259,99 @@ class FotosKlusfilterTest(TestCase):
     def setUp(self):
         self.client.force_login(self.sam)
 
+    def _bijlagen(self, antwoord):
+        """foto_posts groepeert per upload (zie klussen.fotoposts); deze
+        tests kijken alleen of een bijlage wel/niet in het resultaat zit, dus
+        die groepering weer platslaan naar een lijst bijlagen."""
+        return [bijlage for post in antwoord.context["foto_posts"] for bijlage in post]
+
     def test_zonder_filter_toont_alle_fotos(self):
         antwoord = self.client.get(reverse("fotos"))
         self.assertEqual(antwoord.context["klus_pk"], "")
-        self.assertIn(self.foto_op_klus, antwoord.context["foto_bijlagen"])
-        self.assertIn(self.losse_foto, antwoord.context["foto_bijlagen"])
+        self.assertIn(self.foto_op_klus, self._bijlagen(antwoord))
+        self.assertIn(self.losse_foto, self._bijlagen(antwoord))
 
     def test_onbekende_klus_valt_terug_op_alles(self):
         antwoord = self.client.get(reverse("fotos"), {"klus": "onzin"})
         self.assertEqual(antwoord.context["klus_pk"], "")
-        self.assertIn(self.losse_foto, antwoord.context["foto_bijlagen"])
+        self.assertIn(self.losse_foto, self._bijlagen(antwoord))
 
     def test_filter_op_klus_toont_alleen_die_klus(self):
         antwoord = self.client.get(reverse("fotos"), {"klus": self.klus.pk})
-        self.assertIn(self.foto_op_klus, antwoord.context["foto_bijlagen"])
-        self.assertNotIn(self.losse_foto, antwoord.context["foto_bijlagen"])
+        self.assertIn(self.foto_op_klus, self._bijlagen(antwoord))
+        self.assertNotIn(self.losse_foto, self._bijlagen(antwoord))
 
     def test_dropdown_bevat_elke_klus_ook_zonder_inhoud(self):
         antwoord = self.client.get(reverse("fotos"))
         namen = [klus.naam for klus in antwoord.context["klussen"]]
         self.assertIn(self.klus.naam, namen)
         self.assertIn(self.lege_klus.naam, namen)
+
+
+class GroepeerInPostsTest(TestCase):
+    """klussen.fotoposts.groepeer_in_posts: bijlagen uit dezelfde upload
+    (gelijke, niet-lege batch) horen samen in één post, in de volgorde
+    waarin ze binnenkomen; al het andere blijft een post van één."""
+
+    def _bijlage(self, batch=None):
+        # Geen databaseobject nodig: groepeer_in_posts kijkt alleen naar
+        # gelijkheid van .batch, dus een kaal object met dat ene attribuut is
+        # genoeg en scheelt een hoop testopzet (bestand, klus, gebruiker...).
+        return type("Bijlage", (), {"batch": batch})()
+
+    def test_lege_lijst(self):
+        self.assertEqual(fotoposts.groepeer_in_posts([]), [])
+
+    def test_zonder_batch_blijft_elk_een_eigen_post(self):
+        a, b = self._bijlage(), self._bijlage()
+        self.assertEqual(fotoposts.groepeer_in_posts([a, b]), [[a], [b]])
+
+    def test_gelijke_batch_wordt_één_post(self):
+        batch = uuid.uuid4()
+        a, b, c = self._bijlage(batch), self._bijlage(batch), self._bijlage(batch)
+        self.assertEqual(fotoposts.groepeer_in_posts([a, b, c]), [[a, b, c]])
+
+    def test_verschillende_batches_blijven_losse_posts(self):
+        a = self._bijlage(uuid.uuid4())
+        b = self._bijlage(uuid.uuid4())
+        self.assertEqual(fotoposts.groepeer_in_posts([a, b]), [[a], [b]])
+
+    def test_batch_alleen_gegroepeerd_als_opeenvolgend(self):
+        # Twee losse uploads met toevallig dezelfde... nee, batch is altijd
+        # een eigen uuid per upload, maar deze test bewaakt dat de functie op
+        # opeenvolgendheid let en niet blind alles met dezelfde batch bij
+        # elkaar raapt van overal in de lijst — dat zou immers nooit
+        # voorkomen in een echt geordend raster.
+        batch = uuid.uuid4()
+        a = self._bijlage(batch)
+        tussenin = self._bijlage()
+        b = self._bijlage(batch)
+        self.assertEqual(fotoposts.groepeer_in_posts([a, tussenin, b]), [[a], [tussenin], [b]])
+
+
+@override_settings(MEDIA_ROOT=TIJDELIJKE_MEDIA)
+class FotoPostsIntegratieTest(TestCase):
+    """De fotos-pagina zelf: een upload van meerdere bestanden tegelijk moet
+    daar als één post verschijnen, niet als losse kaartjes."""
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.sam = Medewerker.objects.create_user("sam", password="x", first_name="Sam")
+
+    @classmethod
+    def tearDownClass(cls):
+        shutil.rmtree(TIJDELIJKE_MEDIA, ignore_errors=True)
+        super().tearDownClass()
+
+    def test_batchupload_verschijnt_als_één_post(self):
+        self.client.force_login(self.sam)
+        self.client.post(
+            reverse("bijlage_toevoegen"),
+            {"bestanden": [upload("een.jpg"), upload("twee.jpg"), upload("drie.jpg")]},
+        )
+        antwoord = self.client.get(reverse("fotos"))
+        self.assertEqual(len(antwoord.context["foto_posts"]), 1)
+        self.assertEqual(len(antwoord.context["foto_posts"][0]), 3)
 
 
 @override_settings(MEDIA_ROOT=TIJDELIJKE_MEDIA)

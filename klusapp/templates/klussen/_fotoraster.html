@@ -1,9 +1,16 @@
-{% comment %} Raster van foto's. Verwacht `foto_bijlagen`, `terug` en de
+{% comment %} Raster van foto's. Verwacht `foto_posts`, `terug` en de
    BijlageForm-context (`formulier`, `upload_url`, evt. `klus_pk`/`uurblok_pk`)
    die _uploadveld.html nodig heeft via _fotodialoog.html. Optioneel
    `toon_klus`: laat bij elke foto zien aan welke klus die hangt (gebruikt op
    het foto's-scherm, waar foto's van verschillende klussen tussen elkaar
    staan — op een klusdossier of uurblok is dat al duidelijk uit de context).
+
+   `foto_posts` is geen platte lijst bijlagen maar een lijst van lijsten
+   (klussen.fotoposts.groepeer_in_posts): alles wat in één upload is gekozen
+   vormt samen één post en krijgt één kaart met een mini-collage, net als
+   meerdere foto's in één berichtje op sociale media — in plaats van dat elke
+   foto los tussen andere foto's in het raster verschijnt. Een post van één
+   foto ziet er hetzelfde uit als voorheen.
 
    De thumbnail staat in het raster, de klik opent de volle versie. Beide gaan
    langs media_bestand, dus ook hier geldt: zonder inloggen geen bestand. {% endcomment %}
@@ -19,38 +26,72 @@
     <button type="button" class="fotokaart-nieuw" onclick="document.getElementById('foto-invoegen').showModal()" aria-label="{% if alleen_fotos %}Foto toevoegen{% else %}Foto of document toevoegen{% endif %}">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
     </button>
-    {% for bijlage in foto_bijlagen %}
-      <figure class="fotokaart">
-        <button type="button"
-                onclick="fotoPopupOpen('{% url 'media_bestand' bijlage.bestand.name %}', '{{ bijlage.toonnaam|escapejs }}', '{{ bijlage.toegevoegd_door.naam|default:"onbekend"|escapejs }} · {{ bijlage.datum|date:"j M" }}'{% if toon_klus and bijlage.klus %}, '{{ bijlage.klus.get_absolute_url }}'{% endif %})">
-          <img src="{% url 'media_bestand' bijlage.thumbnail.name|default:bijlage.bestand.name %}"
-               alt="{{ bijlage.toonnaam }}" loading="lazy">
-        </button>
-        {% comment %} Geen klus-badge (link) meer hier: die zat naast/over de
-           knop die de popup opent, en een klik erop navigeerde meteen weg
-           i.p.v. de foto te tonen. "Naar de klus" kan alleen nog vanuit de
-           popup zelf, via de knop daar (_fotopopup.html). {% endcomment %}
-        <figcaption>
-          <span class="wat">{{ bijlage.toonnaam }}</span>
-          <span class="wie">
-            {% if bijlage.toegevoegd_door %}
-              <span class="fk-bol" style="background:linear-gradient(150deg, {{ bijlage.toegevoegd_door|medewerker_kleur }}, {{ bijlage.toegevoegd_door|medewerker_kleur }}A6); border-color:{{ bijlage.toegevoegd_door|medewerker_kleur }}">{{ bijlage.toegevoegd_door.initialen }}</span>
-            {% endif %}
-            {{ bijlage.toegevoegd_door.naam|default:"onbekend" }} · {{ bijlage.datum|date:"j M" }}
-          </span>
-        </figcaption>
-        {% if bijlage|mag_weg:user %}
-          <form method="post" action="{% url 'bijlage_verwijderen' bijlage.pk %}" class="weg"
-                onsubmit="return confirm('Deze foto verwijderen?');">
-            {% csrf_token %}
-            <input type="hidden" name="terug" value="{{ terug }}">
-            <button type="submit" title="Verwijderen" aria-label="Verwijderen">×</button>
-          </form>
-        {% endif %}
-      </figure>
+    {% for post in foto_posts %}
+      {% with eerste=post.0 aantal=post|length %}
+      {% if aantal == 1 %}
+        <figure class="fotokaart">
+          <button type="button"
+                  onclick="fotoPopupOpen('{% url 'media_bestand' eerste.bestand.name %}', '{{ eerste.toonnaam|escapejs }}', '{{ eerste.toegevoegd_door.naam|default:"onbekend"|escapejs }} · {{ eerste.datum|date:"j M" }}'{% if toon_klus and eerste.klus %}, '{{ eerste.klus.get_absolute_url }}'{% endif %})">
+            <img src="{% url 'media_bestand' eerste.thumbnail.name|default:eerste.bestand.name %}"
+                 alt="{{ eerste.toonnaam }}" loading="lazy">
+          </button>
+          {% comment %} Geen klus-badge (link) meer hier: die zat naast/over de
+             knop die de popup opent, en een klik erop navigeerde meteen weg
+             i.p.v. de foto te tonen. "Naar de klus" kan alleen nog vanuit de
+             popup zelf, via de knop daar (_fotopopup.html). {% endcomment %}
+          <figcaption>
+            <span class="wat">{{ eerste.toonnaam }}</span>
+            <span class="wie">
+              {% if eerste.toegevoegd_door %}
+                <span class="fk-bol" style="background:linear-gradient(150deg, {{ eerste.toegevoegd_door|medewerker_kleur }}, {{ eerste.toegevoegd_door|medewerker_kleur }}A6); border-color:{{ eerste.toegevoegd_door|medewerker_kleur }}">{{ eerste.toegevoegd_door.initialen }}</span>
+              {% endif %}
+              {{ eerste.toegevoegd_door.naam|default:"onbekend" }} · {{ eerste.datum|date:"j M" }}
+            </span>
+          </figcaption>
+          {% if eerste|mag_weg:user %}
+            <form method="post" action="{% url 'bijlage_verwijderen' eerste.pk %}" class="weg"
+                  onsubmit="return confirm('Deze foto verwijderen?');">
+              {% csrf_token %}
+              <input type="hidden" name="terug" value="{{ terug }}">
+              <button type="submit" title="Verwijderen" aria-label="Verwijderen">×</button>
+            </form>
+          {% endif %}
+        </figure>
+      {% else %}
+        {% comment %} Post van meerdere foto's uit dezelfde upload: mini-collage
+           van de eerste vier, met "+N" op de vierde als er meer zijn. Klik op
+           een tegel opent de galerij (_fotopopup.html) op precies die foto,
+           met vorige/volgende om door de rest van de post te bladeren.
+           De toelichting/datum/wie zijn voor de hele post gelijk (één
+           gedeeld formulier bij het uploaden), dus die komen van `eerste`. {% endcomment %}
+        <figure class="fotokaart fotokaart-post">
+          <div class="fotokaart-post-grid telt-{% if aantal >= 4 %}4{% else %}{{ aantal }}{% endif %}">
+            {% for bijlage in post|slice:":4" %}
+              <button type="button"
+                      onclick="fotoPopupOpenGalerij([{% for item in post %}{src:'{% url 'media_bestand' item.bestand.name %}', titel:'{{ item.toonnaam|escapejs }}', meta:'{{ item.toegevoegd_door.naam|default:"onbekend"|escapejs }} · {{ item.datum|date:"j M" }} · {{ forloop.counter }}/{{ aantal }}'{% if item|mag_weg:user %}, verwijderUrl:'{% url 'bijlage_verwijderen' item.pk %}'{% endif %}}{% if not forloop.last %}, {% endif %}{% endfor %}], {{ forloop.counter0 }}{% if toon_klus and eerste.klus %}, '{{ eerste.klus.get_absolute_url }}'{% endif %})">
+                <img src="{% url 'media_bestand' bijlage.thumbnail.name|default:bijlage.bestand.name %}"
+                     alt="{{ bijlage.toonnaam }}" loading="lazy">
+                {% if forloop.last and aantal > 4 %}
+                  <span class="fotokaart-post-meer">+{{ aantal|add:"-4" }}</span>
+                {% endif %}
+              </button>
+            {% endfor %}
+          </div>
+          <figcaption>
+            <span class="wat">{% if eerste.toelichting %}{{ eerste.toelichting }}{% else %}{{ aantal }} foto's{% endif %}</span>
+            <span class="wie">
+              {% if eerste.toegevoegd_door %}
+                <span class="fk-bol" style="background:linear-gradient(150deg, {{ eerste.toegevoegd_door|medewerker_kleur }}, {{ eerste.toegevoegd_door|medewerker_kleur }}A6); border-color:{{ eerste.toegevoegd_door|medewerker_kleur }}">{{ eerste.toegevoegd_door.initialen }}</span>
+              {% endif %}
+              {{ eerste.toegevoegd_door.naam|default:"onbekend" }} · {{ eerste.datum|date:"j M" }} · {{ aantal }} foto's
+            </span>
+          </figcaption>
+        </figure>
+      {% endif %}
+      {% endwith %}
     {% endfor %}
   </div>
-  {% if not foto_bijlagen %}
+  {% if not foto_posts %}
     <p class="leeg">{% if zoek %}Niets gevonden voor "{{ zoek }}".{% else %}Nog geen foto's.{% endif %}</p>
   {% endif %}
 </div>

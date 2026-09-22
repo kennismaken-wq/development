@@ -1,3 +1,4 @@
+import uuid
 from pathlib import Path
 
 from django.conf import settings
@@ -18,6 +19,7 @@ from uren import totalen
 
 from . import afbeeldingen, kleuren, pdf_thumbnails, voorbeeld
 from .forms import AlleenFotosForm, BijlageForm, KlusForm, NieuweKlusBijlagenForm
+from .fotoposts import groepeer_in_posts
 from .models import Bijlage, Klus
 
 
@@ -54,8 +56,12 @@ def _doel_van(request):
     return klus, uurblok
 
 
-def bewaar_bijlage(bestand, datum, toelichting, klus, uurblok, gebruiker):
+def bewaar_bijlage(bestand, datum, toelichting, klus, uurblok, gebruiker, batch=None):
     """Eén geüpload bestand wegschrijven. Foto's verkleind, documenten zoals ze zijn.
+
+    `batch` is het gedeelde kenmerk van een upload met meerdere bestanden
+    tegelijk (zie batch_van_upload hieronder) — daarmee kan het fotoraster ze
+    als één post tonen. Leeg bij een upload van één bestand.
 
     Publiek (geen underscore): ook het uren-toevoegformulier hangt hier een
     foto mee op (zie uren.views.uurblok_nieuw), niet alleen deze module.
@@ -71,6 +77,7 @@ def bewaar_bijlage(bestand, datum, toelichting, klus, uurblok, gebruiker):
         klus=klus,
         uurblok=uurblok,
         toegevoegd_door=gebruiker,
+        batch=batch,
     )
     if hoofd:
         basis = Path(naam).stem
@@ -84,6 +91,13 @@ def bewaar_bijlage(bestand, datum, toelichting, klus, uurblok, gebruiker):
             bijlage.thumbnail.save(f"{Path(naam).stem}.jpg", document_thumbnail, save=False)
     bijlage.save()
     return bijlage
+
+
+def batch_van_upload(bestanden):
+    """Eén gedeeld kenmerk voor alle bestanden uit dezelfde upload, zodat het
+    fotoraster ze als post bij elkaar kan tonen. Bij één bestand is er niets
+    te groeperen, dus dan blijft het leeg."""
+    return uuid.uuid4() if len(bestanden) > 1 else None
 
 
 @login_required
@@ -107,13 +121,14 @@ def bijlage_toevoegen(request):
     # Daar mag geen document meer bij, want die heeft sinds het verdwijnen van
     # de documentenlijst op dat scherm nergens een plek om terug te vinden.
     alleen_fotos = klus is None and uurblok is None
+    batch = batch_van_upload(formulier.cleaned_data["bestanden"])
     gelukt = 0
     for bestand in formulier.cleaned_data["bestanden"]:
         if alleen_fotos and not afbeeldingen.lijkt_afbeelding(bestand.name):
             messages.error(request, f"{bestand.name}: hier kan alleen een foto bij, geen document.")
             continue
         try:
-            bewaar_bijlage(bestand, datum, toelichting, klus, uurblok, request.user)
+            bewaar_bijlage(bestand, datum, toelichting, klus, uurblok, request.user, batch)
         except afbeeldingen.BestandNietLeesbaar as probleem:
             # De rest van de selectie wel doorzetten: wie acht foto's uploadt
             # wil niet alles opnieuw doen omdat er één niet deugt.
@@ -217,7 +232,7 @@ def fotos(request):
         bijlagen = bijlagen.filter(klus__isnull=True)
     elif klus_pk:
         bijlagen = bijlagen.filter(klus_id=klus_pk)
-    context["foto_bijlagen"] = [b for b in bijlagen if b.is_foto]
+    context["foto_posts"] = groepeer_in_posts(b for b in bijlagen if b.is_foto)
     return render(request, "klussen/fotos.html", context)
 
 
@@ -308,7 +323,7 @@ def klus_detail(request, pk):
             "klus": klus,
             "gewerkt": gewerkt,
             "totaal": totalen.totaal_van(gewerkt),
-            "foto_bijlagen": [los for los in bijlagen if los.is_foto],
+            "foto_posts": groepeer_in_posts(los for los in bijlagen if los.is_foto),
             "document_bijlagen": [los for los in bijlagen if not los.is_foto],
             "formulier": BijlageForm(),
             "upload_url": reverse("bijlage_toevoegen"),
@@ -362,9 +377,10 @@ def klus_nieuw(request):
 
         datum = bijlagenformulier.cleaned_data["datum"] or timezone.localdate()
         toelichting = bijlagenformulier.cleaned_data["toelichting"]
+        batch = batch_van_upload(bijlagenformulier.cleaned_data["bestanden"])
         for bestand in bijlagenformulier.cleaned_data["bestanden"]:
             try:
-                bewaar_bijlage(bestand, datum, toelichting, klus, None, request.user)
+                bewaar_bijlage(bestand, datum, toelichting, klus, None, request.user, batch)
             except afbeeldingen.BestandNietLeesbaar as probleem:
                 # De klus staat er al; alleen het ene bestand mislukt, niet de rest.
                 messages.error(request, f"{bestand.name}: {probleem}")

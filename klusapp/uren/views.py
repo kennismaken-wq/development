@@ -10,7 +10,8 @@ from django.utils import timezone
 
 from klussen import afbeeldingen
 from klussen.forms import BijlageForm
-from klussen.views import bewaar_bijlage
+from klussen.fotoposts import groepeer_in_posts
+from klussen.views import batch_van_upload, bewaar_bijlage
 from medewerkers.models import Medewerker
 from medewerkers.rechten import alleen_eigenaar
 
@@ -195,6 +196,7 @@ def uurblok_nieuw(request):
             # werkdag, niet per se over vandaag.
             datum = bijlagenformulier.cleaned_data["datum"] or blok.datum
             toelichting = bijlagenformulier.cleaned_data["toelichting"]
+            batch = batch_van_upload(bijlagenformulier.cleaned_data["bestanden"])
             for bestand in bijlagenformulier.cleaned_data["bestanden"]:
                 # Het bestandenveld biedt alleen foto's aan (accept="image/*"
                 # op UurblokFotosForm), maar de server moet dat zelf ook
@@ -203,7 +205,7 @@ def uurblok_nieuw(request):
                     messages.error(request, f"{bestand.name}: hier kan alleen een foto bij.")
                     continue
                 try:
-                    bewaar_bijlage(bestand, datum, toelichting, blok.klus, blok, request.user)
+                    bewaar_bijlage(bestand, datum, toelichting, blok.klus, blok, request.user, batch)
                 except afbeeldingen.BestandNietLeesbaar as probleem:
                     # Het uurblok staat er al; alleen deze foto mislukt, niet de rest.
                     messages.error(request, f"{bestand.name}: {probleem}")
@@ -226,39 +228,69 @@ def uurblok_nieuw(request):
     return render(
         request,
         "uren/uurblok_form.html",
-        {"formulier": formulier, "bijlagenformulier": bijlagenformulier, "dag": dag, "nieuw": True},
+        {"formulier": formulier, "bijlagenformulier": bijlagenformulier, "dag": dag},
     )
 
 
-@login_required
-def uurblok_detail(request, pk):
-    """Het blok bekijken, niet bewerken (SPEC §5: view-first).
+def _uurblok_detail_context(request, pk, formulier_override=None, bewerken=None):
+    """De context voor het uurblok-detailscherm — gedeeld door de volledige
+    pagina (`uurblok_detail`), het fragment voor de bottom sheet op de agenda
+    (`uurblok_detail_paneel`) en een mislukte opslagpoging (`uurblok_bewerken`).
 
     De eigenaar mag elk blok bekijken — anders klapt de doorklik vanuit het
     planbord stuk. Bewerken blijft van de medewerker zelf: een gecorrigeerd
     uurblok waar de mede­werker niets van weet levert discussie op die deze app
     juist moet voorkomen.
+
+    SPEC §5, view-first: klikken op een blok toont precies hetzelfde scherm
+    als bewerken (_uurblokformulier.html, met de waarden ingevuld), maar niet
+    bewerkbaar, met een bewerkknop. Dat "op slot zetten" gebeurt hier op de
+    velden zelf (disabled), net als bij het eigen profiel — zie
+    medewerkers.views.mijn_profiel voor hetzelfde patroon.
     """
     blok = get_object_or_404(Uurblok.objects.select_related("klus", "medewerker"), pk=pk)
     if blok.medewerker_id != request.user.pk and not request.user.is_eigenaar:
         raise Http404
+    mag_bewerken = blok.medewerker_id == request.user.pk
+
+    if bewerken is None:
+        bewerken = mag_bewerken and request.GET.get("bewerken") == "1"
+
+    uurblok_formulier = formulier_override or UurblokForm(instance=blok)
+    if not bewerken:
+        for veld in uurblok_formulier.fields.values():
+            veld.widget.attrs["disabled"] = True
 
     bijlagen = blok.bijlagen.select_related("toegevoegd_door").order_by("-toegevoegd_op")
-    return render(
-        request,
-        "uren/uurblok_detail.html",
-        {
-            "blok": blok,
-            "kleur": kalender.kleur_van(blok.klus),
-            "duur": kalender.als_uren(blok.duur_minuten),
-            "mag_bewerken": blok.medewerker_id == request.user.pk,
-            "foto_bijlagen": [los for los in bijlagen if los.is_foto],
-            "document_bijlagen": [los for los in bijlagen if not los.is_foto],
-            "formulier": BijlageForm(),
-            "upload_url": reverse("bijlage_toevoegen"),
-            "terug": request.get_full_path(),
-        },
-    )
+    return {
+        "blok": blok,
+        "duur": kalender.als_uren(blok.duur_minuten),
+        "mag_bewerken": mag_bewerken,
+        "alleen_lezen": not bewerken,
+        "uurblok_formulier": uurblok_formulier,
+        "bewerk_knop_href": "?bewerken=1" if mag_bewerken else "",
+        "foto_posts": groepeer_in_posts(los for los in bijlagen if los.is_foto),
+        "document_bijlagen": [los for los in bijlagen if not los.is_foto],
+        "formulier": BijlageForm(),
+        "upload_url": reverse("bijlage_toevoegen"),
+        "terug": request.get_full_path(),
+    }
+
+
+@login_required
+def uurblok_detail(request, pk):
+    """Het blok bekijken, niet bewerken (SPEC §5: view-first)."""
+    return render(request, "uren/uurblok_detail.html", _uurblok_detail_context(request, pk))
+
+
+@login_required
+def uurblok_detail_paneel(request, pk):
+    """Zelfde inhoud als `uurblok_detail`, maar alleen het fragment: de agenda
+    (static/js/kalender.js) haalt dit op via fetch om in de bottom sheet te
+    tonen, in plaats van naar een nieuwe pagina te navigeren."""
+    context = _uurblok_detail_context(request, pk)
+    context["in_dialoog"] = True
+    return render(request, "uren/_uurblokdetail_inhoud.html", context)
 
 
 @login_required
@@ -266,18 +298,21 @@ def uurblok_bewerken(request, pk):
     # Een medewerker komt alleen bij zijn eigen blokken; die van een ander
     # bestaan voor hem niet.
     blok = get_object_or_404(Uurblok, pk=pk, medewerker=request.user)
-    if request.method == "POST":
-        formulier = UurblokForm(request.POST, instance=blok)
-        if formulier.is_valid():
-            formulier.save()
-            return _terug_naar_dag(formulier.instance.datum)
-    else:
-        formulier = UurblokForm(instance=blok)
-    return render(
-        request,
-        "uren/uurblok_form.html",
-        {"formulier": formulier, "dag": blok.datum, "blok": blok, "nieuw": False},
-    )
+    if request.method != "POST":
+        # Geen los bewerkscherm meer: dit is dezelfde pagina als bekijken,
+        # alleen opengezet — zie _uurblok_detail_context hierboven.
+        return redirect(f"{reverse('uurblok_detail', args=[pk])}?bewerken=1")
+
+    formulier = UurblokForm(request.POST, instance=blok)
+    if formulier.is_valid():
+        formulier.save()
+        return _terug_naar_dag(formulier.instance.datum)
+
+    # Bij een fout terug naar hetzelfde scherm, open en met de foutmelding
+    # erbij (zie _uurblokformulier.html), i.p.v. een leeg formulier opnieuw
+    # te tonen.
+    context = _uurblok_detail_context(request, pk, formulier_override=formulier, bewerken=True)
+    return render(request, "uren/uurblok_detail.html", context)
 
 
 @login_required

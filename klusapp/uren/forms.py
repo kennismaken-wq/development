@@ -1,9 +1,36 @@
+import datetime
+
 from django import forms
 
 from klussen.forms import AlleenFotosForm
 from klussen.models import Klus
 
 from .models import Uurblok
+
+
+class KwartierSelect(forms.Select):
+    """Select met alleen hele kwartieren — een native <input type=time step>
+    lost dit niet overal op: de tijdkiezer van met name Android laat gewoon
+    elke minuut kiezen, ongeacht step. Dit garandeert het net als de
+    tijdkiezer van Google Calendar, op elk toestel."""
+
+    def format_value(self, value):
+        # initial/instance-waarden komen als datetime.time binnen (niet als
+        # de "HH:MM"-string die in choices staat); zonder deze omzetting
+        # matcht format_value() van Select geen enkele optie en staat een
+        # bestaand blok bij het bewerken leeg in plaats van op zijn tijd.
+        if isinstance(value, datetime.time):
+            value = value.strftime("%H:%M")
+        return super().format_value(value)
+
+
+def _tijdkeuzes():
+    keuzes = [("", "--:--")]
+    for uur in range(24):
+        for minuut in (0, 15, 30, 45):
+            waarde = f"{uur:02d}:{minuut:02d}"
+            keuzes.append((waarde, waarde))
+    return keuzes
 
 
 class UurblokForm(forms.ModelForm):
@@ -17,10 +44,8 @@ class UurblokForm(forms.ModelForm):
             # 2026-09-07, terwijl Django in het Nederlands 07-09-2026 zou
             # tonen. Zonder dit komt een bestaande datum leeg in beeld.
             "datum": forms.DateInput(attrs={"type": "date"}, format="%Y-%m-%d"),
-            # step=900: de telefoonkiezer springt dan in stappen van vijftien
-            # minuten in plaats van per minuut.
-            "begintijd": forms.TimeInput(attrs={"type": "time", "step": 900}, format="%H:%M"),
-            "eindtijd": forms.TimeInput(attrs={"type": "time", "step": 900}, format="%H:%M"),
+            "begintijd": KwartierSelect(choices=_tijdkeuzes()),
+            "eindtijd": KwartierSelect(choices=_tijdkeuzes()),
             "toelichting": forms.Textarea(attrs={"rows": 3}),
         }
         labels = {
@@ -29,6 +54,15 @@ class UurblokForm(forms.ModelForm):
             "begintijd": "Van",
             "eindtijd": "Tot",
             "toelichting": "Werkzaamheden",
+        }
+        # Duidelijke tekst voor de foutpopup (zie _uurblokformulier.html): de
+        # standaard "Dit veld is verplicht." zegt in die popup niet genoeg
+        # zonder erbij te lezen welk veld het is.
+        error_messages = {
+            "klus": {"required": "Deze activiteit is niet aan een klus gekoppeld."},
+            "datum": {"required": "Vul een dag in."},
+            "begintijd": {"required": "Vul een begintijd in."},
+            "eindtijd": {"required": "Vul een eindtijd in."},
         }
 
     def __init__(self, *args, **kwargs):

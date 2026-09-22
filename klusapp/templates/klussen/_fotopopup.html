@@ -5,16 +5,34 @@
    fotoPopupOpen(url, titel, meta, klusUrl) vanuit elke fotoknop; klusUrl is
    optioneel en laat de knop weg als 'ie ontbreekt (titel zelf is nooit een
    link, precies om te voorkomen dat een klik erop per ongeluk naar de klus
-   springt). {% endcomment %}
+   springt).
+
+   Voor een post van meerdere foto's (_fotoraster.html) roep je in plaats
+   daarvan fotoPopupOpenGalerij(items, index, klusUrl) aan, met items een
+   array van {src, titel, meta, verwijderUrl}: verwijderUrl is optioneel en
+   toont dan de verwijderknop voor precies die foto. Vorige/volgende en de
+   "1/N"-teller verschijnen vanzelf zodra er meer dan één item is. {% endcomment %}
 <dialog id="foto-popup" class="foto-popup">
   <div class="foto-popup-kaart glas">
-    <img id="foto-popup-img" src="" alt="">
+    <div class="foto-popup-afbeelding">
+      <img id="foto-popup-img" src="" alt="">
+      <button type="button" id="foto-popup-vorige" class="foto-popup-nav foto-popup-vorige" aria-label="Vorige foto" title="Vorige foto" hidden>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+      </button>
+      <button type="button" id="foto-popup-volgende" class="foto-popup-nav foto-popup-volgende" aria-label="Volgende foto" title="Volgende foto" hidden>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
+      </button>
+      <span id="foto-popup-teller" class="foto-popup-teller" hidden></span>
+    </div>
     <div class="foto-popup-info">
       <p class="foto-popup-titel" id="foto-popup-titel"></p>
       <p class="foto-popup-meta" id="foto-popup-meta"></p>
       <a id="foto-popup-klus" class="knop foto-popup-klus-knop" href="" hidden>Bekijk klus</a>
     </div>
     <div class="foto-popup-acties">
+      <button type="button" id="foto-popup-verwijderen" class="foto-popup-knop" aria-label="Verwijderen" title="Verwijderen" hidden>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16"/><path d="M9 7V4h6v3"/><path d="M6 7l1 13h10l1-13"/></svg>
+      </button>
       <a id="foto-popup-download" class="foto-popup-knop" href="" download aria-label="Downloaden" title="Downloaden">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="M7 11l5 5 5-5"/><path d="M5 21h14"/></svg>
       </a>
@@ -28,6 +46,14 @@
     </div>
   </div>
 </dialog>
+{% comment %} Verwijderen vanuit de galerij is een echt formulier-POST naar
+   dezelfde bijlage_verwijderen-view als de "×" in het raster (zie
+   _fotoraster.html) — geen fetch/JSON, dit is geen SPA. actie/terug worden
+   per foto gezet vlak voor de submit. {% endcomment %}
+<form id="foto-popup-verwijder-form" method="post" action="" style="display:none">
+  {% csrf_token %}
+  <input type="hidden" name="terug" value="{{ terug }}">
+</form>
 <script>
   (function () {
     var dialoog = document.getElementById("foto-popup");
@@ -37,19 +63,50 @@
     var download = document.getElementById("foto-popup-download");
     var delenKnop = document.getElementById("foto-popup-delen");
     var klusKnop = document.getElementById("foto-popup-klus");
+    var vorigeKnop = document.getElementById("foto-popup-vorige");
+    var volgendeKnop = document.getElementById("foto-popup-volgende");
+    var tellerEl = document.getElementById("foto-popup-teller");
+    var verwijderKnop = document.getElementById("foto-popup-verwijderen");
+    var verwijderForm = document.getElementById("foto-popup-verwijder-form");
 
-    window.fotoPopupOpen = function (src, titel, meta, klusUrl) {
-      img.src = src;
-      img.alt = titel;
-      titelEl.textContent = titel;
-      metaEl.textContent = meta;
-      download.href = src;
-      if (klusUrl) {
-        klusKnop.href = klusUrl;
+    var huidigeItems = [];
+    var huidigeIndex = 0;
+    var huidigeKlusUrl = "";
+
+    function toonItem(index) {
+      huidigeIndex = index;
+      var item = huidigeItems[index];
+      img.src = item.src;
+      img.alt = item.titel;
+      titelEl.textContent = item.titel;
+      metaEl.textContent = item.meta;
+      download.href = item.src;
+
+      var meerdere = huidigeItems.length > 1;
+      vorigeKnop.hidden = !meerdere;
+      volgendeKnop.hidden = !meerdere;
+      tellerEl.hidden = !meerdere;
+      if (meerdere) tellerEl.textContent = (index + 1) + " / " + huidigeItems.length;
+
+      if (item.verwijderUrl) {
+        verwijderKnop.hidden = false;
+        verwijderForm.action = item.verwijderUrl;
+      } else {
+        verwijderKnop.hidden = true;
+      }
+
+      if (huidigeKlusUrl) {
+        klusKnop.href = huidigeKlusUrl;
         klusKnop.hidden = false;
       } else {
         klusKnop.hidden = true;
       }
+    }
+
+    window.fotoPopupOpenGalerij = function (items, index, klusUrl) {
+      huidigeItems = items;
+      huidigeKlusUrl = klusUrl || "";
+      toonItem(index || 0);
       dialoog.showModal();
       // Twee frames wachten: showModal() zet display synchroon om, dus
       // zonder die omweg ziet de browser geen verschil tussen "net getoond"
@@ -60,6 +117,26 @@
         });
       });
     };
+
+    window.fotoPopupOpen = function (src, titel, meta, klusUrl) {
+      window.fotoPopupOpenGalerij([{ src: src, titel: titel, meta: meta }], 0, klusUrl);
+    };
+
+    vorigeKnop.addEventListener("click", function () {
+      toonItem((huidigeIndex - 1 + huidigeItems.length) % huidigeItems.length);
+    });
+    volgendeKnop.addEventListener("click", function () {
+      toonItem((huidigeIndex + 1) % huidigeItems.length);
+    });
+    document.addEventListener("keydown", function (e) {
+      if (!dialoog.open || huidigeItems.length < 2) return;
+      if (e.key === "ArrowLeft") vorigeKnop.click();
+      if (e.key === "ArrowRight") volgendeKnop.click();
+    });
+
+    verwijderKnop.addEventListener("click", function () {
+      if (confirm("Deze foto verwijderen?")) verwijderForm.submit();
+    });
 
     window.fotoPopupSluiten = function () {
       dialoog.classList.remove("open-anim");

@@ -1,14 +1,10 @@
 {% extends "basis.html" %}
-{% block titel %}{% if nieuw %}Uren toevoegen{% else %}Uren aanpassen{% endif %}{% endblock %}
-{% block kop %}{% if nieuw %}Uren toevoegen{% else %}Uren aanpassen{% endif %}{% endblock %}
+{% comment %} Alleen nog de aanmaakpagina (no-javascript-terugval voor de
+   "uren toevoegen"-dialoog op mijn_uren.html): bewerken van een bestaand
+   uurblok gaat via hetzelfde scherm als bekijken, zie
+   uren/_uurblokdetail_inhoud.html en SPEC §5 (view-first). {% endcomment %}
+{% block titel %}Uren toevoegen{% endblock %}
+{% block kop %}Uren toevoegen{% endblock %}
 {% block inhoud %}
   {% include "uren/_uurblokformulier.html" %}
-
-  {% if not nieuw %}
-    <form method="post" action="{% url 'uurblok_verwijderen' blok.pk %}" class="verwijder"
-          onsubmit="return confirm('Dit uurblok verwijderen?');">
-      {% csrf_token %}
-      <button type="submit">Verwijderen</button>
-    </form>
-  {% endif %}
 {% endblock %}

@@ -686,6 +686,18 @@ input[type=time]::-webkit-calendar-picker-indicator{ filter:invert(1); opacity:.
 .gegeven input[type=checkbox]:disabled{ opacity:.6; }
 .gegeven input[type=color]:disabled{ width:44px; padding:0; border:1px solid rgba(255,255,255,0.2); }
 
+/* Zelfde "op slot ziet eruit als gegevens" als .gegeven hierboven, nu voor
+   het uurblok-detailscherm (_uurblokdetail_inhoud.html): vóór een klik op het
+   bewerk-potlood staan de velden er niet als grijs uitgevinkt invulvak bij,
+   maar als gewone tekst. */
+.uurblokformulier input:disabled:not([type=checkbox]):not([type=radio]):not([type=color]):not([type=file]),
+.uurblokformulier select:disabled,
+.uurblokformulier textarea:disabled{
+  background:none; border-color:transparent; padding-left:0; padding-right:0;
+  color:#fff; opacity:1; -webkit-text-fill-color:#fff;
+  cursor:default;
+}
+
 .profielknop{ margin:0 0 .6rem; }
 .opslaanrij{ display:flex; align-items:center; gap:.6rem; margin-top:1.6rem; }
 .opslaanrij .knop{ width:auto; }
@@ -734,7 +746,10 @@ input[type=time]::-webkit-calendar-picker-indicator{ filter:invert(1); opacity:.
 .fotoraster + .leeg{ margin-top:.9rem; }
 
 .uploadveld{ position:relative; border-radius:20px; padding:1.1rem 1.2rem 1.3rem; }
-.uploadveld label:first-of-type{ margin-top:0; }
+/* Geen margin-top:0 op het eerste label (zoals .uurblokformulier hieronder
+   ook niet doet): de padding van het formulier alleen is te weinig ruimte
+   voor het sluitknopje hierna — bij een boxed eerste veld (de klus-select in
+   AlleenFotosForm) overlapt dat anders met de rand van dat veld. */
 /* sluitknopje rechtsboven op de dialoog, zelfde vormtaal als .weg bij een foto */
 .dialog-sluiten{
   position:absolute; top:.7rem; right:.7rem;
@@ -746,6 +761,18 @@ input[type=time]::-webkit-calendar-picker-indicator{ filter:invert(1); opacity:.
 /* zelfde reden als bij .weg button: zichtbaar rustig, aanraakgebied ~44px */
 .dialog-sluiten::after{ content:''; position:absolute; inset:-5px; border-radius:50%; }
 @media (hover:hover){ .dialog-sluiten:hover{ background:rgba(255,255,255,0.18); } }
+
+/* Kopregel van een bottom sheet (_uurblokformulier.html met in_dialoog): het
+   kruisje en de Opslaan-knop naast elkaar bovenin i.p.v. Opslaan helemaal
+   onderaan het (mogelijk lange, scrollende) formulier — op een telefoon met
+   het toetsenbord open was die knop anders niet te bereiken zonder eerst
+   weg te tikken. Het kruisje verliest hier zijn eigen absolute positie: die
+   plek is nu voor Opslaan. */
+.sheet-kop{ display:flex; align-items:center; justify-content:space-between; margin:0 0 .3rem; }
+.sheet-kop .dialog-sluiten{ position:static; }
+.knop-klein{
+  width:auto; min-height:38px; padding:.5rem 1.15rem; font-size:13.5px;
+}
 /* het standaard bestandsknopje van de browser is wit-op-wit op deze
    achtergrond; hier krijgt het dezelfde pilvorm als de rest.
 
@@ -775,18 +802,21 @@ input[type=file].bestandsveld-verborgen{
   position:absolute; width:1px; height:1px; padding:0; margin:-1px;
   overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0;
 }
+/* Bewust neutraal/doorschijnend (niet de groene .knop-kleur): dit is een
+   secundaire actie naast Opslaan, en met dezelfde accentkleur oogde hij als
+   een tweede "opslaan"-knop op hetzelfde formulier. */
 .bestandsknop{
   display:flex; align-items:center; justify-content:center; gap:.55rem;
   width:100%; min-height:50px; padding:.8rem 1.2rem; margin:0;
-  border:1px solid rgba(var(--accent-rgb),0.45); border-radius:999px;
-  background:rgba(var(--accent-rgb),0.18); cursor:pointer;
+  border:1px solid rgba(255,255,255,0.22); border-radius:999px;
+  background:rgba(255,255,255,0.08); cursor:pointer;
   /* label krijgt in dit stylesheet standaard de kleine hoofdletter-opmaak van
      een formulierkopje; dit label ís de knop, dus die opmaak moet eraf */
   font-family:'Inter',sans-serif; font-size:14.5px; font-weight:600;
-  letter-spacing:normal; text-transform:none; color:#fff;
+  letter-spacing:normal; text-transform:none; color:rgba(255,255,255,0.85);
 }
 .bestandsknop svg{ width:18px; height:18px; flex-shrink:0; }
-@media (hover:hover){ .bestandsknop:hover{ background:rgba(var(--accent-rgb),0.28); } }
+@media (hover:hover){ .bestandsknop:hover{ background:rgba(255,255,255,0.14); } }
 .bestandsknop:active{ filter:brightness(.92); }
 input[type=file]:focus-visible + .bestandsknop{
   outline:2px solid rgba(var(--accent-rgb),0.9); outline-offset:2px;
@@ -851,6 +881,26 @@ input[type=file]:focus-visible + .bestandsknop{
 @media (hover:hover){ .fotokaart-nieuw:hover{ background:rgba(255,255,255,0.10); color:#fff; } }
 .fotokaart-nieuw svg{ width:22px; height:22px; }
 
+/* post van meerdere foto's uit één upload (_fotoraster.html): zelfde kaart als
+   .fotokaart, maar met een mini-collage in plaats van één afbeelding. De
+   tegelverhouding verschilt per aantal foto's, net als bij een social-media-
+   post met meerdere foto's: 2 naast elkaar, 3 één groot + twee klein, 4+ een
+   vast 2x2-raster met "+N" op de laatste tegel voor de rest van de post. */
+.fotokaart-post-grid{ display:grid; gap:2px; aspect-ratio:1; }
+.fotokaart-post-grid.telt-2{ grid-template-columns:1fr 1fr; }
+.fotokaart-post-grid.telt-3{ grid-template-columns:1.4fr 1fr; }
+.fotokaart-post-grid.telt-3 button:first-child{ grid-row:span 2; }
+.fotokaart-post-grid.telt-4{ grid-template-columns:1fr 1fr; grid-template-rows:1fr 1fr; }
+.fotokaart-post-grid button{
+  position:relative; display:block; width:100%; height:100%;
+  padding:0; margin:0; border:0; background:none; cursor:pointer; overflow:hidden;
+}
+.fotokaart-post-grid img{ display:block; width:100%; height:100%; object-fit:cover; background:rgba(0,0,0,0.2); }
+.fotokaart-post-meer{
+  position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
+  background:rgba(10,10,8,0.55); color:#fff; font-size:15px; font-weight:700;
+}
+
 /* dialoog met het uploadveld: de form zelf is al een glaskaart (.uploadveld
    .glas), de dialoog is alleen een neutrale drager met een donkere backdrop */
 dialog.foto-invoegen{
@@ -874,7 +924,17 @@ dialog.uren-invoegen::backdrop{ background:rgba(10,10,8,0.55); backdrop-filter:b
    achtergrond zichtbaar blijft. De dialoog zelf staat leeg in mijn_uren.html
    en wordt pas gevuld ná een klik op een blok (static/js/kalender.js, via
    laadEnOpenSheet in bottomsheet.js). */
-.uurblokdetail.glas{ position:relative; border-radius:20px; padding:1.1rem 1.2rem 1.3rem; }
+/* position:relative ook zonder .glas: het bewerk-potlood hieronder is
+   absoluut gepositioneerd, en op de losse detailpagina (niet in een dialoog,
+   dus zonder .glas) staat _uurblokdetail_inhoud.html toch nog steeds zelf
+   bovenaan de kaart. */
+.uurblokdetail{ position:relative; }
+.uurblokdetail.glas{ border-radius:20px; padding:1.1rem 1.2rem 1.3rem; }
+/* zelfde rondje-vormtaal/plek als het bewerk-potlood op een klusdossier (zie
+   .klus-hero-blok .bewerk-knop) — hier naast het kruisje i.p.v. naast de
+   terugpijl, want een sheet heeft geen terugpijl. */
+.uurblokdetail-bewerk-knop{ position:absolute; top:.7rem; right:.7rem; }
+.uurblokdetail-bewerk-knop.met-sluiten{ right:calc(.7rem + 34px + .5rem); }
 dialog.uurblok-detail{
   border:0; padding:0; background:transparent; color:inherit;
   max-width:560px; width:calc(100% - 2.4rem);
@@ -1210,9 +1270,27 @@ dialog.foto-popup::backdrop{ background:rgba(10,10,8,0.75); backdrop-filter:blur
   overscroll-behavior:contain;
   max-height:calc(100vh - 3rem); max-height:calc(100dvh - 3rem);
 }
+.foto-popup-afbeelding{ position:relative; }
 .foto-popup-kaart img{
   display:block; width:100%; max-height:55vh; max-height:55dvh;
   object-fit:contain; background:rgba(0,0,0,0.3);
+}
+/* vorige/volgende: alleen zichtbaar als fotoPopupOpenGalerij een post van
+   meer dan één foto opent (_fotoraster.html) — verborgen bij een losse foto. */
+.foto-popup-nav{
+  position:absolute; top:50%; transform:translateY(-50%);
+  width:36px; height:36px; border-radius:50%; cursor:pointer;
+  display:flex; align-items:center; justify-content:center;
+  background:rgba(10,10,8,0.45); color:#fff; border:1px solid rgba(255,255,255,0.24);
+}
+.foto-popup-nav svg{ width:18px; height:18px; }
+.foto-popup-vorige{ left:.6rem; }
+.foto-popup-volgende{ right:.6rem; }
+@media (hover:hover){ .foto-popup-nav:hover{ background:rgba(10,10,8,0.65); } }
+.foto-popup-teller{
+  position:absolute; bottom:.6rem; left:50%; transform:translateX(-50%);
+  padding:.2rem .6rem; border-radius:999px; font-size:11px; font-weight:600;
+  background:rgba(10,10,8,0.55); color:#fff;
 }
 .foto-popup-info{ padding:.9rem 1.1rem .2rem; display:grid; gap:.2rem; }
 .foto-popup-titel{ font-size:14.5px; font-weight:600; overflow-wrap:break-word; }
@@ -1235,6 +1313,24 @@ dialog.foto-popup::backdrop{ background:rgba(10,10,8,0.75); backdrop-filter:blur
 .foto-popup-knop::after{ content:''; position:absolute; inset:-4px; border-radius:50%; }
 .foto-popup-knop svg{ width:19px; height:19px; }
 @media (hover:hover){ .foto-popup-knop:hover{ background:rgba(255,255,255,0.18); } }
+
+/* popup met wat er niet klopt bij het opslaan van een uurblok
+   (_uurblokformulier.html): zelfde komt-naar-voren-animatie als
+   dialog.foto-popup hierboven, maar dan als korte tekstkaart i.p.v. een foto. */
+dialog.foutpopup{
+  border:0; padding:0; background:transparent; color:inherit;
+  max-width:min(92vw, 420px); width:calc(100% - 2.4rem);
+  transform:scale(.92) translateY(10px); opacity:0;
+  transition:transform .22s ease-out, opacity .22s ease-out;
+}
+dialog.foutpopup.open-anim{ transform:scale(1) translateY(0); opacity:1; }
+dialog.foutpopup::backdrop{ background:rgba(10,10,8,0.75); backdrop-filter:blur(3px); }
+.foutpopup-kaart{ position:relative; border-radius:20px; padding:1.1rem 1.2rem 1.3rem; }
+.foutpopup-lijst{
+  margin:0; padding-left:1.1rem;
+  color:rgba(255,255,255,0.85); font-size:13.5px; line-height:1.65;
+}
+.foutpopup-lijst li::marker{ color:var(--rood); }
 
 .soort-badge{
   display:inline-flex; align-items:center; width:fit-content;

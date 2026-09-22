@@ -66,6 +66,7 @@
             {% endfor %}
             {% for getekend in dag_kolom.getekend %}
               <a class="blok" href="{% url 'uurblok_detail' getekend.blok.pk %}"
+                 data-paneel-url="{% url 'uurblok_detail_paneel' getekend.blok.pk %}"
                  style="top:{{ getekend.top }}px; height:{{ getekend.hoogte }}px;
                         left:calc({{ getekend.links }}% + 3px); width:calc({{ getekend.breedte }}% - 6px);
                         background:linear-gradient(150deg, {{ getekend.kleur }}D9, {{ getekend.kleur }}73);
@@ -92,6 +93,16 @@
     </dialog>
     <script>
       document.getElementById("uren-invoegen").addEventListener("click", function (e) {
+        if (e.target === this) window.closeSheet(this);
+      });
+    </script>
+
+    {% comment %} Leeg tot een klik op een bestaand blok 'm vult (zie
+       static/js/kalender.js) — zo verschijnt het detail als sheet boven de
+       agenda in plaats van te navigeren naar een nieuwe pagina. {% endcomment %}
+    <dialog id="uurblok-detail" class="uurblok-detail"></dialog>
+    <script>
+      document.getElementById("uurblok-detail").addEventListener("click", function (e) {
         if (e.target === this) window.closeSheet(this);
       });
     </script>

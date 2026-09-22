@@ -161,6 +161,12 @@ class AlleenFotosForm(BijlageForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.fields["bestanden"].widget.attrs["accept"] = "image/*"
+        # Zelfde bestandsknopje als UurblokFotosForm hieronder: "Foto's
+        # kiezen" met het galerij-icoon in plaats van de generieke
+        # documentknop, want hier kan toch nooit iets anders dan een foto in.
+        self.fields["bestanden"].widget.attrs.update(
+            {"data-knoptekst": "Foto's kiezen", "data-knopicoon": "foto"}
+        )
         # Zelfde "(afgerond)"-label als de klus-filter op /fotos/, zodat een
         # afgeronde klus in deze lijst herkenbaar blijft van een lopende.
         self.fields["klus"].label_from_instance = (
