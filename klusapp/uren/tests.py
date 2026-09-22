@@ -168,11 +168,13 @@ class UrenSchrijvenTest(TestCase):
     def test_bestaand_blok_vult_datum_en_tijden_in(self):
         # Een HTML-datumveld toont alleen jjjj-mm-dd; met het Nederlandse
         # formaat zou het veld leeg binnenkomen en de datum verdwijnen.
+        # GET naar .../bewerken/ is geen los scherm meer maar een redirect
+        # naar hetzelfde detailscherm, opengezet (zie uren.views.uurblok_bewerken).
         blok = Uurblok.objects.create(
             medewerker=self.sam, klus=self.klus, datum=self.dag,
             begintijd=time(8, 0), eindtijd=time(16, 30),
         )
-        html = self.client.get(f"/uren/{blok.pk}/bewerken/").content.decode()
+        html = self.client.get(f"/uren/{blok.pk}/bewerken/", follow=True).content.decode()
         self.assertIn('value="2026-09-07"', html)
         self.assertIn('value="08:00"', html)
         self.assertIn('value="16:30"', html)

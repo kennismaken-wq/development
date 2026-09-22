@@ -31,9 +31,11 @@
     <p class="regel"><span class="lbl">Duur</span>{{ duur }}</p>
   </div>
 
-  {% url 'uurblok_bewerken' blok.pk as uurblok_bewerken_url %}
-  {% if mag_bewerken %}{% url 'uurblok_verwijderen' blok.pk as uurblok_verwijderen_url %}{% endif %}
-  {% include "uren/_uurblokformulier.html" with formulier=uurblok_formulier actie=uurblok_bewerken_url alleen_lezen=alleen_lezen verwijder_url=uurblok_verwijderen_url formulier_id="uurblokdetailformulier" %}
+  {% if mag_bewerken %}
+    {% url 'uurblok_bewerken' blok.pk as uurblok_bewerken_url %}
+    {% url 'uurblok_verwijderen' blok.pk as uurblok_verwijderen_url %}
+  {% endif %}
+  {% include "uren/_uurblokformulier.html" with formulier=uurblok_formulier actie=uurblok_bewerken_url alleen_lezen=alleen_lezen verwijder_url=uurblok_verwijderen_url formulier_id="uurblokdetailformulier" in_dialoog=False %}
 
   <h2 class="sectiekop">Foto's</h2>
   {% include "klussen/_fotoraster.html" with uurblok_pk=blok.pk %}
