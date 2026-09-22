@@ -1194,23 +1194,29 @@ dialog.foto-popup::backdrop{ background:rgba(10,10,8,0.75); backdrop-filter:blur
 /* ══════════ KLUSDOSSIER: HERO BOVENAAN ══════════
    Eigen, vaste waaier i.p.v. de .voorbeeldstapel hierboven hergebruikt: die
    is een vierkantje van 78px waar een rotatie van een paar px nauwelijks
-   opvalt, maar op een brede hero (volle kaartbreedte, kort) duwt diezelfde
-   rotatie de hoeken van de achterste lagen ver buiten de eigen doos — vooral
-   verticaal, omdat de doos veel breder dan hoog is. Vandaar: altijd exact
-   drie lagen (klus_detail vult ontbrekende foto's/documenten/notitie aan met
-   lege lagen, zie klussen/views.py), elke laag met een vaste rand van 16px
+   opvalt, maar op volle kaartbreedte duwde diezelfde rotatie de achterste
+   lagen ver buiten hun eigen doos. Vandaar: altijd exact drie lagen
+   (klus_detail vult ontbrekende foto's/documenten/notitie aan met lege
+   lagen, zie klussen/views.py), elke laag met een vaste rand van 16px
    t.o.v. de hero zelf waarin de gedraaide achterlagen mogen uitsteken, en
-   `overflow:hidden` op de hero als vangnet daarbuiten — niets kan ooit over
-   de titel eronder heen steken, wat er ook in de klus zit of hoe smal het
-   scherm is. (Let op: `inset` op de laag zelf, niet `padding` op `.klus-hero`
-   — padding op de container doet niets voor een absoluut gepositioneerd
-   kind, dat volgt de rand-doos, niet de padding-doos.) */
+   `overflow:hidden` op de hero als vangnet daarbuiten. (Let op: `inset` op
+   de laag zelf, niet `padding` op `.klus-hero` — padding op de container
+   doet niets voor een absoluut gepositioneerd kind, dat volgt de rand-doos,
+   niet de padding-doos.)
+
+   De hero zelf is bewust smaller dan de kaart (geen edge-to-edge banner) —
+   zelfde idee als een albumhoes op Spotify: de terugpijl staat er los
+   bovenop, in gewone kaartkleur, in plaats van overheen met een donkere
+   glastint. Zo kan de pijl nooit door een foto geraakt worden, wat er ook
+   in de waaier zit. */
+.klus-hero-blok{ margin-bottom:1.4rem; }
+.klus-hero-blok .terug-pijl{ margin-bottom:.7rem; }
 .klus-hero{
-  position:relative; margin-bottom:1.4rem; aspect-ratio:16/10;
-  border-radius:24px; overflow:hidden; background:rgba(255,255,255,0.05);
+  position:relative; width:58%; max-width:230px; aspect-ratio:1/1;
+  border-radius:22px; overflow:hidden; background:rgba(255,255,255,0.05);
 }
 .klus-hero-laag{
-  position:absolute; inset:16px; border-radius:20px; overflow:hidden;
+  position:absolute; inset:14px; border-radius:18px; overflow:hidden;
   background:rgba(255,255,255,0.09); border:1px solid rgba(255,255,255,0.20);
   box-shadow:0 10px 22px rgba(0,0,0,0.28);
 }
@@ -1218,18 +1224,13 @@ dialog.foto-popup::backdrop{ background:rgba(10,10,8,0.75); backdrop-filter:blur
 .klus-hero-laag-2{ z-index:2; transform:rotate(-6deg) translate(-6%, 3%); }
 .klus-hero-laag-3{ z-index:1; transform:rotate(7deg) translate(6%, 6%); }
 .klus-hero-laag img{ display:block; width:100%; height:100%; object-fit:cover; background:rgba(0,0,0,0.2); }
-.klus-hero-laag-document svg{ width:26px; height:26px; }
-.klus-hero-laag-document .naam{ font-size:11px; }
-.klus-hero-laag-notitie .notitietekst{ font-size:13px; }
+.klus-hero-laag-document svg{ width:22px; height:22px; }
+.klus-hero-laag-document .naam{ font-size:10px; }
+.klus-hero-laag-notitie .notitietekst{ font-size:11.5px; }
 .klus-hero-leeg{ background:rgba(255,255,255,0.04); border:1px dashed rgba(255,255,255,0.20); box-shadow:none; }
 .klus-hero-meer{
-  position:absolute; bottom:.6rem; right:.6rem; z-index:4;
-  font-size:12px; padding:.25rem .65rem;
-}
-.terug-pijl.klus-hero-terug{
-  position:absolute; top:.7rem; left:.7rem; z-index:5;
-  background:rgba(26,26,24,0.45);
-  backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px);
+  position:absolute; bottom:.5rem; right:.5rem; z-index:4;
+  font-size:11px; padding:.2rem .55rem;
 }
 
 /* ══════════ KLUSDOSSIER: GEWERKTE UREN ══════════
