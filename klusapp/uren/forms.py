@@ -17,10 +17,10 @@ class UurblokForm(forms.ModelForm):
             # 2026-09-07, terwijl Django in het Nederlands 07-09-2026 zou
             # tonen. Zonder dit komt een bestaande datum leeg in beeld.
             "datum": forms.DateInput(attrs={"type": "date"}, format="%Y-%m-%d"),
-            # step=300: de telefoonkiezer springt dan in stappen van vijf
+            # step=900: de telefoonkiezer springt dan in stappen van vijftien
             # minuten in plaats van per minuut.
-            "begintijd": forms.TimeInput(attrs={"type": "time", "step": 300}, format="%H:%M"),
-            "eindtijd": forms.TimeInput(attrs={"type": "time", "step": 300}, format="%H:%M"),
+            "begintijd": forms.TimeInput(attrs={"type": "time", "step": 900}, format="%H:%M"),
+            "eindtijd": forms.TimeInput(attrs={"type": "time", "step": 900}, format="%H:%M"),
             "toelichting": forms.Textarea(attrs={"rows": 3}),
         }
         labels = {
