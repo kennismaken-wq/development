@@ -99,11 +99,22 @@
     <script>
       // Opent de weekweergave al gescrold naar vandaag i.p.v. maandag — anders
       // moet je op een telefoon eerst zelf naar de juiste dagkolom scrollen.
-      // scrollIntoView met inline:"start" houdt zelf rekening met de
-      // scroll-padding-left in app.css, die precies de vaste tijdas compenseert.
+      //
+      // Bewust zelf de scrollpositie uitrekenen i.p.v. vandaag.scrollIntoView()
+      // aan de browser overlaten: scrollIntoView met inline:"start" houdt
+      // scroll-padding-left niet in elke browser exact aan, en een paar pixels
+      // ernaast betekent hier dat vandaag half achter de vaste tijdas blijft
+      // steken i.p.v. er direct naast te beginnen. Met getBoundingClientRect
+      // meten we hoeveel de tijdas + zijn eigen padding werkelijk innemen, en
+      // scrollen we precies dat bedrag verder.
       (function () {
+        var scrollgebied = document.querySelector(".raster-scroll");
         var vandaag = document.querySelector(".raster:not(.raster-dag) .dagkolom.vandaag");
-        if (vandaag) vandaag.scrollIntoView({ inline: "start", block: "nearest" });
+        var tijdas = document.querySelector(".raster:not(.raster-dag) .gutter");
+        if (!scrollgebied || !vandaag || !tijdas) return;
+        var vrijeRuimte = tijdas.getBoundingClientRect().right - scrollgebied.getBoundingClientRect().left;
+        var teVerschuiven = vandaag.getBoundingClientRect().left - vrijeRuimte;
+        scrollgebied.scrollLeft += teVerschuiven;
       })();
     </script>
 

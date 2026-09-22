@@ -407,32 +407,29 @@ input[type=time]::-webkit-calendar-picker-indicator{ filter:invert(1); opacity:.
 }
 .kolomkop.vandaag .dag{ color:var(--hi); }
 
-/* Tijdas: in de weekweergave blijft hij staan bij horizontaal scrollen
-   (zelfde reden en opbouw als .bord-naam/.bord-hoek bij het planbord: zonder
-   een eigen dekkende ondergrond zou de kleur van een dagkolom er onderdoor
-   schuiven). In de dagweergave wordt helemaal niet gescrold — daar was dit
-   vlak dus nergens voor nodig en oogde het als een los, verkeerd uitgelijnd
-   blokje (zie git-geschiedenis). Daar gewoon platte tekst op de achtergrond,
-   zoals bij Google Calendar: geen eigen vlak, geen sticky, geen schaduw. */
-.raster-hoek{ background:none; }
-/* position:relative altijd nodig, ook zonder sticky (dagweergave): de
-   uurlabels erin zijn absoluut gepositioneerd tegen déze 48px, niet tegen
-   een verdere voorouder — zonder dit schoten ze naar de rechterrand van het
-   hele scherm in plaats van naast hun eigen kolom te blijven staan. */
-.gutter{ position:relative; background:none; }
+/* Tijdas. Twee weergaven, twee behoeften:
+   - Dagweergave scrollt nooit horizontaal — daar was een vast vlak nergens
+     voor nodig en oogde het als een los, verkeerd uitgelijnd blokje. Daar
+     gewoon platte tekst op de achtergrond, zoals bij Google Calendar.
+   - Weekweergave scrollt wél horizontaal tussen zeven dagen. Zónder sticky
+     tijdas scrol je 'm daar simpelweg uit beeld zodra je voorbij de eerste
+     dag bent — je uurtjes-referentie is dan weg. De cijfers blijven dus
+     gepind, maar zónder eigen ondergrond: staat "vandaag" dicht bij het
+     einde van de week (bv. vrijdag), dan is er letterlijk niet genoeg om
+     nog naar te scrollen — de browser stopt dan bij zijn scrollgrens, en een
+     reepje van de vorige dag blijft noodgedwongen zichtbaar. Met een eigen
+     vlak zag dat eruit als een lelijk afgesneden blok; zonder vlak schuift
+     dat reepje gewoon natuurlijk door, met de cijfers erboven via
+     text-shadow leesbaar in plaats van via een dekkende ondergrond. */
+.raster-hoek, .gutter{ position:relative; background:none; }
 .raster:not(.raster-dag) .raster-hoek,
-.raster:not(.raster-dag) .gutter{
-  position:sticky; left:0;
-  /* iets donkerder dan de dagkolommen ernaast (die hebben
-     rgba(255,255,255,0.03)) — genoeg contrast om de uren-tekst nooit te
-     laten verdwijnen achter een blok dat eronderdoor schuift */
-  background:rgba(20,21,17,0.92);
-}
+.raster:not(.raster-dag) .gutter{ position:sticky; left:0; }
 .raster:not(.raster-dag) .raster-hoek{ z-index:4; }
 .raster:not(.raster-dag) .gutter{ z-index:3; }
 .gutter-lbl{
   position:absolute; right:.5rem; transform:translateY(-50%);
-  font-size:9.5px; color:rgba(255,255,255,0.45);
+  font-size:9.5px; color:rgba(255,255,255,0.5);
+  text-shadow:0 1px 3px rgba(0,0,0,0.9), 0 0 6px rgba(0,0,0,0.7);
 }
 /* Het eerste label (06:00) hoort exact op de bovenrand van het rooster, en
    translateY(-50%) hangt 'm dus voor de helft ín het rijtje erboven —
