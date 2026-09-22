@@ -3,6 +3,15 @@
 {% block kop %}Klussen{% endblock %}
 {% load kleuren %}
 {% block inhoud %}
+  <label class="wisselaar-rij">
+    <span class="wisselaar-label">Ook afgeronde klussen tonen</span>
+    <span class="wisselaar">
+      <input type="checkbox" {% if toon_alles %}checked{% endif %}
+             onchange="window.location.href = this.checked ? '?alles=1' : '{% url 'klussen' %}'">
+      <span class="wisselaar-track"></span>
+    </span>
+  </label>
+
   {% if klussen %}
     <ul class="klussenlijst">
       {% for klus in klussen %}
@@ -35,12 +44,4 @@
       <a class="knop" href="{% url 'klus_nieuw' %}">Nieuwe klus</a>
     </p>
   {% endif %}
-
-  <p style="margin-top:1.2rem">
-    {% if toon_alles %}
-      <a class="knop-stil" href="{% url 'klussen' %}">Alleen actieve klussen</a>
-    {% else %}
-      <a class="knop-stil" href="?alles=1">Ook afgeronde klussen tonen</a>
-    {% endif %}
-  </p>
 {% endblock %}
