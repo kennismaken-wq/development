@@ -211,6 +211,24 @@ def uurblok_nieuw(request):
                     messages.error(request, f"{bestand.name}: {probleem}")
 
             return _terug_naar_dag(blok.datum)
+
+        if request.headers.get("X-Requested-With") == "XMLHttpRequest":
+            # De "uren toevoegen"-knop opent dit formulier als bottom sheet
+            # boven de agenda (zie mijn_uren.html/_uurblokformulier.html) en
+            # dient 'm met fetch in i.p.v. een gewone post, juist om bij een
+            # foutieve invoer niet de hele pagina te vervangen door de
+            # no-javascript-terugvalpagina hieronder — alleen het formulier
+            # opnieuw teruggeven, dan blijft de sheet openstaan.
+            return render(
+                request,
+                "uren/_uurblokformulier.html",
+                {
+                    "formulier": formulier,
+                    "bijlagenformulier": bijlagenformulier,
+                    "actie": request.get_full_path(),
+                    "in_dialoog": True,
+                },
+            )
     else:
         # Uit de kalender komen begin- en eindtijd mee van het vak waarop je
         # hebt gesleept; anders sluiten we aan op het laatste blok van die dag.

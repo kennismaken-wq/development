@@ -604,17 +604,40 @@ input[type=time]::-webkit-calendar-picker-indicator{ filter:invert(1); opacity:.
 .maanddag .nr{ font-size:13px; font-weight:600; }
 .maanddag .uren{ font-size:9.5px; color:var(--hi); font-variant-numeric:tabular-nums; }
 
-/* ══════════ MELDINGEN ══════════ */
-.meldingen{ list-style:none; margin:0 0 1.2rem; padding:0; display:grid; gap:.5rem; }
+/* ══════════ MELDINGEN ══════════
+   Zweven als tijdelijke toasts onderaan het scherm i.p.v. vast bovenaan de
+   kaart te blijven staan — anders blijft bv. "1 bestand toegevoegd" de hele
+   sessie in beeld. static/js/meldingen.js voegt na een paar seconden
+   .melding-uit toe (deze animatie) en verwijdert het element daarna. */
+.meldingen{
+  list-style:none; margin:0; padding:0; display:grid; gap:.5rem;
+  position:fixed; z-index:40; left:50%; bottom:1.5rem;
+  transform:translateX(-50%); width:calc(100% - 2.6rem); max-width:420px;
+  pointer-events:none;
+}
 .melding{
   border-radius:14px; padding:.7rem 1rem; font-size:13px;
   background:rgba(255,255,255,0.10); border:1px solid rgba(255,255,255,0.18);
+  backdrop-filter:blur(16px); -webkit-backdrop-filter:blur(16px);
+  box-shadow:0 10px 26px rgba(0,0,0,0.35);
+  animation:melding-in .22s ease-out;
+}
+.melding.melding-uit{ animation:melding-uit .22s ease-in forwards; }
+@keyframes melding-in{ from{ opacity:0; transform:translateY(.6rem); } to{ opacity:1; transform:translateY(0); } }
+@keyframes melding-uit{ from{ opacity:1; transform:translateY(0); } to{ opacity:0; transform:translateY(.6rem); } }
+@media (prefers-reduced-motion:reduce){
+  .melding{ animation:none; }
+  .melding.melding-uit{ animation:none; opacity:0; }
 }
 .melding.success{
   background:rgba(var(--accent-rgb),0.18); border-color:rgba(var(--accent-rgb),0.42);
   color:var(--hi);
 }
 .melding.error{ background:rgba(224,123,95,0.18); border-color:rgba(224,123,95,0.45); }
+@media (max-width:700px){
+  /* boven de vaste iconenbalk onderaan uit, zie .sidebar hierboven */
+  .meldingen{ bottom:calc(5.4rem + env(safe-area-inset-bottom)); }
+}
 
 /* ══════════ BIJLAGEN: FOTO'S EN DOCUMENTEN ══════════
    Gedeelde bouwstenen voor het klusdossier, de fotodropbox en de foto's bij
@@ -1021,6 +1044,9 @@ dialog.foto-invoegen .uploadveld, dialog.uren-invoegen .uurblokformulier, dialog
    die Apple en Google allebei als minimum aanhouden. */
 .weg button::after{ content:''; position:absolute; inset:-9px; border-radius:50%; }
 @media (hover:hover){ .weg button:hover{ background:rgba(224,123,95,0.8); } }
+/* een foto-verwijderknop toont het prullenbakje (_prullenbak.html) i.p.v.
+   het kruisje — alleen bij foto's, de documentenlijst laat .weg ongemoeid. */
+.weg button svg{ width:13px; height:13px; }
 
 .doclijst{ list-style:none; margin:0; padding:0; display:grid; gap:.5rem; }
 .doclijst li{

@@ -97,3 +97,45 @@
 {% endif %}
 
 {% if bijlagenformulier %}<script src="{% static 'js/bestandsveld.js' %}"></script>{% endif %}
+
+{% if in_dialoog %}
+  {% comment %} Zonder dit dient de browser een submit gewoon als een normale
+     post af: de héle pagina navigeert dan naar `actie`, en bij een foutieve
+     invoer land je op de kale no-javascript-terugvalpagina
+     (uren/uurblok_form.html) in plaats van dat de sheet openblijft met de
+     foutmelding erbij (zie uren.views.uurblok_nieuw). Met fetch posten we
+     zelf en zetten bij een fout alleen dit formulier terug — inclusief de
+     nieuwe foutmeldingen — zonder de sheet te sluiten. Bij een geslaagde post
+     stuurt de server een redirect; die volgt fetch vanzelf, en dan navigeren
+     we er alsnog gewoon naartoe zodat de agenda het nieuwe blok laat zien. {% endcomment %}
+  <script>
+    (function () {
+      var dialoog = document.currentScript.closest("dialog");
+      var formulier = dialoog.querySelector("form.uurblokformulier");
+      if (!formulier) return;
+      formulier.addEventListener("submit", function (gebeurtenis) {
+        gebeurtenis.preventDefault();
+        fetch(formulier.action, {
+          method: "POST",
+          body: new FormData(formulier),
+          headers: { "X-Requested-With": "XMLHttpRequest" },
+        })
+          .then(function (respons) {
+            if (respons.redirected) {
+              window.location.href = respons.url;
+              return null;
+            }
+            return respons.text();
+          })
+          .then(function (html) {
+            if (html === null) return;
+            dialoog.innerHTML = html;
+            window.voerScriptsUit(dialoog);
+          })
+          .catch(function () {
+            formulier.submit();   // terugval zonder fetch: gewone post/navigatie
+          });
+      });
+    })();
+  </script>
+{% endif %}

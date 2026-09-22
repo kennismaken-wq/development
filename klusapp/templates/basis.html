@@ -49,11 +49,12 @@
     </div>
 
     {% if messages %}
-      <ul class="meldingen">
+      <ul class="meldingen" role="status" aria-live="polite">
         {% for melding in messages %}
           <li class="melding {{ melding.tags }}">{{ melding }}</li>
         {% endfor %}
       </ul>
+      <script src="{% static 'js/meldingen.js' %}"></script>
     {% endif %}
 
     {% block inhoud %}{% endblock %}

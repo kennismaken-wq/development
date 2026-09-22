@@ -583,7 +583,13 @@ class UrenexportTest(TestCase):
         cls.maarten = Medewerker.objects.create_user(
             "maarten", password="x", first_name="Maarten", rol=Medewerker.Rol.EIGENAAR
         )
-        cls.klus = Klus.objects.create(naam="Tuin Vermeer", soort=Klus.Soort.AANLEG)
+        cls.klus = Klus.objects.create(
+            naam="Tuin Vermeer",
+            soort=Klus.Soort.AANLEG,
+            opdrachtgever="Fam. Vermeer",
+            adres="Dorpsstraat 12",
+            plaats="Maasdijk",
+        )
         for medewerker, dag, begin, eind in [
             (cls.sam, date(2026, 8, 3), time(8, 0), time(16, 30)),
             (cls.sam, date(2026, 8, 4), time(8, 0), time(12, 0)),
@@ -627,10 +633,14 @@ class UrenexportTest(TestCase):
             .order_by("medewerker__first_name", "datum", "begintijd")
         )
         blad = export.werkboek_bouwen(blokken, "Uren 08-2026").active
-        regels = [(rij[0].value, rij[5].value) for rij in blad.iter_rows(min_row=2)]
+        regels = [(rij[0].value, rij[7].value) for rij in blad.iter_rows(min_row=2)]
         self.assertIn(("Totaal Joep Bakker", 8.0), regels)
         self.assertIn(("Totaal Sam de Wit", 12.5), regels)
         self.assertEqual(regels[-1], ("Totaal alle medewerkers", 20.5))
+
+        eerste_urenregel = next(blad.iter_rows(min_row=2))
+        self.assertEqual(eerste_urenregel[3].value, "Fam. Vermeer")
+        self.assertEqual(eerste_urenregel[4].value, "Dorpsstraat 12, Maasdijk")
 
     def test_lege_maand_geeft_een_leeg_maar_geldig_bestand(self):
         self.client.force_login(self.maarten)
