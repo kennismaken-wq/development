@@ -20,10 +20,11 @@
     </button>
     {% for bijlage in foto_bijlagen %}
       <figure class="fotokaart">
-        <a href="{% url 'media_bestand' bijlage.bestand.name %}" target="_blank" rel="noopener">
+        <button type="button"
+                onclick="fotoPopupOpen('{% url 'media_bestand' bijlage.bestand.name %}', '{{ bijlage.toonnaam|escapejs }}', '{{ bijlage.toegevoegd_door.naam|default:"onbekend"|escapejs }} · {{ bijlage.datum|date:"j M" }}')">
           <img src="{% url 'media_bestand' bijlage.thumbnail.name|default:bijlage.bestand.name %}"
                alt="{{ bijlage.toonnaam }}" loading="lazy">
-        </a>
+        </button>
         <figcaption>
           {% if toon_klus and bijlage.klus %}
             <a href="{{ bijlage.klus.get_absolute_url }}" class="klus-badge">{{ bijlage.klus.naam }}</a>
@@ -48,3 +49,4 @@
 </div>
 
 {% include "klussen/_fotodialoog.html" %}
+{% include "klussen/_fotopopup.html" %}

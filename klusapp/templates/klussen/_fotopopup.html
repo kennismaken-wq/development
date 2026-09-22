@@ -1,0 +1,93 @@
+{% comment %} Popup die een foto uit het raster (of de slider op start.html)
+   vergroot toont: titel, wie/wanneer en downloaden/delen/sluiten eronder, in
+   plaats van rechtstreeks naar het kale mediabestand te linken. Eén gedeelde
+   dialoog per pagina — roep 'm aan met fotoPopupOpen(url, titel, meta) vanuit
+   elke fotoknop. {% endcomment %}
+<dialog id="foto-popup" class="foto-popup">
+  <div class="foto-popup-kaart glas">
+    <img id="foto-popup-img" src="" alt="">
+    <div class="foto-popup-info">
+      <p class="foto-popup-titel" id="foto-popup-titel"></p>
+      <p class="foto-popup-meta" id="foto-popup-meta"></p>
+    </div>
+    <div class="foto-popup-acties">
+      <a id="foto-popup-download" class="foto-popup-knop" href="" download aria-label="Downloaden" title="Downloaden">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="M7 11l5 5 5-5"/><path d="M5 21h14"/></svg>
+      </a>
+      {% comment %} Verborgen tot JS bevestigt dat de browser kan delen
+         (navigator.share) — op een telefoon is dat WhatsApp/Mail/AirDrop e.d.,
+         op een desktopbrowser zonder support blijft de knop weg. {% endcomment %}
+      <button type="button" id="foto-popup-delen" class="foto-popup-knop" aria-label="Delen" title="Delen" hidden>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V4"/><path d="M7 8l5-5 5 5"/><path d="M5 12v7a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-7"/></svg>
+      </button>
+      <button type="button" class="foto-popup-knop foto-popup-sluiten" aria-label="Sluiten" title="Sluiten" onclick="fotoPopupSluiten()">×</button>
+    </div>
+  </div>
+</dialog>
+<script>
+  (function () {
+    var dialoog = document.getElementById("foto-popup");
+    var img = document.getElementById("foto-popup-img");
+    var titelEl = document.getElementById("foto-popup-titel");
+    var metaEl = document.getElementById("foto-popup-meta");
+    var download = document.getElementById("foto-popup-download");
+    var delenKnop = document.getElementById("foto-popup-delen");
+
+    window.fotoPopupOpen = function (src, titel, meta) {
+      img.src = src;
+      img.alt = titel;
+      titelEl.textContent = titel;
+      metaEl.textContent = meta;
+      download.href = src;
+      dialoog.showModal();
+      // Twee frames wachten: showModal() zet display synchroon om, dus
+      // zonder die omweg ziet de browser geen verschil tussen "net getoond"
+      // en "open" en slaat de overgang naar .open-anim (app.css) over.
+      requestAnimationFrame(function () {
+        requestAnimationFrame(function () {
+          dialoog.classList.add("open-anim");
+        });
+      });
+    };
+
+    window.fotoPopupSluiten = function () {
+      dialoog.classList.remove("open-anim");
+      var klaar = function () {
+        dialoog.removeEventListener("transitionend", klaar);
+        dialoog.close();
+      };
+      dialoog.addEventListener("transitionend", klaar);
+      // Vangnet: geen transitionend (bv. prefers-reduced-motion) mag de
+      // dialoog niet voorgoed open laten staan.
+      setTimeout(function () {
+        if (dialoog.open) {
+          dialoog.removeEventListener("transitionend", klaar);
+          dialoog.close();
+        }
+      }, 300);
+    };
+
+    dialoog.addEventListener("click", function (e) {
+      if (e.target === this) fotoPopupSluiten();
+    });
+
+    if (navigator.share) {
+      delenKnop.hidden = false;
+      delenKnop.addEventListener("click", function () {
+        var titel = titelEl.textContent;
+        fetch(img.src)
+          .then(function (r) { return r.blob(); })
+          .then(function (blob) {
+            var bestand = new File([blob], (titel || "foto") + ".jpg", { type: blob.type || "image/jpeg" });
+            var data = (navigator.canShare && navigator.canShare({ files: [bestand] }))
+              ? { files: [bestand], title: titel }
+              : { title: titel, url: img.src };
+            return navigator.share(data);
+          })
+          .catch(function () {
+            // geannuleerd door de gebruiker, of delen zonder bestand mislukt: geen actie nodig
+          });
+      });
+    }
+  })();
+</script>

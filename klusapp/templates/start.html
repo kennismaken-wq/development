@@ -65,20 +65,17 @@
     <div class="fotoslider" id="fotoslider">
       {% for foto in recente_fotos %}
         <figure class="fotoslide">
-          <button type="button" onclick="fotoPopupOpen('{% url 'media_bestand' foto.bestand.name %}', '{{ foto.toonnaam|escapejs }}')">
+          <button type="button" onclick="fotoPopupOpen('{% url 'media_bestand' foto.bestand.name %}', '{{ foto.toonnaam|escapejs }}', '{{ foto.toegevoegd_door.naam|default:"onbekend"|escapejs }} · {{ foto.datum|date:"j M" }}')">
             <img src="{% url 'media_bestand' foto.thumbnail.name|default:foto.bestand.name %}"
                  alt="{{ foto.toonnaam }}" loading="lazy">
           </button>
         </figure>
       {% endfor %}
     </div>
-    <dialog id="foto-popup" class="foto-popup">
-      <img id="foto-popup-img" src="" alt="">
-    </dialog>
+    {% include "klussen/_fotopopup.html" %}
     <script>
       (function () {
         var slider = document.getElementById('fotoslider');
-        var popup = document.getElementById('foto-popup');
         var timer = null;
 
         function volgende() {
@@ -99,17 +96,9 @@
         slider.addEventListener('pointerup', function () { setTimeout(start, 4000); });
         slider.addEventListener('mouseenter', stop);
         slider.addEventListener('mouseleave', start);
-        popup.addEventListener('click', function (e) { if (e.target === this) this.close(); });
 
         if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) start();
       })();
-
-      function fotoPopupOpen(src, alt) {
-        var img = document.getElementById('foto-popup-img');
-        img.src = src;
-        img.alt = alt;
-        document.getElementById('foto-popup').showModal();
-      }
     </script>
   {% else %}
     <p class="leeg">Nog geen foto's toegevoegd.</p>
