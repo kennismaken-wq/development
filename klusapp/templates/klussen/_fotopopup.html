@@ -47,10 +47,7 @@
       <a id="foto-popup-download" class="foto-popup-knop" href="" download aria-label="Downloaden" title="Downloaden">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="M7 11l5 5 5-5"/><path d="M5 21h14"/></svg>
       </a>
-      {% comment %} Verborgen tot JS bevestigt dat de browser kan delen
-         (navigator.share) — op een telefoon is dat WhatsApp/Mail/AirDrop e.d.,
-         op een desktopbrowser zonder support blijft de knop weg. {% endcomment %}
-      <button type="button" id="foto-popup-delen" class="foto-popup-knop" aria-label="Delen" title="Delen" hidden>
+      <button type="button" id="foto-popup-delen" class="foto-popup-knop" aria-label="Delen" title="Delen">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V4"/><path d="M7 8l5-5 5 5"/><path d="M5 12v7a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-7"/></svg>
       </button>
     </div>
@@ -174,23 +171,14 @@
       if (e.target === this) fotoPopupSluiten();
     });
 
-    if (navigator.share) {
-      delenKnop.hidden = false;
-      delenKnop.addEventListener("click", function () {
-        var titel = titelEl.textContent;
-        fetch(img.src)
-          .then(function (r) { return r.blob(); })
-          .then(function (blob) {
-            var bestand = new File([blob], (titel || "foto") + ".jpg", { type: blob.type || "image/jpeg" });
-            var data = (navigator.canShare && navigator.canShare({ files: [bestand] }))
-              ? { files: [bestand], title: titel }
-              : { title: titel, url: img.src };
-            return navigator.share(data);
-          })
-          .catch(function () {
-            // geannuleerd door de gebruiker, of delen zonder bestand mislukt: geen actie nodig
-          });
-      });
-    }
+    // Downloaden en delen werken nog niet — de knoppen staan er al voor de
+    // vormgeving, maar de functie zelf komt pas in een volgende fase.
+    download.addEventListener("click", function (e) {
+      e.preventDefault();
+      alert("Downloaden kan nog niet. Deze functie komt in een volgende fase.");
+    });
+    delenKnop.addEventListener("click", function () {
+      alert("Delen kan nog niet. Deze functie komt in een volgende fase.");
+    });
   })();
 </script>
