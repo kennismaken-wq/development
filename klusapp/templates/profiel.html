@@ -14,7 +14,7 @@
     </a>
   </p>
 
-  <form method="post" id="gegevensformulier">
+  <form method="post" id="gegevensformulier"{% if bewerken %} class="bewerkt"{% endif %}>
     {% csrf_token %}
     <dl class="gegevens-blok">
       <div class="gegeven">
@@ -79,6 +79,7 @@
           // de gebruikersnaam blijft op slot: die verandert de werkgever
           if (veld.name) { veld.disabled = false; }
         });
+        formulier.classList.add('bewerkt');
         knop.hidden = true;
         opslaan.hidden = false;
         var eerste = formulier.querySelector('input:not([disabled])');

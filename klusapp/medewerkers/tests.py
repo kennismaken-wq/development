@@ -497,3 +497,10 @@ class MijnProfielTest(TestCase):
         )
         self.sam.refresh_from_db()
         self.assertTrue(self.sam.check_password("tuinbaas2026"))
+
+    def test_bewerkstand_is_zichtbaar_aan_het_formulier(self):
+        op_slot = self.client.get(reverse("mijn_profiel")).content.decode()
+        self.assertNotIn('class="bewerkt"', op_slot)
+
+        open_ = self.client.get(reverse("mijn_profiel") + "?bewerken=1").content.decode()
+        self.assertIn('class="bewerkt"', open_)

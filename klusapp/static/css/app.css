@@ -740,23 +740,36 @@ input[type=time]::-webkit-calendar-picker-indicator{ filter:invert(1); opacity:.
    gegevens (geen rand, geen invulvak), open als een gewoon formulier — zo
    verspringt er niets als je op wijzigen klikt. */
 .gegevens-blok{ margin:0; display:grid; gap:.2rem; }
-.gegeven{ display:grid; gap:.1rem; padding:.45rem 0; border-bottom:1px solid rgba(255,255,255,0.07); }
-.gegeven:last-child{ border-bottom:0; }
+.gegeven{ display:grid; gap:.25rem; padding:.35rem 0; }
 .gegeven dt label{
   margin:0; font-size:10.5px; font-weight:600; letter-spacing:.07em;
   text-transform:uppercase; color:rgba(255,255,255,0.5);
 }
 .gegeven dd{ margin:0; }
-/* De algemene invoerregel hierboven telt vier :not()-voorwaarden en weegt
+/* Op slot houdt een veld dezelfde vorm als tijdens het bewerken — zelfde
+   bubbel, zelfde maat — maar rustiger van kleur. Zo verspringt er niets als
+   je gaat wijzigen en zie je aan de kleur in welke stand je staat.
+
+   De algemene invoerregel hierboven telt vier :not()-voorwaarden en weegt
    daardoor zwaarder dan een losse klasse; die voorwaarden staan hier dus ook,
-   anders wint hij en houd je toch een invulvak. */
+   anders wint hij. */
 .gegeven input:disabled:not([type=checkbox]):not([type=radio]):not([type=color]):not([type=file]),
 .gegeven select:disabled,
 .gegeven textarea:disabled{
-  background:none; border-color:transparent; padding-left:0; padding-right:0;
+  background:rgba(255,255,255,0.04); border-color:rgba(255,255,255,0.09);
   color:#fff; opacity:1; -webkit-text-fill-color:#fff;   /* Safari dimt anders */
   cursor:default;
 }
+
+/* Aan het wijzigen: de velden lichten op in de accentkleur. Dat is het enige
+   verschil met de leesstand, en genoeg om het in één oogopslag te zien. */
+.bewerkt .gegeven input:not(:disabled):not([type=checkbox]):not([type=radio]):not([type=color]):not([type=file]),
+.bewerkt .gegeven select:not(:disabled),
+.bewerkt .gegeven textarea:not(:disabled){
+  background:rgba(var(--accent-rgb),0.10);
+  border-color:rgba(var(--accent-rgb),0.45);
+}
+.bewerkt .gegeven dt label{ color:var(--hi); }
 .gegeven input[type=checkbox]:disabled{ opacity:.6; }
 .gegeven input[type=color]:disabled{ width:44px; padding:0; border:1px solid rgba(255,255,255,0.2); }
 
