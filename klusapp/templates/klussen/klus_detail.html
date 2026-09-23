@@ -52,7 +52,7 @@
     </div>
 
     <div class="tabblad-paneel" data-tab="uren" hidden>
-      {% if gewerkt %}
+      {% if gewerkt and not alleen_eigen_uren %}
         <div class="sectiekop-rij alleen-actie" style="justify-content:flex-end">
           <a class="knop-stil" href="{% url 'klus_uren_export' klus.pk %}">Exporteren</a>
         </div>
@@ -60,7 +60,11 @@
       {% if gewerkt %}
         {% comment %} Wie hier staat is afgeleid uit de geschreven uren, niet uit een
            toewijzing: er is geen veld waarin staat wie op een klus hoort. Zie
-           uren/totalen.py. {% endcomment %}
+           uren/totalen.py.
+
+           Een medewerker krijgt hier alleen zijn eigen regel (SPEC §2); de
+           filtering zelf gebeurt in klussen.views.klus_detail, want velden
+           weglaten in een template is geen rechtencontrole. {% endcomment %}
         <ul class="urenlijst">
           {% for rij in gewerkt %}
             <li>
@@ -76,13 +80,19 @@
               <span class="uren">{{ rij.uren }}</span>
             </li>
           {% endfor %}
-          <li class="totaalregel">
-            <span class="ur-bol leeg-bol"></span>
-            <span class="wie">Totaal</span>
-            <span class="wanneer"></span>
-            <span class="uren">{{ totaal.uren }}</span>
-          </li>
+          {% comment %} Staat er maar één regel omdat je alleen je eigen uren ziet,
+             dan zou de totaalregel dat getal letterlijk herhalen. {% endcomment %}
+          {% if not alleen_eigen_uren %}
+            <li class="totaalregel">
+              <span class="ur-bol leeg-bol"></span>
+              <span class="wie">Totaal</span>
+              <span class="wanneer"></span>
+              <span class="uren">{{ totaal.uren }}</span>
+            </li>
+          {% endif %}
         </ul>
+      {% elif alleen_eigen_uren %}
+        <p class="leeg">Je hebt nog geen uren op deze klus geschreven.</p>
       {% else %}
         <p class="leeg">Nog niemand heeft uren op deze klus geschreven.</p>
       {% endif %}

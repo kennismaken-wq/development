@@ -405,13 +405,22 @@ def klus_detail(request, pk):
     klus.voorbeeld_items, klus.voorbeeld_meer = voorbeeld.items_voor_stapel(klus)
     klus.hero_items = [None] * (3 - len(klus.voorbeeld_items)) + klus.voorbeeld_items
     bijlagen = klus.bijlagen.select_related("toegevoegd_door").order_by("-toegevoegd_op")
+    # Het volledige dossier mag iedereen zien, de uren van je collega's niet:
+    # "een medewerker ziet alleen zijn eigen uren, maar wél het volledige
+    # klusdossier" (SPEC §2). Wie op een klus heeft gewerkt is de vraag van
+    # contractpunt 4 en dus van de eigenaar; een medewerker houdt hier zijn
+    # eigen regel over.
     gewerkt = totalen.per_medewerker_op_klus(klus)
+    alleen_eigen_uren = not request.user.is_eigenaar
+    if alleen_eigen_uren:
+        gewerkt = [rij for rij in gewerkt if rij["medewerker"] == request.user]
     return render(
         request,
         "klussen/klus_detail.html",
         {
             "klus": klus,
             "gewerkt": gewerkt,
+            "alleen_eigen_uren": alleen_eigen_uren,
             "totaal": totalen.totaal_van(gewerkt),
             "foto_posts": groepeer_in_posts(los for los in bijlagen if los.is_foto),
             "document_bijlagen": [los for los in bijlagen if not los.is_foto],
@@ -423,14 +432,17 @@ def klus_detail(request, pk):
     )
 
 
-@login_required
+@alleen_eigenaar
 def klus_uren_export(request, pk):
     """De uren van dit klusdossier als Excel-bestand, per medewerker.
 
     Zelfde bestandsvorm als de maandelijkse boekhoud-export
     (uren.views.urenexport), nu gefilterd op één klus in plaats van een
-    periode. Iedereen die het dossier mag zien mag ook dit downloaden — de
-    lijst "Gewerkte uren" op dat dossier toont dezelfde uren al op het scherm.
+    periode.
+
+    Alleen de eigenaar: dit bestand bevat de uren van álle medewerkers op deze
+    klus, en die mag een medewerker niet inzien (SPEC §2). Op het dossier zelf
+    ziet hij daarom ook alleen zijn eigen regel — zie klus_detail.
     """
     from uren.models import Uurblok
 

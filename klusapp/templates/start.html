@@ -9,16 +9,14 @@
      als twee losse tegels onder de apps — ver onder de vouw, precies waar je
      er niets aan hebt.
 
-     Tijdelijk afgedekt (23-09-2026, op verzoek van Thijmen) met een donkere
-     overlay + witte tekst: dit hoort bij fase 2, niet bij fase 1. View en
-     berekening (uren/totalen.py:maand_heatmap, medewerkers/views.py:start)
-     blijven ongewijzigd — weer aanzetten is alleen deze wrapper-div en het
-     label eronder weghalen, niet opnieuw bouwen.
+     Stond tussen 23-09 en 24-09-2026 afgedekt met een label "Komt in fase 2".
+     Dat was onjuist: contract artikel 2 punt 3 vraagt een overzicht van
+     gewerkte uren "per week en per maand" in fáse 1, en de afdekking zette er
+     bovendien pointer-events:none op — waarmee de wegwijzer naar het
+     maandoverzicht zelf ook dood was. Niet opnieuw afdekken zonder dat punt 3
+     ergens anders staat.
   {% endcomment %}
-  <div class="fase2-widget">
-    <span class="fase2-label">Komt in fase 2</span>
-    {% include "uren/_maandwidget.html" %}
-  </div>
+  {% include "uren/_maandwidget.html" %}
 
   {% comment %} Daarna waar je nu al middenin zit — je klussen — daarna pas de
      apps: dat is waar je naar kijkt als je toch al hier bent, vóór de vraag

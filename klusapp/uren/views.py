@@ -3,6 +3,7 @@ from datetime import date, time, timedelta
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
+from django.db.models.functions import Lower
 from django.http import Http404, HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
@@ -147,10 +148,13 @@ def _maand_weergave(request, dag, vandaag):
     # Zelfde som als de maandwidget op het startscherm — zie uren/totalen.py.
     weken, minuten_per_dag = totalen.maand_per_dag(request.user, eerste_van_maand)
 
+    def hoort_bij_maand(datum):
+        return (datum.year, datum.month) == (eerste_van_maand.year, eerste_van_maand.month)
+
     def dagcel(datum):
         return {
             "datum": datum,
-            "in_maand": datum.month == eerste_van_maand.month,
+            "in_maand": hoort_bij_maand(datum),
             "is_vandaag": datum == vandaag,
             "totaal": kalender.als_uren(minuten_per_dag[datum]) if datum in minuten_per_dag else None,
         }
@@ -165,7 +169,13 @@ def _maand_weergave(request, dag, vandaag):
             "vorige": _maand_erbij(eerste_van_maand, -1),
             "volgende": _maand_erbij(eerste_van_maand, 1),
             "is_huidige_periode": (eerste_van_maand.year, eerste_van_maand.month) == (vandaag.year, vandaag.month),
-            "totaal_waarde": kalender.als_uren(sum(minuten_per_dag.values())),
+            # Alleen de dagen van déze maand. `minuten_per_dag` loopt over het
+            # hele raster, dus inclusief de rand-dagen uit de vorige en
+            # volgende maand — die horen wel in het rooster maar niet in het
+            # totaal dat er als "deze maand" boven staat.
+            "totaal_waarde": kalender.als_uren(
+                sum(minuten for datum, minuten in minuten_per_dag.items() if hoort_bij_maand(datum))
+            ),
             "vandaag": vandaag,
         },
     )
@@ -581,7 +591,16 @@ def urenexport(request):
             "gekozen_maand": gekozen_maand,
             "medewerker_pk": medewerker_pk,
             "maandopties": _maandopties(vandaag),
-            "medewerkers": Medewerker.objects.filter(rol=Medewerker.Rol.MEDEWERKER),
+            # Iedereen die uren kán schrijven, niet alleen rol "medewerker":
+            # Maarten doet zelf het onderhoud — zes tot acht adressen op een
+            # dag — dus zijn uren staan gewoon in het bestand. Zonder hem in
+            # deze lijst is hij de enige die niet op zichzelf kan filteren.
+            # Ook wie uit dienst is blijft staan: je exporteert ook maanden
+            # van vóór zijn vertrek. Zelfde volgorde als de regels in het
+            # werkboek (zie de order_by op `blokken` hierboven).
+            "medewerkers": Medewerker.objects.order_by(
+                Lower("first_name"), Lower("last_name"), "username"
+            ),
             "totalen": totalen,
         },
     )

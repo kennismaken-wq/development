@@ -1137,15 +1137,19 @@ class GewerkteUrenOpKlusTest(TestCase):
         self.assertEqual(totalen.per_medewerker_op_klus(self.klus), [])
         self.assertEqual(totalen.totaal_van([])["uren"], "0:00")
 
-    def test_medewerker_ziet_de_uren_van_collegas_in_het_dossier(self):
-        # SPEC 2: een medewerker ziet het volledige klusdossier. "Wie op welke
-        # klus heeft gewerkt" hoort daarbij; zijn eigen urenoverzicht is een
-        # ander scherm.
+    def test_medewerker_ziet_de_uren_van_collegas_niet_in_het_dossier(self):
+        # Omgedraaid op 24-09-2026. SPEC §2 heeft twee helften: "een medewerker
+        # ziet alleen zijn eigen uren, maar wél het volledige klusdossier".
+        # Dit stond eerst op de tweede helft ("wie op welke klus heeft gewerkt
+        # hoort bij het dossier"); nu op de eerste, want die gaat specifiek
+        # over uren. Het gespreksverslag met Maarten geeft de doorslag: "je
+        # wil niet dat iedereen ziet hoeveel uur iedereen werkt". De rest van
+        # het dossier — documenten, foto's, adres — blijft voor iedereen.
         self.blok(self.joep, date(2026, 9, 7), 8, 16)
         self.client.force_login(self.sam)
         antwoord = self.client.get(self.klus.get_absolute_url())
-        self.assertContains(antwoord, "Joep")
-        self.assertContains(antwoord, "8:00")
+        self.assertNotContains(antwoord, "Joep")
+        self.assertContains(antwoord, "Tuin Vermeer")
 
     def test_functie_staat_naast_de_naam(self):
         self.blok(self.sam, date(2026, 9, 7), 8, 16)
@@ -1398,3 +1402,65 @@ class KlusKiezerBijFotoPostenTest(TestCase):
         html = self.html()
         self.assertIn('class="klus-kiezer klus-kiezer-veld" data-pillen="soort,staat"', html)
         self.assertIn("js/kluskiezer.js", html)
+
+
+class KlusdossierUrenRechtenTest(TestCase):
+    """SPEC §2: "een medewerker ziet alleen zijn eigen uren, maar wél het
+    volledige klusdossier". Het tabblad Uren op een dossier toonde tot
+    24-09-2026 de totalen van alle collega's, en `/uren-export/` gaf ze als
+    Excel aan iedereen die was ingelogd."""
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.maarten = Medewerker.objects.create_user(
+            "maarten", password="x", first_name="Maarten", rol=Medewerker.Rol.EIGENAAR
+        )
+        cls.sam = Medewerker.objects.create_user("sam", password="x", first_name="Sam")
+        cls.joep = Medewerker.objects.create_user("joep", password="x", first_name="Joep")
+        cls.klus = Klus.objects.create(naam="Tuin Vermeer", soort=Klus.Soort.AANLEG)
+        for wie in (cls.sam, cls.joep):
+            Uurblok.objects.create(
+                medewerker=wie, klus=cls.klus, datum=date(2026, 9, 7),
+                begintijd=time(8, 0), eindtijd=time(16, 0),
+            )
+
+    def dossier(self, wie):
+        self.client.force_login(wie)
+        return self.client.get(reverse("klus_detail", args=[self.klus.pk]))
+
+    def test_medewerker_ziet_alleen_zijn_eigen_regel(self):
+        antwoord = self.dossier(self.sam)
+        namen = [rij["medewerker"] for rij in antwoord.context["gewerkt"]]
+        self.assertEqual(namen, [self.sam])
+        self.assertNotContains(antwoord, "Joep")
+
+    def test_medewerker_zonder_uren_krijgt_geen_lijst_van_collegas(self):
+        antwoord = self.dossier(self.maarten)  # eerst: de eigenaar ziet ze wel
+        self.assertEqual(len(antwoord.context["gewerkt"]), 2)
+
+        buitenstaander = Medewerker.objects.create_user("wim", password="x", first_name="Wim")
+        antwoord = self.dossier(buitenstaander)
+        self.assertEqual(antwoord.context["gewerkt"], [])
+        self.assertContains(antwoord, "Je hebt nog geen uren op deze klus geschreven.")
+
+    def test_eigenaar_ziet_iedereen_met_een_totaalregel(self):
+        antwoord = self.dossier(self.maarten)
+        self.assertFalse(antwoord.context["alleen_eigen_uren"])
+        self.assertEqual(antwoord.context["totaal"]["uren"], "16:00")
+        self.assertContains(antwoord, "Joep")
+
+    def test_exportknop_staat_er_alleen_voor_de_eigenaar(self):
+        url = reverse("klus_uren_export", args=[self.klus.pk])
+        self.assertContains(self.dossier(self.maarten), url)
+        self.assertNotContains(self.dossier(self.sam), url)
+
+    def test_uren_export_van_een_klus_is_alleen_voor_de_eigenaar(self):
+        url = reverse("klus_uren_export", args=[self.klus.pk])
+        self.client.force_login(self.sam)
+        # 404 en geen 403: zelfde lijn als de maandexport op /export/.
+        self.assertEqual(self.client.get(url).status_code, 404)
+
+        self.client.force_login(self.maarten)
+        antwoord = self.client.get(url)
+        self.assertEqual(antwoord.status_code, 200)
+        self.assertTrue(antwoord.content.startswith(b"PK"))

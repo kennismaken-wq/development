@@ -76,6 +76,13 @@ reden.
   maar niet bewerkbaar, met een bewerkknop. Geen tussenvenster.
 - **Bijlagen hangen aan het uurblok**, niet alleen aan de klus, en hebben een eigen
   toelichting. "Toegevoegd door" en "wanneer" gaan automatisch.
+- **"Alleen zijn eigen uren" wint van "het volledige klusdossier."** De rollen-regel
+  in §2 heeft twee helften die elkaar raken op één plek: het tabblad Uren van een
+  klusdossier. Daar ziet een medewerker sinds 24-09-2026 alleen zijn eigen regel, en
+  is de Excel-export van die klus voor de eigenaar. De rest van het dossier —
+  documenten, foto's, adres, opdrachtgever — blijft voor iedereen. Reden: de eerste
+  helft gaat specifiek over uren, en Maarten en wij waren het er in het gesprek over
+  eens dat niet iedereen moet zien hoeveel uur iedereen werkt.
 - **Geen hinttekst** in formulieren en menu's. De klant vond het te druk.
 - **Huisstijl** `#1d1d1b` en `#95bf1d`.
 - **Bedragen als hele centen** opslaan, nooit als kommagetal.

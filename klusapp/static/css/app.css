@@ -1418,24 +1418,6 @@ dialog.foto-invoegen .uploadveld, dialog.uren-invoegen .uurblokformulier, dialog
   .maandwidget-legenda .heatvak{ width:8px; }
 }
 
-/* ══════════ STARTSCHERM: FASE 2-WIDGET (tijdelijk uitgezet) ══════════
-   De maandwidget hoort bij fase 2, niet bij fase 1 — in plaats van 'm weg te
-   halen krijgt hij hier een donkere overlay met witte tekst eroverheen, zodat
-   meteen duidelijk is dat dit geen actief cijfer is. Weer aanzetten is straks
-   alleen deze sectie en het label in start.html schrappen, niet opnieuw
-   bouwen — de widget zelf (kleur, cijfers, heatmap) blijft ongewijzigd
-   eronder zitten. */
-.fase2-widget{ position:relative; margin-bottom:.4rem; border-radius:22px; overflow:hidden; }
-.fase2-widget .maandwidget{ margin-bottom:0; pointer-events:none; filter:grayscale(1) brightness(.4); }
-.fase2-label{
-  position:absolute; inset:0; z-index:1;
-  display:flex; align-items:center; justify-content:center;
-  padding:1rem; text-align:center;
-  background:rgba(0,0,0,0.45);
-  color:#fff; font-family:'Fraunces',serif; font-style:italic; font-weight:600;
-  font-size:1.15rem; letter-spacing:.01em;
-}
-
 .fotoslider{
   display:flex; gap:.7rem; overflow-x:auto; padding-bottom:.3rem;
   scroll-snap-type:x mandatory; -webkit-overflow-scrolling:touch;

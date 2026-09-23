@@ -223,6 +223,31 @@ class UrenSchrijvenTest(TestCase):
         self.assertEqual(antwoord.context["vorige"], date(2026, 8, 1))
         self.assertEqual(antwoord.context["volgende"], date(2026, 10, 1))
 
+    def test_maandtotaal_telt_de_randdagen_niet_mee(self):
+        """Het raster van september 2026 loopt van maandag 31 augustus t/m
+        zondag 4 oktober. Die rand-dagen horen in het rooster, maar niet in
+        het getal dat er als "deze maand" boven staat — anders wijkt het af
+        van de export die de boekhouder krijgt."""
+        Uurblok.objects.create(
+            medewerker=self.sam, klus=self.klus, datum=date(2026, 8, 31),
+            begintijd=time(8, 0), eindtijd=time(16, 0),
+        )
+        Uurblok.objects.create(
+            medewerker=self.sam, klus=self.klus, datum=date(2026, 10, 2),
+            begintijd=time(8, 0), eindtijd=time(16, 0),
+        )
+        Uurblok.objects.create(
+            medewerker=self.sam, klus=self.klus, datum=date(2026, 9, 1),
+            begintijd=time(8, 0), eindtijd=time(12, 0),
+        )
+        antwoord = self.client.get("/uren/?weergave=maand&dag=2026-09-15")
+        self.assertEqual(antwoord.context["totaal_waarde"], "4:00")
+        # De rand-dagen staan er wél, alleen gemarkeerd als buiten de maand.
+        raster = antwoord.context["maandraster"]
+        rand = next(cel for week in raster for cel in week if cel["datum"] == date(2026, 8, 31))
+        self.assertFalse(rand["in_maand"])
+        self.assertEqual(rand["totaal"], "8:00")
+
 
 class UrenCompacteKopTest(TestCase):
     """De compacte kop (dropdown i.p.v. drie knoppen, swipe-doelen, "+"-knop
@@ -653,6 +678,22 @@ class UrenexportTest(TestCase):
         antwoord = self.client.get(f"/export/?maand=2026-08&medewerker={self.joep.pk}")
         namen = [rij["medewerker"].username for rij in antwoord.context["totalen"]]
         self.assertEqual(namen, ["joep"])
+
+    def test_de_eigenaar_staat_zelf_ook_in_het_filter(self):
+        """Maarten doet zelf het onderhoud, dus zijn uren zitten in het
+        bestand. Stond hij niet in de keuzelijst, dan was hij de enige die
+        niet op zichzelf kon filteren."""
+        Uurblok.objects.create(
+            medewerker=self.maarten, klus=self.klus, datum=date(2026, 8, 5),
+            begintijd=time(8, 0), eindtijd=time(11, 0),
+        )
+        self.client.force_login(self.maarten)
+        antwoord = self.client.get("/export/?maand=2026-08")
+        self.assertIn(self.maarten, list(antwoord.context["medewerkers"]))
+
+        gefilterd = self.client.get(f"/export/?maand=2026-08&medewerker={self.maarten.pk}")
+        totalen = {rij["medewerker"].username: rij["totaal"] for rij in gefilterd.context["totalen"]}
+        self.assertEqual(totalen, {"maarten": "3:00"})
 
 
 class DecimaleUrenTest(TestCase):
