@@ -1,7 +1,11 @@
 # Vragen aan Maarten — bellen in week 1
 
-Zes vragen die de bouw van fase 1 echt verschuiven. Ze komen uit SPEC §7 en uit de
-contractreview (SPEC §8). Thijmen belt.
+Vragen die de bouw van fase 1 echt verschuiven. Ze komen uit SPEC §7, uit de
+contractreview (SPEC §8) en uit het gespreksverslag. Thijmen belt.
+
+**Nog openstaand (24-09-2026):** 2, 3, 4, 6, 7, 8, 9 en 10. En: Maarten zou zijn eigen
+lijst met negen onderdelen opsturen ("die 12 kantjes") — die is nooit binnengekomen.
+Vraag die er nog een keer bij; we bouwen nu op het verslag alleen.
 
 Bij elke vraag staat wat we bouwen als het antwoord uitblijft, zodat het gesprek geen
 blokkade wordt. Vul het antwoord hier in, met de datum — dan weet de ander waar hij aan
@@ -90,7 +94,9 @@ waarschijnlijk binnen. Kost ongeveer 2 uur.
 **Als er geen antwoord komt:** we bouwen het, maar pas nadat de negen contractpunten
 staan.
 
-**Antwoord:**
+**Antwoord:** — (nog geen antwoord, maar inmiddels ingehaald door de bouw: `/medewerkers/`
+bestaat sinds september 2026 en kan toevoegen, bewerken, wachtwoord zetten en uit dienst
+zetten. De vraag blijft staan als bevestiging, niet meer als beslissing.)
 
 ---
 
@@ -168,6 +174,25 @@ klus staat, maar laat je bewust doorgaan — de keuze is aan Maarten, niet aan o
 misgaat (per ongeluk een tweede dossier), en de rest blijft zijn beslissing.
 
 **Antwoord:**
+
+---
+
+## 10. Wie mag de offerte met prijzen zien?
+
+**Vraag:** Je uploadt je offerte als PDF bij een klus. Mogen de mannen die openen zoals
+hij is, of moeten de prijzen eruit — of hoort zo'n document alleen bij jou?
+
+**Waarom het uitmaakt:** je zei het zelf in het gesprek ("dan wil ik even over nadenken
+van hey, wie mag wat zien... of kan ik een PDF erin gooien en dat die automatisch alle
+prijzen eruit filtert"). Vandaag ziet iedereen alles: artikel 2 zegt dat een medewerker
+het *volledige* klusdossier mag inzien, dus dat is zoals het hoort — maar in die offerte
+staat wat jij aan de klant rekent, en dat is iets anders dan een tekening.
+
+Prijzen automatisch wegfilteren uit een PDF is geen kleine ingreep en geen zekerheid;
+een document als "alleen voor de eigenaar" markeren is dat wel (~2 uur).
+
+**Als er geen antwoord komt:** het blijft zoals het is. Maar dan wél benoemen bij
+oplevering, zodat het geen verrassing is de eerste keer dat iemand een offerte opent.
 
 ---
 

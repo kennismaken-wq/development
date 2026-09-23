@@ -23,10 +23,21 @@ echte bouw, en die draait live op develop.handigerai.nl.
 
 **Sinds 16-09-2026 hebben alle negen contractpunten van fase 1 een werkend
 scherm en staan ze live.** `nog_te_bouwen` in `config/urls.py` is leeg en geen
-tegel staat meer op `in_aanbouw`. Wat bewust nog open staat: de eigenaar kan zelf
-geen medewerkers toevoegen of uit dienst zetten (vraag 5 aan Maarten), en de
-productiepunten in [docs/DEPLOY.md](docs/DEPLOY.md) — een échte off-site back-up
-voorop. **Per contractpunt staat de stand in [CONTEXT.md](CONTEXT.md) §1.**
+tegel staat meer op `in_aanbouw`. Op 24-09-2026 is de lijst nagelopen tegen
+artikel 2 én tegen het gespreksverslag met Maarten; de negen punten staan.
+**Per contractpunt staat de stand in [CONTEXT.md](CONTEXT.md) §1.**
+
+Wat nog open staat, is geen contractpunt maar komt wel uit de contractreview
+(SPEC §8) en uit dat gesprek:
+
+- De productiepunten in [docs/DEPLOY.md](docs/DEPLOY.md) — een échte off-site
+  back-up voorop. De klusfoto's bestaan nergens anders.
+- Data-export bij beëindiging en een periode op slot kunnen zetten.
+- Vier vragen in [docs/VRAGEN-MAARTEN.md](docs/VRAGEN-MAARTEN.md) hebben nog
+  geen antwoord, en er staat er sinds 24-09 een tiende bij: wie mag de
+  offerte-PDF met prijzen zien?
+- De lijst met negen onderdelen die Maarten zelf zou opsturen, is nooit
+  binnengekomen. We bouwen tot nu toe op het gespreksverslag.
 
 Houd die twee documenten bij als je iets aflevert. Ze liepen in september 2026
 achter op de code, en de volgende die eraan begon heeft daardoor werk gepland dat

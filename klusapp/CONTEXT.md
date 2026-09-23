@@ -31,6 +31,13 @@ Thijmen weer volledig verwijderd — route, view, template, menutegel, tests en 
 Contractpunt 3 heeft dus weer geen scherm; zie SPEC.md voor wat artikel 2 daar
 verplicht.
 
+**Bijgewerkt 24-09-2026: contractpunt 3 staat er weer, nu binnen "Uren schrijven".**
+Het aparte scherm van F2 is niet teruggebouwd; in plaats daarvan heeft `mijn_uren`
+sinds 18-09 drie weergaven (dag/week/maand, zie `../CLAUDE.md`), elk met het totaal
+van die periode erboven. Dat is wat artikel 2 punt 3 vraagt — "gewerkte uren per week
+en per maand" — plus de maandwidget op het startscherm als ingang. Bouw er dus geen
+vierde overzichtsscherm bij zonder dat eerst af te stemmen.
+
 **Bijgewerkt 23-09-2026: het aanmaakformulier van een klus volgt nu het onderscheid
 eenmalig/onderhoud.** Tot nu toe was `Klus.soort` alleen een badge — het stond in het
 model vanaf migratie 0001, maar geen enkel scherm deed er iets mee behalve het tonen
@@ -148,13 +155,36 @@ schrijft zijn opties nog steeds zelf in de template en blijft op `data-scope`.
 |---|---|---|---|
 | 1 | Urenregistratie (klus, tijdblok, toelichting, **foto's**) | 🟢 100% | — foto's bij het uurblok en view-first detail zijn af (F1) |
 | 2 | Klusdossier per klus | 🟢 100% | — lijst, detail, aanmaken/bewerken, uploads |
-| 3 | Overzicht per medewerker week **en maand** | 🔴 verwijderd | — F2 is op 17-09-2026 weer weggehaald, geen scherm meer |
+| 3 | Overzicht per medewerker week **en maand** | 🟢 100% | — zit sinds 18-09 in `mijn_uren` als dag/week/maand-weergave, elk met periodetotaal; maandwidget op het startscherm als ingang |
 | 4 | Beheerdersoverzicht / planbord | 🟢 100% | — `/planbord/`, vaste eerste kolom op mobiel (F3) |
 | 5 | Fotodropbox | 🟢 100% | — raster, zoeken, filter per klus |
 | 6 | Urenexport voor de boekhouder | 🟢 100% | — Excel per kalendermaand, getest (antwoord Maarten 15-09) |
 | 7 | Aanwezigheidsregistratie | 🟢 100% | — `/aanwezigheid/`, groen/rood/onbekend (F4) |
-| 8 | Inlogbeheer rolgebaseerd | 🟡 ~80% | Eigenaar kan zelf geen medewerker toevoegen/uit dienst zetten — bewust uitgesteld, vraag 5 staat nog open bij Maarten |
+| 8 | Inlogbeheer rolgebaseerd | 🟢 100% | — `/medewerkers/`: toevoegen, bewerken, wachtwoord zetten, uit dienst. Vraag 5 aan Maarten is daarmee ingehaald |
 | 9 | Loonstrook-snelkoppeling | 🟢 100% | Klaar, iOS/Android afgehandeld, getest |
+
+De tabel is op 24-09-2026 nagelopen tegen artikel 2 van het contract én tegen het
+gespreksverslag met Maarten. Punt 3 en 8 stonden ten onrechte op rood/geel; dat is
+hierboven rechtgezet. **Houd hem bij**: iemand heeft eerder werk ingepland dat al af
+was omdat deze tabel achterliep op de code.
+
+Vier dingen die bij diezelfde controle boven water kwamen en meteen zijn opgelost:
+
+1. **Het maandtotaal telde de rand-dagen mee.** `_maand_weergave` somde het hele
+   kalenderraster op — voor september 2026 dus 31 augustus t/m 4 oktober. Nu alleen
+   de dagen van de maand zelf, zoals `totalen.maand_heatmap` al deed.
+2. **Elke medewerker zag de uren van zijn collega's** op het tabblad Uren van een
+   klusdossier, en kon ze via `/klussen/<pk>/uren-export/` als Excel downloaden.
+   Beide gingen alleen langs `@login_required`. Een medewerker houdt nu zijn eigen
+   regel over; de klus-export is `@alleen_eigenaar`. SPEC §2 zegt het letterlijk, en
+   in het gesprek met Maarten kwam het ook langs ("je wil niet dat iedereen ziet
+   hoeveel uur iedereen werkt").
+3. **De maandwidget op het startscherm stond afgedekt met "Komt in fase 2"** — met
+   `pointer-events:none`, dus de wegwijzer naar het maandoverzicht was ook dood.
+   Punt 3 is fase 1; de afdekking is weg.
+4. **De eigenaar ontbrak in het filter van de urenexport** (`rol=MEDEWERKER`). Maarten
+   schrijft zelf uren — onderhoud, zes tot acht adressen per dag — dus hij stond wél
+   in het bestand maar kon niet op zichzelf filteren.
 
 Productie: draait op Postgres met een nachtelijke dump (restore één keer echt
 getest). Wat daar nog open staat — een échte off-site back-up, X-Accel en de
@@ -195,6 +225,13 @@ zet 'm in de `urls.py` van je eigen app, en haal de vlag `in_aanbouw` uit de teg
 | `/planbord/` | `planbord` | planbord eigenaar | F3 Floris |
 | `/aanwezigheid/` | `aanwezigheid` | groen/rood | F4 Floris |
 | `/export/` | `urenexport` | boekhouder | T3 Thijmen |
+| `/klussen/<pk>/uren-export/` | `klus_uren_export` | uren van één klus als Excel | ✅ af — alleen eigenaar |
+| `/medewerkers/` | `medewerkers` | ploeglijst, alleen eigenaar | ✅ af |
+| `/medewerkers/nieuw/` | `medewerker_nieuw` | | ✅ af |
+| `/medewerkers/<pk>/` | `medewerker_bewerken` | | ✅ af |
+| `/medewerkers/<pk>/wachtwoord/` | `medewerker_wachtwoord` | | ✅ af |
+| `/medewerkers/<pk>/dienst/` | `medewerker_dienst` | uit/in dienst zetten | ✅ af |
+| `/mijn-profiel/` | `mijn_profiel` | eigen gegevens + wachtwoord | ✅ af |
 
 ## 3. Werkafspraken
 
