@@ -14,7 +14,14 @@
   {% csrf_token %}
   {% if formulier.klus %}
     <label for="{{ formulier.klus.id_for_label }}">{{ formulier.klus.label }}</label>
-    {{ formulier.klus }}
+    {% comment %} Zoekbare kiezer i.p.v. een kale keuzelijst — zelfde widget als
+       op de Galerij en bij het uren schrijven (static/js/kluskiezer.js pakt
+       deze wrapper op aan data-pillen). Hier twee rijen pillen: dit is de
+       enige klussenlijst in de app waar ook de afgeronde klussen in staan, dus
+       zowel soort (Alle/Eenmalig/Onderhoud) als staat (Alle/Actief/Afgerond).
+       De soort en de staat per optie komen uit klussen.forms.KlusSelect.
+       Zonder javascript blijft de <select> gewoon staan. {% endcomment %}
+    <div class="klus-kiezer klus-kiezer-veld" data-pillen="soort,staat" data-knoplabel="Kies een klus">{{ formulier.klus }}</div>
   {% elif klus_pk %}
     <input type="hidden" name="klus" value="{{ klus_pk }}">
   {% endif %}
@@ -39,3 +46,7 @@
 </form>
 {% load static %}
 <script src="{% static 'js/bestandsveld.js' %}"></script>
+{% comment %} Bouwt de klus-kiezer hierboven. Het script zoekt zelf de wrappers
+   met data-pillen op en is bestand tegen twee keer draaien, dus het maakt niet
+   uit dat de Galerij het ook al voor zijn eigen filter laadt. {% endcomment %}
+{% if formulier.klus %}<script src="{% static 'js/kluskiezer.js' %}"></script>{% endif %}

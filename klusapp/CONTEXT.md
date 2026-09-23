@@ -105,6 +105,8 @@ popover als op de Galerij, met een zoekveld — alleen zijn de pillen hier
 `[Alles][Eenmalig][Onderhoud]` (soort) in plaats van Alle/Actief/Niet actief (staat).
 Dat is de as die er bij het uren schrijven toe doet; afgeronde klussen staan er sowieso
 niet tussen, want de queryset van `UurblokForm` filtert al op `actief=True`.
+Hetzelfde geldt sinds 23-09 (4) voor de dialoog waarmee je een foto post; daar
+staan de afgeronde klussen wél in de lijst en zijn het twee rijen pillen.
 
 Wat daarvoor aan `static/js/kluskiezer.js` is veranderd: de rij pillen is een parameter
 geworden (`opts.scopes`, met `KLUS_KIEZER_SCOPES.status` en `.soort`), de radio's krijgen
@@ -119,6 +121,28 @@ dekkende achtergrond: een `backdrop-filter` binnen een al gefilterde kaart blurt
 dus las je dwars door de lijst heen. En op het uurblok-detail blijft de kiezer wég zolang
 de velden op slot staan — daar hoort de klus als gewone tekst te staan, niet als knop;
 `uurblokbewerken.js` bouwt hem pas bij een klik op het bewerk-potlood.
+
+**Bijgewerkt 23-09-2026 (4): dezelfde kiezer in de dialoog waarmee je een foto post, met
+twee rijen pillen.**
+
+    [ Alles | Eenmalig | Onderhoud ]
+    [ Alles | Actief   | Afgerond  ]
+
+`AlleenFotosForm.klus` is de enige klussenlijst in de app die óók de afgeronde klussen
+toont (je hangt een foto soms achteraf aan een klus die al klaar is), dus hier tellen
+allebei de assen mee — zelfde twee-assen-gedachte als de filterrij op de klussenlijst, nu
+onder elkaar in de popover. Een klus moet aan beide rijen voldoen; "Algemeen" (de lege
+keuze, waarmee de foto in de dropbox belandt) staat op `altijd` en valt daarom onder elke
+pil. Op een klusdossier verandert er niets: daar is de klus al bekend en staat er een
+`<input type="hidden">` in plaats van een keuzelijst.
+
+`kluskiezer.js` kan daarvoor nu meer dan één rij: `KLUS_KIEZER_ASSEN` kent `status`
+(Galerij, leest `data-scope`), `soort` (`data-soort`) en `staat` (`data-staat`), en
+`data-pillen` op de wrapper noemt ze komma-gescheiden. Elke as leest een eigen attribuut,
+zodat twee rijen elkaars waarde niet kunnen lezen. De soort/staat per optie komt uit
+`klussen.forms.KlusSelect`, één widget die nu door beide formulieren gebruikt wordt (hij
+stond eerst in `uren/forms.py` en gaf alleen soort mee, als `data-scope`). De Galerij
+schrijft zijn opties nog steeds zelf in de template en blijft op `data-scope`.
 
 | # | Contractpunt | Status | Wat ontbreekt |
 |---|---|---|---|

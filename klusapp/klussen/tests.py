@@ -1363,3 +1363,38 @@ class KlussenlijstFilterTest(TestCase):
         antwoord = self.client.get(reverse("klussen"), {"scope": "alles"})
         self.assertContains(antwoord, "Nog geen klussen")
 
+
+
+class KlusKiezerBijFotoPostenTest(TestCase):
+    """De klus kies je in de postdialoog via de zoekbare kiezer van
+    static/js/kluskiezer.js. Dit is de enige klussenlijst in de app waar ook
+    de afgeronde klussen in staan, dus twee rijen pillen: soort én staat.
+    Dat script leest allebei per optie uit `data-soort`/`data-staat`; zonder
+    die attributen filtert er niets meer."""
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.sam = Medewerker.objects.create_user("sam", password="x", first_name="Sam")
+        cls.lopend = Klus.objects.create(naam="Tuin Vermeer", soort=Klus.Soort.AANLEG)
+        cls.klaar = Klus.objects.create(naam="Nieuwbouw Van Dijk", soort=Klus.Soort.AANLEG, actief=False)
+        cls.vast = Klus.objects.create(naam="Parkzicht", soort=Klus.Soort.ONDERHOUD)
+
+    def html(self):
+        self.client.force_login(self.sam)
+        return self.client.get(reverse("fotos")).content.decode()
+
+    def test_elke_optie_draagt_soort_en_staat_mee(self):
+        html = self.html()
+        self.assertIn(f'value="{self.lopend.pk}" data-soort="aanleg" data-staat="actief"', html)
+        self.assertIn(f'value="{self.klaar.pk}" data-soort="aanleg" data-staat="inactief"', html)
+        self.assertIn(f'value="{self.vast.pk}" data-soort="onderhoud" data-staat="actief"', html)
+
+    def test_algemeen_blijft_onder_elke_pil_staan(self):
+        # De lege keuze is "Algemeen" (de foto belandt dan in de dropbox); die
+        # mag geen enkele pil wegfilteren.
+        self.assertIn('data-soort="altijd" data-staat="altijd"', self.html())
+
+    def test_de_kiezer_krijgt_beide_rijen_en_het_script_wordt_geladen(self):
+        html = self.html()
+        self.assertIn('class="klus-kiezer klus-kiezer-veld" data-pillen="soort,staat"', html)
+        self.assertIn("js/kluskiezer.js", html)

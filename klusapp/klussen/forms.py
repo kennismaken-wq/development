@@ -4,6 +4,32 @@ from django.utils import timezone
 from .models import Klus
 
 
+class KlusSelect(forms.Select):
+    """Keuzelijst van klussen met soort en staat per optie erbij, zodat
+    static/js/kluskiezer.js er een zoekbare lijst met pillen van kan maken —
+    Alle/Eenmalig/Onderhoud, Alle/Actief/Afgerond, of allebei. Welke rijen een
+    scherm toont staat in `data-pillen` op de wrapper in de template; deze
+    widget levert alleen de gegevens waar dat script op filtert.
+
+    De <select> zelf blijft gewoon de waarde die gepost wordt, en zonder
+    javascript gewoon zichtbaar en bruikbaar.
+
+    "altijd" op de lege keuze ("Kies een klus", "Algemeen"): die moet onder
+    elke pil zichtbaar blijven."""
+
+    def create_option(self, name, value, label, selected, index, subindex=None, attrs=None):
+        optie = super().create_option(name, value, label, selected, index, subindex, attrs)
+        # value is een ModelChoiceIteratorValue met de klus erachter; alleen
+        # bij de lege keuze is het een kale lege string.
+        klus = getattr(value, "instance", None)
+        optie["attrs"]["data-soort"] = klus.soort if klus is not None else "altijd"
+        if klus is None:
+            optie["attrs"]["data-staat"] = "altijd"
+        else:
+            optie["attrs"]["data-staat"] = "actief" if klus.actief else "inactief"
+        return optie
+
+
 class KlusForm(forms.ModelForm):
     """Klus aanmaken en bijwerken. Alleen de eigenaar komt hier.
 
@@ -181,6 +207,11 @@ class AlleenFotosForm(BijlageForm):
         queryset=Klus.objects.all(),  # Meta.ordering = ["-actief", "naam"]
         required=False,
         empty_label="Algemeen",
+        # Zoekbare kiezer i.p.v. de systeemlijst van de telefoon — zie
+        # klussen/_uploadveld.html. Dit is de enige klussenlijst in de app waar
+        # ook de afgeronde klussen in staan, dus hier twee rijen pillen: soort
+        # én staat.
+        widget=KlusSelect(attrs={"class": "klus-kiezer-select"}),
     )
 
     def __init__(self, *args, **kwargs):
