@@ -89,8 +89,9 @@ def _onderdelen_met_cijfers(gebruiker, vandaag, maandag, zondag, uren):
 
 @login_required
 def start(request):
-    """Het beginscherm: een begroeting, de klussen waar je het laatst uren op
-    hebt geschreven, je uren-statistieken en de laatst toegevoegde foto's.
+    """Het beginscherm: een begroeting, je uren van deze maand als widget, de
+    klussen waar je het laatst uren op hebt geschreven en de laatst toegevoegde
+    foto's.
     Navigatie zit niet meer hier maar in de zijbalk (basis.html) — die krijgt
     zijn tegels via de context processor, dus hoeft hier niet te worden
     meegegeven.
@@ -142,6 +143,7 @@ def start(request):
             ).exists(),
             "klussen_recent": klussen_recent,
             "uren_stats": uren_stats,
+            "maandwidget": totalen.maand_heatmap(request.user, vandaag),
             "recente_fotos": recente_fotos,
         },
     )

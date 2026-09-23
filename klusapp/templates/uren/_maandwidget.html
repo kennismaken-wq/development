@@ -1,0 +1,39 @@
+{% comment %} De maandwidget bovenaan het startscherm: hoeveel uur je deze
+   maand hebt geschreven, met daarnaast hoe die uren over de maand verdeeld
+   liggen. Bewust zonder getallen in de vakjes — anders dan in het
+   maandoverzicht zelf (uren/_maandraster.html) gaat het hier om het patroon
+   in één oogopslag; voor de cijfers tik je door naar dat overzicht.
+
+   Eén link om de hele widget heen in plaats van per dag een eigen link: 42
+   vakjes van een halve centimeter zijn op een telefoon geen tikdoel, en een
+   dag openen doe je een schermdiepte verder wél comfortabel.
+
+   Verwacht `maandwidget` uit uren/totalen.py:maand_heatmap. {% endcomment %}
+<a class="maandwidget" href="{% url 'mijn_uren' %}?weergave=maand"
+   aria-label="Je uren van {{ maandwidget.maand|date:'F Y' }}: {{ maandwidget.totaal }} uur. Opent het maandoverzicht.">
+  <div class="maandwidget-cijfers">
+    <span class="maand">{{ maandwidget.maand|date:"F Y"|capfirst }}</span>
+    <span class="n">{{ maandwidget.totaal }}</span>
+    <span class="l">uur deze maand</span>
+    <span class="neven">{{ uren_stats.week }} deze week · {{ uren_stats.totaal }} totaal</span>
+  </div>
+
+  <div class="maandwidget-kalender">
+    <div class="maandwidget-dagkoppen" aria-hidden="true">
+      <span>M</span><span>D</span><span>W</span><span>D</span><span>V</span><span>Z</span><span>Z</span>
+    </div>
+    <div class="maandwidget-raster" aria-hidden="true">
+      {% for week in maandwidget.weken %}
+        {% for cel in week %}
+          <span class="heatvak tint-{{ cel.tint }}{% if not cel.in_maand %} buiten-maand{% endif %}{% if cel.is_vandaag %} vandaag{% endif %}"
+                title="{{ cel.datum|date:'j F' }} · {% if cel.uren %}{{ cel.uren }}{% else %}geen uren{% endif %}"></span>
+        {% endfor %}
+      {% endfor %}
+    </div>
+    <div class="maandwidget-legenda" aria-hidden="true">
+      <span>Minder</span>
+      {% for tint in maandwidget.tinten %}<i class="heatvak tint-{{ tint }}"></i>{% endfor %}
+      <span>Meer</span>
+    </div>
+  </div>
+</a>

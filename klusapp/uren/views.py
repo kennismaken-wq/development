@@ -144,15 +144,8 @@ def mijn_uren(request):
 
 def _maand_weergave(request, dag, vandaag):
     eerste_van_maand = dag.replace(day=1)
-    weken = kalender.maandraster(eerste_van_maand.year, eerste_van_maand.month)
-    eerste_dag, laatste_dag = weken[0][0], weken[-1][-1]
-
-    blokken = Uurblok.objects.filter(
-        medewerker=request.user, datum__range=(eerste_dag, laatste_dag)
-    ).only("datum", "begintijd", "eindtijd")
-    minuten_per_dag = {}
-    for blok in blokken:
-        minuten_per_dag[blok.datum] = minuten_per_dag.get(blok.datum, 0) + blok.duur_minuten
+    # Zelfde som als de maandwidget op het startscherm — zie uren/totalen.py.
+    weken, minuten_per_dag = totalen.maand_per_dag(request.user, eerste_van_maand)
 
     def dagcel(datum):
         return {

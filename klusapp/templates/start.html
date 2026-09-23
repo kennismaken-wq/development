@@ -4,7 +4,14 @@
 {% block kop %}Hai, {{ user.first_name|default:user.naam }}{% endblock %}
 {% block sub %}{{ vandaag|date:"l j F Y"|capfirst }}{% endblock %}
 {% block inhoud %}
-  {% comment %} Eerst waar je nu al middenin zit — je klussen — daarna pas de
+  {% comment %} Helemaal bovenaan je eigen uren van deze maand: dat is het cijfer
+     waar iedereen die de app opent als eerste naar kijkt, en het stond eerder
+     als twee losse tegels onder de apps — ver onder de vouw, precies waar je
+     er niets aan hebt.
+  {% endcomment %}
+  {% include "uren/_maandwidget.html" %}
+
+  {% comment %} Daarna waar je nu al middenin zit — je klussen — daarna pas de
      apps: dat is waar je naar kijkt als je toch al hier bent, vóór de vraag
      waar je verder heen wilt.
   {% endcomment %}
@@ -45,17 +52,6 @@
         </span>
       {% endif %}
     {% endfor %}
-  </div>
-
-  <div class="statrij">
-    <div class="statkaart">
-      <span class="statgetal">{{ uren_stats.totaal }}</span>
-      <span class="statlabel">Uren gewerkt totaal</span>
-    </div>
-    <div class="statkaart">
-      <span class="statgetal">{{ uren_stats.week }}</span>
-      <span class="statlabel">Uren gewerkt deze week</span>
-    </div>
   </div>
 
   <h2 class="sectiekop">Laatst toegevoegde foto's</h2>

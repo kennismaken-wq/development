@@ -106,7 +106,7 @@ body.met-navigatie{ padding-left:6.6rem; }
    4. touch-action:manipulation haalt de dubbeltik-om-in-te-zoomen weg op
       knoppen en rijen; dat scheelt de vertraging vóór een tik "aankomt". */
 a, button, .knop, .knop-stil, .pil, .side-icon, .klusregel, .profielregel,
-.klus-slide, .klustegel, .maanddag, .fotokaart-nieuw, .keuzepil .vlak,
+.klus-slide, .klustegel, .maanddag, .maandwidget, .fotokaart-nieuw, .keuzepil .vlak,
 .dialog-sluiten, .weg button, .legenda a{
   -webkit-tap-highlight-color:transparent;
   touch-action:manipulation;
@@ -1287,17 +1287,90 @@ dialog.foto-invoegen .uploadveld, dialog.uren-invoegen .uurblokformulier, dialog
 }
 .klus-slide .voorbeeldstapel{ grid-area:stapel; margin-top:.5rem; }
 
-.statrij{ display:grid; grid-template-columns:1fr 1fr; gap:.7rem; margin:1.2rem 0; }
-.statkaart{
-  border-radius:18px; padding:1.1rem 1.2rem; display:flex; flex-direction:column; gap:.3rem;
+/* ══════════ STARTSCHERM: MAANDWIDGET ══════════
+   Vervangt de twee stattegels die eerder onder de apps stonden: hetzelfde
+   cijfer, maar bovenaan en met het patroon van de maand erbij.
+
+   Op een breed scherm staan het cijfer en de kalender naast elkaar — de
+   kalender is gebonden aan 320px, want zeven kolommen van 1fr in een kaart
+   van 640px maakt vakjes ter grootte van een postzegel en dan lees je geen
+   patroon meer, maar een agenda. Op een telefoon gaan ze onder elkaar en mag
+   de kalender wel de volle breedte pakken. */
+.maandwidget{
+  display:flex; gap:1.4rem; align-items:center;
+  text-decoration:none; color:#fff;
+  border-radius:22px; padding:1.2rem 1.3rem; margin:0 0 .4rem;
   background:linear-gradient(135deg, rgba(var(--accent-rgb),0.30), rgba(var(--accent-rgb),0.10));
   border:1px solid rgba(var(--accent-rgb),0.38);
+  transition:border-color .15s, transform .12s;
 }
-.statgetal{
-  font-family:'Fraunces',serif; font-style:italic; font-weight:600; font-size:1.8rem;
-  color:var(--hi); line-height:1; font-variant-numeric:tabular-nums;
+@media (hover:hover){ .maandwidget:hover{ border-color:rgba(var(--accent-rgb),0.65); } }
+.maandwidget:active{ transform:scale(.99); }
+
+.maandwidget-cijfers{ display:flex; flex-direction:column; gap:.2rem; min-width:0; flex:1; }
+.maandwidget-cijfers .maand{
+  font-size:11px; letter-spacing:.04em; text-transform:uppercase;
+  color:rgba(255,255,255,0.6);
 }
-.statlabel{ font-size:11.5px; color:rgba(255,255,255,0.75); }
+.maandwidget-cijfers .n{
+  font-family:'Fraunces',serif; font-style:italic; font-weight:600;
+  font-size:2.6rem; line-height:1.05; color:var(--hi); font-variant-numeric:tabular-nums;
+}
+.maandwidget-cijfers .l{ font-size:12.5px; color:rgba(255,255,255,0.78); }
+/* De twee cijfers die de oude stattegels lieten zien, nu als één regel
+   eronder — ondergeschikt aan de maand, maar niet verdwenen. */
+.maandwidget-cijfers .neven{
+  margin-top:.55rem; font-size:11.5px; color:rgba(255,255,255,0.58);
+  font-variant-numeric:tabular-nums;
+}
+
+.maandwidget-kalender{ flex:0 0 auto; width:320px; max-width:100%; }
+.maandwidget-dagkoppen{
+  display:grid; grid-template-columns:repeat(7,1fr); gap:.28rem;
+  font-size:9.5px; text-align:center; color:rgba(255,255,255,0.45);
+  margin-bottom:.28rem;
+}
+.maandwidget-raster{ display:grid; grid-template-columns:repeat(7,1fr); gap:.28rem; }
+
+/* Vijf tinten: leeg, en dan vier keer voller richting de accentkleur. De
+   trappen staan hier hard in CSS en niet als inline style, zodat de tint een
+   klasse blijft die je in de legenda hergebruikt — zie
+   uren/totalen.py:maand_heatmap voor welke dag welke tint krijgt. */
+.heatvak{
+  display:block; aspect-ratio:1; border-radius:7px;
+  background:rgba(255,255,255,0.07); border:1px solid rgba(255,255,255,0.10);
+}
+.heatvak.tint-1{ background:rgba(var(--accent-rgb),0.28); border-color:rgba(var(--accent-rgb),0.30); }
+.heatvak.tint-2{ background:rgba(var(--accent-rgb),0.48); border-color:rgba(var(--accent-rgb),0.50); }
+.heatvak.tint-3{ background:rgba(var(--accent-rgb),0.70); border-color:rgba(var(--accent-rgb),0.72); }
+.heatvak.tint-4{ background:rgba(var(--accent-rgb),0.95); border-color:rgba(var(--accent-rgb),1); }
+.heatvak.buiten-maand{ opacity:.28; }
+/* Vandaag krijgt een ring in plaats van een andere vulling: de vulling zegt
+   hier al hoeveel uur je hebt geschreven en die mag niet twee dingen doen. */
+.heatvak.vandaag{ box-shadow:0 0 0 2px rgba(255,255,255,0.75); }
+
+.maandwidget-legenda{
+  display:flex; align-items:center; justify-content:flex-end; gap:.22rem;
+  margin-top:.5rem; font-size:9.5px; color:rgba(255,255,255,0.45);
+}
+.maandwidget-legenda .heatvak{ width:10px; aspect-ratio:1; border-radius:3px; }
+
+/* Op een telefoon blijven cijfer en kalender náást elkaar staan in plaats van
+   onder elkaar te vallen. Gestapeld worden de vakjes ruim veertig pixels breed
+   en vult de widget in z'n eentje het eerste scherm — dan staat "Jouw klussen"
+   onder de vouw. Naast elkaar krimpen ze mee tot echte heatmap-formaat en
+   blijft het één blok dat je in één oogopslag leest. */
+@media (max-width:700px){
+  .maandwidget{ gap:.9rem; padding:1.1rem; border-radius:20px; }
+  .maandwidget-cijfers{ flex:0 1 auto; }
+  .maandwidget-cijfers .n{ font-size:2rem; }
+  .maandwidget-cijfers .neven{ margin-top:.45rem; font-size:10.5px; }
+  .maandwidget-kalender{ flex:1 1 140px; width:auto; min-width:0; }
+  .maandwidget-dagkoppen, .maandwidget-raster{ gap:.2rem; }
+  .heatvak{ border-radius:4px; }
+  .maandwidget-legenda{ font-size:9px; gap:.18rem; }
+  .maandwidget-legenda .heatvak{ width:8px; }
+}
 
 .fotoslider{
   display:flex; gap:.7rem; overflow-x:auto; padding-bottom:.3rem;
@@ -1480,7 +1553,7 @@ dialog.foutpopup::backdrop{ background:rgba(10,10,8,0.75); backdrop-filter:blur(
   padding:.15rem .45rem; border-radius:999px; border:1px solid rgba(255,255,255,0.25);
 }
 .voorbeeldstapel-leeg{
-  display:flex; align-items:center; justify-content:center;
+  display:flex; align-items:center; justify-content:center; text-align:center;
   border:1px dashed rgba(255,255,255,0.20); border-radius:14px;
   color:rgba(255,255,255,0.4); font-size:10px;
 }

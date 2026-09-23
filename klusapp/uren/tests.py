@@ -13,7 +13,7 @@ from klussen.models import Bijlage, Klus
 from klussen.tests import TIJDELIJKE_MEDIA, upload
 from medewerkers.models import Medewerker
 
-from . import export
+from . import export, totalen
 from .models import Aanwezigheid, Uurblok
 
 
@@ -750,3 +750,53 @@ class UurblokBijlagenBijAanmakenTest(TestCase):
         self.assertEqual(antwoord.status_code, 200)
         self.assertFalse(Uurblok.objects.exists())
         self.assertFalse(Bijlage.objects.exists())
+
+
+class MaandHeatmapTest(TestCase):
+    """De maandwidget bovenaan het startscherm — zie uren/totalen.py."""
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.sam = Medewerker.objects.create_user("sam", password="x", first_name="Sam")
+        cls.klus = Klus.objects.create(naam="Tuin Vermeer", soort=Klus.Soort.AANLEG)
+
+    def blok(self, dag, uren):
+        Uurblok.objects.create(
+            medewerker=self.sam, klus=self.klus, datum=dag,
+            begintijd=time(8, 0), eindtijd=time(8 + uren, 0),
+        )
+
+    def cel(self, heatmap, dag):
+        return next(c for week in heatmap["weken"] for c in week if c["datum"] == dag)
+
+    def test_drukste_dag_krijgt_de_bovenste_tint_en_een_lege_dag_geen(self):
+        self.blok(date(2026, 9, 10), 8)
+        self.blok(date(2026, 9, 11), 2)
+        heatmap = totalen.maand_heatmap(self.sam, date(2026, 9, 23))
+        self.assertEqual(self.cel(heatmap, date(2026, 9, 10))["tint"], totalen.HEATMAP_TINTEN)
+        self.assertEqual(self.cel(heatmap, date(2026, 9, 11))["tint"], 1)
+        self.assertEqual(self.cel(heatmap, date(2026, 9, 12))["tint"], 0)
+
+    def test_totaal_telt_alleen_de_maand_zelf(self):
+        # 31 augustus valt in de eerste week van het septemberraster en hoort
+        # dus wel in beeld, maar niet in het maandtotaal.
+        self.blok(date(2026, 8, 31), 4)
+        self.blok(date(2026, 9, 10), 8)
+        heatmap = totalen.maand_heatmap(self.sam, date(2026, 9, 23))
+        self.assertEqual(heatmap["totaal"], "8:00")
+        self.assertFalse(self.cel(heatmap, date(2026, 8, 31))["in_maand"])
+        self.assertEqual(self.cel(heatmap, date(2026, 8, 31))["uren"], "4:00")
+
+    def test_lege_maand_valt_niet_om(self):
+        heatmap = totalen.maand_heatmap(self.sam, date(2026, 9, 23))
+        self.assertEqual(heatmap["totaal"], "0:00")
+        self.assertTrue(all(c["tint"] == 0 for week in heatmap["weken"] for c in week))
+
+    def test_startscherm_toont_de_widget(self):
+        self.blok(date(2026, 9, 10), 8)
+        self.client.force_login(self.sam)
+        with patch("medewerkers.views.date") as nep:
+            nep.today.return_value = date(2026, 9, 23)
+            antwoord = self.client.get("/")
+        self.assertEqual(antwoord.context["maandwidget"]["totaal"], "8:00")
+        self.assertContains(antwoord, "uur deze maand")
