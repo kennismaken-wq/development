@@ -1420,35 +1420,20 @@ dialog.foto-invoegen .uploadveld, dialog.uren-invoegen .uurblokformulier, dialog
 
 /* ══════════ STARTSCHERM: FASE 2-WIDGET (tijdelijk uitgezet) ══════════
    De maandwidget hoort bij fase 2, niet bij fase 1 — in plaats van 'm weg te
-   halen krijgt hij hier zijn kleur (het groene accent, de heatmap-tinten)
-   overschreven naar neutraal licht-grijs/wit, zodat meteen duidelijk is dat
-   dit geen actief cijfer is. Weer aanzetten is straks alleen deze sectie en
-   het label in start.html schrappen, niet opnieuw bouwen. */
-.fase2-widget{ margin-bottom:.4rem; }
-.fase2-widget .maandwidget{
-  margin-bottom:0; pointer-events:none;
-  background:rgba(255,255,255,0.07); border-color:rgba(255,255,255,0.16);
-}
-.fase2-widget .maandwidget-cijfers .n{ color:rgba(255,255,255,0.6); }
-.fase2-widget .maandwidget-cijfers .maand,
-.fase2-widget .maandwidget-cijfers .l,
-.fase2-widget .maandwidget-cijfers .neven{ color:rgba(255,255,255,0.45); }
-.fase2-widget .maandwidget-naar{
-  background:rgba(255,255,255,0.06); border-color:rgba(255,255,255,0.16);
-  color:rgba(255,255,255,0.5);
-}
-.fase2-widget .heatvak{ background:rgba(255,255,255,0.07); border-color:rgba(255,255,255,0.12); }
-.fase2-widget .heatvak.tint-1{ background:rgba(255,255,255,0.16); border-color:rgba(255,255,255,0.18); }
-.fase2-widget .heatvak.tint-2{ background:rgba(255,255,255,0.28); border-color:rgba(255,255,255,0.30); }
-.fase2-widget .heatvak.tint-3{ background:rgba(255,255,255,0.42); border-color:rgba(255,255,255,0.44); }
-.fase2-widget .heatvak.tint-4{ background:rgba(255,255,255,0.60); border-color:rgba(255,255,255,0.62); }
-.fase2-widget .heatvak.vandaag{ box-shadow:0 0 0 2px rgba(255,255,255,0.4); }
+   halen krijgt hij hier een donkere overlay met witte tekst eroverheen, zodat
+   meteen duidelijk is dat dit geen actief cijfer is. Weer aanzetten is straks
+   alleen deze sectie en het label in start.html schrappen, niet opnieuw
+   bouwen — de widget zelf (kleur, cijfers, heatmap) blijft ongewijzigd
+   eronder zitten. */
+.fase2-widget{ position:relative; margin-bottom:.4rem; border-radius:22px; overflow:hidden; }
+.fase2-widget .maandwidget{ margin-bottom:0; pointer-events:none; filter:grayscale(1) brightness(.4); }
 .fase2-label{
-  display:inline-block; margin-bottom:.5rem; padding:.3rem .8rem;
-  border-radius:999px; background:rgba(255,255,255,0.10);
-  border:1px solid rgba(255,255,255,0.20);
-  font-size:11px; font-weight:600; letter-spacing:.04em; text-transform:uppercase;
-  color:rgba(255,255,255,0.55);
+  position:absolute; inset:0; z-index:1;
+  display:flex; align-items:center; justify-content:center;
+  padding:1rem; text-align:center;
+  background:rgba(0,0,0,0.45);
+  color:#fff; font-family:'Fraunces',serif; font-style:italic; font-weight:600;
+  font-size:1.15rem; letter-spacing:.01em;
 }
 
 .fotoslider{
