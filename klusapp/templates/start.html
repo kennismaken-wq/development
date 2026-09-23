@@ -8,8 +8,16 @@
      waar iedereen die de app opent als eerste naar kijkt, en het stond eerder
      als twee losse tegels onder de apps — ver onder de vouw, precies waar je
      er niets aan hebt.
+
+     Tijdelijk grijs gezet (23-09-2026, op verzoek van Thijmen): dit hoort bij
+     fase 2, niet bij fase 1. View en berekening (uren/totalen.py:maand_heatmap,
+     medewerkers/views.py:start) blijven ongewijzigd — weer aanzetten is alleen
+     deze wrapper-div en het label eronder weghalen, niet opnieuw bouwen.
   {% endcomment %}
-  {% include "uren/_maandwidget.html" %}
+  <div class="fase2-widget">
+    <span class="fase2-label">Fase 02</span>
+    {% include "uren/_maandwidget.html" %}
+  </div>
 
   {% comment %} Daarna waar je nu al middenin zit — je klussen — daarna pas de
      apps: dat is waar je naar kijkt als je toch al hier bent, vóór de vraag
