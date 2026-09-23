@@ -1234,3 +1234,73 @@ class BekendeOpdrachtgeversTest(TestCase):
         with CaptureQueriesContext(connection) as queries:
             opdrachtgevers.bekende_opdrachtgevers()
         self.assertEqual(len(queries), 1)
+
+
+class KlussenlijstSoortFilterTest(TestCase):
+    """De pillen Alles/Eenmalig/Onderhoud boven de klussenlijst.
+
+    SPEC §1: aanleg versus onderhoud bepaalt bijna elke ontwerpkeuze. Met een
+    handvol eenmalige klussen naast tientallen onderhoudsadressen is een lijst
+    die alleen op naam sorteert onbruikbaar voor allebei.
+    """
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.sam = Medewerker.objects.create_user("sam", password="x")
+        cls.eenmalig = Klus.objects.create(
+            naam="Tuin Vermeer", soort=Klus.Soort.AANLEG, plaats="Maasdijk"
+        )
+        cls.onderhoud = Klus.objects.create(
+            naam="Onderhoud Dijkweg", soort=Klus.Soort.ONDERHOUD, plaats="Maasdijk"
+        )
+
+    def setUp(self):
+        self.client.force_login(self.sam)
+
+    def namen(self, **parameters):
+        antwoord = self.client.get(reverse("klussen"), parameters)
+        self.assertEqual(antwoord.status_code, 200)
+        return [klus.naam for klus in antwoord.context["klussen"]]
+
+    def test_zonder_filter_staan_ze_er_allebei(self):
+        self.assertCountEqual(self.namen(), ["Tuin Vermeer", "Onderhoud Dijkweg"])
+
+    def test_alleen_onderhoud(self):
+        self.assertEqual(self.namen(soort="onderhoud"), ["Onderhoud Dijkweg"])
+
+    def test_alleen_eenmalig(self):
+        self.assertEqual(self.namen(soort="aanleg"), ["Tuin Vermeer"])
+
+    def test_onzin_valt_terug_op_alles(self):
+        # Een waarde uit de url is niet te vertrouwen; alles tonen is hier de
+        # veilige uitkomst, niet een lege lijst.
+        self.assertCountEqual(self.namen(soort="kaboem"), ["Tuin Vermeer", "Onderhoud Dijkweg"])
+
+    def test_filter_en_zoeken_werken_samen(self):
+        Klus.objects.create(naam="Onderhoud Parklaan", soort=Klus.Soort.ONDERHOUD)
+        self.assertEqual(self.namen(soort="onderhoud", q="Dijkweg"), ["Onderhoud Dijkweg"])
+
+    def test_een_gekozen_klus_wint_van_de_pil(self):
+        # Zelfde afspraak als bij de scope-pil: vraag je expliciet om één klus,
+        # dan krijg je die, ook als het filter er anders voor staat.
+        self.assertEqual(
+            self.namen(soort="onderhoud", klus=str(self.eenmalig.pk)), ["Tuin Vermeer"]
+        )
+
+    def test_de_pillen_staan_op_het_scherm_met_de_juiste_aan(self):
+        inhoud = self.client.get(reverse("klussen"), {"soort": "onderhoud"}).content.decode()
+        self.assertIn('name="soort" value="onderhoud"', inhoud)
+        self.assertIn(">Eenmalig<", inhoud)
+        self.assertIn(">Alles<", inhoud)
+        # het aangevinkte hoort onderhoud te zijn, niet eenmalig
+        onderhoud_pil = inhoud.index('value="onderhoud"')
+        self.assertIn("checked", inhoud[onderhoud_pil:onderhoud_pil + 120])
+
+    def test_lege_uitkomst_zegt_waarom(self):
+        # "Nog geen klussen" is onwaar als er wel klussen zijn, maar niet van
+        # deze soort.
+        Klus.objects.all().update(soort=Klus.Soort.AANLEG)
+        antwoord = self.client.get(reverse("klussen"), {"soort": "onderhoud"})
+        self.assertContains(antwoord, "Geen klussen van de soort onderhoud")
+        self.assertNotContains(antwoord, "Nog geen klussen")
+

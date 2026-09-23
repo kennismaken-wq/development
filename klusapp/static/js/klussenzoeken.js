@@ -59,6 +59,14 @@
     klusKeuze.addEventListener("change", verversen);
   }
 
+  // De soort-pillen (Alles/Eenmalig/Onderhoud) horen via hun form-attribuut
+  // al bij dit formulier, dus FormData pikt ze vanzelf op; ze hoeven alleen
+  // nog de verversing aan te zwengelen. Zonder dit script submit de
+  // noscript-knop het formulier en werkt hetzelfde filter gewoon.
+  document.querySelectorAll('input[name="soort"]').forEach(function (pil) {
+    pil.addEventListener("change", verversen);
+  });
+
   function scopeVeld() {
     let veld = form.querySelector('input[name="scope"]');
     if (!veld) {

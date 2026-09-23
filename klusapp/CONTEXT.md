@@ -60,6 +60,14 @@ stuurt dat veld nu ook echt het formulier (`klussen/forms.py`,
   verschil is niet het bestandstype maar de bestemming — wat in het documentenveld gaat
   blijft een document (Floris' `forceer_document`), ook een gefotografeerde tekening.
 
+**Bijgewerkt 23-09-2026 (2): filterpillen op de klussenlijst.** Alles/Eenmalig/Onderhoud
+boven de lijst (`?soort=`), bewust op het scherm zelf en niet in de klus-kiezer: die
+Alle/Actief-pillen gaan over de *staat* van een klus, deze over zijn *ritme*. Werkt samen
+met de zoekbalk en de scope, en een expliciet gekozen klus wint er net zo van als van de
+scope-pil. Geen nieuwe CSS — `.keuzes` plus `.keuzepil.kies` bestonden al, en
+`klussenzoeken.js` ververst alleen de lijst. Zonder javascript submit de noscript-knop
+hetzelfde filter.
+
 De regel waarop een klus wordt gesplitst staat in de docstring van `Klus`: één klus is
 wat je apart wil optellen. Ander adres → aparte klus. Aparte afspraak op hetzelfde adres
 → aparte klus. Maaien versus snoeien binnen dezelfde afspraak → één klus, verschil in de

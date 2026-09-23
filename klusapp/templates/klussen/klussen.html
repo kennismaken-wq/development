@@ -8,6 +8,29 @@
     {% if scope != "actief" %}<input type="hidden" name="scope" value="{{ scope }}">{% endif %}
   </form>
 
+  {% comment %} Filteren op ritme: eenmalig of doorlopend onderhoud. Staat hier
+     op het scherm en niet in de klus-kiezer hieronder, want het beantwoordt een
+     andere vraag dan de Alle/Actief-pillen daarin — die gaan over de staat van
+     een klus, deze over zijn soort (SPEC §1). Zodra er naast een handvol
+     eenmalige klussen tientallen onderhoudsadressen staan, is dit het verschil
+     tussen een bruikbare lijst en scrollen.
+
+     Radio's in een label, net als de standen op het aanwezigheidsscherm: geen
+     regel javascript nodig om te werken, en met het form-attribuut horen ze bij
+     de zoekbalk hierboven. Zonder javascript submit de noscript-knop hieronder
+     het geheel; met javascript ververst klussenzoeken.js alleen de lijst.
+     Zelfde klassen als het aanmaakformulier (.keuzes/.keuzepil), en
+     .foto-filterrij erbij voor de marge eronder — dus geen nieuwe CSS. {% endcomment %}
+  <div class="foto-filterrij keuzes" role="radiogroup" aria-label="Filter op soort">
+    {% for waarde, label in soort_keuzes %}
+      <label class="keuzepil kies">
+        <input type="radio" name="soort" value="{{ waarde }}" form="klus-zoekform"
+               {% if soort == waarde %}checked{% endif %}>
+        <span class="vlak">{{ label }}</span>
+      </label>
+    {% endfor %}
+  </div>
+
   <div class="foto-filterrij">
     <div class="klus-kiezer" id="klus-kiezer" data-scope="{{ scope }}">
       <select name="klus" id="klus-select" form="klus-zoekform" class="klus-kiezer-select" onchange="this.form.submit()">

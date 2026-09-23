@@ -281,6 +281,14 @@ def klus_lijst(request):
     actief-pillen in de klus-kiezer filteren ook deze lijst, niet alleen de
     opties in de kiezer zelf.
 
+    Daarnaast filteren de soort-pillen (Alles/Eenmalig/Onderhoud) op het
+    scherm zelf. Die staan er los van de kiezer omdat ze een andere vraag
+    beantwoorden: de scope gaat over de staat van een klus (loopt hij nog),
+    de soort over zijn ritme. SPEC §1 zegt dat dat tweede onderscheid bijna
+    elke ontwerpkeuze bepaalt — en zodra er naast een handvol aanlegklussen
+    tientallen onderhoudsadressen staan, verzuipen die eerste in een lijst die
+    alleen op naam sorteert (Meta.ordering = ["-actief", "naam"]).
+
     Iedereen die inlogt ziet alle klussen: er is geen "toegewezen aan"-veld op
     Klus (dat loopt via Uurblok, per werkdag), dus een medewerker moet elke
     klus kunnen openen om er een foto aan te hangen, ook eentje waar hij
@@ -293,6 +301,10 @@ def klus_lijst(request):
     scope = request.GET.get("scope", "actief")
     if scope not in ("actief", "inactief", "altijd"):
         scope = "actief"
+    # Leeg is "alles"; een onbekende waarde valt daar ook op terug.
+    soort = request.GET.get("soort", "").strip()
+    if soort not in Klus.Soort.values:
+        soort = ""
     alle_klussen = Klus.objects.all()  # opties voor de klus-kiezer; Meta.ordering = ["-actief", "naam"]
 
     # Een specifieke klus kiezen in de kiezer wint van de scope-pil: je vroeg
@@ -305,6 +317,9 @@ def klus_lijst(request):
         klussen = Klus.objects.all()
     else:
         klussen = Klus.objects.filter(actief=True)
+    # Om dezelfde reden wint een gekozen klus ook van de soort-pil.
+    if soort and not klus_pk:
+        klussen = klussen.filter(soort=soort)
     if zoek:
         klussen = klussen.filter(
             Q(naam__icontains=zoek) | Q(adres__icontains=zoek) | Q(plaats__icontains=zoek)
@@ -333,6 +348,14 @@ def klus_lijst(request):
             "zoek": zoek,
             "klus_pk": klus_pk,
             "scope": scope,
+            "soort": soort,
+            # Uit Klus.Soort, zodat de pillen meebewegen als die labels ooit
+            # veranderen (zoals "Aanleg" → "Eenmalig" al gebeurd is).
+            "soort_keuzes": [("", "Alles"), *Klus.Soort.choices],
+            # Voor de lege-staat: "Geen onderhoudsklussen gevonden" zegt meer
+            # dan "Nog geen klussen" als er wel klussen zijn, maar niet van
+            # deze soort.
+            "soort_label": Klus.Soort(soort).label if soort else "",
             "alle_klussen": alle_klussen,
         },
     )

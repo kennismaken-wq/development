@@ -29,6 +29,8 @@
       {% endfor %}
     </ul>
   {% else %}
-    <p class="leeg">{% if zoek %}Niets gevonden voor "{{ zoek }}".{% else %}Nog geen klussen.{% endif %}</p>
+    {% comment %} "Nog geen klussen" is onwaar zodra er wél klussen zijn maar
+       niet van de gefilterde soort — dan lijkt het alsof er niets bestaat. {% endcomment %}
+    <p class="leeg">{% if zoek %}Niets gevonden voor "{{ zoek }}".{% elif soort_label %}Geen klussen van de soort {{ soort_label|lower }}.{% else %}Nog geen klussen.{% endif %}</p>
   {% endif %}
 </div>
