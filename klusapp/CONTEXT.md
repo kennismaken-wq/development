@@ -60,13 +60,35 @@ stuurt dat veld nu ook echt het formulier (`klussen/forms.py`,
   verschil is niet het bestandstype maar de bestemming — wat in het documentenveld gaat
   blijft een document (Floris' `forceer_document`), ook een gefotografeerde tekening.
 
-**Bijgewerkt 23-09-2026 (2): filterpillen op de klussenlijst.** Alles/Eenmalig/Onderhoud
-boven de lijst (`?soort=`), bewust op het scherm zelf en niet in de klus-kiezer: die
-Alle/Actief-pillen gaan over de *staat* van een klus, deze over zijn *ritme*. Werkt samen
-met de zoekbalk en de scope, en een expliciet gekozen klus wint er net zo van als van de
-scope-pil. Geen nieuwe CSS — `.keuzes` plus `.keuzepil.kies` bestonden al, en
-`klussenzoeken.js` ververst alleen de lijst. Zonder javascript submit de noscript-knop
-hetzelfde filter.
+**Bijgewerkt 23-09-2026 (2): één filterrij met twee assen op de klussenlijst.**
+
+    [ Alles | Eenmalig | Onderhoud ]   [ Alles | Actief | Afgerond ]
+              soort = ritme                   scope = staat
+
+Twee groepen met dezelfde vorm naast elkaar (`?soort=` en `?scope=`), niet het ene
+filter onder het andere. Eerdere versies van deze wijziging hadden de soort-pillen bóven
+de klus-kiezer staan (twee filters onder elkaar, zonder dat het ene onder het andere
+hing) en daarna soort-pillen plus één aan/uit-schakelaar (waarmee "alleen afgeronde" als
+stand verdween). Dit is de derde en gelijkwaardige vorm, op aanwijzing van Thijmen.
+
+**De klus-kiezer is van dit scherm verdwenen.** Op de Galerij doet hij echt iets (foto's
+filteren op klus), maar op een lijst van klussen levert "kies één klus" een lijst van één
+klus op, terwijl je die klus in de lijst eronder gewoon kunt aantikken en de zoekbalk hem
+al op naam vindt. Erger was dat hij de staat-filter verstopte: de lijst toonde standaard
+alleen actieve klussen terwijl niets op het scherm dat vertelde. Nu staat "Actief" als
+aangezette pil in beeld. `static/js/kluskiezer.js` blijft bestaan voor de Galerij. Dit
+draait Floris' keuze van 994d5b1/deb1014 op dít scherm terug — in overleg met Thijmen op
+23-09; de Galerij is niet aangeraakt.
+
+Twee details die niet cosmetisch zijn. Elke groep is één flex-kind, dus op een telefoon
+breekt de rij tússen de groepen af en nooit middenin één groep — allebei beginnen ze met
+"Alles" en die twee mogen niet naast elkaar op dezelfde regel eindigen. En het
+scheidingslijntje vervalt onder 700px, want daar zouden de groepen onder elkaar staan en
+bleef het als los streepje hangen.
+
+De lege staat komt uit `klussen.views._lege_melding` en noemt beide filters ("Geen
+afgeronde klussen van de soort onderhoud"). "Nog geen klussen" is onwaar zodra er wel
+klussen zijn maar niet in dit filter, en dan lijkt het alsof er niets bestaat.
 
 De regel waarop een klus wordt gesplitst staat in de docstring van `Klus`: één klus is
 wat je apart wil optellen. Ander adres → aparte klus. Aparte afspraak op hetzelfde adres

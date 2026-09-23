@@ -29,8 +29,9 @@
       {% endfor %}
     </ul>
   {% else %}
-    {% comment %} "Nog geen klussen" is onwaar zodra er wél klussen zijn maar
-       niet van de gefilterde soort — dan lijkt het alsof er niets bestaat. {% endcomment %}
-    <p class="leeg">{% if zoek %}Niets gevonden voor "{{ zoek }}".{% elif soort_label %}Geen klussen van de soort {{ soort_label|lower }}.{% else %}Nog geen klussen.{% endif %}</p>
+    {% comment %} De tekst komt uit klussen.views._lege_melding: die weet welke
+       twee filters aanstonden, en dat is meer dan een sjabloon met geneste
+       ifs leesbaar kan zeggen. {% endcomment %}
+    <p class="leeg">{% if zoek %}Niets gevonden voor "{{ zoek }}".{% else %}{{ lege_melding }}{% endif %}</p>
   {% endif %}
 </div>

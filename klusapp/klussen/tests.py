@@ -1236,8 +1236,9 @@ class BekendeOpdrachtgeversTest(TestCase):
         self.assertEqual(len(queries), 1)
 
 
-class KlussenlijstSoortFilterTest(TestCase):
-    """De pillen Alles/Eenmalig/Onderhoud boven de klussenlijst.
+class KlussenlijstFilterTest(TestCase):
+    """De filterrij boven de klussenlijst: twee gelijkwaardige groepen,
+    Alles/Eenmalig/Onderhoud (ritme) en Alles/Actief/Afgerond (staat).
 
     SPEC §1: aanleg versus onderhoud bepaalt bijna elke ontwerpkeuze. Met een
     handvol eenmalige klussen naast tientallen onderhoudsadressen is een lijst
@@ -1280,12 +1281,61 @@ class KlussenlijstSoortFilterTest(TestCase):
         Klus.objects.create(naam="Onderhoud Parklaan", soort=Klus.Soort.ONDERHOUD)
         self.assertEqual(self.namen(soort="onderhoud", q="Dijkweg"), ["Onderhoud Dijkweg"])
 
-    def test_een_gekozen_klus_wint_van_de_pil(self):
-        # Zelfde afspraak als bij de scope-pil: vraag je expliciet om één klus,
-        # dan krijg je die, ook als het filter er anders voor staat.
+    def afronden(self, naam, soort):
+        klus = Klus.objects.create(naam=naam, soort=soort)
+        klus.actief = False
+        klus.save()
+        return klus
+
+    def test_standaard_alleen_wat_loopt(self):
+        # Standaard "Actief" en niet "Alles": je kijkt bijna altijd naar wat er
+        # loopt. Het verschil met vroeger is dat die stand nu in beeld staat.
+        self.afronden("Oude tuin", Klus.Soort.AANLEG)
+        self.assertNotIn("Oude tuin", self.namen())
+
+    def test_alles_en_afgerond_zijn_eigen_standen(self):
+        self.afronden("Oude tuin", Klus.Soort.AANLEG)
+        self.assertIn("Oude tuin", self.namen(scope="alles"))
+        # Deze stand was kwijt toen het even een aan/uit-schakelaar was.
+        self.assertEqual(self.namen(scope="afgerond"), ["Oude tuin"])
+
+    def test_onzin_in_scope_valt_terug_op_actief(self):
+        self.afronden("Oude tuin", Klus.Soort.AANLEG)
+        self.assertNotIn("Oude tuin", self.namen(scope="kaboem"))
+
+    def test_de_twee_assen_werken_samen(self):
+        self.afronden("Oud onderhoud", Klus.Soort.ONDERHOUD)
+        self.assertEqual(self.namen(soort="onderhoud", scope="afgerond"), ["Oud onderhoud"])
+        self.assertEqual(self.namen(soort="onderhoud", scope="actief"), ["Onderhoud Dijkweg"])
         self.assertEqual(
-            self.namen(soort="onderhoud", klus=str(self.eenmalig.pk)), ["Tuin Vermeer"]
+            self.namen(soort="onderhoud", scope="alles"),
+            ["Onderhoud Dijkweg", "Oud onderhoud"],
         )
+        self.assertEqual(self.namen(soort="aanleg", scope="alles"), ["Tuin Vermeer"])
+
+    def test_beide_groepen_staan_als_pillen_op_het_scherm(self):
+        inhoud = self.client.get(reverse("klussen"), {"soort": "onderhoud"}).content.decode()
+        for naam, waarden in (("soort", ["", "aanleg", "onderhoud"]),
+                              ("scope", ["alles", "actief", "afgerond"])):
+            for waarde in waarden:
+                self.assertIn(f'name="{naam}" value="{waarde}"', inhoud)
+        # Elke groep heeft er precies één aan: onderhoud, en de standaard actief.
+        for zoek in ('value="onderhoud"', 'value="actief"'):
+            plek = inhoud.index(zoek)
+            self.assertIn("checked", inhoud[plek:plek + 140])
+
+    def test_de_klus_kiezer_staat_niet_meer_op_dit_scherm(self):
+        # Hij leverde hier een lijst van één klus op, terwijl je die klus in de
+        # lijst eronder gewoon kunt aantikken — en hij verstopte de staat van
+        # het tweede filter. Op de Galerij blijft hij wel staan.
+        inhoud = self.client.get(reverse("klussen")).content.decode()
+        self.assertNotIn('id="klus-kiezer"', inhoud)
+        self.assertNotIn("kluskiezer.js", inhoud)
+        self.assertIn('name="scope"', inhoud)
+
+    def test_de_galerij_houdt_zijn_kiezer(self):
+        inhoud = self.client.get(reverse("fotos")).content.decode()
+        self.assertIn('id="klus-kiezer"', inhoud)
 
     def test_de_pillen_staan_op_het_scherm_met_de_juiste_aan(self):
         inhoud = self.client.get(reverse("klussen"), {"soort": "onderhoud"}).content.decode()
@@ -1296,11 +1346,20 @@ class KlussenlijstSoortFilterTest(TestCase):
         onderhoud_pil = inhoud.index('value="onderhoud"')
         self.assertIn("checked", inhoud[onderhoud_pil:onderhoud_pil + 120])
 
-    def test_lege_uitkomst_zegt_waarom(self):
-        # "Nog geen klussen" is onwaar als er wel klussen zijn, maar niet van
-        # deze soort.
+    def test_lege_uitkomst_zegt_welke_filters_niets_opleverden(self):
+        # "Nog geen klussen" is onwaar als er wel klussen zijn maar niet in dit
+        # filter; dan lijkt het alsof er niets bestaat.
         Klus.objects.all().update(soort=Klus.Soort.AANLEG)
         antwoord = self.client.get(reverse("klussen"), {"soort": "onderhoud"})
-        self.assertContains(antwoord, "Geen klussen van de soort onderhoud")
+        self.assertContains(antwoord, "Geen lopende klussen van de soort onderhoud")
         self.assertNotContains(antwoord, "Nog geen klussen")
+
+    def test_lege_uitkomst_noemt_ook_alleen_de_staat(self):
+        antwoord = self.client.get(reverse("klussen"), {"scope": "afgerond"})
+        self.assertContains(antwoord, "Geen afgeronde klussen")
+
+    def test_zonder_filter_is_leeg_gewoon_leeg(self):
+        Klus.objects.all().delete()
+        antwoord = self.client.get(reverse("klussen"), {"scope": "alles"})
+        self.assertContains(antwoord, "Nog geen klussen")
 

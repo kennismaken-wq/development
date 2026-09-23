@@ -2010,3 +2010,25 @@ html.klus-terug-navigatie .kaart:has(.terug-pijl){
 .klusbotsing-regel .naam{ overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 /* de knop staat los onder de regels en hoeft niet de volle breedte */
 .klusbotsing-kaart .knop-stil{ justify-self:start; }
+
+/* ── Filterrij op de klussenlijst: twee gelijkwaardige groepen ──
+   [ Alles | Eenmalig | Onderhoud ]  |  [ Alles | Actief | Afgerond ]
+
+   Elke groep is één flex-kind van .keuzes met zijn eigen binnenkant. Daardoor
+   breekt de rij op een telefoon tússen de groepen af en nooit middenin één
+   groep — belangrijk, want allebei beginnen ze met "Alles" en die twee mogen
+   niet naast elkaar op dezelfde regel eindigen.
+
+   Het scheidingslijntje maakt van twee keer drie pillen twee assen in plaats
+   van één lijst van zes. Onder 700px staan de groepen onder elkaar en zou dat
+   lijntje als los streepje boven de tweede groep hangen, dus daar vervalt het. */
+.keuzegroep{ display:flex; flex-wrap:wrap; gap:.4rem; }
+.keuzegroep.tweede{
+  margin-left:.9rem; padding-left:.9rem;
+  /* zelfde sterkte als de rand van een invoerveld: zwakker dan dit valt het
+     op deze achtergrond weg en doet het lijntje zijn werk niet */
+  border-left:1px solid rgba(255,255,255,0.20);
+}
+@media (max-width:700px){
+  .keuzegroep.tweede{ margin-left:0; padding-left:0; border-left:0; }
+}

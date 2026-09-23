@@ -1,22 +1,21 @@
-/* Live zoeken op het klussenscherm: zelfde aanpak als static/js/fotozoeken.js
-   voor de foto tab — bij elke toetsaanslag (met een korte pauze erin), bij
-   het kiezen van een klus en bij het wisselen van scope (Alle/Actief/Niet
-   actief) haalt dit script dezelfde pagina opnieuw op en vervangt alleen de
-   klussenlijst.
+/* Live zoeken en filteren op het klussenscherm: zelfde aanpak als
+   static/js/fotozoeken.js voor de foto tab — bij elke toetsaanslag (met een
+   korte pauze erin) en bij elke wissel in de filterrij haalt dit script
+   dezelfde pagina opnieuw op en vervangt alleen de klussenlijst.
 
    Bewust géén los JSON/fragment-endpoint: dit haalt gewoon de normale
    klussen-pagina op en pakt er client-side het lijstdeel uit. Zonder JS (of
    zonder verbinding) werkt het gewone <form method=get> gewoon nog steeds.
 
-   De zoekbare klus-kiezer zelf (knop + popover) zit in static/js/kluskiezer.js,
-   gedeeld met de foto's-pagina — dit bestand laadt dat script. Anders dan op
-   de foto's-pagina filtert de scope-pil hier niet alleen de opties in de
-   kiezer, maar ook de klussenlijst zelf (die verving de oude "ook afgeronde
-   tonen"-wisselaar), dus die geeft dit bestand door als onScopeChange. */
+   De filterrij zelf (soort-pillen plus "Ook afgeronde") is gewone HTML in
+   klussen.html en hoort via het form-attribuut al bij de zoekbalk, dus
+   FormData pikt hem vanzelf op; hier wordt alleen de verversing aangezwengeld.
+   De zoekbare klus-kiezer die hier eerst onder stond is weg — zie de docstring
+   van klussen.views.klus_lijst. static/js/kluskiezer.js blijft bestaan voor de
+   Galerij, waar hij wél iets doet. */
 (function () {
   const form = document.getElementById("klus-zoekform");
   const zoekveld = form && form.querySelector('input[name="q"]');
-  const klusKeuze = document.querySelector('select[name="klus"]');
   if (!form || !zoekveld) return;
 
   let volgnummer = 0;
@@ -53,43 +52,19 @@
     timer = setTimeout(verversen, 300);
   });
 
-  if (klusKeuze) {
-    // Was this.form.submit() (zie klussen.html); dat gaf een volledige reload.
-    klusKeuze.removeAttribute("onchange");
-    klusKeuze.addEventListener("change", verversen);
-  }
-
-  // De soort-pillen (Alles/Eenmalig/Onderhoud) horen via hun form-attribuut
-  // al bij dit formulier, dus FormData pikt ze vanzelf op; ze hoeven alleen
-  // nog de verversing aan te zwengelen. Zonder dit script submit de
-  // noscript-knop het formulier en werkt hetzelfde filter gewoon.
-  document.querySelectorAll('input[name="soort"]').forEach(function (pil) {
-    pil.addEventListener("change", verversen);
-  });
-
-  function scopeVeld() {
-    let veld = form.querySelector('input[name="scope"]');
-    if (!veld) {
-      veld = document.createElement("input");
-      veld.type = "hidden";
-      veld.name = "scope";
-      form.appendChild(veld);
-    }
-    return veld;
+  // Alles in de filterrij (soort-pillen en "Ook afgeronde") ververst de lijst.
+  // Zonder dit script submit de noscript-knop het formulier en werkt hetzelfde
+  // filter gewoon, alleen met een volledige herlading.
+  const filterrij = document.getElementById("klus-filters");
+  if (filterrij) {
+    filterrij.querySelectorAll("input").forEach(function (knop) {
+      knop.addEventListener("change", verversen);
+    });
   }
 
   form.addEventListener("submit", function (e) {
     e.preventDefault();
     clearTimeout(timer);
     verversen();
-  });
-
-  const kiezerWrapper = document.getElementById("klus-kiezer");
-  initKlusKiezer("klus-kiezer", "klus-select", {
-    initialScope: kiezerWrapper ? kiezerWrapper.dataset.scope : undefined,
-    onScopeChange: function (scope) {
-      scopeVeld().value = scope;
-      verversen();
-    },
   });
 })();

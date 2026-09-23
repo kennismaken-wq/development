@@ -275,17 +275,44 @@ def fotos(request):
     return render(request, "klussen/fotos.html", context)
 
 
+def _lege_melding(soort, scope):
+    """Wat er staat als het filter niets oplevert.
+
+    Niet "Nog geen klussen": dat is onwaar zodra er wel klussen zijn maar niet
+    in dit filter, en dan lijkt het alsof er niets bestaat in plaats van dat je
+    te ver hebt gefilterd.
+    """
+    staat = {"actief": "lopende", "afgerond": "afgeronde"}.get(scope, "")
+    if soort:
+        soortnaam = Klus.Soort(soort).label.lower()
+        return f"Geen {staat} klussen van de soort {soortnaam}.".replace("  ", " ")
+    if staat:
+        return f"Geen {staat} klussen."
+    return "Nog geen klussen."
+
+
 @login_required
 def klus_lijst(request):
-    """Overzicht van klussen. Standaard alleen actief; de Alle/Actief/Niet
-    actief-pillen in de klus-kiezer filteren ook deze lijst, niet alleen de
-    opties in de kiezer zelf.
+    """Overzicht van klussen, met één filterrij van twee gelijkwaardige groepen:
 
-    Daarnaast filteren de soort-pillen (Alles/Eenmalig/Onderhoud) op het
-    scherm zelf. Die staan er los van de kiezer omdat ze een andere vraag
-    beantwoorden: de scope gaat over de staat van een klus (loopt hij nog),
-    de soort over zijn ritme. SPEC §1 zegt dat dat tweede onderscheid bijna
-    elke ontwerpkeuze bepaalt — en zodra er naast een handvol aanlegklussen
+        [ Alles | Eenmalig | Onderhoud ]   [ Alles | Actief | Afgerond ]
+                  soort = ritme                   scope = staat
+
+    Twee assen, dus twee groepen met dezelfde vorm naast elkaar — niet het ene
+    filter onder het andere. Hier stond eerst een klus-kiezer met daarin
+    verstopt nog een pillenrij Alle/Actief/Niet actief. Dat waren twee filters
+    onder elkaar zonder dat het ene onder het andere hing, en erger nog: de
+    stand van dat tweede filter was niet te zien. De lijst toonde standaard
+    alleen actieve klussen terwijl niets op het scherm dat vertelde.
+
+    De kiezer zelf is hier weg. Op de Galerij doet hij echt iets — foto's
+    filteren op klus — maar op een lijst van klussen levert "kies één klus" een
+    lijst van één klus op, terwijl je die klus in de lijst eronder gewoon kunt
+    aantikken en de zoekbalk hem al op naam vindt. Wat er wél in zat, de staat
+    van een klus, staat nu als eigen groep in beeld.
+
+    De soort is de primaire as: SPEC §1 zegt dat aanleg versus onderhoud bijna
+    elke ontwerpkeuze bepaalt, en zodra er naast een handvol eenmalige klussen
     tientallen onderhoudsadressen staan, verzuipen die eerste in een lijst die
     alleen op naam sorteert (Meta.ordering = ["-actief", "naam"]).
 
@@ -295,37 +322,27 @@ def klus_lijst(request):
     vandaag niet op staat.
     """
     zoek = request.GET.get("q", "").strip()
-    klus_pk = request.GET.get("klus", "").strip()
-    if not klus_pk.isdigit():
-        klus_pk = ""
-    scope = request.GET.get("scope", "actief")
-    if scope not in ("actief", "inactief", "altijd"):
-        scope = "actief"
     # Leeg is "alles"; een onbekende waarde valt daar ook op terug.
     soort = request.GET.get("soort", "").strip()
     if soort not in Klus.Soort.values:
         soort = ""
-    alle_klussen = Klus.objects.all()  # opties voor de klus-kiezer; Meta.ordering = ["-actief", "naam"]
+    # "actief" is de standaard, niet "alles": je kijkt bijna altijd naar wat er
+    # loopt. Anders dan vroeger staat dat nu wél in beeld, als aangezette pil.
+    scope = request.GET.get("scope", "actief")
+    if scope not in ("alles", "actief", "afgerond"):
+        scope = "actief"
 
-    # Een specifieke klus kiezen in de kiezer wint van de scope-pil: je vroeg
-    # expliciet om precies die klus, ook als die niet in de gekozen scope valt.
-    if klus_pk:
-        klussen = Klus.objects.all()
-    elif scope == "inactief":
-        klussen = Klus.objects.filter(actief=False)
-    elif scope == "altijd":
-        klussen = Klus.objects.all()
-    else:
-        klussen = Klus.objects.filter(actief=True)
-    # Om dezelfde reden wint een gekozen klus ook van de soort-pil.
-    if soort and not klus_pk:
+    klussen = Klus.objects.all()
+    if scope == "actief":
+        klussen = klussen.filter(actief=True)
+    elif scope == "afgerond":
+        klussen = klussen.filter(actief=False)
+    if soort:
         klussen = klussen.filter(soort=soort)
     if zoek:
         klussen = klussen.filter(
             Q(naam__icontains=zoek) | Q(adres__icontains=zoek) | Q(plaats__icontains=zoek)
         )
-    if klus_pk:
-        klussen = klussen.filter(pk=klus_pk)
     # Zelfde gewaaierde voorproefje als op het startscherm en het foto's-scherm.
     # De prefetch hoort erbij: zonder to_attr haalt items_voor_stapel() de
     # bijlagen per klus apart op en wordt een lijst van tien klussen elf queries.
@@ -346,17 +363,18 @@ def klus_lijst(request):
         {
             "klussen": klussen,
             "zoek": zoek,
-            "klus_pk": klus_pk,
             "scope": scope,
             "soort": soort,
             # Uit Klus.Soort, zodat de pillen meebewegen als die labels ooit
             # veranderen (zoals "Aanleg" → "Eenmalig" al gebeurd is).
             "soort_keuzes": [("", "Alles"), *Klus.Soort.choices],
-            # Voor de lege-staat: "Geen onderhoudsklussen gevonden" zegt meer
-            # dan "Nog geen klussen" als er wel klussen zijn, maar niet van
-            # deze soort.
-            "soort_label": Klus.Soort(soort).label if soort else "",
-            "alle_klussen": alle_klussen,
+            # Twee groepen met dezelfde vorm, zodat ze naast elkaar als twee
+            # assen lezen en niet als één lijst keuzes.
+            "scope_keuzes": [("alles", "Alles"), ("actief", "Actief"), ("afgerond", "Afgerond")],
+            # Voor de lege staat. "Nog geen klussen" is onwaar zodra er wel
+            # klussen zijn maar niet in dit filter; dan lijkt het alsof er niets
+            # bestaat. Hier staat dus welke twee knoppen niets opleverden.
+            "lege_melding": _lege_melding(soort, scope),
         },
     )
 
