@@ -800,3 +800,5 @@ class MaandHeatmapTest(TestCase):
             antwoord = self.client.get("/")
         self.assertEqual(antwoord.context["maandwidget"]["totaal"], "8:00")
         self.assertContains(antwoord, "uur deze maand")
+        # De widget moet laten zien dát hij ergens heen gaat, en waarheen.
+        self.assertContains(antwoord, "Maandoverzicht")

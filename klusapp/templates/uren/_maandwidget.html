@@ -16,6 +16,14 @@
     <span class="n">{{ maandwidget.totaal }}</span>
     <span class="l">uur deze maand</span>
     <span class="neven">{{ uren_stats.week }} deze week · {{ uren_stats.totaal }} totaal</span>
+    {% comment %} Een <span>, geen link: een link in een link mag niet en de
+       kaart eromheen vangt de tik al. Hij staat er om te laten zien dát de
+       widget ergens heen gaat én waarheen — een kaal pijltje in de hoek doet
+       alleen het eerste. {% endcomment %}
+    <span class="maandwidget-naar">
+      Maandoverzicht
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>
+    </span>
   </div>
 
   <div class="maandwidget-kalender">
