@@ -802,3 +802,33 @@ class MaandHeatmapTest(TestCase):
         self.assertContains(antwoord, "uur deze maand")
         # De widget moet laten zien dát hij ergens heen gaat, en waarheen.
         self.assertContains(antwoord, "Maandoverzicht")
+
+
+class KlusKiezerOpUrenformulierTest(TestCase):
+    """De klus kies je op het urenformulier via de zoekbare kiezer van
+    static/js/kluskiezer.js, met de pillen Alle/Eenmalig/Onderhoud. Dat script
+    leest de soort per optie uit `data-scope`; zonder dat attribuut filteren
+    de pillen niets meer weg."""
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.sam = Medewerker.objects.create_user("sam", password="x", first_name="Sam")
+        cls.eenmalig = Klus.objects.create(naam="Tuin Vermeer", soort=Klus.Soort.AANLEG)
+        cls.onderhoud = Klus.objects.create(naam="Parkzicht", soort=Klus.Soort.ONDERHOUD)
+
+    def html(self):
+        self.client.force_login(self.sam)
+        return self.client.get("/uren/").content.decode()
+
+    def test_elke_optie_draagt_zijn_soort_mee(self):
+        html = self.html()
+        self.assertIn(f'value="{self.eenmalig.pk}" data-scope="aanleg"', html)
+        self.assertIn(f'value="{self.onderhoud.pk}" data-scope="onderhoud"', html)
+
+    def test_de_lege_keuze_blijft_onder_elke_pil_staan(self):
+        self.assertIn('value="" selected data-scope="altijd"', self.html())
+
+    def test_de_kiezer_wordt_op_soort_gezet_en_het_script_geladen(self):
+        html = self.html()
+        self.assertIn('class="klus-kiezer klus-kiezer-veld" data-pillen="soort"', html)
+        self.assertIn("js/kluskiezer.js", html)

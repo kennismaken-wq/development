@@ -96,6 +96,30 @@ wat je apart wil optellen. Ander adres → aparte klus. Aparte afspraak op hetze
 toelichting op het uurblok. Meer structuur dan dat (contracttype, factuurperiode) is
 fase 2, SPEC §3.
 
+**Bijgewerkt 23-09-2026 (3): de klus kiezen bij het uren schrijven gaat via dezelfde
+zoekbare kiezer als op de Galerij.**
+
+Het was een kale `<select>`: op een telefoon opent die de systeemlijst, en daar scroll je
+met twintig klussen doorheen zonder te kunnen zoeken. Nu staat er dezelfde knop +
+popover als op de Galerij, met een zoekveld — alleen zijn de pillen hier
+`[Alles][Eenmalig][Onderhoud]` (soort) in plaats van Alle/Actief/Niet actief (staat).
+Dat is de as die er bij het uren schrijven toe doet; afgeronde klussen staan er sowieso
+niet tussen, want de queryset van `UurblokForm` filtert al op `actief=True`.
+
+Wat daarvoor aan `static/js/kluskiezer.js` is veranderd: de rij pillen is een parameter
+geworden (`opts.scopes`, met `KLUS_KIEZER_SCOPES.status` en `.soort`), de radio's krijgen
+een eigen naam per kiezer (de "uren toevoegen"-sheet en het uurblok-detail kunnen tegelijk
+in de pagina staan), wrapper en select mogen als element meegegeven worden in plaats van
+als id (om diezelfde reden — beide selects heten `id_klus`), en het script initialiseert
+zichzelf op elke wrapper met `data-pillen`. De Galerij blijft het langs de oude weg
+aanroepen via `fotozoeken.js` en is verder niet aangeraakt.
+
+Twee dingen die niet vanzelf goed gingen. De popover krijgt in een bottom sheet een eigen
+dekkende achtergrond: een `backdrop-filter` binnen een al gefilterde kaart blurt niets,
+dus las je dwars door de lijst heen. En op het uurblok-detail blijft de kiezer wég zolang
+de velden op slot staan — daar hoort de klus als gewone tekst te staan, niet als knop;
+`uurblokbewerken.js` bouwt hem pas bij een klik op het bewerk-potlood.
+
 | # | Contractpunt | Status | Wat ontbreekt |
 |---|---|---|---|
 | 1 | Urenregistratie (klus, tijdblok, toelichting, **foto's**) | 🟢 100% | — foto's bij het uurblok en view-first detail zijn af (F1) |

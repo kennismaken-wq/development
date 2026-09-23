@@ -41,7 +41,19 @@
   {% csrf_token %}
   {% for veld in formulier %}
     <label for="{{ veld.id_for_label }}">{{ veld.label }}</label>
-    {{ veld }}
+    {% if veld.name == "klus" %}
+      {% comment %} Zoekbare kiezer i.p.v. een kale keuzelijst: met twintig
+         klussen is scrollen door de systeemlijst van de telefoon geen doen.
+         static/js/kluskiezer.js pakt deze wrapper vanzelf op aan
+         data-pillen en zet er een knop + popover overheen — met een zoekveld
+         en de pillen Alle/Eenmalig/Onderhoud, waarvan de waarden uit
+         Klus.Soort komen (zie uren.forms.KlusSelect, die ze per optie als
+         data-scope meegeeft). Zonder javascript blijft de <select>
+         hieronder gewoon staan en werkt het formulier onveranderd. {% endcomment %}
+      <div class="klus-kiezer klus-kiezer-veld" data-pillen="soort" data-knoplabel="Kies een klus">{{ veld }}</div>
+    {% else %}
+      {{ veld }}
+    {% endif %}
     {% for fout in veld.errors %}<p class="fout">{{ fout }}</p>{% endfor %}
   {% endfor %}
 
@@ -95,6 +107,13 @@
     })();
   </script>
 {% endif %}
+
+{% comment %} Bouwt de zoekbare klus-kiezer hierboven. Het script initialiseert
+   zichzelf (het zoekt de wrappers met data-pillen op), dus dit werkt ook als
+   dit formulier als fragment in een <dialog> wordt gezet en bottomsheet.js de
+   scripts erin opnieuw uitvoert — het is met opzet bestand tegen twee keer
+   draaien. {% endcomment %}
+<script src="{% static 'js/kluskiezer.js' %}"></script>
 
 {% if bijlagenformulier %}<script src="{% static 'js/bestandsveld.js' %}"></script>{% endif %}
 

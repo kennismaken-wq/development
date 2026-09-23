@@ -24,6 +24,25 @@ class KwartierSelect(forms.Select):
         return super().format_value(value)
 
 
+class KlusSelect(forms.Select):
+    """Keuzelijst van klussen met de soort per optie erbij, zodat
+    static/js/kluskiezer.js er een zoekbare lijst met de pillen
+    Alle/Eenmalig/Onderhoud van kan maken. De <select> zelf blijft gewoon de
+    waarde die gepost wordt (en zonder javascript gewoon zichtbaar), dit zet
+    er alleen het data-attribuut op waar dat script op filtert.
+
+    "altijd" op de lege keuze ("Kies een klus"): die moet onder elke pil
+    zichtbaar blijven, ook onder Onderhoud."""
+
+    def create_option(self, name, value, label, selected, index, subindex=None, attrs=None):
+        optie = super().create_option(name, value, label, selected, index, subindex, attrs)
+        # value is een ModelChoiceIteratorValue met de klus erachter; alleen
+        # bij de lege keuze is het een kale lege string.
+        klus = getattr(value, "instance", None)
+        optie["attrs"]["data-scope"] = klus.soort if klus is not None else "altijd"
+        return optie
+
+
 def _tijdkeuzes():
     keuzes = [("", "--:--")]
     for uur in range(24):
@@ -40,6 +59,10 @@ class UurblokForm(forms.ModelForm):
         model = Uurblok
         fields = ["klus", "datum", "begintijd", "eindtijd", "toelichting"]
         widgets = {
+            # De klasse hoort bij de zoekbare kiezer die static/js/kluskiezer.js
+            # eroverheen bouwt (zie _uurblokformulier.html): daarmee verdwijnt
+            # de kale keuzelijst pas als dat script echt geladen is.
+            "klus": KlusSelect(attrs={"class": "klus-kiezer-select"}),
             # Het format moet erbij: een HTML-datumveld leest alleen
             # 2026-09-07, terwijl Django in het Nederlands 07-09-2026 zou
             # tonen. Zonder dit komt een bestaande datum leeg in beeld.

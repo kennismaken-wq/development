@@ -18,10 +18,19 @@
     formulier.querySelectorAll("[disabled]").forEach(function (veld) {
       veld.disabled = false;
     });
+    // De klus-select stond op slot en is daarom overgeslagen door
+    // kluskiezer.js (op slot hoort hij er als gewone tekst te staan, niet als
+    // knop). Nu hij open is, alsnog de zoekbare kiezer eroverheen.
+    if (window.initKlusKiezers) window.initKlusKiezers(formulier);
     knop.hidden = true;
     if (opslaan) opslaan.hidden = false;
     if (verwijderen) verwijderen.hidden = false;
-    var eerste = formulier.querySelector("select:not([disabled]), input:not([disabled]), textarea:not([disabled])");
+    // De knop van de klus-kiezer eerst: die staat vóór de andere velden, maar
+    // de <select> erachter is dan onzichtbaar weggezet en zou als focus een
+    // cursor zonder zichtbaar veld opleveren.
+    var eerste =
+      formulier.querySelector(".klus-kiezer.js-klaar .klus-kiezer-trigger") ||
+      formulier.querySelector("select:not([disabled]), input:not([disabled]), textarea:not([disabled])");
     if (eerste) eerste.focus();
   });
 })();
