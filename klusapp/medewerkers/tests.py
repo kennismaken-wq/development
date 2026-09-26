@@ -567,14 +567,16 @@ class ProfielfotoTest(TestCase):
     def test_zonder_foto_blijven_de_initialen_staan(self):
         html = self.client.get(reverse("mijn_profiel")).content.decode()
         self.assertIn("SD", html)
-        self.assertNotIn("bolfoto", html)
+        # let op: het woord bolfoto staat ook in het script dat een gekozen
+        # foto alvast toont, dus zoeken op de <img> zelf
+        self.assertNotIn('<img class="bolfoto"', html)
 
     def test_met_foto_verschijnt_die_op_het_profiel(self):
         self.client.post(
             reverse("mijn_profiel"), self._formuliervelden(profielfoto=self._foto())
         )
         html = self.client.get(reverse("mijn_profiel")).content.decode()
-        self.assertIn("bolfoto", html)
+        self.assertIn('<img class="bolfoto"', html)
 
     def test_de_foto_staat_ook_op_het_planbord_en_bij_de_aanwezigheid(self):
         self.client.post(
@@ -585,4 +587,22 @@ class ProfielfotoTest(TestCase):
         )
         self.client.force_login(baas)
         for adres in ("/planbord/", "/aanwezigheid/", reverse("medewerkers")):
-            self.assertIn("bolfoto", self.client.get(adres).content.decode(), adres)
+            self.assertIn('<img class="bolfoto"', self.client.get(adres).content.decode(), adres)
+
+    def test_geen_bestandsknop_tussen_de_gegevens(self):
+        # De foto wissel je via het pennetje op de foto, niet via een
+        # "Bestand kiezen"-knop in de lijst met gegevens.
+        html = self.client.get(reverse("mijn_profiel")).content.decode()
+        self.assertIn("fotowissel", html)
+        self.assertIn("buiten-beeld", html)
+        # het veld zit wél in het formulier, en is niet op slot gezet
+        self.assertIn('name="profielfoto"', html)
+        self.assertNotIn('name="profielfoto" disabled', html)
+
+    def test_het_fotoveld_staat_niet_in_de_veldgroepen(self):
+        velden = [
+            veld.name
+            for _kop, groep in self.client.get(reverse("mijn_profiel")).context["formulier"].groepen()
+            for veld in groep
+        ]
+        self.assertNotIn("profielfoto", velden)

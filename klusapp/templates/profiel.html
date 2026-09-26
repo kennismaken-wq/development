@@ -1,9 +1,21 @@
 {% extends "basis.html" %}
 {% block titel %}Mijn profiel{% endblock %}
 {% block kop %}Mijn profiel{% endblock %}
+{% load pictogrammen %}
 {% block inhoud %}
   <div class="profielkop">
-    {% include "_medewerkerbol.html" with persoon=user klasse="grote-bol" %}
+    {% comment %} Het penknopje hoort bij het invoerveld verderop in het
+       formulier; een label met "for" bedient dat veld ook op afstand. Zo
+       staat er geen "Bestand kiezen"-knop in beeld en wissel je je foto
+       door op de foto zelf te tikken.
+    {% endcomment %}
+    <label class="fotowissel" for="{{ formulier.profielfoto.id_for_label }}"
+           title="Andere foto kiezen">
+      {% include "_medewerkerbol.html" with persoon=user klasse="grote-bol" %}
+      <span class="pen" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">{{ "pen"|pictogram }}</svg>
+      </span>
+    </label>
     <span class="wie">
       <span class="naam">{{ user.naam }}</span>
       <span class="rol">{{ user.get_rol_display }}{% if user.functie %} · {{ user.functie }}{% endif %}</span>
@@ -23,6 +35,11 @@
 
   <form method="post" id="gegevensformulier" enctype="multipart/form-data"{% if bewerken %} class="bewerkt"{% endif %}>
     {% csrf_token %}
+    {% comment %} Buiten beeld, maar wel in het formulier: het penknopje
+       hierboven bedient dit veld. {% endcomment %}
+    <span class="buiten-beeld">{{ formulier.profielfoto }}</span>
+    {% for fout in formulier.profielfoto.errors %}<p class="fout">{{ fout }}</p>{% endfor %}
+
     <dl class="gegevens-blok">
       <div class="gegeven">
         <dt><label>Gebruikersnaam</label></dt>
@@ -80,8 +97,7 @@
       var opslaan = document.getElementById('opslaanrij');
       if (!knop || !formulier) return;
 
-      knop.addEventListener('click', function (gebeurtenis) {
-        gebeurtenis.preventDefault();
+      function openBewerken() {
         formulier.querySelectorAll('[disabled]').forEach(function (veld) {
           // de gebruikersnaam blijft op slot: die verandert de werkgever
           if (veld.name) { veld.disabled = false; }
@@ -89,9 +105,36 @@
         formulier.classList.add('bewerkt');
         knop.hidden = true;
         opslaan.hidden = false;
-        var eerste = formulier.querySelector('input:not([disabled])');
+      }
+
+      knop.addEventListener('click', function (gebeurtenis) {
+        gebeurtenis.preventDefault();
+        openBewerken();
+        var eerste = formulier.querySelector('input:not([disabled]):not([type=file])');
         if (eerste) { eerste.focus(); }
       });
+
+      // Een nieuwe foto kiezen zet het formulier open en toont de foto
+      // meteen, zodat je vóór het opslaan ziet wat je gekozen hebt.
+      var fotoveld = document.getElementById('id_profielfoto');
+      var bol = document.querySelector('.fotowissel .grote-bol');
+      if (fotoveld && bol) {
+        fotoveld.addEventListener('change', function () {
+          var gekozen = fotoveld.files && fotoveld.files[0];
+          if (!gekozen) return;
+          openBewerken();
+          var plaatje = bol.querySelector('img');
+          if (!plaatje) {
+            bol.textContent = '';
+            bol.classList.add('met-foto');
+            plaatje = document.createElement('img');
+            plaatje.className = 'bolfoto';
+            plaatje.alt = '';
+            bol.appendChild(plaatje);
+          }
+          plaatje.src = URL.createObjectURL(gekozen);
+        });
+      }
     })();
   </script>
 {% endblock %}

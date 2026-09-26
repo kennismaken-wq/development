@@ -185,7 +185,11 @@ def mijn_profiel(request):
     # er niets is opgeslagen.
     bewerken = bewerken or bool(gegevens.errors)
     if not bewerken:
-        for veld in gegevens.fields.values():
+        for naam, veld in gegevens.fields.items():
+            # De profielfoto blijft bedienbaar: die wissel je via het
+            # penknopje op de foto zelf, niet via "Gegevens wijzigen".
+            if naam == "profielfoto":
+                continue
             veld.widget.attrs["disabled"] = True
             # Een streepje bij wat niet is ingevuld; anders staat er een kopje
             # met niets eronder en lijkt het scherm half geladen.

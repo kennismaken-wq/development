@@ -742,6 +742,27 @@ input[type=time]::-webkit-calendar-picker-indicator{ filter:invert(1); opacity:.
 .met-foto{ overflow:hidden; padding:0; }
 .bolfoto{ width:100%; height:100%; object-fit:cover; border-radius:inherit; display:block; }
 
+/* Buiten beeld, maar wel te bedienen: een invoerveld dat door een label
+   elders wordt aangestuurd. Niet display:none — dan negeert de browser het
+   bij het versturen op sommige toestellen en werkt het label niet meer. */
+.buiten-beeld{
+  position:absolute; width:1px; height:1px; overflow:hidden;
+  clip-path:inset(50%); white-space:nowrap;
+}
+
+/* Foto wisselen door op de foto te tikken; het pennetje maakt zichtbaar dat
+   dat kan, zonder een "Bestand kiezen"-knop in het scherm. */
+.fotowissel{ position:relative; display:inline-block; cursor:pointer; margin:0; }
+.fotowissel .pen{
+  position:absolute; right:-2px; bottom:-2px;
+  width:26px; height:26px; border-radius:999px;
+  display:flex; align-items:center; justify-content:center;
+  background:var(--accent); color:var(--ink);
+  border:2px solid #20211C;
+}
+.fotowissel .pen svg{ width:14px; height:14px; }
+@media (hover:hover){ .fotowissel:hover .pen{ filter:brightness(1.1); } }
+
 /* De kop van het profielscherm: grote foto naast je naam. */
 .profielkop{ display:flex; align-items:center; gap:.9rem; margin:0 0 1.2rem; }
 .profielkop .grote-bol{

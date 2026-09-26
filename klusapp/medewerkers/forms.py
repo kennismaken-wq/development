@@ -107,11 +107,15 @@ class MedewerkerForm(ProfielfotoMixin, forms.ModelForm):
         ("In de app", ["kleur", "in_dienst_sinds"]),
     ]
 
+    # Velden die de template zelf plaatst en die dus niet in de restgroep
+    # moeten belanden — anders staan ze er twee keer, met dezelfde id.
+    BUITEN_GROEPEN = frozenset()
+
     def groepen(self):
         """(kopje, velden) voor de template. Velden die dit formulier niet
         heeft — zoals het wachtwoord bij een nieuwe medewerker — komen er
         onderaan achteraan."""
-        gebruikt = set()
+        gebruikt = set(self.BUITEN_GROEPEN)
         for kop, namen in self.GROEPEN:
             velden = [self[naam] for naam in namen if naam in self.fields]
             gebruikt.update(naam for naam in namen if naam in self.fields)
@@ -197,8 +201,11 @@ class EigenGegevensForm(ProfielfotoMixin, forms.ModelForm):
         labels = MedewerkerForm.Meta.labels
         help_texts = {veld: "" for veld in fields if veld != "noodcontact_relatie"}
 
+    # De foto plaatst de template zelf, als penknopje in de kop.
+    BUITEN_GROEPEN = frozenset({"profielfoto"})
+
     GROEPEN = [
-        ("", ["profielfoto", "first_name", "last_name"]),
+        ("", ["first_name", "last_name"]),
         ("Contact", ["telefoon", "email", "adres", "postcode", "woonplaats"]),
         ("Bij nood bellen", ["noodcontact_naam", "noodcontact_relatie", "noodcontact_telefoon"]),
         ("Rijbewijs", ["rijbewijs", "aanhanger"]),
