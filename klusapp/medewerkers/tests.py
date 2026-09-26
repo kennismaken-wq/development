@@ -504,3 +504,85 @@ class MijnProfielTest(TestCase):
 
         open_ = self.client.get(reverse("mijn_profiel") + "?bewerken=1").content.decode()
         self.assertIn('class="bewerkt"', open_)
+
+
+class ProfielfotoTest(TestCase):
+    """Een pasfoto uploaden, verkleind opslaan en overal tonen."""
+
+    @staticmethod
+    def _foto(breedte=1600, hoogte=1200, naam="pasfoto.jpg"):
+        from io import BytesIO
+
+        from django.core.files.uploadedfile import SimpleUploadedFile
+        from PIL import Image
+
+        buffer = BytesIO()
+        Image.new("RGB", (breedte, hoogte), (90, 140, 70)).save(buffer, format="JPEG")
+        return SimpleUploadedFile(naam, buffer.getvalue(), content_type="image/jpeg")
+
+    def setUp(self):
+        self.sam = Medewerker.objects.create_user(
+            "sam", password="tuinbaas2026", first_name="Sam", last_name="de Wit"
+        )
+        self.client.force_login(self.sam)
+
+    def _formuliervelden(self, **extra):
+        velden = {"first_name": "Sam", "last_name": "de Wit", "kleur": "#5B8FA8"}
+        velden.update(extra)
+        return velden
+
+    def test_uploaden_slaat_een_verkleinde_versie_op(self):
+        from PIL import Image
+
+        self.client.post(
+            reverse("mijn_profiel"), self._formuliervelden(profielfoto=self._foto())
+        )
+        self.sam.refresh_from_db()
+        self.assertTrue(self.sam.profielfoto)
+
+        with Image.open(self.sam.profielfoto) as opgeslagen:
+            # THUMB_ZIJDE is 400: het origineel van 1600px wordt niet bewaard
+            self.assertLessEqual(max(opgeslagen.size), 400)
+
+    def test_een_bestand_dat_geen_foto_is_wordt_geweigerd(self):
+        from django.core.files.uploadedfile import SimpleUploadedFile
+
+        nep = SimpleUploadedFile("cv.pdf", b"%PDF-1.4 geen foto", content_type="application/pdf")
+        self.client.post(reverse("mijn_profiel"), self._formuliervelden(profielfoto=nep))
+        self.sam.refresh_from_db()
+        self.assertFalse(self.sam.profielfoto)
+
+    def test_opslaan_zonder_nieuwe_foto_laat_de_bestaande_staan(self):
+        self.client.post(
+            reverse("mijn_profiel"), self._formuliervelden(profielfoto=self._foto())
+        )
+        self.sam.refresh_from_db()
+        eerste = self.sam.profielfoto.name
+
+        self.client.post(reverse("mijn_profiel"), self._formuliervelden(telefoon="0612345678"))
+        self.sam.refresh_from_db()
+        self.assertEqual(self.sam.profielfoto.name, eerste)
+        self.assertEqual(self.sam.telefoon, "0612345678")
+
+    def test_zonder_foto_blijven_de_initialen_staan(self):
+        html = self.client.get(reverse("mijn_profiel")).content.decode()
+        self.assertIn("SD", html)
+        self.assertNotIn("bolfoto", html)
+
+    def test_met_foto_verschijnt_die_op_het_profiel(self):
+        self.client.post(
+            reverse("mijn_profiel"), self._formuliervelden(profielfoto=self._foto())
+        )
+        html = self.client.get(reverse("mijn_profiel")).content.decode()
+        self.assertIn("bolfoto", html)
+
+    def test_de_foto_staat_ook_op_het_planbord_en_bij_de_aanwezigheid(self):
+        self.client.post(
+            reverse("mijn_profiel"), self._formuliervelden(profielfoto=self._foto())
+        )
+        baas = Medewerker.objects.create_user(
+            "maarten", password="x", first_name="Maarten", rol=Medewerker.Rol.EIGENAAR
+        )
+        self.client.force_login(baas)
+        for adres in ("/planbord/", "/aanwezigheid/", reverse("medewerkers")):
+            self.assertIn("bolfoto", self.client.get(adres).content.decode(), adres)

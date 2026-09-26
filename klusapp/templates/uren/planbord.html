@@ -30,7 +30,7 @@
 
       {% for rij in rijen %}
         <div class="bord-naam{% if not rij.heeft_uren %} zonder-uren{% endif %}">
-          <span class="bol" style="background:linear-gradient(150deg, {{ rij.kleur }}, {{ rij.kleur }}A6); border-color:{{ rij.kleur }}">{{ rij.medewerker.initialen }}</span>
+          {% include "_medewerkerbol.html" with persoon=rij.medewerker klasse="bol" %}
           <span class="bord-naam-tekst">
             <span class="wie">{{ rij.medewerker.naam }}</span>
             {% if rij.medewerker.functie %}<span class="functie">{{ rij.medewerker.functie }}</span>{% endif %}

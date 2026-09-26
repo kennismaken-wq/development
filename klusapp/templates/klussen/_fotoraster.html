@@ -52,7 +52,7 @@
             <span class="wat">{{ eerste.toonnaam }}</span>
             <span class="wie">
               {% if eerste.toegevoegd_door %}
-                <span class="fk-bol" style="background:linear-gradient(150deg, {{ eerste.toegevoegd_door|medewerker_kleur }}, {{ eerste.toegevoegd_door|medewerker_kleur }}A6); border-color:{{ eerste.toegevoegd_door|medewerker_kleur }}">{{ eerste.toegevoegd_door.initialen }}</span>
+                {% include "_medewerkerbol.html" with persoon=eerste.toegevoegd_door klasse="fk-bol" %}
               {% endif %}
               {{ eerste.toegevoegd_door.naam|default:"onbekend" }} · {{ eerste.datum|date:"j M" }}
             </span>
@@ -90,7 +90,7 @@
             <span class="wat">{% if eerste.toelichting %}{{ eerste.toelichting }}{% else %}{{ aantal }} foto's{% endif %}</span>
             <span class="wie">
               {% if eerste.toegevoegd_door %}
-                <span class="fk-bol" style="background:linear-gradient(150deg, {{ eerste.toegevoegd_door|medewerker_kleur }}, {{ eerste.toegevoegd_door|medewerker_kleur }}A6); border-color:{{ eerste.toegevoegd_door|medewerker_kleur }}">{{ eerste.toegevoegd_door.initialen }}</span>
+                {% include "_medewerkerbol.html" with persoon=eerste.toegevoegd_door klasse="fk-bol" %}
               {% endif %}
               {{ eerste.toegevoegd_door.naam|default:"onbekend" }} · {{ eerste.datum|date:"j M" }} · {{ aantal }} foto's
             </span>

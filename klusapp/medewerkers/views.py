@@ -175,7 +175,7 @@ def mijn_profiel(request):
                 messages.success(request, "Je wachtwoord is gewijzigd.")
                 return redirect("mijn_profiel")
         else:
-            gegevens = EigenGegevensForm(request.POST, instance=request.user)
+            gegevens = EigenGegevensForm(request.POST, request.FILES, instance=request.user)
             if gegevens.is_valid():
                 gegevens.save()
                 messages.success(request, "Je gegevens zijn bijgewerkt.")
@@ -263,7 +263,7 @@ def medewerker_lijst(request):
 @alleen_eigenaar
 def medewerker_nieuw(request):
     if request.method == "POST":
-        formulier = NieuweMedewerkerForm(request.POST)
+        formulier = NieuweMedewerkerForm(request.POST, request.FILES)
         if formulier.is_valid():
             medewerker = formulier.save()
             messages.success(
@@ -281,7 +281,7 @@ def medewerker_nieuw(request):
 def medewerker_bewerken(request, pk):
     medewerker = get_object_or_404(_te_beheren(request.user), pk=pk)
     if request.method == "POST":
-        formulier = MedewerkerForm(request.POST, instance=medewerker)
+        formulier = MedewerkerForm(request.POST, request.FILES, instance=medewerker)
         if formulier.is_valid():
             formulier.save()
             messages.success(request, f"{medewerker.naam} is bijgewerkt.")

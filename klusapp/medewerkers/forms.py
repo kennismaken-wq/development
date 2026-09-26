@@ -1,8 +1,34 @@
 from django import forms
 from django.contrib.auth.password_validation import validate_password
+from django.core.files.uploadedfile import UploadedFile
 from django.utils.safestring import mark_safe
 
+from . import profielfotos
 from .models import Medewerker
+
+
+class ProfielfotoMixin:
+    """Een geüploade pasfoto verkleind opslaan in plaats van het origineel.
+
+    Zelfde behandeling als klusfoto's: rechtop, naar JPEG, EXIF eraf. Zonder
+    dit belandt een foto van acht megabyte ongewijzigd op de server, inclusief
+    de GPS-coördinaten van waar hij genomen is.
+    """
+
+    def clean_profielfoto(self):
+        foto = self.cleaned_data.get("profielfoto")
+        # Alleen een echte upload verwerken. Staat er al een foto, dan geeft
+        # Django het bestaande bestand terug — dat heeft ook een .file, dus
+        # daarop controleren betekent bij elke keer opslaan opnieuw verkleinen
+        # en hernoemen.
+        if not isinstance(foto, UploadedFile):
+            return foto
+        try:
+            verkleind = profielfotos.verkleind(foto)
+        except profielfotos.BestandNietLeesbaar as oorzaak:
+            raise forms.ValidationError(str(oorzaak)) from oorzaak
+        verkleind.name = "profielfoto.jpg"
+        return verkleind
 
 # Wat Django afkeurt, in gewone taal. Deze vier punten horen bij de
 # validators in config/settings.py (AUTH_PASSWORD_VALIDATORS); verandert daar
@@ -18,7 +44,7 @@ WACHTWOORD_EISEN = mark_safe(
 )
 
 
-class MedewerkerForm(forms.ModelForm):
+class MedewerkerForm(ProfielfotoMixin, forms.ModelForm):
     """Een medewerker aanmaken of bijwerken. Alleen de eigenaar komt hier.
 
     Bewust weinig velden: alles wat met rechten en systeembeheer te maken
@@ -29,6 +55,7 @@ class MedewerkerForm(forms.ModelForm):
     class Meta:
         model = Medewerker
         fields = [
+            "profielfoto",
             "first_name", "last_name", "username", "functie", "rol",
             "telefoon", "email", "adres", "postcode", "woonplaats",
             "noodcontact_naam", "noodcontact_relatie", "noodcontact_telefoon",
@@ -49,6 +76,7 @@ class MedewerkerForm(forms.ModelForm):
             "postcode": forms.TextInput(attrs={"autocomplete": "postal-code"}),
         }
         labels = {
+            "profielfoto": "Profielfoto",
             "first_name": "Voornaam",
             "last_name": "Achternaam",
             "username": "Gebruikersnaam",
@@ -72,7 +100,7 @@ class MedewerkerForm(forms.ModelForm):
 
     # Kopjes boven de velden, zodat het geen lange rij invulvakken wordt.
     GROEPEN = [
-        ("", ["first_name", "last_name", "username", "functie", "rol"]),
+        ("", ["profielfoto", "first_name", "last_name", "username", "functie", "rol"]),
         ("Contact", ["telefoon", "email", "adres", "postcode", "woonplaats"]),
         ("Bij nood bellen", ["noodcontact_naam", "noodcontact_relatie", "noodcontact_telefoon"]),
         ("Rijbewijs", ["rijbewijs", "aanhanger"]),
@@ -147,7 +175,7 @@ class WachtwoordForm(forms.Form):
         return wachtwoord
 
 
-class EigenGegevensForm(forms.ModelForm):
+class EigenGegevensForm(ProfielfotoMixin, forms.ModelForm):
     """Wat je van jezelf mag wijzigen op /mijn-profiel/.
 
     Niet je rol, gebruikersnaam, functie of datum in dienst: dat zijn
@@ -159,6 +187,7 @@ class EigenGegevensForm(forms.ModelForm):
     class Meta:
         model = Medewerker
         fields = [
+            "profielfoto",
             "first_name", "last_name",
             "telefoon", "email", "adres", "postcode", "woonplaats",
             "noodcontact_naam", "noodcontact_relatie", "noodcontact_telefoon",
@@ -169,7 +198,7 @@ class EigenGegevensForm(forms.ModelForm):
         help_texts = {veld: "" for veld in fields if veld != "noodcontact_relatie"}
 
     GROEPEN = [
-        ("", ["first_name", "last_name"]),
+        ("", ["profielfoto", "first_name", "last_name"]),
         ("Contact", ["telefoon", "email", "adres", "postcode", "woonplaats"]),
         ("Bij nood bellen", ["noodcontact_naam", "noodcontact_relatie", "noodcontact_telefoon"]),
         ("Rijbewijs", ["rijbewijs", "aanhanger"]),

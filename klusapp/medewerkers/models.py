@@ -1,5 +1,12 @@
+import uuid
+
 from django.contrib.auth.models import AbstractUser
 from django.db import models
+
+
+def profielfoto_pad(instance, bestandsnaam):
+    """Eigen bestandsnaam: telefoons leveren allemaal IMG_0001.jpg aan."""
+    return f"profielfotos/{uuid.uuid4().hex}.jpg"
 
 
 class Medewerker(AbstractUser):
@@ -18,6 +25,11 @@ class Medewerker(AbstractUser):
     # staat naast zijn naam in het klusdossier. De rol hierboven bepaalt de
     # rechten; dit veld bepaalt niets en is puur ter herkenning.
     functie = models.CharField(max_length=60, blank=True)
+
+    # Eén verkleinde versie, geen origineel: zie klussen/afbeeldingen.py. Een
+    # pasfoto van 400px is ruim genoeg voor een rondje van 40 en voor de kop
+    # van het profielscherm.
+    profielfoto = models.ImageField(upload_to=profielfoto_pad, blank=True)
 
     # ── contact ───────────────────────────────────────────────────────────
     telefoon = models.CharField("mobiel nummer", max_length=20, blank=True)

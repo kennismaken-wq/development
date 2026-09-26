@@ -1,8 +1,15 @@
 {% extends "basis.html" %}
 {% block titel %}Mijn profiel{% endblock %}
-{% block kop %}{{ user.naam }}{% endblock %}
-{% block sub %}{{ user.get_rol_display }}{% if user.functie %} · {{ user.functie }}{% endif %}{% endblock %}
+{% block kop %}Mijn profiel{% endblock %}
 {% block inhoud %}
+  <div class="profielkop">
+    {% include "_medewerkerbol.html" with persoon=user klasse="grote-bol" %}
+    <span class="wie">
+      <span class="naam">{{ user.naam }}</span>
+      <span class="rol">{{ user.get_rol_display }}{% if user.functie %} · {{ user.functie }}{% endif %}</span>
+    </span>
+  </div>
+
   {% comment %} Eén weergave voor lezen en wijzigen: de velden staan er altijd,
      alleen niet bewerkbaar. De knop hierboven zet ze open — met javascript
      meteen, en zonder javascript via ?bewerken=1, zodat het scherm in beide
@@ -14,7 +21,7 @@
     </a>
   </p>
 
-  <form method="post" id="gegevensformulier"{% if bewerken %} class="bewerkt"{% endif %}>
+  <form method="post" id="gegevensformulier" enctype="multipart/form-data"{% if bewerken %} class="bewerkt"{% endif %}>
     {% csrf_token %}
     <dl class="gegevens-blok">
       <div class="gegeven">

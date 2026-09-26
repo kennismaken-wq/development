@@ -1,0 +1,10 @@
+{% load kleuren %}{% comment %} Het avatarrondje van een medewerker: zijn foto als
+   hij er een heeft, anders zijn initialen op zijn eigen kleur. Eén plek, want
+   dit rondje staat in de medewerkerslijst, het planbord, de aanwezigheid, het
+   klusdossier en het fotoraster — en daar moet het overal hetzelfde zijn.
+
+   Aanroepen met de klasse die bij dat scherm de maat bepaalt:
+     {% include "_medewerkerbol.html" with persoon=rij.medewerker klasse="aw-bol" %}
+{% endcomment %}<span class="{{ klasse }}{% if persoon.profielfoto %} met-foto{% endif %}"
+      style="background:linear-gradient(150deg, {{ persoon|medewerker_kleur }}, {{ persoon|medewerker_kleur }}A6); border-color:{{ persoon|medewerker_kleur }}"
+>{% if persoon.profielfoto %}<img class="bolfoto" src="{% url 'media_bestand' persoon.profielfoto.name %}" alt="{{ persoon.naam }}" loading="lazy">{% else %}{{ persoon.initialen }}{% endif %}</span>

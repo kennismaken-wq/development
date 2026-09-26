@@ -68,7 +68,7 @@
         <ul class="urenlijst">
           {% for rij in gewerkt %}
             <li>
-              <span class="ur-bol" style="background:linear-gradient(150deg, {{ rij.medewerker|medewerker_kleur }}, {{ rij.medewerker|medewerker_kleur }}A6); border-color:{{ rij.medewerker|medewerker_kleur }}">{{ rij.medewerker.initialen }}</span>
+              {% include "_medewerkerbol.html" with persoon=rij.medewerker klasse="ur-bol" %}
               <span class="wie">
                 {{ rij.medewerker.naam }}
                 {% if rij.medewerker.functie %}<span class="functie">{{ rij.medewerker.functie }}</span>{% endif %}

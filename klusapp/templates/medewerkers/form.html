@@ -3,6 +3,16 @@
 {% block kop %}{% if nieuw %}Nieuwe medewerker{% else %}{{ medewerker.naam }}{% endif %}{% endblock %}
 {% block sub %}<a href="{% url 'medewerkers' %}" style="color:rgba(255,255,255,0.6)">‹ Medewerkers</a>{% endblock %}
 {% block inhoud %}
+  {% if not nieuw %}
+    <div class="profielkop">
+      {% include "_medewerkerbol.html" with persoon=medewerker klasse="grote-bol" %}
+      <span class="wie">
+        <span class="naam">{{ medewerker.naam }}</span>
+        <span class="rol">{{ medewerker.get_rol_display }}{% if medewerker.functie %} · {{ medewerker.functie }}{% endif %}</span>
+      </span>
+    </div>
+  {% endif %}
+
   {% if not nieuw and medewerker.telefoon or not nieuw and medewerker.email %}
     <p class="snelcontact">
       {% if medewerker.telefoon %}<a class="knop-stil" href="tel:{{ medewerker.telefoon }}">Bellen</a>{% endif %}
@@ -10,7 +20,7 @@
     </p>
   {% endif %}
 
-  <form method="post">
+  <form method="post" enctype="multipart/form-data">
     {% csrf_token %}
     {% for kop, velden in formulier.groepen %}
       {% if kop %}<h2 class="sectiekop">{{ kop }}</h2>{% endif %}

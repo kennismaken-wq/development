@@ -736,6 +736,23 @@ input[type=time]::-webkit-calendar-picker-indicator{ filter:invert(1); opacity:.
 .eisen li::marker{ color:rgba(var(--accent-rgb),0.7); }
 .eisen em{ font-style:normal; color:rgba(255,255,255,0.75); }
 
+/* Een avatarrondje met een foto erin. De maat en de ronding komen van de
+   klasse van het scherm zelf (mw-bol, aw-bol, bol, ur-bol, fk-bol); dit zorgt
+   alleen dat de foto het rondje vult zonder uitgerekt te worden. */
+.met-foto{ overflow:hidden; padding:0; }
+.bolfoto{ width:100%; height:100%; object-fit:cover; border-radius:inherit; display:block; }
+
+/* De kop van het profielscherm: grote foto naast je naam. */
+.profielkop{ display:flex; align-items:center; gap:.9rem; margin:0 0 1.2rem; }
+.profielkop .grote-bol{
+  width:72px; height:72px; flex-shrink:0; border-radius:999px; border:1px solid;
+  display:flex; align-items:center; justify-content:center;
+  font-size:22px; font-weight:700; color:#fff;
+}
+.profielkop .wie{ display:grid; gap:.15rem; min-width:0; }
+.profielkop .naam{ font-size:18px; font-weight:600; }
+.profielkop .rol{ font-size:12.5px; color:rgba(255,255,255,0.55); }
+
 /* Profiel: dezelfde velden voor lezen en wijzigen. Op slot zien ze eruit als
    gegevens (geen rand, geen invulvak), open als een gewoon formulier — zo
    verspringt er niets als je op wijzigen klikt. */
