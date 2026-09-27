@@ -165,6 +165,25 @@ class Bijlage(models.Model):
     def is_foto(self):
         return self.soort == self.Soort.FOTO
 
+    # Wat een browser zelf kan laten zien. HEIC staat er bewust niet bij:
+    # alleen Safari kan dat tonen, en een document gaat ongemoeid door (zie
+    # hierboven), dus een HEIC-tekening blijft HEIC.
+    AFBEELDING_EXTENSIES = (".jpg", ".jpeg", ".png", ".gif", ".webp")
+
+    @property
+    def weergave(self):
+        """Hoe de bestand-overlay (klussen/_fotopopup.html) dit toont: als
+        "foto", als "pdf" (op een computer in de overlay, op een telefoon
+        niet), of als "bestand" — alleen downloaden en delen."""
+        if self.is_foto:
+            return "foto"
+        naam = self.bestand.name.lower()
+        if naam.endswith(self.AFBEELDING_EXTENSIES):
+            return "foto"
+        if naam.endswith(".pdf"):
+            return "pdf"
+        return "bestand"
+
     @property
     def toonnaam(self):
         """Wat er in een lijst moet staan. Een foto heeft zelden een zinnige

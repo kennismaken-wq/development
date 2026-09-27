@@ -69,5 +69,12 @@
 
     {% block inhoud %}{% endblock %}
   </div>
+
+  {% if user.is_authenticated %}
+    {% comment %} Eén overlay voor foto's en bestanden op de hele site, zodat
+       elk scherm met een foto of document hetzelfde werkt — ook de
+       uurblok-sheet, die zijn inhoud pas later ophaalt. {% endcomment %}
+    {% include "klussen/_fotopopup.html" %}
+  {% endif %}
 </body>
 </html>

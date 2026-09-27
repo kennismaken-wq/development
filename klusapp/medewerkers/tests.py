@@ -653,7 +653,7 @@ class WisselenTest(TestCase):
         self.client.post(reverse("wissel_terug"))
         self.assertEqual(self.ingelogd(), self.maarten)
         html = self.client.get(reverse("start")).content.decode()
-        self.assertNotIn("Terug naar", html)
+        self.assertNotIn('class="wisselbalk"', html)
 
     def test_medewerker_kan_niet_wisselen(self):
         self.client.force_login(self.sam)

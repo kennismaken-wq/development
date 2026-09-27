@@ -23,7 +23,15 @@
 <ul class="doclijst">
   {% for bijlage in document_bijlagen %}
     <li>
-      <a class="doc-rij" href="{% url 'media_bestand' bijlage.bestand.name %}" target="_blank" rel="noopener">
+      {% comment %} De link blijft een gewone link (zonder javascript, of met
+         ctrl-klik, opent hij het bestand zoals vroeger); de data-velden laten
+         _fotopopup.html hem in de overlay openen. {% endcomment %}
+      <a class="doc-rij" href="{% url 'media_bestand' bijlage.bestand.name %}" target="_blank" rel="noopener"
+         data-overlay="{{ bijlage.weergave }}"
+         data-titel="{{ bijlage.toonnaam }}"
+         data-meta="{{ bijlage.toegevoegd_door.naam|default:'onbekend' }} · {{ bijlage.datum|date:'j M Y' }}"
+         data-naam="{{ bijlage.originele_naam|default:bijlage.toonnaam }}"
+         {% if bijlage|mag_weg:user %}data-verwijder="{% url 'bijlage_verwijderen' bijlage.pk %}"{% endif %}>
         {% if bijlage.thumbnail %}
           <img class="doc-thumb" src="{% url 'media_bestand' bijlage.thumbnail.name %}" alt="" loading="lazy">
         {% else %}

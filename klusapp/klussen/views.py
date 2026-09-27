@@ -12,6 +12,7 @@ from django.urls import reverse
 from django.utils import timezone
 from django.utils.http import url_has_allowed_host_and_scheme
 from django.utils.text import slugify
+from django.views.decorators.clickjacking import xframe_options_sameorigin
 
 from medewerkers.rechten import alleen_eigenaar
 from uren import export as uren_export
@@ -183,6 +184,10 @@ def post_verwijderen(request, batch):
     return _terug_naar(request, standaard)
 
 
+# Sameorigin in plaats van de algemene DENY: een pdf wordt op een computer in
+# de overlay van onze eigen pagina getoond (klussen/_fotopopup.html). Andere
+# sites mogen deze bestanden nog steeds niet insluiten.
+@xframe_options_sameorigin
 @login_required
 def media_bestand(request, pad):
     """Geüploade bestanden uitleveren, maar alleen aan wie is ingelogd.

@@ -14,11 +14,29 @@
    Vorige/volgende en de "1/N"-teller verschijnen vanzelf zodra er meer dan
    één item is. klusUrl/klusNaam gelden voor de hele galerij (alle foto's van
    één post hangen aan dezelfde klus) en tonen samen één regel met de
-   klusnaam en een klein knopje ernaast — geen los blok meer onderaan. {% endcomment %}
+   klusnaam en een klein knopje ernaast — geen los blok meer onderaan.
+
+   Sinds 27-09 ook voor documenten, en staat hij één keer in basis.html in
+   plaats van per pagina. Een item kan daarom ook `soort` ("foto", "pdf" of
+   "bestand"), `naam` (bestandsnaam bij downloaden) en `downloadbaar`
+   hebben. Een link met data-overlay (zie _documentenlijst.html) opent
+   vanzelf hier. Zo ziet dat eruit:
+     - foto: in beeld, zoals altijd;
+     - pdf op een computer: in de overlay, met de pdf-lezer van de browser;
+     - pdf op een telefoon: die kan dat in een pagina niet (Android) of
+       slecht (iPhone), dus een kaartje met Openen, Downloaden en Delen;
+     - Word, Excel en de rest: een kaartje met Downloaden en Delen.
+   Downloaden en delen werken alleen voor documenten. Bij klusfoto's tonen
+   ze nog de melding hieronder: dat hoort bij de social-mediamodule. {% endcomment %}
 <dialog id="foto-popup" class="foto-popup">
   <div class="foto-popup-kaart glas">
     <div class="foto-popup-afbeelding">
       <img id="foto-popup-img" src="" alt="">
+      <iframe id="foto-popup-pdf" class="foto-popup-pdf" title="" hidden></iframe>
+      <div id="foto-popup-bestand" class="foto-popup-bestand" hidden>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 3h7l4 4v13a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z"/><path d="M14 3v4h4"/></svg>
+        <span id="foto-popup-extensie" class="foto-popup-extensie"></span>
+      </div>
       {% comment %} Linksboven, zelfde plek als het kruisje op het
          uploadformulier (.uploadveld > .dialog-sluiten) — niet rechtsboven
          zoals een gewone dialoog, want daar staat op een telefoon al gauw de
@@ -41,6 +59,7 @@
       </p>
     </div>
     <div class="foto-popup-acties">
+      <a id="foto-popup-openen" class="knop-stil foto-popup-openen" href="" target="_blank" rel="noopener" hidden>Openen</a>
       <button type="button" id="foto-popup-verwijderen" class="foto-popup-knop" aria-label="Verwijderen" title="Verwijderen" hidden>
         {% include "uren/_prullenbak.html" %}
       </button>
@@ -77,6 +96,22 @@
     var tellerEl = document.getElementById("foto-popup-teller");
     var verwijderKnop = document.getElementById("foto-popup-verwijderen");
     var verwijderForm = document.getElementById("foto-popup-verwijder-form");
+    var pdfFrame = document.getElementById("foto-popup-pdf");
+    var bestandKaart = document.getElementById("foto-popup-bestand");
+    var extensieEl = document.getElementById("foto-popup-extensie");
+    var openenKnop = document.getElementById("foto-popup-openen");
+
+    // Alleen een computer met een ingebouwde pdf-lezer toont een pdf in de
+    // overlay. Android heeft die lezer niet; een iPhone zegt van wel, maar
+    // toont in een pagina alleen de eerste bladzijde — vandaar ook de
+    // voorwaarde van een muis.
+    var pdfInOverlay = navigator.pdfViewerEnabled === true &&
+      window.matchMedia("(hover: hover) and (pointer: fine)").matches;
+    var kanDelen = !!(navigator.share && navigator.canShare);
+    // Het bestand voor delen wordt al opgehaald zodra het in beeld komt:
+    // een telefoon laat delen alleen toe vlak na de tik, en een download
+    // die dan pas begint, is te laat.
+    var klaarVoorDelen = null;
 
     var huidigeItems = [];
     var huidigeIndex = 0;
@@ -86,11 +121,42 @@
     function toonItem(index) {
       huidigeIndex = index;
       var item = huidigeItems[index];
-      img.src = item.src;
-      img.alt = item.titel;
+      var soort = item.soort || "foto";
+      var inBeeld = soort === "foto" ? "foto" : (soort === "pdf" && pdfInOverlay ? "pdf" : "kaart");
+
+      img.hidden = inBeeld !== "foto";
+      if (inBeeld === "foto") { img.src = item.src; img.alt = item.titel; }
+      else { img.removeAttribute("src"); }
+      pdfFrame.hidden = inBeeld !== "pdf";
+      if (inBeeld === "pdf") { pdfFrame.src = item.src; pdfFrame.title = item.titel; }
+      else { pdfFrame.removeAttribute("src"); }
+      bestandKaart.hidden = inBeeld !== "kaart";
+      if (inBeeld === "kaart") {
+        var punt = (item.naam || "").lastIndexOf(".");
+        extensieEl.textContent = punt > -1 ? item.naam.slice(punt + 1).toUpperCase() : "";
+      }
+      // Ook op een computer: als de pdf in de overlay niet laadt, is dit
+      // de uitweg.
+      openenKnop.hidden = soort !== "pdf";
+      openenKnop.href = item.src;
+
       titelEl.textContent = item.titel;
       metaEl.textContent = item.meta;
       download.href = item.src;
+      if (item.downloadbaar) { download.setAttribute("download", item.naam || ""); }
+      else { download.removeAttribute("download"); }
+      delenKnop.hidden = !!item.downloadbaar && !kanDelen;
+
+      klaarVoorDelen = null;
+      if (item.downloadbaar && kanDelen) {
+        fetch(item.src)
+          .then(function (r) { if (!r.ok) throw new Error(); return r.blob(); })
+          .then(function (blob) {
+            if (huidigeItems[huidigeIndex] !== item) return;
+            klaarVoorDelen = new File([blob], item.naam || item.titel, { type: blob.type });
+          })
+          .catch(function () {});
+      }
 
       var meerdere = huidigeItems.length > 1;
       vorigeKnop.hidden = !meerdere;
@@ -147,7 +213,36 @@
     });
 
     verwijderKnop.addEventListener("click", function () {
-      if (confirm("Deze foto verwijderen?")) verwijderForm.submit();
+      var item = huidigeItems[huidigeIndex];
+      var vraag = item.downloadbaar ? "Dit document verwijderen?" : "Deze foto verwijderen?";
+      if (!confirm(vraag)) return;
+      // Terug naar waar je nu bent — ook als de overlay vanuit de
+      // uurblok-sheet is geopend, die een eigen adres heeft.
+      verwijderForm.elements.terug.value = location.pathname + location.search;
+      verwijderForm.submit();
+    });
+
+    // Een link met data-overlay opent hier in plaats van in een nieuw
+    // tabblad. Ctrl-, cmd- en middelklik laten we met rust: wie dat doet,
+    // wil juist dat tabblad.
+    document.addEventListener("click", function (e) {
+      var link = e.target.closest && e.target.closest("a[data-overlay]");
+      if (!link || e.button !== 0 || e.ctrlKey || e.metaKey || e.shiftKey) return;
+      e.preventDefault();
+      window.fotoPopupOpenGalerij([{
+        src: link.href,
+        titel: link.dataset.titel || "",
+        meta: link.dataset.meta || "",
+        soort: link.dataset.overlay,
+        naam: link.dataset.naam || "",
+        verwijderUrl: link.dataset.verwijder || "",
+        downloadbaar: true
+      }], 0);
+    });
+
+    // Een pdf in de overlay blijft anders op de achtergrond geladen.
+    dialoog.addEventListener("close", function () {
+      pdfFrame.removeAttribute("src");
     });
 
     window.fotoPopupSluiten = function () {
@@ -171,14 +266,30 @@
       if (e.target === this) fotoPopupSluiten();
     });
 
-    // Downloaden en delen werken nog niet — de knoppen staan er al voor de
-    // vormgeving, maar de functie zelf komt pas in een volgende fase.
+    // Downloaden en delen van klusfoto's werken nog niet — dat hoort bij de
+    // social-mediamodule. Voor documenten wel.
     download.addEventListener("click", function (e) {
+      if (huidigeItems[huidigeIndex].downloadbaar) return;
       e.preventDefault();
       alert("Downloaden kan nog niet. Deze functie komt in een volgende fase.");
     });
     delenKnop.addEventListener("click", function () {
-      alert("Delen kan nog niet. Deze functie komt in een volgende fase.");
+      if (!huidigeItems[huidigeIndex].downloadbaar) {
+        alert("Delen kan nog niet. Deze functie komt in een volgende fase.");
+        return;
+      }
+      if (!klaarVoorDelen) {
+        alert("Het bestand wordt nog opgehaald. Probeer het zo nog eens.");
+        return;
+      }
+      if (!navigator.canShare({ files: [klaarVoorDelen] })) {
+        alert("Dit soort bestand kan dit toestel niet delen. Download het en deel het daarna.");
+        return;
+      }
+      navigator.share({ files: [klaarVoorDelen], title: klaarVoorDelen.name })
+        .catch(function () {
+          // geannuleerd door de gebruiker: niets aan de hand
+        });
     });
   })();
 </script>

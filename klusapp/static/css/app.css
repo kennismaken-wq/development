@@ -2137,3 +2137,26 @@ html.klus-terug-navigatie .kaart:has(.terug-pijl){
   font-size:13px; color:rgba(255,255,255,0.85);
 }
 .wisselbalk strong{ color:var(--hi); font-weight:600; }
+
+/* ══════════ BESTAND-OVERLAY ══════════
+   Dezelfde popup als voor foto's (dialog.foto-popup hierboven), nu ook voor
+   documenten; zie klussen/_fotopopup.html. Een pdf krijgt op een computer
+   de volle ruimte, want een A4 in 480px breed is niet te lezen. */
+dialog.foto-popup:has(.foto-popup-pdf:not([hidden])){ max-width:min(92vw, 1000px); }
+/* Een strook boven de pdf voor het sluitkruisje: bovenop de pdf zelf valt
+   het over de knoppenbalk van de pdf-lezer van de browser. */
+.foto-popup-afbeelding:has(.foto-popup-pdf:not([hidden])){ padding-top:3.2rem; }
+.foto-popup-pdf{
+  /* schermhoogte min kopstrook, titel en knoppen: zo past de kaart
+     zonder eigen schuifbalk */
+  display:block; width:100%; border:0; background:#fff;
+  height:max(240px, calc(100vh - 17rem)); height:max(240px, calc(100dvh - 17rem));
+}
+.foto-popup-bestand{
+  display:flex; flex-direction:column; align-items:center; justify-content:center; gap:.5rem;
+  padding:3.2rem 1rem 2.2rem; color:rgba(255,255,255,0.6);
+  background:rgba(0,0,0,0.2);
+}
+.foto-popup-bestand svg{ width:56px; height:56px; }
+.foto-popup-extensie{ font-size:12px; font-weight:700; letter-spacing:.08em; color:var(--hi); }
+.foto-popup-openen{ margin-right:auto; }

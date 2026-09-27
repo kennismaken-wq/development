@@ -1464,3 +1464,60 @@ class KlusdossierUrenRechtenTest(TestCase):
         antwoord = self.client.get(url)
         self.assertEqual(antwoord.status_code, 200)
         self.assertTrue(antwoord.content.startswith(b"PK"))
+
+
+class WeergaveTest(TestCase):
+    """Hoe de bestand-overlay een bijlage toont (klussen/_fotopopup.html)."""
+
+    def weergave(self, naam, soort=Bijlage.Soort.DOCUMENT):
+        return Bijlage(bestand=f"bijlagen/2026/09/{naam}", soort=soort).weergave
+
+    def test_per_soort_bestand(self):
+        self.assertEqual(self.weergave("x.jpg", Bijlage.Soort.FOTO), "foto")
+        # een gefotografeerde tekening is een document, maar wel een plaatje
+        self.assertEqual(self.weergave("tekening.JPG"), "foto")
+        self.assertEqual(self.weergave("plan.png"), "foto")
+        self.assertEqual(self.weergave("Offerte.PDF"), "pdf")
+        for naam in ("begroting.xlsx", "brief.docx", "notitie.txt", "scan.heic"):
+            self.assertEqual(self.weergave(naam), "bestand", naam)
+
+
+@override_settings(MEDIA_ROOT=TIJDELIJKE_MEDIA)
+class BestandOverlayTest(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        cls.sam = Medewerker.objects.create_user("sam", password="x")
+        cls.klus = Klus.objects.create(naam="Tuin Vermeer")
+
+    @classmethod
+    def tearDownClass(cls):
+        shutil.rmtree(TIJDELIJKE_MEDIA, ignore_errors=True)
+        super().tearDownClass()
+
+    def setUp(self):
+        self.client.force_login(self.sam)
+        self.client.post(
+            reverse("bijlage_toevoegen"),
+            {"bestanden": upload("Offerte.pdf", b"%PDF-1.4", "application/pdf"), "klus": self.klus.pk},
+        )
+        self.pdf = Bijlage.objects.get()
+
+    def test_document_opent_in_de_overlay(self):
+        html = self.client.get(self.klus.get_absolute_url()).content.decode()
+        self.assertIn('data-overlay="pdf"', html)
+        self.assertIn('data-naam="Offerte.pdf"', html)
+        # eigen document: verwijderen mag, dus die knop krijgt de overlay mee
+        self.assertIn(f'data-verwijder="{reverse("bijlage_verwijderen", args=[self.pdf.pk])}"', html)
+
+    def test_overlay_staat_precies_een_keer_op_de_pagina(self):
+        # Vroeger per pagina ingevoegd; nu in basis.html. Twee keer zou twee
+        # dialogen met hetzelfde id geven.
+        for adres in (self.klus.get_absolute_url(), reverse("start"), reverse("fotos")):
+            html = self.client.get(adres).content.decode()
+            self.assertEqual(html.count('id="foto-popup"'), 1, adres)
+
+    def test_eigen_site_mag_het_bestand_insluiten_een_ander_niet(self):
+        antwoord = self.client.get(reverse("media_bestand", args=[self.pdf.bestand.name]))
+        self.assertEqual(antwoord.headers["X-Frame-Options"], "SAMEORIGIN")
+        # de rest van de site blijft op DENY
+        self.assertEqual(self.client.get(reverse("start")).headers["X-Frame-Options"], "DENY")
