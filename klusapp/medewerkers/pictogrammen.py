@@ -59,6 +59,10 @@ PICTOGRAMMEN = {
         '<circle cx="8.5" cy="9.5" r="1.7"/>'
         '<path d="M4 17l5-5 3 3 3-3.5 5 5.5"/>'
     ),
+    # een map: foto's en documenten samen, op het klusdossier
+    "bestanden": (
+        '<path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>'
+    ),
     # zelfde tekening als het documentpictogram in _documentenlijst.html
     "documenten": (
         '<path d="M7 3h7l4 4v13a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z"/>'

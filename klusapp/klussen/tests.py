@@ -1,3 +1,4 @@
+import re
 import shutil
 import tempfile
 import uuid
@@ -1521,3 +1522,27 @@ class BestandOverlayTest(TestCase):
         self.assertEqual(antwoord.headers["X-Frame-Options"], "SAMEORIGIN")
         # de rest van de site blijft op DENY
         self.assertEqual(self.client.get(reverse("start")).headers["X-Frame-Options"], "DENY")
+
+
+class KlusTabbladenTest(TestCase):
+    """Bestanden (foto's + documenten samen) staat open; Foto's en
+    Documenten tonen elk één soort. Zie klussen/klus_detail.html."""
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.sam = Medewerker.objects.create_user("sam", password="x")
+        cls.klus = Klus.objects.create(naam="Tuin Vermeer")
+
+    def test_volgorde_en_standaard_open(self):
+        self.client.force_login(self.sam)
+        html = self.client.get(self.klus.get_absolute_url()).content.decode()
+        tabs = re.findall(r'class="tabblad(?: actief)?" data-tab="(\w+)"', html)
+        self.assertEqual(tabs, ["bestanden", "uren", "fotos", "documenten"])
+        self.assertIn('class="tabblad actief" data-tab="bestanden"', html)
+        # documenten en foto's allebei zichtbaar, uren niet
+        self.assertIn('data-tab="documenten" data-ook="bestanden">', html)
+        self.assertIn('data-tab="fotos" data-ook="bestanden">', html)
+        self.assertIn('data-tab="uren" hidden>', html)
+        # en elk maar één keer: de uploaddialogen zitten erin
+        self.assertEqual(html.count('id="foto-invoegen"'), 1)
+        self.assertEqual(html.count('id="document-invoegen"'), 1)

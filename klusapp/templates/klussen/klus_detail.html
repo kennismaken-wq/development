@@ -27,15 +27,22 @@
     {% endif %}
   </div>
 
-  {% comment %} Documenten/Uren/Foto's als tabbladen: drie volle secties onder
-     elkaar was op een telefoon een lange scroll voor je bij Foto's was.
-     static/js/klustabs.js wisselt op een klik; de eerste tab staat hier al
-     open zodat de pagina ook zonder JS iets zinnigs toont. {% endcomment %}
-  <div class="tabbladen">
+  {% comment %} Bestanden/Uren/Foto's/Documenten als tabbladen: alles onder
+     elkaar was op een telefoon een lange scroll. static/js/klustabs.js
+     wisselt op een klik; "Bestanden" staat hier al open zodat de pagina ook
+     zonder JS iets zinnigs toont.
+
+     "Bestanden" is geen eigen paneel maar toont de panelen Documenten en
+     Foto's samen (data-ook). Zo staat alles er maar één keer in, en ook de
+     uploaddialogen die in die panelen zitten — twee keer zou dubbele id's
+     geven. De tussenkopjes (.paneelkop) verschijnen alleen in die stand.
+     Documenten staan bovenaan: dat lijstje is kort, het fotoraster kan lang
+     worden. {% endcomment %}
+  <div class="tabbladen" data-actief="bestanden">
     <div class="tabbladen-kop">
-      <button type="button" class="tabblad actief" data-tab="documenten">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">{{ "documenten"|pictogram }}</svg>
-        Documenten
+      <button type="button" class="tabblad actief" data-tab="bestanden">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">{{ "bestanden"|pictogram }}</svg>
+        Bestanden
       </button>
       <button type="button" class="tabblad" data-tab="uren">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">{{ "uren"|pictogram }}</svg>
@@ -45,10 +52,14 @@
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">{{ "fotos"|pictogram }}</svg>
         Foto's
       </button>
+      <button type="button" class="tabblad" data-tab="documenten">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">{{ "documenten"|pictogram }}</svg>
+        Documenten
+      </button>
     </div>
 
-    <div class="tabblad-paneel" data-tab="documenten">
-      {% include "klussen/_documentenlijst.html" with klus_pk=klus.pk geen_kop=True %}
+    <div class="tabblad-paneel" data-tab="documenten" data-ook="bestanden">
+      {% include "klussen/_documentenlijst.html" with klus_pk=klus.pk geen_kop=True paneelkop="Documenten" %}
     </div>
 
     <div class="tabblad-paneel" data-tab="uren" hidden>
@@ -98,7 +109,8 @@
       {% endif %}
     </div>
 
-    <div class="tabblad-paneel" data-tab="fotos" hidden>
+    <div class="tabblad-paneel" data-tab="fotos" data-ook="bestanden">
+      <h2 class="sectiekop paneelkop">Foto's</h2>
       {% include "klussen/_fotoraster.html" with klus_pk=klus.pk %}
     </div>
   </div>
