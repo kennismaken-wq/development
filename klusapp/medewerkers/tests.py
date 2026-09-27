@@ -595,9 +595,16 @@ class ProfielfotoTest(TestCase):
         html = self.client.get(reverse("mijn_profiel")).content.decode()
         self.assertIn("fotowissel", html)
         self.assertIn("buiten-beeld", html)
-        # het veld zit wél in het formulier, en is niet op slot gezet
+        # het veld zit wél in het formulier
         self.assertIn('name="profielfoto"', html)
-        self.assertNotIn('name="profielfoto" disabled', html)
+
+    def test_foto_is_niet_te_wijzigen_zolang_je_niet_aan_het_wijzigen_bent(self):
+        # Op slot: een tik op de foto mag de fotokiezer niet openen.
+        op_slot = self.client.get(reverse("mijn_profiel")).context["formulier"]
+        self.assertTrue(op_slot.fields["profielfoto"].widget.attrs.get("disabled"))
+
+        bewerken = self.client.get(reverse("mijn_profiel") + "?bewerken=1").context["formulier"]
+        self.assertFalse(bewerken.fields["profielfoto"].widget.attrs.get("disabled"))
 
     def test_het_fotoveld_staat_niet_in_de_veldgroepen(self):
         velden = [
