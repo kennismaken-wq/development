@@ -9,8 +9,8 @@
        staat er geen "Bestand kiezen"-knop in beeld en wissel je je foto
        door op de foto zelf te tikken.
     {% endcomment %}
-    <label class="fotowissel" for="{{ formulier.profielfoto.id_for_label }}"
-           title="Andere foto kiezen">
+    <label class="fotowissel{% if bewerken %} aan{% endif %}" id="fotowissel"
+           for="{{ formulier.profielfoto.id_for_label }}" title="Andere foto kiezen">
       {% include "_medewerkerbol.html" with persoon=user klasse="grote-bol" %}
       <span class="pen" aria-hidden="true">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">{{ "pen"|pictogram }}</svg>
@@ -103,6 +103,9 @@
           if (veld.name) { veld.disabled = false; }
         });
         formulier.classList.add('bewerkt');
+        // het pennetje op de foto hoort bij dezelfde stand
+        var wissel = document.getElementById('fotowissel');
+        if (wissel) { wissel.classList.add('aan'); }
         knop.hidden = true;
         opslaan.hidden = false;
       }

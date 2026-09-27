@@ -6,6 +6,7 @@ Lokaal draait de app op SQLite, op de VPS op Postgres.
 """
 
 import os
+import sys
 from pathlib import Path
 
 import dj_database_url
@@ -81,6 +82,13 @@ DATABASES = {
 }
 
 AUTH_USER_MODEL = "medewerkers.Medewerker"
+
+# Wachtwoorden hashen is met opzet traag — dat is precies de bedoeling bij
+# inloggen, maar in de testsuite maken we honderden gebruikers aan en daar gaat
+# het merendeel van de looptijd in zitten. Tijdens `manage.py test` dus een
+# snelle hasher; in de app zelf verandert er niets.
+if "test" in sys.argv:
+    PASSWORD_HASHERS = ["django.contrib.auth.hashers.MD5PasswordHasher"]
 
 AUTH_PASSWORD_VALIDATORS = [
     {"NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"},

@@ -42,7 +42,7 @@ TEGELS = [
 # Schermen die niet in de navigatiebalk passen maar wel bereikbaar moeten
 # blijven — getoond als knoppenlijst op het profielscherm (templates/profiel.html).
 PROFIEL_TEGELS = [
-    {"titel": "Overzichten", "icoon": "export", "url_naam": "urenexport", "rollen": ["eigenaar"]},
+    {"titel": "Urenexport", "icoon": "export", "url_naam": "urenexport", "rollen": ["eigenaar"]},
     # Niet in de balk: je mensen beheer je af en toe, niet dagelijks.
     {"titel": "Medewerkers", "icoon": "medewerkers", "url_naam": "medewerkers", "rollen": ["eigenaar"]},
     {"titel": "Loonstrook", "icoon": "loonstrook", "url_naam": "loonstrook", "rollen": ["medewerker", "eigenaar"]},
@@ -51,7 +51,8 @@ PROFIEL_TEGELS = [
     {"titel": "Beheer", "icoon": "beheer", "url": "/beheer/", "rollen": ["eigenaar"]},
 ]
 
-# Planbord is op 17-09-2026 op verzoek van Thijmen uit de navigatie gehaald
+# Het weekoverzicht (url_naam "planbord") is op 17-09-2026 op verzoek van Thijmen
+# uit de navigatie gehaald
 # om de balk tot vijf iconen te beperken (later apart te bespreken waar het
 # terugkomt). De route en view (uren.views.planbord, url_naam "planbord")
 # bestaan nog gewoon; alleen de link ernaartoe ontbreekt bewust.

@@ -76,7 +76,10 @@ al af was.
 Testgebruikers maak je met `python maak_testdata.py`: `maarten` (eigenaar) en
 `sam` (medewerker), beide met wachtwoord `test1234`. Alleen voor lokaal.
 
-Tests: `.venv\Scripts\python manage.py test`
+Tests: `.venv\Scripts\python manage.py test` — de hele suite draait in een
+seconde of tien. Tijdens het testen schakelt `settings.py` over op een snelle
+wachtwoord-hasher; zonder dat duurde dezelfde suite twee en een halve minuut,
+want bijna alle tijd ging op aan het hashen van testwachtwoorden.
 
 ## Stack
 

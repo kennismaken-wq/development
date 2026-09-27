@@ -76,7 +76,7 @@ def _onderdelen_met_cijfers(gebruiker, vandaag, maandag, zondag, uren):
         # 's ochtends als eerste opent na zijn eigen uren.
         onderdelen.insert(
             1,
-            {"titel": "Planbord", "icoon": "planbord", "url_naam": "planbord",
+            {"titel": "Weekoverzicht", "icoon": "planbord", "url_naam": "planbord",
              "url": reverse("planbord"), "extern": False},
         )
 

@@ -37,7 +37,7 @@ class StartschermTest(TestCase):
         self.assertIn("Aanwezigheid", titels)
         # Planbord, Overzichten, Loonstrook en Beheer staan niet meer in de
         # balk zelf maar op het profielscherm, zie ProfielschermTest hieronder.
-        for verplaatst in ("Planbord", "Overzichten", "Loonstrook", "Beheer"):
+        for verplaatst in ("Weekoverzicht", "Urenexport", "Loonstrook", "Beheer"):
             self.assertNotIn(verplaatst, titels)
 
     def test_medewerker_ziet_geen_beheerderstegels(self):
@@ -45,7 +45,7 @@ class StartschermTest(TestCase):
         titels = tegeltitels(self.client.get(reverse("start")).content.decode())
         self.assertIn("Uren schrijven", titels)
         self.assertIn("Mijn profiel", titels)
-        for verboden in ("Planbord", "Aanwezigheid", "Beheer", "Overzichten"):
+        for verboden in ("Weekoverzicht", "Aanwezigheid", "Beheer", "Urenexport"):
             self.assertNotIn(verboden, titels)
 
     def test_loonstrook_op_android_direct_naar_loondossier(self):
@@ -167,14 +167,14 @@ class ProfielschermTest(TestCase):
         self.client.force_login(self.medewerker)
         titels = [t["titel"] for t in self.client.get(reverse("start")).context["onderdelen"]]
         self.assertIn("Loonstrook", titels)
-        for verboden in ("Overzichten", "Beheer", "Planbord"):
+        for verboden in ("Urenexport", "Beheer", "Weekoverzicht"):
             self.assertNotIn(verboden, titels)
 
     def test_eigenaar_ziet_ook_overzichten(self):
         self.client.force_login(self.eigenaar)
         titels = [t["titel"] for t in self.client.get(reverse("start")).context["onderdelen"]]
-        self.assertIn("Overzichten", titels)
-        self.assertIn("Planbord", titels)
+        self.assertIn("Urenexport", titels)
+        self.assertIn("Weekoverzicht", titels)
 
     def test_loonstrooktegel_gaat_via_de_app_zelf(self):
         # De tegel wijst naar ons eigen adres; daar wordt pas bepaald of
@@ -312,7 +312,7 @@ class StarttegelsTest(TestCase):
         html = self.client.get(reverse("start")).content.decode()
         self.assertIn("Uren schrijven", html)
         self.assertIn("Klussen", html)
-        for alleen_voor_de_baas in ("Aanwezigheid", "Overzichten", "Medewerkers"):
+        for alleen_voor_de_baas in ("Aanwezigheid", "Urenexport", "Medewerkers"):
             self.assertNotIn(alleen_voor_de_baas, html)
 
     def test_eigenaar_ziet_ook_zijn_eigen_schermen(self):
@@ -390,15 +390,15 @@ class TestgegevensTest(TestCase):
         self.assertNotIn("{#", html)
         self.assertNotIn("automatische doorverwijzing", html)
 
-    def test_planbord_staat_vooraan_voor_de_eigenaar(self):
+    def test_weekoverzicht_staat_vooraan_voor_de_eigenaar(self):
         self.client.force_login(self.eigenaar)
         titels = [t["titel"] for t in self.client.get(reverse("start")).context["onderdelen"]]
-        self.assertEqual(titels[:2], ["Uren schrijven", "Planbord"])
+        self.assertEqual(titels[:2], ["Uren schrijven", "Weekoverzicht"])
 
-    def test_medewerker_krijgt_geen_planbord(self):
+    def test_medewerker_krijgt_geen_weekoverzicht(self):
         self.client.force_login(self.sam)
         titels = [t["titel"] for t in self.client.get(reverse("start")).context["onderdelen"]]
-        self.assertNotIn("Planbord", titels)
+        self.assertNotIn("Weekoverzicht", titels)
 
     def test_geen_aanmaakformulier_meer_op_het_startscherm(self):
         self.client.force_login(self.eigenaar)
@@ -606,3 +606,10 @@ class ProfielfotoTest(TestCase):
             for veld in groep
         ]
         self.assertNotIn("profielfoto", velden)
+
+    def test_pennetje_staat_er_pas_in_de_bewerkstand(self):
+        op_slot = self.client.get(reverse("mijn_profiel")).content.decode()
+        self.assertIn('class="fotowissel"', op_slot)
+
+        bewerken = self.client.get(reverse("mijn_profiel") + "?bewerken=1").content.decode()
+        self.assertIn('class="fotowissel aan"', bewerken)

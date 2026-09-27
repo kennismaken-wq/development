@@ -357,6 +357,12 @@ input[type=time]::-webkit-calendar-picker-indicator{ filter:invert(1); opacity:.
   position:absolute; z-index:30; top:calc(100% + .5rem); left:0;
   width:290px; max-width:min(290px, 88vw); border-radius:18px; padding:.8rem;
   display:flex; flex-direction:column; gap:.6rem;
+  /* Dekkend, niet doorzichtig: dit paneel staat boven het fotoraster en
+     glas over foto's maakt de tekst onleesbaar. Zelfde nagebouwde glaslook
+     als de namenkolom van het planbord (.bord-naam). */
+  background:
+    linear-gradient(150deg, rgba(255,255,255,0.125), rgba(255,255,255,0.05)),
+    linear-gradient(160deg, #20211C, #282C21);
 }
 .klus-kiezer-zoek{
   display:flex; align-items:center; gap:.5rem;
@@ -752,8 +758,12 @@ input[type=time]::-webkit-calendar-picker-indicator{ filter:invert(1); opacity:.
 
 /* Foto wisselen door op de foto te tikken; het pennetje maakt zichtbaar dat
    dat kan, zonder een "Bestand kiezen"-knop in het scherm. */
-.fotowissel{ position:relative; display:inline-block; cursor:pointer; margin:0; }
-.fotowissel .pen{
+/* Alleen tijdens het wijzigen: anders suggereert een pennetje dat je zomaar
+   iets kunt veranderen terwijl de rest van het scherm op slot staat. */
+.fotowissel{ position:relative; display:inline-block; margin:0; cursor:default; }
+.fotowissel.aan{ cursor:pointer; }
+.fotowissel .pen{ display:none; }
+.fotowissel.aan .pen{
   position:absolute; right:-2px; bottom:-2px;
   width:26px; height:26px; border-radius:999px;
   display:flex; align-items:center; justify-content:center;
@@ -761,7 +771,7 @@ input[type=time]::-webkit-calendar-picker-indicator{ filter:invert(1); opacity:.
   border:2px solid #20211C;
 }
 .fotowissel .pen svg{ width:14px; height:14px; }
-@media (hover:hover){ .fotowissel:hover .pen{ filter:brightness(1.1); } }
+@media (hover:hover){ .fotowissel.aan:hover .pen{ filter:brightness(1.1); } }
 
 /* De kop van het profielscherm: grote foto naast je naam. */
 .profielkop{ display:flex; align-items:center; gap:.9rem; margin:0 0 1.2rem; }
