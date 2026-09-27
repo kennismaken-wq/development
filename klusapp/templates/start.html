@@ -105,6 +105,25 @@
     <p class="leeg">Nog geen foto's toegevoegd.</p>
   {% endif %}
 
+  {% if wisselbaar %}
+    {% comment %} TIJDELIJK — om te testen wat een medewerker ziet: één tik en
+       je bent die persoon, de balk bovenaan brengt je terug. Weghalen vóór de
+       oplevering; zie medewerkers/views.py:wissel_naar.
+    {% endcomment %}
+    <h2 class="sectiekop">Bekijk als medewerker</h2>
+    <div class="wisselrij">
+      {% for persoon in wisselbaar %}
+        <form method="post" action="{% url 'wissel_naar' persoon.pk %}">
+          {% csrf_token %}
+          <button type="submit" class="wisselknop" title="Verder als {{ persoon.naam }}">
+            {% include "_medewerkerbol.html" with persoon=persoon klasse="mw-bol" %}
+            <span class="wisselnaam">{{ persoon.first_name|default:persoon.naam }}</span>
+          </button>
+        </form>
+      {% endfor %}
+    </div>
+  {% endif %}
+
   {% if testgegevens_aanwezig %}
     {% comment %} TIJDELIJK — staat er alleen zolang er testmedewerkers zijn,
        en verdwijnt zodra je ze opruimt. Zie medewerkers/testgegevens.py.

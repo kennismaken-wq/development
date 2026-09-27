@@ -1,8 +1,9 @@
 from datetime import date, timedelta
 
 from django.contrib import messages
-from django.contrib.auth import update_session_auth_hash
+from django.contrib.auth import login, update_session_auth_hash
 from django.contrib.auth.decorators import login_required
+from django.views.decorators.http import require_POST
 from django.db.models import Case, IntegerField, Max, Prefetch, Q, Value, When
 from django.db.models.functions import Lower
 from django.shortcuts import get_object_or_404, redirect, render
@@ -141,6 +142,8 @@ def start(request):
             and Medewerker.objects.filter(
                 username__startswith=demo_gegevens.VOORVOEGSEL
             ).exists(),
+            # TIJDELIJK: met één tik als medewerker verder, om te testen.
+            "wisselbaar": _wisselbaar() if request.user.is_eigenaar else [],
             "klussen_recent": klussen_recent,
             "uren_stats": uren_stats,
             "maandwidget": totalen.maand_heatmap(request.user, vandaag),
@@ -376,4 +379,49 @@ def testgegevens(request):
         f"{mensen} testmedewerkers met {blokken} uurblokken in de week van "
         f"{kort(maandag)} tot {kort(zondag)}.",
     )
+    return redirect("start")
+
+
+# ── TIJDELIJK: wisselen van account om te testen ────────────────────────────
+# Zolang we bouwen, wil je snel zien wat een medewerker ziet zonder uit te
+# loggen en een wachtwoord te zoeken. Een eigenaar kan daarom met één tik als
+# medewerker verder, en via de balk bovenaan elk scherm weer terug.
+# Weghalen vóór de oplevering: dit is meekijken in iemands account zonder zijn
+# wachtwoord. Alles hangt aan wissel_naar, wissel_terug, _wisselbaar, de
+# context processor "wissel" en de twee blokken in start.html en basis.html.
+SESSIE_WISSEL = "gewisseld_van"
+BACKEND = "django.contrib.auth.backends.ModelBackend"
+
+
+def _wisselbaar():
+    """Alleen medewerkers die nog in dienst zijn, nooit een andere eigenaar."""
+    return Medewerker.objects.filter(
+        rol=Medewerker.Rol.MEDEWERKER, is_active=True, uit_dienst_sinds__isnull=True
+    ).order_by(Lower("first_name"), Lower("last_name"), "username")
+
+
+@require_POST
+@alleen_eigenaar
+def wissel_naar(request, pk):
+    doel = get_object_or_404(_wisselbaar(), pk=pk)
+    eigen = request.user.pk
+    # login() maakt de sessie leeg als er iemand anders inlogt, dus pas
+    # daarna onthouden wie je eigenlijk bent.
+    login(request, doel, backend=BACKEND)
+    # Geen melding: de balk bovenaan elk scherm zegt het al.
+    request.session[SESSIE_WISSEL] = eigen
+    return redirect("start")
+
+
+@require_POST
+@login_required
+def wissel_terug(request):
+    eigen_pk = request.session.get(SESSIE_WISSEL)
+    eigen = Medewerker.objects.filter(
+        pk=eigen_pk, rol=Medewerker.Rol.EIGENAAR, is_active=True
+    ).first()
+    if eigen is None:
+        return redirect("start")
+    login(request, eigen, backend=BACKEND)
+    messages.success(request, f"Je bent weer {eigen.naam}.")
     return redirect("start")

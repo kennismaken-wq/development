@@ -66,6 +66,11 @@ al af was.
   eigenaar krijgt voorlopig wél toegang tot `/beheer/`. Dat hangt aan één regel
   in `Medewerker.save()`. Zodra dat account er is, moet die toegang weer los van
   de rol "eigenaar" komen te staan.
+- **Tijdelijk (sept. 2026):** een eigenaar kan onderaan het startscherm met één
+  tik als medewerker meekijken ("Bekijk als medewerker"), en via de balk
+  bovenaan elk scherm terug. Handig om te testen, maar het is inloggen als
+  iemand anders zonder zijn wachtwoord: **weghalen vóór de oplevering.** Alles
+  staat bij `wissel_naar` in `medewerkers/views.py`.
 
 ## Lokaal draaien
 

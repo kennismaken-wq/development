@@ -620,3 +620,74 @@ class ProfielfotoTest(TestCase):
 
         bewerken = self.client.get(reverse("mijn_profiel") + "?bewerken=1").content.decode()
         self.assertIn('class="fotowissel aan"', bewerken)
+
+
+class WisselenTest(TestCase):
+    """TIJDELIJK: als eigenaar met één tik meekijken als medewerker."""
+
+    def setUp(self):
+        self.maarten = Medewerker.objects.create_user(
+            "maarten", password="x", first_name="Maarten", rol=Medewerker.Rol.EIGENAAR
+        )
+        self.sam = Medewerker.objects.create_user("sam", password="x", first_name="Sam")
+
+    def ingelogd(self):
+        return self.client.get(reverse("start")).context["user"]
+
+    def test_eigenaar_ziet_de_knoppen_medewerker_niet(self):
+        self.client.force_login(self.maarten)
+        html = self.client.get(reverse("start")).content.decode()
+        self.assertIn(reverse("wissel_naar", args=[self.sam.pk]), html)
+
+        self.client.force_login(self.sam)
+        html = self.client.get(reverse("start")).content.decode()
+        self.assertNotIn("Bekijk als medewerker", html)
+
+    def test_wisselen_en_terug(self):
+        self.client.force_login(self.maarten)
+        self.client.post(reverse("wissel_naar", args=[self.sam.pk]))
+        self.assertEqual(self.ingelogd(), self.sam)
+        html = self.client.get(reverse("start")).content.decode()
+        self.assertIn("Terug naar Maarten", html)
+
+        self.client.post(reverse("wissel_terug"))
+        self.assertEqual(self.ingelogd(), self.maarten)
+        html = self.client.get(reverse("start")).content.decode()
+        self.assertNotIn("Terug naar", html)
+
+    def test_medewerker_kan_niet_wisselen(self):
+        self.client.force_login(self.sam)
+        antwoord = self.client.post(reverse("wissel_naar", args=[self.maarten.pk]))
+        self.assertEqual(antwoord.status_code, 404)
+        self.assertEqual(self.ingelogd(), self.sam)
+
+    def test_niet_naar_een_andere_eigenaar_of_iemand_uit_dienst(self):
+        tweede = Medewerker.objects.create_user("els", password="x", rol=Medewerker.Rol.EIGENAAR)
+        weg = Medewerker.objects.create_user(
+            "piet", password="x", is_active=False, uit_dienst_sinds=date(2026, 1, 1)
+        )
+        self.client.force_login(self.maarten)
+        for persoon in (tweede, weg):
+            antwoord = self.client.post(reverse("wissel_naar", args=[persoon.pk]))
+            self.assertEqual(antwoord.status_code, 404)
+        self.assertEqual(self.ingelogd(), self.maarten)
+
+    def test_alleen_met_post(self):
+        self.client.force_login(self.maarten)
+        antwoord = self.client.get(reverse("wissel_naar", args=[self.sam.pk]))
+        self.assertEqual(antwoord.status_code, 405)
+        self.assertEqual(self.ingelogd(), self.maarten)
+
+    def test_terug_zonder_te_hebben_gewisseld_doet_niets(self):
+        # Een medewerker die zelf "terug" post, wordt niet ineens eigenaar.
+        self.client.force_login(self.sam)
+        self.client.post(reverse("wissel_terug"))
+        self.assertEqual(self.ingelogd(), self.sam)
+
+    def test_testaccounts_zonder_wachtwoord_zijn_ook_te_bekijken(self):
+        # Juist die hebben uren, dus daar wil je in kunnen kijken.
+        self.client.force_login(self.maarten)
+        self.client.post(reverse("testgegevens"), {"week": "2026-09-16"})
+        nep = Medewerker.objects.filter(username__startswith="demo-").first()
+        self.client.post(reverse("wissel_naar", args=[nep.pk]))
+        self.assertEqual(self.ingelogd(), nep)

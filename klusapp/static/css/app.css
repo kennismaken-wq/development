@@ -2116,3 +2116,24 @@ html.klus-terug-navigatie .kaart:has(.terug-pijl){
 @media (max-width:700px){
   .keuzegroep.tweede{ margin-left:0; padding-left:0; border-left:0; }
 }
+
+/* ══════════ TIJDELIJK: MEEKIJKEN ALS MEDEWERKER ══════════
+   Zie medewerkers/views.py:wissel_naar. Weg vóór de oplevering. */
+.wisselrij{ display:flex; flex-wrap:wrap; gap:.4rem .5rem; }
+.wisselknop{
+  display:flex; flex-direction:column; align-items:center; gap:.35rem;
+  width:68px; padding:.45rem .2rem; background:none; border:0; border-radius:16px;
+  color:#fff; font-family:'Inter',sans-serif; cursor:pointer;
+}
+@media (hover:hover){ .wisselknop:hover{ background:rgba(255,255,255,0.08); } }
+.wisselnaam{
+  font-size:12px; color:rgba(255,255,255,0.75); max-width:100%;
+  overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+}
+.wisselbalk{
+  display:flex; align-items:center; justify-content:space-between; gap:.6rem; flex-wrap:wrap;
+  margin:0 0 1rem; padding:.55rem .6rem .55rem .9rem; border-radius:16px;
+  background:rgba(var(--accent-rgb),0.16); border:1px solid rgba(var(--accent-rgb),0.45);
+  font-size:13px; color:rgba(255,255,255,0.85);
+}
+.wisselbalk strong{ color:var(--hi); font-weight:600; }

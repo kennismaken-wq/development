@@ -48,6 +48,16 @@
       </div>
     </div>
 
+    {% if gewisseld_van %}
+      {% comment %} TIJDELIJK: je kijkt mee als medewerker; zie
+         medewerkers/views.py:wissel_naar. {% endcomment %}
+      <form method="post" action="{% url 'wissel_terug' %}" class="wisselbalk">
+        {% csrf_token %}
+        <span>Je kijkt mee als <strong>{{ user.naam }}</strong></span>
+        <button type="submit" class="knop-stil">Terug naar {{ gewisseld_van.first_name|default:gewisseld_van.naam }}</button>
+      </form>
+    {% endif %}
+
     {% if messages %}
       <ul class="meldingen" role="status" aria-live="polite">
         {% for melding in messages %}

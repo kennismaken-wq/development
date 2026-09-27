@@ -67,6 +67,7 @@ TEMPLATES = [
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
                 "medewerkers.context_processors.tegels",
+                "medewerkers.context_processors.wissel",
             ],
         },
     },

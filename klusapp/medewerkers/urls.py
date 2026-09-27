@@ -5,6 +5,9 @@ from . import views
 urlpatterns = [
     # TIJDELIJK: nepmedewerkers met uren; zie medewerkers/testgegevens.py
     path("testgegevens/", views.testgegevens, name="testgegevens"),
+    # TIJDELIJK: als medewerker meekijken om te testen; zie views.wissel_naar
+    path("wissel/<int:pk>/", views.wissel_naar, name="wissel_naar"),
+    path("wissel/terug/", views.wissel_terug, name="wissel_terug"),
     path("medewerkers/", views.medewerker_lijst, name="medewerkers"),
     path("medewerkers/nieuw/", views.medewerker_nieuw, name="medewerker_nieuw"),
     path("medewerkers/<int:pk>/", views.medewerker_bewerken, name="medewerker_bewerken"),
