@@ -5,8 +5,8 @@
    de "Technische documenten"-kop weg, voor het klusdossier waar het
    "Documenten"-tabblad zelf al als kop dient (zie klussen/klus_detail.html)
    — de toevoegknop blijft dan wel staan, rechts uitgelijnd. Optioneel
-   `paneelkop`: een kopje dat alleen in de stand "Bestanden" van het
-   klusdossier zichtbaar is (zie .paneelkop in app.css).
+   `kop`: een andere koptekst dan "Technische documenten" (het klusdossier
+   zet er "Documenten" boven, met de foto's eronder).
 
    Tekent zelf de kop met de toevoegknop (zelfde .sectiekop-rij als "Gewerkte
    uren"/Exporteren op het klusdossier): los in de lijst als eigen
@@ -19,8 +19,7 @@
    verschijnen. {% endcomment %}
 {% load bijlagen %}
 <div class="sectiekop-rij{% if geen_kop %} alleen-actie{% endif %}"{% if geen_kop %} style="justify-content:flex-end"{% endif %}>
-  {% if not geen_kop %}<h2 class="sectiekop">Technische documenten</h2>{% endif %}
-  {% if paneelkop %}<h2 class="sectiekop paneelkop">{{ paneelkop }}</h2>{% endif %}
+  {% if not geen_kop %}<h2 class="sectiekop">{{ kop|default:"Technische documenten" }}</h2>{% endif %}
   <button type="button" class="knop-stil" style="margin-left:auto" onclick="document.getElementById('document-invoegen').showModal()">Document toevoegen</button>
 </div>
 <ul class="doclijst">

@@ -7,6 +7,7 @@ from io import BytesIO
 
 import pymupdf
 from django.contrib.auth.models import AnonymousUser
+from django.core.files.base import ContentFile
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.db import connection
 from django.http import Http404
@@ -86,20 +87,6 @@ class AfbeeldingenTest(TestCase):
     def test_kapotte_afbeelding_geeft_geen_serverfout(self):
         with self.assertRaises(afbeeldingen.BestandNietLeesbaar):
             afbeeldingen.versies_van(BytesIO(b"dit is geen plaatje"), "stuk.jpg")
-
-    def test_thumbnail_van_geeft_voorbeeld_voor_een_foto_als_document(self):
-        # bewaar_bijlage roept dit alleen aan met forceer_document=True: het
-        # bestand zelf blijft dan ongemoeid, alleen dit voorbeeldplaatje wordt
-        # gemaakt (zie klussen.views.bewaar_bijlage).
-        thumbnail = afbeeldingen.thumbnail_van(BytesIO(jpeg()), "tekening.jpg")
-        with Image.open(thumbnail) as klein:
-            self.assertEqual(max(klein.size), afbeeldingen.THUMB_ZIJDE)
-
-    def test_thumbnail_van_geeft_niets_voor_een_pdf(self):
-        self.assertIsNone(afbeeldingen.thumbnail_van(BytesIO(b"%PDF-1.4"), "offerte.pdf"))
-
-    def test_thumbnail_van_geeft_niets_voor_onleesbare_afbeelding(self):
-        self.assertIsNone(afbeeldingen.thumbnail_van(BytesIO(b"dit is geen plaatje"), "stuk.jpg"))
 
 
 class PdfThumbnailsTest(TestCase):
@@ -189,33 +176,31 @@ class BijlageUploadTest(TestCase):
         self.client.post(reverse("bijlage_toevoegen"), {"bestanden": upload()})
         self.assertIsNone(Bijlage.objects.get().batch)
 
-    def test_forceer_document_maakt_van_een_foto_toch_een_document(self):
-        # De documentendialoog op een klusdossier (_documentdialoog.html):
-        # een foto van bijvoorbeeld een tekening hoort hier ook, en moet dan
-        # niet tussen de werkfoto's in het fotoraster verschijnen.
-        self.client.post(
-            reverse("bijlage_toevoegen"),
-            {"bestanden": upload("tekening.jpg"), "klus": self.klus.pk, "forceer_document": "1"},
-        )
-        bijlage = Bijlage.objects.get()
-        self.assertEqual(bijlage.soort, Bijlage.Soort.DOCUMENT)
-        self.assertFalse(bijlage.is_foto)
-        # Het bestand zelf blijft ongemoeid, net als elk ander document —
-        # niet verkleind zoals een gewone foto-upload.
-        with Image.open(bijlage.bestand) as bewaard:
-            self.assertEqual(bewaard.size, Image.open(BytesIO(jpeg())).size)
-        # Wel een thumbnail, zodat de documentenlijst een voorbeeld toont.
-        self.assertTrue(bijlage.thumbnail)
+    def test_foto_via_de_documentendialoog_wordt_toch_een_foto(self):
+        # Sinds 27-09-2026: een plaatje staat altijd bij de foto's, ook als
+        # het via "Document toevoegen" komt — en de melding zegt waar.
+        for naam in ("tekening.jpg", "plan.png", "schets.JPEG"):
+            antwoord = self.client.post(
+                reverse("bijlage_toevoegen"),
+                {"bestanden": upload(naam), "klus": self.klus.pk, "documentdialoog": "1"},
+                follow=True,
+            )
+            bijlage = Bijlage.objects.get(originele_naam=naam)
+            self.assertEqual(bijlage.soort, Bijlage.Soort.FOTO, naam)
+            self.assertContains(antwoord, f"{naam} staat bij de foto")
+            # verkleind en zonder GPS, zoals elke foto
+            with Image.open(bijlage.bestand) as bewaard:
+                self.assertLessEqual(max(bewaard.size), afbeeldingen.MAX_ZIJDE)
 
-    def test_forceer_document_geldt_niet_in_de_fotodropbox(self):
-        # Zonder klus/uurblok is dit de fotodropbox, die geen documenten
-        # toont — forceer_document mag daar dus niet stiekem toch een
-        # document van maken (zie klussen.views.bijlage_toevoegen).
-        self.client.post(
+    def test_pdf_via_de_documentendialoog_blijft_een_document(self):
+        antwoord = self.client.post(
             reverse("bijlage_toevoegen"),
-            {"bestanden": upload("tekening.jpg"), "forceer_document": "1"},
+            {"bestanden": upload("Offerte.pdf", pdf(), "application/pdf"),
+             "klus": self.klus.pk, "documentdialoog": "1"},
+            follow=True,
         )
-        self.assertEqual(Bijlage.objects.get().soort, Bijlage.Soort.FOTO)
+        self.assertEqual(Bijlage.objects.get().soort, Bijlage.Soort.DOCUMENT)
+        self.assertNotContains(antwoord, "staat bij de foto")
 
     def test_twee_losse_uploads_delen_geen_batch(self):
         self.client.post(
@@ -809,17 +794,16 @@ class KlusBijlagenBijAanmakenTest(TestCase):
         self.assertEqual(bijlage.originele_naam, "Offerte.pdf")
         self.assertEqual(bijlage.toegevoegd_door, self.maarten)
 
-    def test_gefotografeerde_tekening_blijft_een_document(self):
-        # Dit is waarom er twee velden zijn: een foto van een tekening hoort in
-        # de documentenlijst en niet tussen de werkfoto's in het fotoraster.
-        # Het bestand is een echte jpeg, alleen de bestemming verschilt.
+    def test_foto_in_het_documentenveld_wordt_een_foto(self):
+        # Sinds 27-09-2026 bepaalt het bestandstype waar iets staat, niet het
+        # vak: een plaatje komt altijd bij de foto's.
         self.client.force_login(self.maarten)
-        self.client.post(
-            reverse("klus_nieuw"), self.geldig(documenten=upload("tekening.jpg"))
+        antwoord = self.client.post(
+            reverse("klus_nieuw"), self.geldig(documenten=upload("tekening.jpg")), follow=True
         )
         bijlage = Klus.objects.get().bijlagen.get()
-        self.assertEqual(bijlage.soort, Bijlage.Soort.DOCUMENT)
-        self.assertFalse(bijlage.is_foto)
+        self.assertEqual(bijlage.soort, Bijlage.Soort.FOTO)
+        self.assertContains(antwoord, "tekening.jpg staat bij de foto")
 
     def test_foto_in_het_fotoveld_blijft_een_foto(self):
         self.client.force_login(self.maarten)
@@ -1525,8 +1509,8 @@ class BestandOverlayTest(TestCase):
 
 
 class KlusTabbladenTest(TestCase):
-    """Bestanden (foto's + documenten samen) staat open; Foto's en
-    Documenten tonen elk één soort. Zie klussen/klus_detail.html."""
+    """Twee tabbladen: Bestanden (documenten, daaronder foto's) en Uren.
+    Zie klussen/klus_detail.html."""
 
     @classmethod
     def setUpTestData(cls):
@@ -1537,12 +1521,62 @@ class KlusTabbladenTest(TestCase):
         self.client.force_login(self.sam)
         html = self.client.get(self.klus.get_absolute_url()).content.decode()
         tabs = re.findall(r'class="tabblad(?: actief)?" data-tab="(\w+)"', html)
-        self.assertEqual(tabs, ["bestanden", "uren", "fotos", "documenten"])
+        self.assertEqual(tabs, ["bestanden", "uren"])
         self.assertIn('class="tabblad actief" data-tab="bestanden"', html)
-        # documenten en foto's allebei zichtbaar, uren niet
-        self.assertIn('data-tab="documenten" data-ook="bestanden">', html)
-        self.assertIn('data-tab="fotos" data-ook="bestanden">', html)
         self.assertIn('data-tab="uren" hidden>', html)
+        # onder Bestanden eerst de documenten, daaronder de foto's
+        paneel = html[html.index('class="tabblad-paneel" data-tab="bestanden"'):html.index('data-tab="uren" hidden>')]
+        self.assertLess(paneel.index(">Documenten</h2>"), paneel.index(">Foto's</h2>"))
+        self.assertLess(paneel.index(">Foto's</h2>"), paneel.index('class="fotoraster"'))
         # en elk maar één keer: de uploaddialogen zitten erin
         self.assertEqual(html.count('id="foto-invoegen"'), 1)
         self.assertEqual(html.count('id="document-invoegen"'), 1)
+
+
+@override_settings(MEDIA_ROOT=TIJDELIJKE_MEDIA)
+class PlaatjesAlsFotoMigratieTest(TestCase):
+    """Migratie 0010: wat al als document-plaatje bestond, wordt een foto."""
+
+    @classmethod
+    def tearDownClass(cls):
+        shutil.rmtree(TIJDELIJKE_MEDIA, ignore_errors=True)
+        super().tearDownClass()
+
+    def document(self, naam, inhoud):
+        bijlage = Bijlage(soort=Bijlage.Soort.DOCUMENT, originele_naam=naam)
+        bijlage.bestand.save(naam, ContentFile(inhoud), save=False)
+        bijlage.thumbnail.save("oud.jpg", ContentFile(jpeg(40, 30)), save=False)
+        bijlage.save()
+        return bijlage
+
+    def omzetten(self):
+        import importlib
+        from django.apps import apps
+        importlib.import_module("klussen.migrations.0010_plaatjes_als_foto").omzetten(apps, None)
+
+    def test_plaatje_wordt_verkleinde_foto_en_oude_bestanden_verdwijnen(self):
+        bijlage = self.document("images (2).jpg", jpeg())
+        oud_bestand, oud_thumbnail = bijlage.bestand.name, bijlage.thumbnail.name
+        self.omzetten()
+        bijlage.refresh_from_db()
+        self.assertEqual(bijlage.soort, Bijlage.Soort.FOTO)
+        self.assertEqual(bijlage.originele_naam, "images (2).jpg")
+        with Image.open(bijlage.bestand) as bewaard:
+            self.assertLessEqual(max(bewaard.size), afbeeldingen.MAX_ZIJDE)
+        opslag = bijlage.bestand.storage
+        self.assertFalse(opslag.exists(oud_bestand))
+        self.assertFalse(opslag.exists(oud_thumbnail))
+        self.assertTrue(opslag.exists(bijlage.thumbnail.name))
+
+    def test_pdf_blijft_een_document(self):
+        bijlage = self.document("Offerte.pdf", pdf())
+        self.omzetten()
+        bijlage.refresh_from_db()
+        self.assertEqual(bijlage.soort, Bijlage.Soort.DOCUMENT)
+
+    def test_ontbrekend_bestand_breekt_de_migratie_niet(self):
+        bijlage = self.document("weg.png", jpeg())
+        bijlage.bestand.storage.delete(bijlage.bestand.name)
+        self.omzetten()
+        bijlage.refresh_from_db()
+        self.assertEqual(bijlage.soort, Bijlage.Soort.FOTO)

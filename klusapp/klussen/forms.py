@@ -260,10 +260,9 @@ class NieuweKlusBijlagenForm(BijlageForm):
     categorie; met twee velden wordt die vraag niet gesteld — en dat past bij
     "geen hinttekst" uit SPEC §5.
 
-    Het verschil zit niet in het bestandstype maar in waar het terechtkomt:
-    `documenten` slaat op met forceer_document (zie klussen.views), dus ook een
-    gefotografeerde tekening blijft een document en verschijnt niet tussen de
-    werkfoto's in het fotoraster. Precies waarom die vlag bestaat.
+    Waar een bestand uiteindelijk staat, bepaalt het bestandstype: een
+    plaatje wordt altijd een foto, ook uit het documentenvak (zie
+    klussen.views.klus_nieuw).
 
     Kiezen is bij beide geen verplichte stap: een klus zonder bijlagen moet
     gewoon aan te maken zijn."""

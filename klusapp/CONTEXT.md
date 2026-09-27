@@ -63,9 +63,12 @@ stuurt dat veld nu ook echt het formulier (`klussen/forms.py`,
   klus, dan komt die in beeld met een link erheen en de knop "Toch een aparte klus".
   Geen blokkade — twee afspraken op één adres is een geldig geval, per ongeluk een
   tweede dossier maken niet.
-- **Twee uploadvelden** in plaats van één: "Foto's" en "Technische documenten". Het
-  verschil is niet het bestandstype maar de bestemming — wat in het documentenveld gaat
-  blijft een document (Floris' `forceer_document`), ook een gefotografeerde tekening.
+- **Twee uploadvelden** in plaats van één: "Foto's" en "Technische documenten".
+  **Gewijzigd 27-09-2026:** het bestandstype bepaalt de bestemming, niet het vak. Een
+  plaatje is altijd een foto, ook uit het documentenvak of via "Document toevoegen";
+  `forceer_document` is weg. Migratie `klussen/0010` zette de plaatjes die al als
+  document bestonden om naar foto's. Het klusdossier heeft sindsdien twee tabbladen:
+  Bestanden (documenten, daaronder foto's) en Uren.
 
 **Bijgewerkt 23-09-2026 (2): één filterrij met twee assen op de klussenlijst.**
 

@@ -712,6 +712,12 @@ input[type=time]::-webkit-calendar-picker-indicator{ filter:invert(1); opacity:.
    .sectiekop anders via zijn eigen margin zou geven, en plakt de knop tegen
    de lijst eronder. */
 .sectiekop-rij.alleen-actie{ margin-bottom:.8rem; }
+/* Met een kop erin: de marge van de rij, niet van de kop. Anders duwt de
+   bovenmarge van .sectiekop de tekst omlaag en staat hij lager dan de knop. */
+.sectiekop-rij:not(.alleen-actie){ margin:1.8rem 0 .8rem; }
+.sectiekop-rij > .sectiekop{ margin:0; }
+/* direct onder de tabbladen: die hebben zelf al ruimte eronder */
+.tabblad-paneel > .sectiekop-rij:first-child{ margin-top:0; }
 
 /* Tabbladen: Documenten/Uren/Foto's op het klusdossier, één zichtbaar
    tegelijk i.p.v. alle drie onder elkaar (static/js/klustabs.js zet
@@ -733,23 +739,6 @@ input[type=time]::-webkit-calendar-picker-indicator{ filter:invert(1); opacity:.
   background:rgba(var(--accent-rgb),0.32); border-color:rgba(var(--accent-rgb),0.6); color:var(--hi);
 }
 .tabblad:focus-visible{ outline:2px solid rgba(var(--accent-rgb),0.9); outline-offset:2px; }
-/* Vier tabbladen passen op een telefoon niet naast elkaar met icoon (±440px
-   nodig, 343px beschikbaar). Dan zonder icoon en iets smaller, op één regel. */
-@media (max-width:460px){
-  .tabbladen-kop{ flex-wrap:nowrap; gap:.3rem; }
-  .tabblad{ flex:1 1 auto; justify-content:center; padding:.4rem .6rem; }
-  .tabblad svg{ display:none; }
-}
-/* iPhone SE en kleiner: nog 17px te breed */
-@media (max-width:360px){
-  .tabblad{ padding:.4rem .4rem; font-size:12px; }
-}
-/* Tussenkopjes "Documenten" en "Foto's": alleen als beide samen in beeld
-   staan (tab "Bestanden"); bij één soort zegt de tab zelf het al. */
-.paneelkop{ display:none; }
-.tabbladen[data-actief="bestanden"] .paneelkop{ display:block; }
-.tabbladen[data-actief="bestanden"] [data-tab="documenten"] .sectiekop-rij .paneelkop{ margin:0; }
-.tabbladen[data-actief="bestanden"] [data-tab="fotos"] .paneelkop{ margin-top:1.6rem; }
 /* de wachtwoordeisen, direct onder het invulveld */
 .eisen-blok{ margin:.5rem 0 0; }
 .eisen{
@@ -996,7 +985,7 @@ input[type=file]:focus-visible + .bestandsknop{
 }
 /* De statusregel heeft zelf geen ondermarge — normaal komt er een label
    achteraan, en dat brengt zijn eigen 1.1rem mee. In de documentendialoog
-   (klussen/_uploadveld.html met forceer_document) staat er eerst nog een
+   (klussen/_uploadveld.html met documentdialoog) staat er eerst nog een
    .uitleg, en die begint met margin-top:0: dan plakken de twee regels aan
    elkaar en lezen ze als één alinea, terwijl de ene bij de knop hoort en de
    andere bij het veld. */
