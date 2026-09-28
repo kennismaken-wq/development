@@ -783,6 +783,17 @@ input[type=time]::-webkit-calendar-picker-indicator{ filter:invert(1); opacity:.
 .profielkop{ display:flex; align-items:center; gap:.9rem; margin:0 0 1.2rem; }
 /* nieuwe medewerker: nog geen initialen of foto */
 .profielkop .grote-bol.leeg-bol{ background:rgba(255,255,255,0.06); border:1px dashed rgba(255,255,255,0.3); }
+/* Telefoon en e-mail in de leesstand: een link in dezelfde bubbel als een
+   veld op slot, in de accentkleur zodat je ziet dat je erop kunt tikken. In
+   de bewerkstand het gewone invulvak (medewerkers/_gegevens.html). */
+.gegeven-link{
+  display:block; padding:.8rem .9rem; font-size:16px; border-radius:14px;
+  background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.09);
+  color:var(--hi); text-decoration:none; overflow-wrap:anywhere;
+}
+@media (hover:hover){ .gegeven-link:hover{ border-color:rgba(var(--accent-rgb),0.5); } }
+#gegevensformulier:not(.bewerkt) .heeft-link > :not(.gegeven-link){ display:none; }
+#gegevensformulier.bewerkt .gegeven-link{ display:none; }
 /* uitleg bij een veld alleen tijdens het invullen (medewerkers/_gegevens.html) */
 #gegevensformulier:not(.bewerkt) .hulptekst{ display:none; }
 .profielkop .grote-bol{

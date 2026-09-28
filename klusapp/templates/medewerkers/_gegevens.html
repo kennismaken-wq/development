@@ -71,7 +71,13 @@
       {% for veld in velden %}
         <div class="gegeven">
           <dt><label for="{{ veld.id_for_label }}">{{ veld.label }}</label></dt>
-          <dd>
+          {% comment %} Telefoon en e-mail zijn in de leesstand een link: tik
+             en je belt of mailt. In de bewerkstand staat daar het gewone
+             invulvak (zie .heeft-link in app.css). {% endcomment %}
+          {% with soort=veld.field.widget.attrs.type|default:veld.field.widget.input_type %}
+          <dd{% if veld.value and soort == "tel" or veld.value and soort == "email" %} class="heeft-link"{% endif %}>
+            {% if veld.value and soort == "tel" %}<a class="gegeven-link" href="tel:{{ veld.value }}">{{ veld.value }}</a>{% endif %}
+            {% if veld.value and soort == "email" %}<a class="gegeven-link" href="mailto:{{ veld.value }}">{{ veld.value }}</a>{% endif %}
             {{ veld }}
             {% comment %} Uitleg bij een veld (een voorbeeld, de
                wachtwoordeisen) hoort bij het invullen, niet bij het lezen:
@@ -79,6 +85,7 @@
             {% if veld.help_text %}<div class="eisen-blok hulptekst">{{ veld.help_text }}</div>{% endif %}
             {% for fout in veld.errors %}<p class="fout">{{ fout }}</p>{% endfor %}
           </dd>
+          {% endwith %}
         </div>
       {% endfor %}
     </dl>

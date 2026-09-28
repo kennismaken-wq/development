@@ -779,3 +779,27 @@ class MedewerkerZoalsProfielTest(TestCase):
         self.assertIn('class="bewerkt"', html)
         self.assertIn("Medewerker toevoegen", html)
         self.assertIn("leeg-bol", html)
+
+
+class KlikbareGegevensTest(TestCase):
+    """Telefoon en e-mail zijn in de leesstand een link (_gegevens.html)."""
+
+    def test_tel_en_mailto_op_profiel_en_medewerkersscherm(self):
+        maarten = Medewerker.objects.create_user(
+            "maarten", password="x", first_name="Maarten", rol=Medewerker.Rol.EIGENAAR,
+            telefoon="06 11", email="m@voorbeeld.nl",
+        )
+        sam = Medewerker.objects.create_user(
+            "sam", password="x", first_name="Sam", telefoon="06 22", noodcontact_telefoon="06 33"
+        )
+        self.client.force_login(maarten)
+        for adres, verwacht in (
+            (reverse("mijn_profiel"), ['href="tel:06 11"', 'href="mailto:m@voorbeeld.nl"']),
+            (reverse("medewerker_bewerken", args=[sam.pk]), ['href="tel:06 22"', 'href="tel:06 33"']),
+        ):
+            html = self.client.get(adres).content.decode()
+            for stuk in verwacht:
+                self.assertIn(stuk, html, adres)
+        # een leeg veld wordt geen link
+        html = self.client.get(reverse("medewerker_bewerken", args=[sam.pk])).content.decode()
+        self.assertNotIn('href="mailto:', html)
