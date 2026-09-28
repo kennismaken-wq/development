@@ -418,6 +418,15 @@ def klus_detail(request, pk):
     alleen_eigen_uren = not request.user.is_eigenaar
     if alleen_eigen_uren:
         gewerkt = [rij for rij in gewerkt if rij["medewerker"] == request.user]
+    # Kom je hier vanuit het weekoverzicht (?terug=/planbord/...), dan brengt
+    # het terugpijltje je daar weer; anders naar de klussenlijst. Alleen een
+    # pad op deze site: zonder die controle stuurt een link van buitenaf je
+    # via het pijltje naar een andere site.
+    terugpijl = request.GET.get("terug", "")
+    if not (terugpijl.startswith("/") and url_has_allowed_host_and_scheme(
+        terugpijl, allowed_hosts={request.get_host()}, require_https=request.is_secure()
+    )):
+        terugpijl = ""
     return render(
         request,
         "klussen/klus_detail.html",
@@ -432,6 +441,7 @@ def klus_detail(request, pk):
             "foto_formulier": KlusFotoForm(),
             "upload_url": reverse("bijlage_toevoegen"),
             "terug": request.get_full_path(),
+            "terugpijl": terugpijl,
         },
     )
 

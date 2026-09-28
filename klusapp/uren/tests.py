@@ -6,6 +6,7 @@ from unittest.mock import patch
 from django.core.exceptions import ValidationError
 from django.db import IntegrityError, transaction
 from django.test import TestCase, override_settings
+from django.urls import reverse
 
 from . import kalender
 
@@ -362,6 +363,51 @@ class PlanbordTest(TestCase):
         self.assertIn('<div class="dag">Week</div>', html)
         self.assertRegex(html, r'class="bord-cel bord-week">\s*8:30')
         self.assertNotIn('class="week"', html)
+
+    def test_filter_op_klus(self):
+        andere = Klus.objects.create(naam="Nieuwbouw Van Dijk", soort=Klus.Soort.AANLEG)
+        Uurblok.objects.create(
+            medewerker=self.sam, klus=self.klus, datum=self.maandag,
+            begintijd=time(8, 0), eindtijd=time(12, 0),
+        )
+        Uurblok.objects.create(
+            medewerker=self.sam, klus=andere, datum=self.maandag,
+            begintijd=time(13, 0), eindtijd=time(15, 0),
+        )
+        self.client.force_login(self.maarten)
+        antwoord = self.client.get(f"/planbord/?dag=2026-09-09&klus={self.klus.pk}")
+        sam = self.rij_van(antwoord, self.sam)
+        # alleen het blok van Tuin Vermeer, en de totalen tellen alleen dat
+        self.assertEqual([b["blok"].klus for b in sam["dagen"][0]["blokken"]], [self.klus])
+        self.assertEqual(sam["weektotaal"], "4:00")
+        self.assertEqual(antwoord.context["weektotaal"], "4:00")
+        # de keuzelijst krimpt niet: beide klussen blijven kiesbaar
+        self.assertEqual([r["klus"] for r in antwoord.context["legenda"]], [andere, self.klus])
+        self.assertEqual([r["actief"] for r in antwoord.context["legenda"]], [False, True])
+        html = antwoord.content.decode()
+        self.assertIn("Alle klussen", html)
+        # bladeren houdt het filter vast
+        self.assertIn(f"?dag=2026-09-14&amp;klus={self.klus.pk}", html)
+
+    def test_onzin_filter_negeren(self):
+        self.client.force_login(self.maarten)
+        for waarde in ("abc", "999999", ""):
+            antwoord = self.client.get(f"/planbord/?dag=2026-09-09&klus={waarde}")
+            self.assertEqual(antwoord.status_code, 200)
+            self.assertIsNone(antwoord.context["gekozen_klus"])
+
+    def test_uurblok_opent_in_een_venster(self):
+        blok = Uurblok.objects.create(
+            medewerker=self.sam, klus=self.klus, datum=self.maandag,
+            begintijd=time(8, 0), eindtijd=time(12, 0),
+        )
+        self.client.force_login(self.maarten)
+        html = self.client.get("/planbord/?dag=2026-09-09").content.decode()
+        self.assertIn(f'data-paneel-url="{reverse("uurblok_detail_paneel", args=[blok.pk])}"', html)
+        self.assertIn('id="uurblok-detail"', html)
+        # en in dat venster is de klusnaam een link naar de klus
+        paneel = self.client.get(reverse("uurblok_detail_paneel", args=[blok.pk])).content.decode()
+        self.assertIn(f'href="{reverse("klus_detail", args=[self.klus.pk])}" data-met-terug', paneel)
 
     def test_inloggen_vereist(self):
         antwoord = self.client.get("/planbord/")

@@ -66,6 +66,17 @@ window.laadEnOpenSheet = function (dialoog, url, terugvalHref) {
     })
     .then(function (html) {
       dialoog.innerHTML = html;
+      // Het fragment weet niet op welk scherm het staat: zijn "terug" is
+      // het adres van het fragment zelf. Na een upload zou je dan op een
+      // kaal stuk HTML belanden. Daarom hier het echte scherm invullen, en
+      // links die de weg terug meenemen (data-met-terug) ook.
+      var hier = window.location.pathname + window.location.search;
+      dialoog.querySelectorAll('input[name="terug"]').forEach(function (veld) {
+        veld.value = hier;
+      });
+      dialoog.querySelectorAll("a[data-met-terug]").forEach(function (link) {
+        link.href += (link.href.indexOf("?") === -1 ? "?" : "&") + "terug=" + encodeURIComponent(hier);
+      });
       window.voerScriptsUit(dialoog);
       window.openSheet(dialoog);
     })

@@ -1120,6 +1120,10 @@ dialog.uurblok-detail{
   max-width:560px; width:calc(100% - 2.4rem);
 }
 dialog.uurblok-detail::backdrop{ background:rgba(10,10,8,0.55); backdrop-filter:blur(3px); }
+/* klusnaam bovenin het venster: link naar de klus (zie _uurblokdetail_inhoud.html) */
+.sheet-kluslink{ color:inherit; text-decoration:none; display:inline-flex; align-items:center; gap:.3rem; }
+.sheet-kluslink svg{ width:16px; height:16px; opacity:.6; flex-shrink:0; }
+@media (hover:hover){ .sheet-kluslink:hover{ color:var(--hi); } .sheet-kluslink:hover svg{ opacity:1; } }
 
 /* Een dialoog op een telefoon: zodra het toetsenbord opengaat (tikken in
    "Werkzaamheden" of "Toelichting") houdt de browser maar een strook scherm
@@ -1933,6 +1937,11 @@ label:has(> input[type=checkbox]), input[type=checkbox] + label{ cursor:pointer;
 }
 @media (hover:hover){ .legenda a:hover{ background:rgba(255,255,255,0.14); } }
 .legenda .vlek{ width:14px; height:14px; border-radius:999px; border:1px solid; flex-shrink:0; }
+/* de gekozen klus als filter (uren/views.py:planbord, ?klus=) */
+.legenda a.actief{
+  background:rgba(var(--accent-rgb),0.32); border-color:rgba(var(--accent-rgb),0.6); color:var(--hi);
+}
+.legenda a.alle{ padding-left:.8rem; color:rgba(255,255,255,0.8); }
 
 /* ══════════ AANWEZIGHEID ══════════
    Eén rij per medewerker, op een telefoon onder elkaar: naam, dan de drie

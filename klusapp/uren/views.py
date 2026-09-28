@@ -12,6 +12,7 @@ from django.utils import timezone
 from klussen import afbeeldingen
 from klussen.forms import BijlageForm, KlusFotoForm
 from klussen.fotoposts import groepeer_in_posts
+from klussen.models import Klus
 from klussen.views import batch_van_upload, bewaar_bijlage
 from medewerkers.models import Medewerker
 from medewerkers.rechten import alleen_eigenaar
@@ -358,6 +359,13 @@ def planbord(request):
     """
     week = periode.week_context(request)
 
+    # Filter op één klus (?klus=<pk>), via de klussen onder het bord. Dan
+    # staan alleen de blokken van die klus erop en tellen de totalen alleen
+    # die uren: "wie heeft deze week hoeveel aan Tuin Vermeer gedaan".
+    gekozen_klus = None
+    if request.GET.get("klus", "").isdigit():
+        gekozen_klus = Klus.objects.filter(pk=request.GET["klus"]).first()
+
     # Eén query voor de hele week, daarna groeperen in Python. Zes mensen en
     # een paar honderd blokken — daar weegt een aggregatie per cel niet tegen
     # op, en de index op (datum, medewerker) dekt precies deze filter.
@@ -367,10 +375,16 @@ def planbord(request):
         .order_by("begintijd")
     )
     per_cel = {}
+    # Alle klussen van de week, ook met een filter aan: dat is de lijst
+    # waaruit je kiest, en die mag niet krimpen tot die ene.
     klussen_in_beeld = {}
     for blok in blokken:
-        per_cel.setdefault((blok.medewerker_id, blok.datum), []).append(blok)
         klussen_in_beeld[blok.klus_id] = blok.klus
+        if gekozen_klus and blok.klus_id != gekozen_klus.pk:
+            continue
+        per_cel.setdefault((blok.medewerker_id, blok.datum), []).append(blok)
+    if gekozen_klus:
+        klussen_in_beeld[gekozen_klus.pk] = gekozen_klus
 
     dagminuten = dict.fromkeys(week["dagen"], 0)
     rijen = []
@@ -442,11 +456,19 @@ def planbord(request):
                 for datum, minuten in dagminuten.items()
             ],
             # De kleur draagt op deze breedte de klusidentiteit (SPEC §5), dus
-            # hoort er een legenda onder die vertelt welke kleur wat is.
+            # hoort er een legenda onder die vertelt welke kleur wat is. Een
+            # tik op een klus daarin filtert het bord.
             "legenda": [
-                {"klus": klus, "kleur": kalender.kleur_van(klus)}
+                {
+                    "klus": klus,
+                    "kleur": kalender.kleur_van(klus),
+                    "actief": gekozen_klus is not None and klus.pk == gekozen_klus.pk,
+                }
                 for klus in sorted(klussen_in_beeld.values(), key=lambda klus: klus.naam.lower())
             ],
+            "gekozen_klus": gekozen_klus,
+            # achter de bladerknoppen, zodat het filter meegaat naar een andere week
+            "filter_query": f"&klus={gekozen_klus.pk}" if gekozen_klus else "",
             "weektotaal": kalender.als_uren(sum(dagminuten.values())),
         },
     )

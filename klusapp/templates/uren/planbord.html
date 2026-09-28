@@ -5,16 +5,16 @@
 {% block inhoud %}
   <div class="navbalk">
     <div class="navlinks">
-      <a class="knop-stil" href="?dag={{ vorige|date:'Y-m-d' }}">‹</a>
-      <a class="knop-stil" href="?dag={{ volgende|date:'Y-m-d' }}">›</a>
+      <a class="knop-stil" href="?dag={{ vorige|date:'Y-m-d' }}{{ filter_query }}">‹</a>
+      <a class="knop-stil" href="?dag={{ volgende|date:'Y-m-d' }}{{ filter_query }}">›</a>
       {% if not is_deze_week %}
-        <a class="knop-stil" href="{% url 'planbord' %}">Deze week</a>
+        <a class="knop-stil" href="{% url 'planbord' %}{% if gekozen_klus %}?klus={{ gekozen_klus.pk }}{% endif %}">Deze week</a>
       {% endif %}
       <span class="periodetitel">{{ maandag|date:"j M" }} – {{ zondag|date:"j M" }}</span>
     </div>
     <div class="totaal-chip">
       <span class="n">{{ weektotaal }}</span>
-      <span class="l">{% if is_deze_week %}deze week{% else %}die week{% endif %}</span>
+      <span class="l">{% if gekozen_klus %}aan deze klus{% elif is_deze_week %}deze week{% else %}die week{% endif %}</span>
     </div>
   </div>
 
@@ -45,6 +45,7 @@
                  begintijd staat in de tooltip en op het detailscherm.
               {% endcomment %}
               <a class="bord-chip" href="{% url 'uurblok_detail' getekend.blok.pk %}"
+                 data-paneel-url="{% url 'uurblok_detail_paneel' getekend.blok.pk %}"
                  title="{{ getekend.blok.klus.naam }} · {{ getekend.blok.begintijd|time:'H:i' }}–{{ getekend.blok.eindtijd|time:'H:i' }}">
                 <span class="vlek" style="background:linear-gradient(150deg, {{ getekend.kleur }}, {{ getekend.kleur }}80); border-color:{{ getekend.kleur }}"></span>
                 <span class="klus">{{ getekend.blok.klus.naam }}</span>
@@ -71,11 +72,20 @@
   </div>
 
   {% if legenda %}
+    {% comment %} Wat welke kleur is, en tegelijk het filter: een tik op een
+       klus toont alleen die klus op het bord, nog een tik (of "Alle
+       klussen") zet het weer uit. Naar de klus zelf ga je via een uurblok
+       (de klusnaam bovenin het venster). {% endcomment %}
     <p class="sectiekop">Klussen deze week</p>
     <ul class="legenda">
+      {% if gekozen_klus %}
+        <li><a class="alle" href="?dag={{ dag|date:'Y-m-d' }}">Alle klussen</a></li>
+      {% endif %}
       {% for regel in legenda %}
         <li>
-          <a href="{% url 'klus_detail' regel.klus.pk %}">
+          <a href="?dag={{ dag|date:'Y-m-d' }}{% if not regel.actief %}&klus={{ regel.klus.pk }}{% endif %}"
+             {% if regel.actief %}class="actief" aria-current="true"{% endif %}
+             title="{% if regel.actief %}Filter uitzetten{% else %}Alleen {{ regel.klus.naam }} tonen{% endif %}">
             <span class="vlek" style="background:linear-gradient(150deg, {{ regel.kleur }}D9, {{ regel.kleur }}73); border-color:{{ regel.kleur }}"></span>
             {{ regel.klus.naam }}
           </a>
@@ -85,4 +95,26 @@
   {% else %}
     <p class="leeg" style="margin-top:1.6rem">Deze week staat er nog niets op het bord.</p>
   {% endif %}
+
+  {% comment %} Het uurblok opent als venster boven het bord, hetzelfde als
+     op Uren schrijven (static/js/kalender.js), in plaats van als nieuwe
+     pagina. Ctrl-, cmd- en middelklik openen nog wel een tabblad. {% endcomment %}
+  {% load static %}
+  <dialog id="uurblok-detail" class="uurblok-detail"></dialog>
+  <script src="{% static 'js/bottomsheet.js' %}"></script>
+  <script>
+    (function () {
+      var dialoog = document.getElementById("uurblok-detail");
+      dialoog.addEventListener("click", function (e) {
+        if (e.target === this) window.closeSheet(this);
+      });
+      document.querySelectorAll("a.bord-chip[data-paneel-url]").forEach(function (chip) {
+        chip.addEventListener("click", function (e) {
+          if (e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+          e.preventDefault();
+          window.laadEnOpenSheet(dialoog, chip.dataset.paneelUrl, chip.href);
+        });
+      });
+    })();
+  </script>
 {% endblock %}

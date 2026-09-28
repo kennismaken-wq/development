@@ -1580,3 +1580,31 @@ class PlaatjesAlsFotoMigratieTest(TestCase):
         self.omzetten()
         bijlage.refresh_from_db()
         self.assertEqual(bijlage.soort, Bijlage.Soort.FOTO)
+
+
+class KlusTerugpijlTest(TestCase):
+    """Het terugpijltje op een klus gaat terug naar waar je vandaan kwam."""
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.maarten = Medewerker.objects.create_user(
+            "maarten", password="x", rol=Medewerker.Rol.EIGENAAR
+        )
+        cls.klus = Klus.objects.create(naam="Tuin Vermeer")
+
+    def pijl(self, adres):
+        self.client.force_login(self.maarten)
+        html = self.client.get(adres).content.decode()
+        return re.search(r'class="terug-pijl" href="([^"]*)"', html).group(1)
+
+    def test_zonder_terug_naar_de_klussenlijst(self):
+        self.assertEqual(self.pijl(self.klus.get_absolute_url()), reverse("klussen"))
+
+    def test_vanuit_het_weekoverzicht_daar_weer_naartoe(self):
+        adres = self.klus.get_absolute_url() + "?terug=/planbord/%3Fdag%3D2026-09-23%26klus%3D3"
+        self.assertEqual(self.pijl(adres), "/planbord/?dag=2026-09-23&amp;klus=3")
+
+    def test_nooit_naar_een_andere_site(self):
+        for stiekem in ("https://evil.example/", "//evil.example/", "javascript:alert(1)"):
+            adres = self.klus.get_absolute_url() + "?terug=" + stiekem
+            self.assertEqual(self.pijl(adres), reverse("klussen"), stiekem)

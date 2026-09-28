@@ -8,7 +8,7 @@
    maar met een eigen, begrensde laag-opmaak i.p.v. die kleine kaart
    opgeschaald — zie de toelichting bij .klus-hero in app.css. {% endcomment %}
 <div class="klus-hero-blok">
-  <a class="terug-pijl" href="{% url 'klussen' %}" aria-label="Terug naar klussen">
+  <a class="terug-pijl" href="{% if terugpijl %}{{ terugpijl }}{% else %}{% url 'klussen' %}{% endif %}" aria-label="Terug">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
   </a>
   {% if user.is_eigenaar %}
