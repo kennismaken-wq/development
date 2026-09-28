@@ -348,9 +348,20 @@ class PlanbordTest(TestCase):
         self.assertTrue(self.rij_van(antwoord, self.joep)["dagen"][6]["smal"])
         self.assertEqual(
             antwoord.context["bordkolommen"],
-            "176px " + "minmax(142px,1fr) " * 6 + "52px",
+            "176px " + "minmax(142px,1fr) " * 6 + "52px 72px",
         )
         self.assertContains(antwoord, "grid-template-columns:176px ")
+
+    def test_weektotaal_in_eigen_kolom_en_niet_meer_in_de_naamcel(self):
+        Uurblok.objects.create(
+            medewerker=self.sam, klus=self.klus, datum=self.maandag,
+            begintijd=time(8, 0), eindtijd=time(16, 30),
+        )
+        self.client.force_login(self.maarten)
+        html = self.client.get("/planbord/?dag=2026-09-09").content.decode()
+        self.assertIn('<div class="dag">Week</div>', html)
+        self.assertRegex(html, r'class="bord-cel bord-week">\s*8:30')
+        self.assertNotIn('class="week"', html)
 
     def test_inloggen_vereist(self):
         antwoord = self.client.get("/planbord/")

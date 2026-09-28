@@ -430,8 +430,8 @@ def planbord(request):
             "bordkolommen": " ".join([f"{BORD_NAAM}px"] + [
                 f"{breedte}px" if breedte == BORD_SMAL else f"minmax({breedte}px,1fr)"
                 for breedte in kolommen
-            ]),
-            "bordbreedte": BORD_NAAM + sum(kolommen),
+            ] + [f"{BORD_WEEK}px"]),
+            "bordbreedte": BORD_NAAM + sum(kolommen) + BORD_WEEK,
             "kopdagen": [
                 {
                     "datum": datum,
@@ -460,6 +460,9 @@ AANWEZIG_KEUZES = {"ja", "nee"}
 BORD_NAAM = 176
 BORD_DAG = 142
 BORD_SMAL = 52
+# Het weektotaal per persoon, rechts: spiegelt de regel "Per dag" onderaan.
+# Stond eerst als derde regel in de naamcel en maakte die hoger dan nodig.
+BORD_WEEK = 72
 
 
 @login_required

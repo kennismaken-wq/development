@@ -27,6 +27,7 @@
           <div class="datum">{{ kopdag.datum|date:"j M" }}</div>
         </div>
       {% endfor %}
+      <div class="bord-kop bord-week-kop"><div class="dag">Week</div></div>
 
       {% for rij in rijen %}
         <div class="bord-naam{% if not rij.heeft_uren %} zonder-uren{% endif %}">
@@ -34,7 +35,6 @@
           <span class="bord-naam-tekst">
             <span class="wie">{{ rij.medewerker.naam }}</span>
             {% if rij.medewerker.functie %}<span class="functie">{{ rij.medewerker.functie }}</span>{% endif %}
-            <span class="week">{{ rij.weektotaal }}</span>
           </span>
         </div>
         {% for dagcel in rij.dagen %}
@@ -55,6 +55,9 @@
             {% endfor %}
           </div>
         {% endfor %}
+        <div class="bord-cel bord-week">
+          {% if rij.weektotaal %}{{ rij.weektotaal }}{% else %}<span class="bord-leeg">–</span>{% endif %}
+        </div>
       {% endfor %}
 
       <div class="bord-naam bord-voet"><span class="wie">Per dag</span></div>
@@ -63,6 +66,7 @@
           <span class="dagtotaal">{{ kopdag.totaal }}</span>
         </div>
       {% endfor %}
+      <div class="bord-cel bord-voet bord-week"><span class="dagtotaal">{{ weektotaal }}</span></div>
     </div>
   </div>
 
