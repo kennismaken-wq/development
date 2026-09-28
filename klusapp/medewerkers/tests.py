@@ -691,3 +691,39 @@ class WisselenTest(TestCase):
         nep = Medewerker.objects.filter(username__startswith="demo-").first()
         self.client.post(reverse("wissel_naar", args=[nep.pk]))
         self.assertEqual(self.ingelogd(), nep)
+
+
+class PersoonskaartTest(TestCase):
+    """De gegevens van één medewerker als venster op het weekoverzicht."""
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.maarten = Medewerker.objects.create_user(
+            "maarten", password="x", first_name="Maarten", rol=Medewerker.Rol.EIGENAAR
+        )
+        cls.sam = Medewerker.objects.create_user(
+            "sam", password="x", first_name="Sam", last_name="de Wit",
+            telefoon="06 12345678", noodcontact_naam="Anne", noodcontact_relatie="partner",
+            noodcontact_telefoon="06 87654321", rijbewijs="B", aanhanger=True,
+        )
+
+    def test_eigenaar_ziet_de_gegevens(self):
+        self.client.force_login(self.maarten)
+        html = self.client.get(reverse("medewerker_kaart", args=[self.sam.pk])).content.decode()
+        self.assertIn("Sam de Wit", html)
+        self.assertIn('href="tel:06 12345678"', html)
+        self.assertIn("Anne (partner)", html)
+        self.assertIn("B — personenauto", html)
+        self.assertIn("Ja, BE", html)
+        self.assertIn(reverse("medewerker_bewerken", args=[self.sam.pk]), html)
+
+    def test_medewerker_niet(self):
+        self.client.force_login(self.sam)
+        antwoord = self.client.get(reverse("medewerker_kaart", args=[self.maarten.pk]))
+        self.assertEqual(antwoord.status_code, 404)
+
+    def test_naam_op_het_weekoverzicht_opent_de_kaart(self):
+        self.client.force_login(self.maarten)
+        html = self.client.get(reverse("planbord")).content.decode()
+        self.assertIn(f'data-paneel-url="{reverse("medewerker_kaart", args=[self.sam.pk])}"', html)
+        self.assertIn('id="persoon-detail"', html)

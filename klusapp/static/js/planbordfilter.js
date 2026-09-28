@@ -43,17 +43,17 @@
 
     document.querySelectorAll(".bord-week[data-rij]").forEach(function (cel) {
       var minuten = perRij[cel.dataset.rij] || 0;
-      cel.innerHTML = minuten ? alsUren(minuten) : '<span class="bord-leeg">–</span>';
+      cel.innerHTML = minuten ? alsUren(minuten) + " u" : '<span class="bord-leeg">–</span>';
     });
     document.querySelectorAll(".bord-naam[data-rij]").forEach(function (naam) {
       naam.classList.toggle("zonder-uren", !perRij[naam.dataset.rij]);
     });
     document.querySelectorAll(".bord-voet[data-dag] .dagtotaal").forEach(function (totaal) {
       var minuten = perDag[totaal.parentNode.dataset.dag] || 0;
-      totaal.textContent = minuten ? alsUren(minuten) : "";
+      totaal.textContent = minuten ? alsUren(minuten) + " u" : "";
     });
     document.getElementById("bord-weektotaal").textContent = alsUren(week);
-    document.getElementById("bord-voettotaal").textContent = alsUren(week);
+    document.getElementById("bord-voettotaal").textContent = alsUren(week) + " u";
     weeklabel.textContent = klus ? "uur aan deze klus" : weeklabel.dataset.standaard;
 
     knoppen.forEach(function (knop) {

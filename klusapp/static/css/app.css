@@ -921,8 +921,11 @@ input[type=time]::-webkit-calendar-picker-indicator{ filter:invert(1); opacity:.
    de hele .uurblokformulier.glas — waardoor het "kruisje" bijna het hele
    formulier overdekte en je nergens anders meer kon klikken zonder de sheet
    te sluiten. */
-.sheet-kop{ display:flex; align-items:center; justify-content:space-between; margin:0 0 .3rem; }
-.sheet-kop .dialog-sluiten{ position:relative; }
+.sheet-kop{ display:flex; align-items:center; justify-content:space-between; margin:0 0 .7rem; }
+/* In de kopregel staat het kruisje gewoon in de rij. top/right van de
+   losse variant hierboven moeten dan weg: bij position:relative verschuiven
+   ze het kruisje juist, over de titel eronder en tegen de rand. */
+.sheet-kop .dialog-sluiten{ position:relative; top:auto; right:auto; }
 /* kruisje en prullenbak samen links, potlood/Opslaan samen rechts — anders
    verspreidt justify-content:space-between alle vier de knoppen gelijk over
    de rij zodra de prullenbak zichtbaar wordt, en zwerft die los in het
@@ -1881,6 +1884,22 @@ label:has(> input[type=checkbox]), input[type=checkbox] + label{ cursor:pointer;
   font-size:9.5px; font-weight:700; color:#fff; letter-spacing:.02em;
 }
 .bord-naam.zonder-uren .bol{ opacity:.45; }
+/* de naam is een link naar de persoonskaart (medewerkers/_persoonkaart.html) */
+.bord-naam-link{ display:flex; align-items:flex-start; gap:.45rem; min-width:0; color:inherit; text-decoration:none; }
+@media (hover:hover){ .bord-naam-link:hover .wie{ color:var(--hi); } }
+
+/* persoonskaart: kop met grote bol zoals op het profiel, daaronder de gegevens */
+/* ruimte onder de rij met kruisje en potlood, anders valt het kruisje over
+   de bol */
+.persoonkaart .profielkop{ margin:.3rem 0 .4rem; }
+.persoonkaart .klusinfo{ margin-bottom:.4rem; }
+.persoonkaart .klusinfo a{ color:var(--hi); text-decoration:none; }
+/* zelfde soort kop als de groepen op het profielscherm (.sectiekop), iets
+   kleiner: een kop moet anders ogen dan de labels eronder */
+.persoonkaart-kop{
+  margin:1.1rem 0 .45rem; font-family:'Fraunces',serif; font-style:italic;
+  font-weight:600; font-size:1rem; color:#fff;
+}
 .bord-naam .wie{ font-size:12.5px; font-weight:600; line-height:1.25; overflow-wrap:break-word; }
 .bord-naam .functie{ font-size:10px; color:rgba(255,255,255,0.5); }
 /* Het weektotaal per persoon: eigen kolom rechts, zie BORD_WEEK in
@@ -1891,11 +1910,15 @@ label:has(> input[type=checkbox]), input[type=checkbox] + label{ cursor:pointer;
 .bord-cel.bord-week{
   align-content:center; justify-items:center;
   background:rgba(255,255,255,0.07); border-left-color:rgba(255,255,255,0.18);
-  font-size:14px; font-weight:700; color:#fff; font-variant-numeric:tabular-nums;
+  font-size:12.5px; font-weight:700; color:#fff; font-variant-numeric:tabular-nums;
 }
 .bord-week-kop{ background:rgba(255,255,255,0.07); border-radius:10px 10px 0 0; }
-.bord-cel.bord-voet.bord-week{ background:rgba(var(--accent-rgb),0.16); border-radius:0 0 10px 10px; }
-.bord-cel.bord-voet.bord-week .dagtotaal{ font-size:14px; font-weight:800; color:var(--hi); }
+/* De regel "Per dag" krijgt dezelfde trede als de kolom Week: een eigen
+   band, witte vette getallen. Op het kruispunt het eindtotaal, groen. */
+.bord-cel.bord-voet{ background:rgba(255,255,255,0.07); border-top-color:rgba(255,255,255,0.18); }
+.bord-voet .dagtotaal{ font-size:12.5px; font-weight:700; color:#fff; }
+.bord-cel.bord-voet.bord-week{ background:rgba(var(--accent-rgb),0.16); border-radius:0 0 10px 0; }
+.bord-cel.bord-voet.bord-week .dagtotaal{ font-size:13px; font-weight:800; color:var(--hi); }
 /* wie deze week nergens staat blijft leesbaar maar valt terug — precies de
    vraag waarvoor dit scherm open staat, dus niet verbergen */
 .bord-naam.zonder-uren .wie{ color:rgba(255,255,255,0.55); font-weight:500; }
@@ -1935,8 +1958,8 @@ label:has(> input[type=checkbox]), input[type=checkbox] + label{ cursor:pointer;
 .bord-voet .wie{ color:rgba(255,255,255,0.6); font-size:11px; }
 /* alleen de dagcellen van de voetregel; de naamcel houdt zijn dekkende
    ondergrond, anders scrollen de chips er onderdoor */
-.bord-cel.bord-voet{ background:none; text-align:center; }
-.bord-voet .dagtotaal{ font-size:11px; color:var(--hi); font-variant-numeric:tabular-nums; }
+.bord-cel.bord-voet{ text-align:center; }
+.bord-voet .dagtotaal{ font-variant-numeric:tabular-nums; }
 
 /* de kleur draagt op deze breedte de klusidentiteit, dus staat eronder wat
    welke kleur is */

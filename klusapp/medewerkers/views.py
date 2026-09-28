@@ -302,6 +302,14 @@ def medewerker_bewerken(request, pk):
 
 
 @alleen_eigenaar
+def medewerker_kaart(request, pk):
+    """De gegevens van één medewerker om te lezen, als fragment: het
+    weekoverzicht toont dit in een venster bij een klik op een naam."""
+    persoon = get_object_or_404(_te_beheren(request.user), pk=pk)
+    return render(request, "medewerkers/_persoonkaart.html", {"persoon": persoon})
+
+
+@alleen_eigenaar
 def medewerker_wachtwoord(request, pk):
     medewerker = get_object_or_404(_te_beheren(request.user), pk=pk)
     if request.method == "POST":

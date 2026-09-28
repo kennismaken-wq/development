@@ -31,11 +31,16 @@
 
       {% for rij in rijen %}
         <div class="bord-naam{% if not rij.heeft_uren %} zonder-uren{% endif %}" data-rij="{{ forloop.counter0 }}">
-          {% include "_medewerkerbol.html" with persoon=rij.medewerker klasse="bol" %}
-          <span class="bord-naam-tekst">
-            <span class="wie">{{ rij.medewerker.naam }}</span>
-            {% if rij.medewerker.functie %}<span class="functie">{{ rij.medewerker.functie }}</span>{% endif %}
-          </span>
+          {% comment %} Een klik op de naam opent de persoonskaart als venster;
+             zonder javascript gaat de link naar het medewerkersscherm. {% endcomment %}
+          <a class="bord-naam-link" href="{% url 'medewerker_bewerken' rij.medewerker.pk %}"
+             data-paneel-url="{% url 'medewerker_kaart' rij.medewerker.pk %}" title="Gegevens van {{ rij.medewerker.naam }}">
+            {% include "_medewerkerbol.html" with persoon=rij.medewerker klasse="bol" %}
+            <span class="bord-naam-tekst">
+              <span class="wie">{{ rij.medewerker.naam }}</span>
+              {% if rij.medewerker.functie %}<span class="functie">{{ rij.medewerker.functie }}</span>{% endif %}
+            </span>
+          </a>
         </div>
         {% for dagcel in rij.dagen %}
           <div class="bord-cel{% if dagcel.is_vandaag %} vandaag{% endif %}{% if dagcel.smal %} smal{% endif %}" data-rij="{{ forloop.parentloop.counter0 }}" data-dag="{{ forloop.counter0 }}">
@@ -59,17 +64,17 @@
           </div>
         {% endfor %}
         <div class="bord-cel bord-week" data-rij="{{ forloop.counter0 }}">
-          {% if rij.weektotaal %}{{ rij.weektotaal }}{% else %}<span class="bord-leeg">–</span>{% endif %}
+          {% if rij.weektotaal %}{{ rij.weektotaal }} u{% else %}<span class="bord-leeg">–</span>{% endif %}
         </div>
       {% endfor %}
 
       <div class="bord-naam bord-voet"><span class="wie">Per dag</span></div>
       {% for kopdag in kopdagen %}
         <div class="bord-cel bord-voet{% if kopdag.is_vandaag %} vandaag{% endif %}" data-dag="{{ forloop.counter0 }}">
-          <span class="dagtotaal">{{ kopdag.totaal }}</span>
+          <span class="dagtotaal">{% if kopdag.totaal %}{{ kopdag.totaal }} u{% endif %}</span>
         </div>
       {% endfor %}
-      <div class="bord-cel bord-voet bord-week"><span class="dagtotaal" id="bord-voettotaal">{{ weektotaal }}</span></div>
+      <div class="bord-cel bord-voet bord-week"><span class="dagtotaal" id="bord-voettotaal">{{ weektotaal }} u</span></div>
     </div>
   </div>
 
@@ -101,19 +106,25 @@
      pagina. Ctrl-, cmd- en middelklik openen nog wel een tabblad. {% endcomment %}
   {% load static %}
   <dialog id="uurblok-detail" class="uurblok-detail breed"></dialog>
+  <dialog id="persoon-detail" class="uurblok-detail"></dialog>
   <script src="{% static 'js/bottomsheet.js' %}"></script>
   <script src="{% static 'js/planbordfilter.js' %}"></script>
   <script>
     (function () {
-      var dialoog = document.getElementById("uurblok-detail");
-      dialoog.addEventListener("click", function (e) {
-        if (e.target === this) window.closeSheet(this);
-      });
-      document.querySelectorAll("a.bord-chip[data-paneel-url]").forEach(function (chip) {
-        chip.addEventListener("click", function (e) {
-          if (e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
-          e.preventDefault();
-          window.laadEnOpenSheet(dialoog, chip.dataset.paneelUrl, chip.href);
+      // Blokjes openen het uurblok, namen de persoonskaart — elk in een
+      // eigen venster, met dezelfde ophaal-en-open van bottomsheet.js.
+      [["a.bord-chip[data-paneel-url]", "uurblok-detail"],
+       ["a.bord-naam-link[data-paneel-url]", "persoon-detail"]].forEach(function (paar) {
+        var dialoog = document.getElementById(paar[1]);
+        dialoog.addEventListener("click", function (e) {
+          if (e.target === this) window.closeSheet(this);
+        });
+        document.querySelectorAll(paar[0]).forEach(function (link) {
+          link.addEventListener("click", function (e) {
+            if (e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+            e.preventDefault();
+            window.laadEnOpenSheet(dialoog, link.dataset.paneelUrl, link.href);
+          });
         });
       });
     })();

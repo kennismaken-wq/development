@@ -1,0 +1,52 @@
+{% comment %} Persoonskaart: de gegevens van één medewerker om te lezen, als
+   venster boven het weekoverzicht (uren/planbord.html haalt dit op via
+   bottomsheet.js). Wijzigen gebeurt op het medewerkersscherm; het potlood
+   rechtsboven gaat daarheen. Alleen voor de eigenaar, zie
+   medewerkers.views.medewerker_kaart. {% endcomment %}
+<div class="uurblokdetail glas persoonkaart">
+  <div class="sheet-hendel" aria-hidden="true"></div>
+  <div class="sheet-kop">
+    <div class="sheet-kop-links">
+      <button type="button" class="dialog-sluiten" onclick="window.closeSheet(this.closest('dialog'))" aria-label="Sluiten">×</button>
+    </div>
+    <div class="sheet-kop-rechts">
+      <a class="bewerk-knop" href="{% url 'medewerker_bewerken' persoon.pk %}" aria-label="Gegevens wijzigen" title="Gegevens wijzigen">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+      </a>
+    </div>
+  </div>
+
+  <div class="profielkop">
+    {% include "_medewerkerbol.html" with persoon=persoon klasse="grote-bol" %}
+    <span class="wie">
+      <span class="naam">{{ persoon.naam }}</span>
+      <span class="rol">{{ persoon.get_rol_display }}{% if persoon.functie %} · {{ persoon.functie }}{% endif %}</span>
+    </span>
+  </div>
+
+  <h3 class="persoonkaart-kop">Contact</h3>
+  <div class="klusinfo">
+    <p class="regel"><span class="lbl">Mobiel</span>{% if persoon.telefoon %}<a href="tel:{{ persoon.telefoon }}">{{ persoon.telefoon }}</a>{% else %}—{% endif %}</p>
+    <p class="regel"><span class="lbl">E-mail</span>{% if persoon.email %}<a href="mailto:{{ persoon.email }}">{{ persoon.email }}</a>{% else %}—{% endif %}</p>
+    <p class="regel"><span class="lbl">Adres</span>{% if persoon.adres or persoon.woonplaats %}{{ persoon.adres }}{% if persoon.adres and persoon.woonplaats %}, {% endif %}{{ persoon.postcode }} {{ persoon.woonplaats }}{% else %}—{% endif %}</p>
+  </div>
+
+  <h3 class="persoonkaart-kop">Bij nood bellen</h3>
+  <div class="klusinfo">
+    <p class="regel"><span class="lbl">Naam</span>{% if persoon.noodcontact_naam %}{{ persoon.noodcontact_naam }}{% if persoon.noodcontact_relatie %} ({{ persoon.noodcontact_relatie }}){% endif %}{% else %}—{% endif %}</p>
+    <p class="regel"><span class="lbl">Telefoon</span>{% if persoon.noodcontact_telefoon %}<a href="tel:{{ persoon.noodcontact_telefoon }}">{{ persoon.noodcontact_telefoon }}</a>{% else %}—{% endif %}</p>
+  </div>
+
+  <h3 class="persoonkaart-kop">Rijbewijs</h3>
+  <div class="klusinfo">
+    <p class="regel"><span class="lbl">Categorie</span>{{ persoon.get_rijbewijs_display }}</p>
+    <p class="regel"><span class="lbl">Aanhanger</span>{% if persoon.aanhanger %}Ja, BE{% else %}Nee{% endif %}</p>
+  </div>
+
+  {% if persoon.in_dienst_sinds %}
+    <h3 class="persoonkaart-kop">In de app</h3>
+    <div class="klusinfo">
+      <p class="regel"><span class="lbl">In dienst</span>sinds {{ persoon.in_dienst_sinds|date:"j F Y" }}</p>
+    </div>
+  {% endif %}
+</div>
