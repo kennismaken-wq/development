@@ -806,3 +806,22 @@ class KlikbareGegevensTest(TestCase):
         # een leeg veld wordt geen link
         html = self.client.get(reverse("medewerker_bewerken", args=[sam.pk])).content.decode()
         self.assertNotIn('href="mailto:', html)
+
+
+class LeegDatumveldTest(TestCase):
+    """Een lege datum op slot toont een streepje, geen dd/mm/jjjj."""
+
+    def test_leeg_en_gevuld(self):
+        maarten = Medewerker.objects.create_user("maarten", password="x", rol=Medewerker.Rol.EIGENAAR)
+        leeg = Medewerker.objects.create_user("sam", password="x", first_name="Sam")
+        gevuld = Medewerker.objects.create_user(
+            "joep", password="x", first_name="Joep", in_dienst_sinds=date(2022, 4, 1)
+        )
+        self.client.force_login(maarten)
+        html = self.client.get(reverse("medewerker_bewerken", args=[leeg.pk])).content.decode()
+        self.assertRegex(html, r'<input type="text" name="in_dienst_sinds"[^>]*data-type="date"[^>]*placeholder="—"|<input type="text" name="in_dienst_sinds"[^>]*placeholder="—"[^>]*data-type="date"')
+        html = self.client.get(reverse("medewerker_bewerken", args=[gevuld.pk])).content.decode()
+        self.assertRegex(html, r'<input type="date" name="in_dienst_sinds" value="2022-04-01"')
+        # in de bewerkstand gewoon een datumveld
+        html = self.client.get(reverse("medewerker_bewerken", args=[leeg.pk]) + "?bewerken=1").content.decode()
+        self.assertRegex(html, r'<input type="date" name="in_dienst_sinds"')

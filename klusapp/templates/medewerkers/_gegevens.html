@@ -111,6 +111,11 @@
         // een vaste regel zonder naam (de eigen gebruikersnaam) blijft op slot
         if (veld.name) { veld.disabled = false; }
       });
+      // een leeg datumveld stond als tekstvak met een streepje (zie
+      // medewerkers.views._op_slot); nu weer een datumveld met kalender
+      formulier.querySelectorAll('[data-type]').forEach(function (veld) {
+        veld.type = veld.dataset.type;
+      });
       formulier.classList.add('bewerkt');
       // het pennetje op de foto hoort bij dezelfde stand
       var wissel = document.getElementById('fotowissel');

@@ -158,11 +158,18 @@ def _op_slot(formulier):
     de rest van het scherm op slot staat. Het script in die template zet ze
     allemaal tegelijk weer open.
     """
-    for veld in formulier.fields.values():
+    for naam, veld in formulier.fields.items():
         veld.widget.attrs["disabled"] = True
         # Een streepje bij wat niet is ingevuld; anders staat er een kopje
         # met niets eronder en lijkt het scherm half geladen.
         veld.widget.attrs.setdefault("placeholder", "—")
+        # Een datumveld toont geen placeholder maar "dd/mm/jjjj". Leeg en op
+        # slot wordt het daarom een tekstvak; het script in _gegevens.html
+        # maakt er bij het wijzigen weer een datumveld van (data-type).
+        # (Django bewaart het type als input_type, niet tussen de attrs.)
+        if getattr(veld.widget, "input_type", "") == "date" and not formulier[naam].value():
+            veld.widget.input_type = "text"
+            veld.widget.attrs["data-type"] = "date"
 
 
 @login_required
