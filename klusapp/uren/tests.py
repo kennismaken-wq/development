@@ -335,6 +335,23 @@ class PlanbordTest(TestCase):
     def rij_van(self, antwoord, medewerker):
         return next(rij for rij in antwoord.context["rijen"] if rij["medewerker"] == medewerker)
 
+    def test_leeg_weekend_wordt_smal_een_gevuld_weekend_niet(self):
+        # zaterdag 12-09 gewerkt, zondag 13-09 niet; dinsdag leeg blijft breed
+        Uurblok.objects.create(
+            medewerker=self.sam, klus=self.klus, datum=date(2026, 9, 12),
+            begintijd=time(8, 0), eindtijd=time(12, 0),
+        )
+        self.client.force_login(self.maarten)
+        antwoord = self.client.get("/planbord/?dag=2026-09-09")
+        smal = [kopdag["smal"] for kopdag in antwoord.context["kopdagen"]]
+        self.assertEqual(smal, [False, False, False, False, False, False, True])
+        self.assertTrue(self.rij_van(antwoord, self.joep)["dagen"][6]["smal"])
+        self.assertEqual(
+            antwoord.context["bordkolommen"],
+            "176px " + "minmax(142px,1fr) " * 6 + "52px",
+        )
+        self.assertContains(antwoord, "grid-template-columns:176px ")
+
     def test_inloggen_vereist(self):
         antwoord = self.client.get("/planbord/")
         self.assertEqual(antwoord.status_code, 302)

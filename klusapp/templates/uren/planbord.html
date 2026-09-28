@@ -19,10 +19,10 @@
   </div>
 
   <div class="bord-scroll">
-    <div class="bord">
+    <div class="bord" style="grid-template-columns:{{ bordkolommen }}; min-width:{{ bordbreedte }}px">
       <div class="bord-hoek"></div>
       {% for kopdag in kopdagen %}
-        <div class="bord-kop{% if kopdag.is_vandaag %} vandaag{% endif %}">
+        <div class="bord-kop{% if kopdag.is_vandaag %} vandaag{% endif %}{% if kopdag.smal %} smal{% endif %}">
           <div class="dag">{{ kopdag.datum|date:"D" }}</div>
           <div class="datum">{{ kopdag.datum|date:"j M" }}</div>
         </div>
@@ -38,7 +38,7 @@
           </span>
         </div>
         {% for dagcel in rij.dagen %}
-          <div class="bord-cel{% if dagcel.is_vandaag %} vandaag{% endif %}">
+          <div class="bord-cel{% if dagcel.is_vandaag %} vandaag{% endif %}{% if dagcel.smal %} smal{% endif %}">
             {% for getekend in dagcel.blokken %}
               {% comment %} Klusnaam en uren, zoals in de demo: op dit bord is
                  de vraag "waar stond hij" en niet "hoe laat begon hij". De

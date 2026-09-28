@@ -409,16 +409,34 @@ def planbord(request):
             }
         )
 
+    # Een zaterdag of zondag waarop niemand werkte, krijgt een smalle kolom:
+    # daar valt niets te lezen, en de ruimte gaat naar de namen en de dagen
+    # die wel gevuld zijn. Een lege doordeweekse dag blijft breed — dat er
+    # op een dinsdag niemand stond, is juist iets om te zien.
+    smal = {
+        datum for datum, minuten in dagminuten.items() if datum.weekday() >= 5 and not minuten
+    }
+    for rij in rijen:
+        for dagcel in rij["dagen"]:
+            dagcel["smal"] = dagcel["datum"] in smal
+    kolommen = [BORD_SMAL if datum in smal else BORD_DAG for datum in week["dagen"]]
+
     return render(
         request,
         "uren/planbord.html",
         {
             **week,
             "rijen": rijen,
+            "bordkolommen": " ".join([f"{BORD_NAAM}px"] + [
+                f"{breedte}px" if breedte == BORD_SMAL else f"minmax({breedte}px,1fr)"
+                for breedte in kolommen
+            ]),
+            "bordbreedte": BORD_NAAM + sum(kolommen),
             "kopdagen": [
                 {
                     "datum": datum,
                     "is_vandaag": datum == week["vandaag"],
+                    "smal": datum in smal,
                     "totaal": kalender.als_uren(minuten) if minuten else "",
                 }
                 for datum, minuten in dagminuten.items()
@@ -435,6 +453,13 @@ def planbord(request):
 
 
 AANWEZIG_KEUZES = {"ja", "nee"}
+
+# Kolombreedtes van het planbord, in px. De namenkolom is zo breed dat een
+# naam als "Youssef el Amrani" op één regel past: een naam over twee regels
+# maakte de hele rij hoger dan zijn uurblokken nodig hadden.
+BORD_NAAM = 176
+BORD_DAG = 142
+BORD_SMAL = 52
 
 
 @login_required

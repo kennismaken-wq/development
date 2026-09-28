@@ -1834,8 +1834,12 @@ label:has(> input[type=checkbox]), input[type=checkbox] + label{ cursor:pointer;
 .bord-scroll::-webkit-scrollbar{ height:6px; }
 .bord-scroll::-webkit-scrollbar-thumb{ background:rgba(255,255,255,0.2); border-radius:999px; }
 /* Bredere kolommen dan eerst: in de chips staat nu de klusnaam, en die
-   heeft ruimte nodig om herkenbaar te zijn in plaats van afgekapt. */
-.bord{ display:grid; grid-template-columns:132px repeat(7, minmax(142px,1fr)); min-width:1126px; }
+   heeft ruimte nodig om herkenbaar te zijn in plaats van afgekapt. De
+   kolommen zelf staan in de view (uren/views.py, BORD_*): een lege
+   zaterdag of zondag wordt daar smal. Dit is alleen de terugval. */
+.bord{ display:grid; grid-template-columns:176px repeat(7, minmax(142px,1fr)); min-width:1170px; }
+.bord-kop.smal{ padding-left:0; padding-right:0; }
+.bord-cel.smal{ padding-left:0; padding-right:0; }
 
 .bord-kop{ font-size:11px; text-align:center; padding:.1rem .2rem .5rem; color:rgba(255,255,255,0.7); }
 .bord-kop .dag{ font-weight:600; text-transform:capitalize; }
@@ -1856,7 +1860,6 @@ label:has(> input[type=checkbox]), input[type=checkbox] + label{ cursor:pointer;
   background:
     linear-gradient(150deg, rgba(255,255,255,0.125), rgba(255,255,255,0.05)),
     linear-gradient(160deg, #20211C, #282C21);
-  box-shadow:14px 0 18px -14px rgba(0,0,0,0.75);
 }
 .bord-hoek{
   position:sticky; left:0; z-index:4;
