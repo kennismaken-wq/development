@@ -137,10 +137,10 @@ class UrenSchrijvenTest(TestCase):
             begintijd=time(8, 0), eindtijd=time(9, 0),
         )
         antwoord = self.client.get("/uren/?dag=2026-09-07&weergave=week")
-        self.assertEqual(antwoord.context["weektotaal"], "4:45")
+        self.assertEqual(antwoord.context["weektotaal"], "4,75")
         maandag = antwoord.context["dagen"][0]
         self.assertEqual(maandag["datum"], self.dag)
-        self.assertEqual(maandag["totaal"], "3:45")
+        self.assertEqual(maandag["totaal"], "3,75")
 
     def test_week_toont_zeven_dagen_vanaf_maandag(self):
         antwoord = self.client.get("/uren/?dag=2026-09-10&weergave=week")   # een donderdag
@@ -217,7 +217,7 @@ class UrenSchrijvenTest(TestCase):
         antwoord = self.client.get("/uren/?weergave=maand&dag=2026-09-15")
         raster = antwoord.context["maandraster"]
         cel = next(dagcel for week in raster for dagcel in week if dagcel["datum"] == date(2026, 9, 10))
-        self.assertEqual(cel["totaal"], "1:30")
+        self.assertEqual(cel["totaal"], "1,5")
 
     def test_maandnavigatie_naar_vorige_en_volgende_maand(self):
         antwoord = self.client.get("/uren/?weergave=maand&dag=2026-09-15")
@@ -242,12 +242,12 @@ class UrenSchrijvenTest(TestCase):
             begintijd=time(8, 0), eindtijd=time(12, 0),
         )
         antwoord = self.client.get("/uren/?weergave=maand&dag=2026-09-15")
-        self.assertEqual(antwoord.context["totaal_waarde"], "4:00")
+        self.assertEqual(antwoord.context["totaal_waarde"], "4")
         # De rand-dagen staan er wél, alleen gemarkeerd als buiten de maand.
         raster = antwoord.context["maandraster"]
         rand = next(cel for week in raster for cel in week if cel["datum"] == date(2026, 8, 31))
         self.assertFalse(rand["in_maand"])
-        self.assertEqual(rand["totaal"], "8:00")
+        self.assertEqual(rand["totaal"], "8")
 
 
 class UrenCompacteKopTest(TestCase):
@@ -361,7 +361,7 @@ class PlanbordTest(TestCase):
         self.client.force_login(self.maarten)
         html = self.client.get("/planbord/?dag=2026-09-09").content.decode()
         self.assertIn('<div class="dag">Week</div>', html)
-        self.assertRegex(html, r'class="bord-cel bord-week">\s*8:30')
+        self.assertRegex(html, r'class="bord-cel bord-week"[^>]*>\s*8,5')
         self.assertNotIn('class="week"', html)
 
     def test_filter_op_klus(self):
@@ -377,15 +377,21 @@ class PlanbordTest(TestCase):
         self.client.force_login(self.maarten)
         antwoord = self.client.get(f"/planbord/?dag=2026-09-09&klus={self.klus.pk}")
         sam = self.rij_van(antwoord, self.sam)
-        # alleen het blok van Tuin Vermeer, en de totalen tellen alleen dat
-        self.assertEqual([b["blok"].klus for b in sam["dagen"][0]["blokken"]], [self.klus])
-        self.assertEqual(sam["weektotaal"], "4:00")
-        self.assertEqual(antwoord.context["weektotaal"], "4:00")
+        # beide blokken staan in de pagina (het script wisselt zonder
+        # herladen), maar alleen Tuin Vermeer is zichtbaar en telt mee
+        self.assertEqual(
+            [(b["blok"].klus, b["zichtbaar"]) for b in sam["dagen"][0]["blokken"]],
+            [(self.klus, True), (andere, False)],
+        )
+        self.assertEqual(sam["weektotaal"], "4")
+        self.assertEqual(antwoord.context["weektotaal"], "4")
         # de keuzelijst krimpt niet: beide klussen blijven kiesbaar
         self.assertEqual([r["klus"] for r in antwoord.context["legenda"]], [andere, self.klus])
         self.assertEqual([r["actief"] for r in antwoord.context["legenda"]], [False, True])
         html = antwoord.content.decode()
         self.assertIn("Alle klussen", html)
+        self.assertIn("Filter op klus", html)
+        self.assertRegex(html, rf'data-klus="{andere.pk}" data-minuten="120" hidden')
         # bladeren houdt het filter vast
         self.assertIn(f"?dag=2026-09-14&amp;klus={self.klus.pk}", html)
 
@@ -433,17 +439,17 @@ class PlanbordTest(TestCase):
 
         sam = self.rij_van(antwoord, self.sam)
         self.assertEqual(len(sam["dagen"][0]["blokken"]), 1)   # maandag
-        self.assertEqual(sam["dagen"][0]["blokken"][0]["duur"], "8:30")
+        self.assertEqual(sam["dagen"][0]["blokken"][0]["duur"], "8,5")
         self.assertEqual(sam["dagen"][2]["blokken"], [])       # woensdag
-        self.assertEqual(sam["weektotaal"], "8:30")
+        self.assertEqual(sam["weektotaal"], "8,5")
 
         joep = self.rij_van(antwoord, self.joep)
         self.assertEqual(joep["dagen"][0]["blokken"], [])
         self.assertEqual(len(joep["dagen"][2]["blokken"]), 1)
-        self.assertEqual(joep["weektotaal"], "4:30")
+        self.assertEqual(joep["weektotaal"], "4,5")
 
-        self.assertEqual(antwoord.context["weektotaal"], "13:00")
-        self.assertEqual(antwoord.context["kopdagen"][2]["totaal"], "4:30")
+        self.assertEqual(antwoord.context["weektotaal"], "13")
+        self.assertEqual(antwoord.context["kopdagen"][2]["totaal"], "4,5")
 
     def test_lege_rij_voor_wie_niets_schreef(self):
         # "Wie staat er níét ingepland" is de vraag waarvoor dit scherm bestaat.
@@ -712,7 +718,7 @@ class UrenexportTest(TestCase):
         self.client.force_login(self.maarten)
         antwoord = self.client.get("/export/?maand=2026-08")
         totalen = {rij["medewerker"].username: rij["totaal"] for rij in antwoord.context["totalen"]}
-        self.assertEqual(totalen, {"sam": "12:30", "joep": "8:00"})
+        self.assertEqual(totalen, {"sam": "12,5", "joep": "8"})
 
     def test_download_levert_een_excelbestand(self):
         self.client.force_login(self.maarten)
@@ -767,7 +773,7 @@ class UrenexportTest(TestCase):
 
         gefilterd = self.client.get(f"/export/?maand=2026-08&medewerker={self.maarten.pk}")
         totalen = {rij["medewerker"].username: rij["totaal"] for rij in gefilterd.context["totalen"]}
-        self.assertEqual(totalen, {"maarten": "3:00"})
+        self.assertEqual(totalen, {"maarten": "3"})
 
 
 class DecimaleUrenTest(TestCase):
@@ -898,13 +904,13 @@ class MaandHeatmapTest(TestCase):
         self.blok(date(2026, 8, 31), 4)
         self.blok(date(2026, 9, 10), 8)
         heatmap = totalen.maand_heatmap(self.sam, date(2026, 9, 23))
-        self.assertEqual(heatmap["totaal"], "8:00")
+        self.assertEqual(heatmap["totaal"], "8")
         self.assertFalse(self.cel(heatmap, date(2026, 8, 31))["in_maand"])
-        self.assertEqual(self.cel(heatmap, date(2026, 8, 31))["uren"], "4:00")
+        self.assertEqual(self.cel(heatmap, date(2026, 8, 31))["uren"], "4")
 
     def test_lege_maand_valt_niet_om(self):
         heatmap = totalen.maand_heatmap(self.sam, date(2026, 9, 23))
-        self.assertEqual(heatmap["totaal"], "0:00")
+        self.assertEqual(heatmap["totaal"], "0")
         self.assertTrue(all(c["tint"] == 0 for week in heatmap["weken"] for c in week))
 
     def test_startscherm_toont_de_widget(self):
@@ -913,7 +919,7 @@ class MaandHeatmapTest(TestCase):
         with patch("medewerkers.views.date") as nep:
             nep.today.return_value = date(2026, 9, 23)
             antwoord = self.client.get("/")
-        self.assertEqual(antwoord.context["maandwidget"]["totaal"], "8:00")
+        self.assertEqual(antwoord.context["maandwidget"]["totaal"], "8")
         self.assertContains(antwoord, "uur deze maand")
         # De widget moet laten zien dát hij ergens heen gaat, en waarheen.
         self.assertContains(antwoord, "Maandoverzicht")
@@ -947,3 +953,13 @@ class KlusKiezerOpUrenformulierTest(TestCase):
         html = self.html()
         self.assertIn('class="klus-kiezer klus-kiezer-veld" data-pillen="soort"', html)
         self.assertIn("js/kluskiezer.js", html)
+
+
+class UrenNotatieTest(TestCase):
+    """Totalen en duren als getal, niet als klok (28-09-2026)."""
+
+    def test_notatie(self):
+        for minuten, verwacht in (
+            (0, "0"), (30, "0,5"), (510, "8,5"), (285, "4,75"), (14400, "240"), (20, "0,33"),
+        ):
+            self.assertEqual(kalender.als_uren(minuten), verwacht, minuten)

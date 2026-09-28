@@ -32,7 +32,7 @@
   <div class="urensub">
     <span class="totaal-chip-klein">
       <span class="n">{{ totaal_waarde }}</span>
-      <span class="l">{% if weergave == "week" %}deze week{% elif weergave == "maand" %}deze maand{% else %}vandaag{% endif %}</span>
+      <span class="l">{% if weergave == "week" %}uur deze week{% elif weergave == "maand" %}uur deze maand{% else %}uur vandaag{% endif %}</span>
     </span>
     {% if not is_huidige_periode %}
       <a class="vandaag-chip" href="?weergave={{ weergave }}">Vandaag</a>

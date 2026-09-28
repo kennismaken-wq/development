@@ -47,7 +47,7 @@ def _onderdelen_met_cijfers(gebruiker, vandaag, maandag, zondag, uren):
     fotos = Bijlage.objects.filter(soort=Bijlage.Soort.FOTO).count()
 
     info = {
-        "mijn_uren": f"{uren['week']} deze week",
+        "mijn_uren": f"{uren['week']} u deze week",
         "klussen": f"{actieve_klussen} lopend",
         "fotos": f"{fotos} foto's",
         "loonstrook": "bij Loondossier",

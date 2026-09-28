@@ -13,8 +13,8 @@
       <span class="periodetitel">{{ maandag|date:"j M" }} – {{ zondag|date:"j M" }}</span>
     </div>
     <div class="totaal-chip">
-      <span class="n">{{ weektotaal }}</span>
-      <span class="l">{% if gekozen_klus %}aan deze klus{% elif is_deze_week %}deze week{% else %}die week{% endif %}</span>
+      <span class="n" id="bord-weektotaal">{{ weektotaal }}</span>
+      <span class="l" id="bord-weeklabel" data-standaard="{% if is_deze_week %}uur deze week{% else %}uur die week{% endif %}">{% if gekozen_klus %}uur aan deze klus{% elif is_deze_week %}uur deze week{% else %}uur die week{% endif %}</span>
     </div>
   </div>
 
@@ -30,7 +30,7 @@
       <div class="bord-kop bord-week-kop"><div class="dag">Week</div></div>
 
       {% for rij in rijen %}
-        <div class="bord-naam{% if not rij.heeft_uren %} zonder-uren{% endif %}">
+        <div class="bord-naam{% if not rij.heeft_uren %} zonder-uren{% endif %}" data-rij="{{ forloop.counter0 }}">
           {% include "_medewerkerbol.html" with persoon=rij.medewerker klasse="bol" %}
           <span class="bord-naam-tekst">
             <span class="wie">{{ rij.medewerker.naam }}</span>
@@ -38,7 +38,7 @@
           </span>
         </div>
         {% for dagcel in rij.dagen %}
-          <div class="bord-cel{% if dagcel.is_vandaag %} vandaag{% endif %}{% if dagcel.smal %} smal{% endif %}">
+          <div class="bord-cel{% if dagcel.is_vandaag %} vandaag{% endif %}{% if dagcel.smal %} smal{% endif %}" data-rij="{{ forloop.parentloop.counter0 }}" data-dag="{{ forloop.counter0 }}">
             {% for getekend in dagcel.blokken %}
               {% comment %} Klusnaam en uren, zoals in de demo: op dit bord is
                  de vraag "waar stond hij" en niet "hoe laat begon hij". De
@@ -46,28 +46,30 @@
               {% endcomment %}
               <a class="bord-chip" href="{% url 'uurblok_detail' getekend.blok.pk %}"
                  data-paneel-url="{% url 'uurblok_detail_paneel' getekend.blok.pk %}"
+                 data-klus="{{ getekend.blok.klus_id }}" data-minuten="{{ getekend.blok.duur_minuten }}"{% if not getekend.zichtbaar %} hidden{% endif %}
                  title="{{ getekend.blok.klus.naam }} · {{ getekend.blok.begintijd|time:'H:i' }}–{{ getekend.blok.eindtijd|time:'H:i' }}">
                 <span class="vlek" style="background:linear-gradient(150deg, {{ getekend.kleur }}, {{ getekend.kleur }}80); border-color:{{ getekend.kleur }}"></span>
                 <span class="klus">{{ getekend.blok.klus.naam }}</span>
                 <span class="uren">{{ getekend.uren }}</span>
               </a>
-            {% empty %}
-              <span class="bord-leeg">–</span>
             {% endfor %}
+            {% comment %} Altijd aanwezig; de CSS verbergt hem zodra er een
+               zichtbaar blok in de cel staat (ook na filteren). {% endcomment %}
+            <span class="bord-leeg">–</span>
           </div>
         {% endfor %}
-        <div class="bord-cel bord-week">
+        <div class="bord-cel bord-week" data-rij="{{ forloop.counter0 }}">
           {% if rij.weektotaal %}{{ rij.weektotaal }}{% else %}<span class="bord-leeg">–</span>{% endif %}
         </div>
       {% endfor %}
 
       <div class="bord-naam bord-voet"><span class="wie">Per dag</span></div>
       {% for kopdag in kopdagen %}
-        <div class="bord-cel bord-voet{% if kopdag.is_vandaag %} vandaag{% endif %}">
+        <div class="bord-cel bord-voet{% if kopdag.is_vandaag %} vandaag{% endif %}" data-dag="{{ forloop.counter0 }}">
           <span class="dagtotaal">{{ kopdag.totaal }}</span>
         </div>
       {% endfor %}
-      <div class="bord-cel bord-voet bord-week"><span class="dagtotaal">{{ weektotaal }}</span></div>
+      <div class="bord-cel bord-voet bord-week"><span class="dagtotaal" id="bord-voettotaal">{{ weektotaal }}</span></div>
     </div>
   </div>
 
@@ -76,14 +78,12 @@
        klus toont alleen die klus op het bord, nog een tik (of "Alle
        klussen") zet het weer uit. Naar de klus zelf ga je via een uurblok
        (de klusnaam bovenin het venster). {% endcomment %}
-    <p class="sectiekop">Klussen deze week</p>
-    <ul class="legenda">
-      {% if gekozen_klus %}
-        <li><a class="alle" href="?dag={{ dag|date:'Y-m-d' }}">Alle klussen</a></li>
-      {% endif %}
+    <p class="sectiekop">Filter op klus</p>
+    <ul class="legenda" id="bord-filter">
+      <li{% if not gekozen_klus %} hidden{% endif %}><a class="alle" href="?dag={{ dag|date:'Y-m-d' }}" data-klus="">Alle klussen</a></li>
       {% for regel in legenda %}
         <li>
-          <a href="?dag={{ dag|date:'Y-m-d' }}{% if not regel.actief %}&klus={{ regel.klus.pk }}{% endif %}"
+          <a href="?dag={{ dag|date:'Y-m-d' }}{% if not regel.actief %}&klus={{ regel.klus.pk }}{% endif %}" data-klus="{{ regel.klus.pk }}"
              {% if regel.actief %}class="actief" aria-current="true"{% endif %}
              title="{% if regel.actief %}Filter uitzetten{% else %}Alleen {{ regel.klus.naam }} tonen{% endif %}">
             <span class="vlek" style="background:linear-gradient(150deg, {{ regel.kleur }}D9, {{ regel.kleur }}73); border-color:{{ regel.kleur }}"></span>
@@ -100,8 +100,9 @@
      op Uren schrijven (static/js/kalender.js), in plaats van als nieuwe
      pagina. Ctrl-, cmd- en middelklik openen nog wel een tabblad. {% endcomment %}
   {% load static %}
-  <dialog id="uurblok-detail" class="uurblok-detail"></dialog>
+  <dialog id="uurblok-detail" class="uurblok-detail breed"></dialog>
   <script src="{% static 'js/bottomsheet.js' %}"></script>
+  <script src="{% static 'js/planbordfilter.js' %}"></script>
   <script>
     (function () {
       var dialoog = document.getElementById("uurblok-detail");

@@ -1098,12 +1098,12 @@ class GewerkteUrenOpKlusTest(TestCase):
         self.blok(self.sam, date(2026, 9, 8), 8, 12)      # 4:00
         self.blok(self.joep, date(2026, 9, 8), 9, 11)     # 2:00
         rijen = totalen.per_medewerker_op_klus(self.klus)
-        self.assertEqual([rij["uren"] for rij in rijen], ["12:00", "2:00"])
+        self.assertEqual([rij["uren"] for rij in rijen], ["12", "2"])
         self.assertEqual(rijen[0]["medewerker"], self.sam)
         self.assertEqual(rijen[0]["aantal_dagen"], 2)
         self.assertEqual(rijen[0]["eerste_dag"], date(2026, 9, 7))
         self.assertEqual(rijen[0]["laatste_dag"], date(2026, 9, 8))
-        self.assertEqual(totalen.totaal_van(rijen)["uren"], "14:00")
+        self.assertEqual(totalen.totaal_van(rijen)["uren"], "14")
 
     def test_twee_blokken_op_een_dag_tellen_als_een_dag(self):
         # Bij onderhoud doet iemand zes tot acht adressen op een dag.
@@ -1111,16 +1111,16 @@ class GewerkteUrenOpKlusTest(TestCase):
         self.blok(self.sam, date(2026, 9, 7), 10, 11)
         rij = totalen.per_medewerker_op_klus(self.klus)[0]
         self.assertEqual(rij["aantal_dagen"], 1)
-        self.assertEqual(rij["uren"], "2:00")
+        self.assertEqual(rij["uren"], "2")
 
     def test_uren_van_een_andere_klus_tellen_niet_mee(self):
         self.blok(self.sam, date(2026, 9, 7), 8, 16)
         self.blok(self.sam, date(2026, 9, 7), 8, 16, klus=self.andere)
-        self.assertEqual(totalen.per_medewerker_op_klus(self.klus)[0]["uren"], "8:00")
+        self.assertEqual(totalen.per_medewerker_op_klus(self.klus)[0]["uren"], "8")
 
     def test_klus_zonder_uren_geeft_lege_lijst(self):
         self.assertEqual(totalen.per_medewerker_op_klus(self.klus), [])
-        self.assertEqual(totalen.totaal_van([])["uren"], "0:00")
+        self.assertEqual(totalen.totaal_van([])["uren"], "0")
 
     def test_medewerker_ziet_de_uren_van_collegas_niet_in_het_dossier(self):
         # Omgedraaid op 24-09-2026. SPEC §2 heeft twee helften: "een medewerker
@@ -1431,7 +1431,7 @@ class KlusdossierUrenRechtenTest(TestCase):
     def test_eigenaar_ziet_iedereen_met_een_totaalregel(self):
         antwoord = self.dossier(self.maarten)
         self.assertFalse(antwoord.context["alleen_eigen_uren"])
-        self.assertEqual(antwoord.context["totaal"]["uren"], "16:00")
+        self.assertEqual(antwoord.context["totaal"]["uren"], "16")
         self.assertContains(antwoord, "Joep")
 
     def test_exportknop_staat_er_alleen_voor_de_eigenaar(self):

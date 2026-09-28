@@ -1120,6 +1120,8 @@ dialog.uurblok-detail{
   max-width:560px; width:calc(100% - 2.4rem);
 }
 dialog.uurblok-detail::backdrop{ background:rgba(10,10,8,0.55); backdrop-filter:blur(3px); }
+/* op het weekoverzicht, dat op een laptop wordt geopend: ruimer */
+dialog.uurblok-detail.breed{ max-width:760px; }
 /* klusnaam bovenin het venster: link naar de klus (zie _uurblokdetail_inhoud.html) */
 .sheet-kluslink{ color:inherit; text-decoration:none; display:inline-flex; align-items:center; gap:.3rem; }
 .sheet-kluslink svg{ width:16px; height:16px; opacity:.6; flex-shrink:0; }
@@ -1881,12 +1883,19 @@ label:has(> input[type=checkbox]), input[type=checkbox] + label{ cursor:pointer;
 .bord-naam.zonder-uren .bol{ opacity:.45; }
 .bord-naam .wie{ font-size:12.5px; font-weight:600; line-height:1.25; overflow-wrap:break-word; }
 .bord-naam .functie{ font-size:10px; color:rgba(255,255,255,0.5); }
-/* het weektotaal per persoon: eigen kolom rechts, zie BORD_WEEK in uren/views.py */
+/* Het weektotaal per persoon: eigen kolom rechts, zie BORD_WEEK in
+   uren/views.py. Een trede hoger dan de uren in de blokjes: wit en groter,
+   op een eigen band, anders lees je hem als nog een blokje. Het groene
+   accent blijft voor de blokjes en de dagtotalen; het eindtotaal
+   rechtsonder is het zwaarst. */
 .bord-cel.bord-week{
   align-content:center; justify-items:center;
-  font-size:11.5px; font-weight:600; color:var(--hi); font-variant-numeric:tabular-nums;
+  background:rgba(255,255,255,0.07); border-left-color:rgba(255,255,255,0.18);
+  font-size:14px; font-weight:700; color:#fff; font-variant-numeric:tabular-nums;
 }
-.bord-cel.bord-voet.bord-week .dagtotaal{ font-weight:700; }
+.bord-week-kop{ background:rgba(255,255,255,0.07); border-radius:10px 10px 0 0; }
+.bord-cel.bord-voet.bord-week{ background:rgba(var(--accent-rgb),0.16); border-radius:0 0 10px 10px; }
+.bord-cel.bord-voet.bord-week .dagtotaal{ font-size:14px; font-weight:800; color:var(--hi); }
 /* wie deze week nergens staat blijft leesbaar maar valt terug — precies de
    vraag waarvoor dit scherm open staat, dus niet verbergen */
 .bord-naam.zonder-uren .wie{ color:rgba(255,255,255,0.55); font-weight:500; }
@@ -1918,6 +1927,9 @@ label:has(> input[type=checkbox]), input[type=checkbox] + label{ cursor:pointer;
 /* een lege dag krijgt een streepje: dan zie je dat er gekeken is en er niets
    was, in plaats van een gat waarvan je je afvraagt of het scherm klopt */
 .bord-leeg{ color:rgba(255,255,255,0.22); font-size:12px; text-align:center; }
+/* staat in elke cel; weg zodra er een zichtbaar blok in staat, ook na
+   filteren (static/js/planbordfilter.js) */
+.bord-cel:has(.bord-chip:not([hidden])) .bord-leeg{ display:none; }
 
 .bord-voet{ min-height:0; padding-top:.45rem; padding-bottom:.45rem; }
 .bord-voet .wie{ color:rgba(255,255,255,0.6); font-size:11px; }

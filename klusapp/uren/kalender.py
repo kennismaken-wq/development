@@ -26,15 +26,21 @@ def minuten(tijdstip):
 
 
 def als_uren(totaal_minuten):
-    return f"{totaal_minuten // 60}:{totaal_minuten % 60:02d}"
+    """Een duur of totaal zoals de app hem overal toont: zie als_decimaal.
+
+    Was tot 28-09-2026 "8:30"; Floris vond "240:00" voor 240 uur raar ogen.
+    Tijdstippen (08:00) lopen hier niet langs, die blijven een klok.
+    """
+    return als_decimaal(totaal_minuten)
 
 
 def als_decimaal(totaal_minuten):
     """Uren als getal in plaats van als klok: 8, 8,5, 3,25.
 
-    Op het planbord staat naast elke klusnaam hoeveel uur eraan is gewerkt.
-    "8,5" leest daar sneller dan "8:30", dat je makkelijk voor een tijdstip
-    aanziet in een rooster vol begintijden.
+    "8,5" leest sneller dan "8:30", dat je makkelijk voor een tijdstip
+    aanziet in een rooster vol begintijden. Zonder eenheid: waar het getal
+    los staat, zet de template er "u" of "uur" achter. Dezelfde notatie
+    rekent static/js/planbordfilter.js na.
     """
     uren = totaal_minuten / 60
     tekst = f"{uren:.2f}".rstrip("0").rstrip(".")

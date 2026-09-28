@@ -50,7 +50,7 @@
   {% if in_dialoog %}<h2 class="sectiekop" style="margin-top:0"><a class="sheet-kluslink" href="{% url 'klus_detail' blok.klus.pk %}" data-met-terug>{{ blok.klus.naam }}<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></a></h2>{% endif %}
   <div class="klusinfo">
     <p class="regel"><span class="lbl">Wie</span>{{ blok.medewerker.naam }}</p>
-    <p class="regel"><span class="lbl">Duur</span>{{ duur }}</p>
+    <p class="regel"><span class="lbl">Duur</span>{{ duur }} uur</p>
   </div>
 
   {% if mag_bewerken %}

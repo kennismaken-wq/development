@@ -359,9 +359,13 @@ def planbord(request):
     """
     week = periode.week_context(request)
 
-    # Filter op één klus (?klus=<pk>), via de klussen onder het bord. Dan
-    # staan alleen de blokken van die klus erop en tellen de totalen alleen
-    # die uren: "wie heeft deze week hoeveel aan Tuin Vermeer gedaan".
+    # Filter op één klus, via "Filter op klus" onder het bord. Dan staan
+    # alleen de blokken van die klus erop en tellen de totalen alleen die
+    # uren: "wie heeft deze week hoeveel aan Tuin Vermeer gedaan". Het wisselen
+    # zelf doet static/js/planbordfilter.js zonder de pagina te herladen; het
+    # bord bevat daarom altijd álle blokken, en een verborgen blok krijgt
+    # hidden. ?klus=<pk> in het adres is waar dat script de keuze bewaart,
+    # zodat bladeren, verversen en het terugpijltje hem onthouden.
     gekozen_klus = None
     if request.GET.get("klus", "").isdigit():
         gekozen_klus = Klus.objects.filter(pk=request.GET["klus"]).first()
@@ -380,13 +384,17 @@ def planbord(request):
     klussen_in_beeld = {}
     for blok in blokken:
         klussen_in_beeld[blok.klus_id] = blok.klus
-        if gekozen_klus and blok.klus_id != gekozen_klus.pk:
-            continue
         per_cel.setdefault((blok.medewerker_id, blok.datum), []).append(blok)
     if gekozen_klus:
         klussen_in_beeld[gekozen_klus.pk] = gekozen_klus
 
+    def zichtbaar(blok):
+        return gekozen_klus is None or blok.klus_id == gekozen_klus.pk
+
     dagminuten = dict.fromkeys(week["dagen"], 0)
+    # Zonder filter: bepaalt welke weekenddag smal wordt. Anders verspringen
+    # de kolommen bij elke filterkeuze.
+    alle_dagminuten = dict.fromkeys(week["dagen"], 0)
     rijen = []
     # Ook wie niets schreef krijgt een rij: "wie staat er níét ingepland" is
     # net zo goed de vraag waarvoor dit scherm bestaat.
@@ -394,9 +402,10 @@ def planbord(request):
         dagen, weekminuten = [], 0
         for datum in week["dagen"]:
             cel = per_cel.get((medewerker.pk, datum), [])
-            minuten = sum(blok.duur_minuten for blok in cel)
+            minuten = sum(blok.duur_minuten for blok in cel if zichtbaar(blok))
             weekminuten += minuten
             dagminuten[datum] += minuten
+            alle_dagminuten[datum] += sum(blok.duur_minuten for blok in cel)
             dagen.append(
                 {
                     "datum": datum,
@@ -407,6 +416,7 @@ def planbord(request):
                             "kleur": kalender.kleur_van(blok.klus),
                             "duur": kalender.als_uren(blok.duur_minuten),
                             "uren": kalender.als_decimaal(blok.duur_minuten),
+                            "zichtbaar": zichtbaar(blok),
                         }
                         for blok in cel
                     ],
@@ -428,7 +438,7 @@ def planbord(request):
     # die wel gevuld zijn. Een lege doordeweekse dag blijft breed — dat er
     # op een dinsdag niemand stond, is juist iets om te zien.
     smal = {
-        datum for datum, minuten in dagminuten.items() if datum.weekday() >= 5 and not minuten
+        datum for datum, minuten in alle_dagminuten.items() if datum.weekday() >= 5 and not minuten
     }
     for rij in rijen:
         for dagcel in rij["dagen"]:

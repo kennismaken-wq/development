@@ -77,7 +77,7 @@
                 {{ rij.aantal_dagen }} dag{{ rij.aantal_dagen|pluralize:"en" }} ·
                 {{ rij.eerste_dag|date:"j M" }}{% if rij.eerste_dag != rij.laatste_dag %} – {{ rij.laatste_dag|date:"j M" }}{% endif %}
               </span>
-              <span class="uren">{{ rij.uren }}</span>
+              <span class="uren">{{ rij.uren }} u</span>
             </li>
           {% endfor %}
           {% comment %} Staat er maar één regel omdat je alleen je eigen uren ziet,
@@ -87,7 +87,7 @@
               <span class="ur-bol leeg-bol"></span>
               <span class="wie">Totaal</span>
               <span class="wanneer"></span>
-              <span class="uren">{{ totaal.uren }}</span>
+              <span class="uren">{{ totaal.uren }} u</span>
             </li>
           {% endif %}
         </ul>
