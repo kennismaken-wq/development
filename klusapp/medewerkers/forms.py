@@ -100,7 +100,7 @@ class MedewerkerForm(ProfielfotoMixin, forms.ModelForm):
 
     # Kopjes boven de velden, zodat het geen lange rij invulvakken wordt.
     GROEPEN = [
-        ("", ["profielfoto", "first_name", "last_name", "username", "functie", "rol"]),
+        ("", ["first_name", "last_name", "username", "functie", "rol"]),
         ("Contact", ["telefoon", "email", "adres", "postcode", "woonplaats"]),
         ("Bij nood bellen", ["noodcontact_naam", "noodcontact_relatie", "noodcontact_telefoon"]),
         ("Rijbewijs", ["rijbewijs", "aanhanger"]),
@@ -108,8 +108,9 @@ class MedewerkerForm(ProfielfotoMixin, forms.ModelForm):
     ]
 
     # Velden die de template zelf plaatst en die dus niet in de restgroep
-    # moeten belanden — anders staan ze er twee keer, met dezelfde id.
-    BUITEN_GROEPEN = frozenset()
+    # moeten belanden — anders staan ze er twee keer, met dezelfde id. De
+    # foto staat als penknopje in de kop (medewerkers/_gegevens.html).
+    BUITEN_GROEPEN = frozenset({"profielfoto"})
 
     def groepen(self):
         """(kopje, velden) voor de template. Velden die dit formulier niet

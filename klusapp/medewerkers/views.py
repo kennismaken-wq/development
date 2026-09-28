@@ -152,6 +152,20 @@ def start(request):
     )
 
 
+def _op_slot(formulier):
+    """Alle velden op slot, voor de leesstand van medewerkers/_gegevens.html.
+
+    Ook het fotoveld: anders opent een tik op de foto de fotokiezer terwijl
+    de rest van het scherm op slot staat. Het script in die template zet ze
+    allemaal tegelijk weer open.
+    """
+    for veld in formulier.fields.values():
+        veld.widget.attrs["disabled"] = True
+        # Een streepje bij wat niet is ingevuld; anders staat er een kopje
+        # met niets eronder en lijkt het scherm half geladen.
+        veld.widget.attrs.setdefault("placeholder", "—")
+
+
 @login_required
 def mijn_profiel(request):
     """Je eigen gegevens: bekijken en wijzigen, plus wachtwoord en uitloggen.
@@ -188,14 +202,7 @@ def mijn_profiel(request):
     # er niets is opgeslagen.
     bewerken = bewerken or bool(gegevens.errors)
     if not bewerken:
-        for veld in gegevens.fields.values():
-            # Ook het fotoveld: anders opent een tik op de foto de
-            # fotokiezer terwijl de rest van het scherm op slot staat. Het
-            # script zet hem samen met de andere velden open.
-            veld.widget.attrs["disabled"] = True
-            # Een streepje bij wat niet is ingevuld; anders staat er een kopje
-            # met niets eronder en lijkt het scherm half geladen.
-            veld.widget.attrs.setdefault("placeholder", "—")
+        _op_slot(gegevens)
 
     return render(
         request,
@@ -280,24 +287,34 @@ def medewerker_nieuw(request):
             return redirect("medewerkers")
     else:
         formulier = NieuweMedewerkerForm(initial={"in_dienst_sinds": date.today()})
-    return render(request, "medewerkers/form.html", {"formulier": formulier, "nieuw": True})
+    return render(
+        request, "medewerkers/form.html", {"formulier": formulier, "nieuw": True, "bewerken": True}
+    )
 
 
 @alleen_eigenaar
 def medewerker_bewerken(request, pk):
+    """Werkt als Mijn profiel: eerst lezen, "Gegevens wijzigen" zet de velden
+    open, na opslaan terug naar dezelfde pagina in de leesstand."""
     medewerker = get_object_or_404(_te_beheren(request.user), pk=pk)
+    bewerken = request.GET.get("bewerken") == "1"
     if request.method == "POST":
         formulier = MedewerkerForm(request.POST, request.FILES, instance=medewerker)
         if formulier.is_valid():
             formulier.save()
             messages.success(request, f"{medewerker.naam} is bijgewerkt.")
-            return redirect("medewerkers")
+            return redirect("medewerker_bewerken", pk=medewerker.pk)
+        # Bij een fout blijft het formulier open, anders zie je niet waarom
+        # er niets is opgeslagen.
+        bewerken = True
     else:
         formulier = MedewerkerForm(instance=medewerker)
+    if not bewerken:
+        _op_slot(formulier)
     return render(
         request,
         "medewerkers/form.html",
-        {"formulier": formulier, "nieuw": False, "medewerker": medewerker},
+        {"formulier": formulier, "nieuw": False, "medewerker": medewerker, "bewerken": bewerken},
     )
 
 

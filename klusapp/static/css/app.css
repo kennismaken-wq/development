@@ -781,6 +781,10 @@ input[type=time]::-webkit-calendar-picker-indicator{ filter:invert(1); opacity:.
 
 /* De kop van het profielscherm: grote foto naast je naam. */
 .profielkop{ display:flex; align-items:center; gap:.9rem; margin:0 0 1.2rem; }
+/* nieuwe medewerker: nog geen initialen of foto */
+.profielkop .grote-bol.leeg-bol{ background:rgba(255,255,255,0.06); border:1px dashed rgba(255,255,255,0.3); }
+/* uitleg bij een veld alleen tijdens het invullen (medewerkers/_gegevens.html) */
+#gegevensformulier:not(.bewerkt) .hulptekst{ display:none; }
 .profielkop .grote-bol{
   width:72px; height:72px; flex-shrink:0; border-radius:999px; border:1px solid;
   display:flex; align-items:center; justify-content:center;

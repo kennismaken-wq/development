@@ -727,3 +727,55 @@ class PersoonskaartTest(TestCase):
         html = self.client.get(reverse("planbord")).content.decode()
         self.assertIn(f'data-paneel-url="{reverse("medewerker_kaart", args=[self.sam.pk])}"', html)
         self.assertIn('id="persoon-detail"', html)
+
+
+class MedewerkerZoalsProfielTest(TestCase):
+    """Het medewerkersscherm werkt als Mijn profiel (medewerkers/_gegevens.html)."""
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.maarten = Medewerker.objects.create_user(
+            "maarten", password="x", first_name="Maarten", rol=Medewerker.Rol.EIGENAAR
+        )
+        cls.sam = Medewerker.objects.create_user("sam", password="x", first_name="Sam", telefoon="0612")
+
+    def setUp(self):
+        self.client.force_login(self.maarten)
+        self.adres = reverse("medewerker_bewerken", args=[self.sam.pk])
+
+    def test_eerst_op_slot(self):
+        html = self.client.get(self.adres).content.decode()
+        self.assertIn('id="wijzig-knop"', html)
+        self.assertRegex(html, r'<input[^>]*name="telefoon"[^>]*disabled')
+        self.assertRegex(html, r'id="opslaanrij" hidden')
+        # geen "Bestand kiezen" in beeld: de foto zit achter het pennetje,
+        # en staat er dus maar één keer (niet ook nog tussen de velden)
+        self.assertIn('class="buiten-beeld"', html)
+        self.assertEqual(html.count('name="profielfoto"'), 1)
+
+    def test_bewerken_zet_de_velden_open(self):
+        html = self.client.get(self.adres + "?bewerken=1").content.decode()
+        self.assertNotRegex(html, r'<input[^>]*name="telefoon"[^>]*disabled')
+        self.assertIn('class="bewerkt"', html)
+
+    def test_opslaan_blijft_op_dezelfde_pagina(self):
+        gegevens = {
+            "first_name": "Sam", "last_name": "de Wit", "username": "sam",
+            "rol": Medewerker.Rol.MEDEWERKER, "telefoon": "06 99", "kleur": "#5B8FA8",
+        }
+        antwoord = self.client.post(self.adres, gegevens)
+        self.assertRedirects(antwoord, self.adres)
+        self.sam.refresh_from_db()
+        self.assertEqual(self.sam.telefoon, "06 99")
+
+    def test_fout_houdt_het_formulier_open(self):
+        antwoord = self.client.post(self.adres, {"first_name": "", "username": "sam", "rol": "medewerker"})
+        html = antwoord.content.decode()
+        self.assertIn('class="bewerkt"', html)
+        self.assertNotRegex(html, r'id="opslaanrij" hidden')
+
+    def test_nieuwe_medewerker_meteen_open(self):
+        html = self.client.get(reverse("medewerker_nieuw")).content.decode()
+        self.assertIn('class="bewerkt"', html)
+        self.assertIn("Medewerker toevoegen", html)
+        self.assertIn("leeg-bol", html)

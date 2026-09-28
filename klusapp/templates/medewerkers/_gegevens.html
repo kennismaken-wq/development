@@ -1,0 +1,144 @@
+{% load pictogrammen %}
+{% comment %} Gegevens van een medewerker: bekijken en wijzigen in één
+   weergave. Gedeeld door Mijn profiel (je eigen gegevens) en het
+   medewerkersscherm van de eigenaar (die van een ander), zodat die twee er
+   hetzelfde uitzien en hetzelfde werken.
+
+   De velden staan er altijd, alleen op slot (de view zet ze op disabled,
+   zie medewerkers.views._op_slot). "Gegevens wijzigen" zet ze open — met
+   javascript meteen, en zonder javascript via ?bewerken=1, zodat het
+   scherm in beide gevallen op hetzelfde adres blijft. De foto wissel je met
+   het pennetje op de foto, dat pas verschijnt als je aan het wijzigen bent.
+
+   Verwacht:  formulier       met .groepen() en een veld profielfoto
+              persoon         wiens bol er bovenaan staat (ongeopslagen bij
+                              een nieuwe medewerker: dan een leeg rondje)
+              bewerken        True: de velden staan open
+              annuleren_url   waar Annuleren heen gaat
+   Optioneel: gebruikersnaam  tonen als vaste regel (op je eigen profiel is
+                              dat geen veld: die wijzig je niet zelf)
+              opslaan_tekst   tekst op de opslaanknop
+{% endcomment %}
+<div class="profielkop">
+  {% comment %} Het penknopje hoort bij het invoerveld verderop in het
+     formulier; een label met "for" bedient dat veld ook op afstand. Zo staat
+     er geen "Bestand kiezen"-knop in beeld. {% endcomment %}
+  <label class="fotowissel{% if bewerken %} aan{% endif %}" id="fotowissel"
+         for="{{ formulier.profielfoto.id_for_label }}" title="Andere foto kiezen">
+    {% if persoon.pk %}
+      {% include "_medewerkerbol.html" with persoon=persoon klasse="grote-bol" %}
+    {% else %}
+      <span class="grote-bol leeg-bol"></span>
+    {% endif %}
+    <span class="pen" aria-hidden="true">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">{{ "pen"|pictogram }}</svg>
+    </span>
+  </label>
+  {% if persoon.pk %}
+    <span class="wie">
+      <span class="naam">{{ persoon.naam }}</span>
+      <span class="rol">{{ persoon.get_rol_display }}{% if persoon.functie %} · {{ persoon.functie }}{% endif %}</span>
+    </span>
+  {% endif %}
+</div>
+
+<p class="profielknop">
+  <a class="knop-stil" id="wijzig-knop" href="?bewerken=1"{% if bewerken %} hidden{% endif %}>
+    Gegevens wijzigen
+  </a>
+</p>
+
+<form method="post" id="gegevensformulier" enctype="multipart/form-data"{% if bewerken %} class="bewerkt"{% endif %}>
+  {% csrf_token %}
+  {% comment %} Buiten beeld, maar wel in het formulier: het penknopje
+     hierboven bedient dit veld. {% endcomment %}
+  <span class="buiten-beeld">{{ formulier.profielfoto }}</span>
+  {% for fout in formulier.profielfoto.errors %}<p class="fout">{{ fout }}</p>{% endfor %}
+  {% for fout in formulier.non_field_errors %}<p class="fout">{{ fout }}</p>{% endfor %}
+
+  {% if gebruikersnaam %}
+    <dl class="gegevens-blok">
+      <div class="gegeven">
+        <dt><label>Gebruikersnaam</label></dt>
+        <dd><input type="text" value="{{ gebruikersnaam }}" disabled></dd>
+      </div>
+    </dl>
+  {% endif %}
+
+  {% for kop, velden in formulier.groepen %}
+    {% if kop %}<h2 class="sectiekop">{{ kop }}</h2>{% endif %}
+    <dl class="gegevens-blok">
+      {% for veld in velden %}
+        <div class="gegeven">
+          <dt><label for="{{ veld.id_for_label }}">{{ veld.label }}</label></dt>
+          <dd>
+            {{ veld }}
+            {% comment %} Uitleg bij een veld (een voorbeeld, de
+               wachtwoordeisen) hoort bij het invullen, niet bij het lezen:
+               alleen zichtbaar in de bewerkstand, zie .hulptekst. {% endcomment %}
+            {% if veld.help_text %}<div class="eisen-blok hulptekst">{{ veld.help_text }}</div>{% endif %}
+            {% for fout in veld.errors %}<p class="fout">{{ fout }}</p>{% endfor %}
+          </dd>
+        </div>
+      {% endfor %}
+    </dl>
+  {% endfor %}
+
+  <p class="opslaanrij" id="opslaanrij"{% if not bewerken %} hidden{% endif %}>
+    <button type="submit" class="knop">{{ opslaan_tekst|default:"Opslaan" }}</button>
+    <a class="knop-stil" href="{{ annuleren_url }}">Annuleren</a>
+  </p>
+</form>
+
+<script>
+  // De knop is een gewone link naar ?bewerken=1; met javascript openen we de
+  // velden meteen, zodat de pagina niet opnieuw hoeft te laden.
+  (function () {
+    var knop = document.getElementById('wijzig-knop');
+    var formulier = document.getElementById('gegevensformulier');
+    var opslaan = document.getElementById('opslaanrij');
+    if (!knop || !formulier) return;
+
+    function openBewerken() {
+      formulier.querySelectorAll('[disabled]').forEach(function (veld) {
+        // een vaste regel zonder naam (de eigen gebruikersnaam) blijft op slot
+        if (veld.name) { veld.disabled = false; }
+      });
+      formulier.classList.add('bewerkt');
+      // het pennetje op de foto hoort bij dezelfde stand
+      var wissel = document.getElementById('fotowissel');
+      if (wissel) { wissel.classList.add('aan'); }
+      knop.hidden = true;
+      opslaan.hidden = false;
+    }
+
+    knop.addEventListener('click', function (gebeurtenis) {
+      gebeurtenis.preventDefault();
+      openBewerken();
+      var eerste = formulier.querySelector('input:not([disabled]):not([type=file])');
+      if (eerste) { eerste.focus(); }
+    });
+
+    // Een nieuwe foto kiezen toont hem meteen, zodat je vóór het opslaan ziet
+    // wat je gekozen hebt.
+    var fotoveld = document.getElementById('{{ formulier.profielfoto.id_for_label }}');
+    var bol = document.querySelector('.fotowissel .grote-bol');
+    if (fotoveld && bol) {
+      fotoveld.addEventListener('change', function () {
+        var gekozen = fotoveld.files && fotoveld.files[0];
+        if (!gekozen) return;
+        openBewerken();
+        var plaatje = bol.querySelector('img');
+        if (!plaatje) {
+          bol.textContent = '';
+          bol.classList.add('met-foto');
+          plaatje = document.createElement('img');
+          plaatje.className = 'bolfoto';
+          plaatje.alt = '';
+          bol.appendChild(plaatje);
+        }
+        plaatje.src = URL.createObjectURL(gekozen);
+      });
+    }
+  })();
+</script>
