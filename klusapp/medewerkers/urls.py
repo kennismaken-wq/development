@@ -12,6 +12,5 @@ urlpatterns = [
     path("medewerkers/nieuw/", views.medewerker_nieuw, name="medewerker_nieuw"),
     path("medewerkers/<int:pk>/", views.medewerker_bewerken, name="medewerker_bewerken"),
     path("medewerkers/<int:pk>/kaart/", views.medewerker_kaart, name="medewerker_kaart"),
-    path("medewerkers/<int:pk>/wachtwoord/", views.medewerker_wachtwoord, name="medewerker_wachtwoord"),
     path("medewerkers/<int:pk>/dienst/", views.medewerker_dienst, name="medewerker_dienst"),
 ]

@@ -19,7 +19,6 @@ from .forms import (
     EigenWachtwoordForm,
     MedewerkerForm,
     NieuweMedewerkerForm,
-    WachtwoordForm,
 )
 from .models import Medewerker
 from . import testgegevens as demo_gegevens
@@ -324,25 +323,6 @@ def medewerker_kaart(request, pk):
     weekoverzicht toont dit in een venster bij een klik op een naam."""
     persoon = get_object_or_404(_te_beheren(request.user), pk=pk)
     return render(request, "medewerkers/_persoonkaart.html", {"persoon": persoon})
-
-
-@alleen_eigenaar
-def medewerker_wachtwoord(request, pk):
-    medewerker = get_object_or_404(_te_beheren(request.user), pk=pk)
-    if request.method == "POST":
-        formulier = WachtwoordForm(request.POST)
-        if formulier.is_valid():
-            medewerker.set_password(formulier.cleaned_data["wachtwoord"])
-            medewerker.save()
-            messages.success(request, f"Het wachtwoord van {medewerker.naam} is gewijzigd.")
-            return redirect("medewerkers")
-    else:
-        formulier = WachtwoordForm()
-    return render(
-        request,
-        "medewerkers/wachtwoord.html",
-        {"formulier": formulier, "medewerker": medewerker},
-    )
 
 
 @alleen_eigenaar

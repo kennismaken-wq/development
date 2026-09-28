@@ -5,7 +5,12 @@
 {% block inhoud %}
   {% comment %} Zelfde weergave als Mijn profiel (medewerkers/_gegevens.html):
      eerst op slot, "Gegevens wijzigen" zet de velden open. Een nieuwe
-     medewerker begint meteen in de bewerkstand. {% endcomment %}
+     medewerker begint meteen in de bewerkstand.
+
+     Geen "nieuw wachtwoord instellen" hier: een wachtwoord wijzigt ieder
+     alleen zelf, op Mijn profiel (28-09-2026). Alleen bij een nieuwe
+     medewerker kies je een tijdelijk wachtwoord, anders kan hij niet
+     inloggen. {% endcomment %}
   {% if nieuw %}
     {% url 'medewerkers' as annuleren %}
     {% include "medewerkers/_gegevens.html" with persoon=formulier.instance annuleren_url=annuleren opslaan_tekst="Medewerker toevoegen" %}
@@ -15,12 +20,6 @@
   {% else %}
     {% url 'medewerker_bewerken' medewerker.pk as annuleren %}
     {% include "medewerkers/_gegevens.html" with persoon=medewerker annuleren_url=annuleren %}
-
-    <p style="margin-top:1.6rem">
-      <a class="knop-stil" href="{% url 'medewerker_wachtwoord' medewerker.pk %}">
-        Nieuw wachtwoord instellen
-      </a>
-    </p>
 
     {% if medewerker.pk != user.pk %}
       <form method="post" action="{% url 'medewerker_dienst' medewerker.pk %}" class="verwijder"

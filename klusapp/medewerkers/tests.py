@@ -243,16 +243,25 @@ class MedewerkersBeherenTest(TestCase):
         # en kan er meteen mee inloggen
         self.assertTrue(self.client.login(username="joep", password="tuinbaas2026"))
 
-    def test_wachtwoord_opnieuw_instellen(self):
-        self.client.post(
-            reverse("medewerker_wachtwoord", args=[self.sam.pk]), {"wachtwoord": "nieuwezomer26"}
-        )
-        self.assertTrue(self.client.login(username="sam", password="nieuwezomer26"))
-
-    def test_te_zwak_wachtwoord_wordt_geweigerd(self):
-        self.client.post(reverse("medewerker_wachtwoord", args=[self.sam.pk]), {"wachtwoord": "1234"})
+    def test_eigenaar_kan_geen_wachtwoord_van_een_ander_zetten(self):
+        # Sinds 28-09-2026: een wachtwoord wijzigt ieder alleen zelf, op Mijn
+        # profiel. Geen knop op het medewerkersscherm, en ook het oude adres
+        # bestaat niet meer.
+        html = self.client.get(reverse("medewerker_bewerken", args=[self.sam.pk])).content.decode()
+        self.assertNotIn("Nieuw wachtwoord instellen", html)
+        self.assertNotIn(f"/medewerkers/{self.sam.pk}/wachtwoord/", html)
+        antwoord = self.client.post(f"/medewerkers/{self.sam.pk}/wachtwoord/", {"wachtwoord": "nieuwezomer26"})
+        self.assertEqual(antwoord.status_code, 404)
         self.sam.refresh_from_db()
         self.assertTrue(self.sam.check_password("test1234"))
+
+    def test_te_zwak_tijdelijk_wachtwoord_wordt_geweigerd(self):
+        self.client.post(
+            reverse("medewerker_nieuw"),
+            {"first_name": "Joep", "username": "joep", "rol": "medewerker",
+             "kleur": "#5B8FA8", "wachtwoord": "1234"},
+        )
+        self.assertFalse(Medewerker.objects.filter(username="joep").exists())
 
     def test_uit_dienst_bewaart_de_persoon(self):
         self.client.post(reverse("medewerker_dienst", args=[self.sam.pk]))
@@ -276,15 +285,9 @@ class MedewerkersBeherenTest(TestCase):
 
     def test_de_wachtwoordeisen_staan_bij_het_veld(self):
         # Een eis die je pas leest nadat je hem overtreedt is geen hulp.
-        for adres in (reverse("medewerker_nieuw"), reverse("medewerker_wachtwoord", args=[self.sam.pk])):
-            html = self.client.get(adres).content.decode()
-            self.assertIn("Minstens 8 tekens", html, adres)
-            self.assertIn("Niet alleen cijfers", html, adres)
-
-    def test_wachtwoord_dat_lijkt_op_de_naam_wordt_geweigerd(self):
-        self.client.post(reverse("medewerker_wachtwoord", args=[self.sam.pk]), {"wachtwoord": "sam"})
-        self.sam.refresh_from_db()
-        self.assertTrue(self.sam.check_password("test1234"))
+        html = self.client.get(reverse("medewerker_nieuw")).content.decode()
+        self.assertIn("Minstens 8 tekens", html)
+        self.assertIn("Niet alleen cijfers", html)
 
 
 

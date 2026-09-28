@@ -163,23 +163,6 @@ class NieuweMedewerkerForm(MedewerkerForm):
         return medewerker
 
 
-class WachtwoordForm(forms.Form):
-    """Een nieuw wachtwoord zetten voor iemand anders. De eigenaar hoeft het
-    oude niet te weten — die kent het immers niet."""
-
-    wachtwoord = forms.CharField(
-        label="Nieuw wachtwoord",
-        widget=forms.PasswordInput(render_value=True),
-        strip=False,
-        help_text=WACHTWOORD_EISEN,
-    )
-
-    def clean_wachtwoord(self):
-        wachtwoord = self.cleaned_data["wachtwoord"]
-        validate_password(wachtwoord)
-        return wachtwoord
-
-
 class EigenGegevensForm(ProfielfotoMixin, forms.ModelForm):
     """Wat je van jezelf mag wijzigen op /mijn-profiel/.
 
