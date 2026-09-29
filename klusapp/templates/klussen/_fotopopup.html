@@ -109,8 +109,16 @@
     // en kreeg dan ten onrechte het kaartje in plaats van de pdf (29-09).
     // Staat in de browser "pdf's downloaden" aan, dan is pdfViewerEnabled
     // false en blijft het kaartje: de browser zou hem dan ook niet tonen.
+    //
+    // PROEF (29-09-2026): op een iPhone of iPad ook de pdf in de overlay,
+    // om te zien hoe Safari dat nu doet. Valt het tegen, dan is dit het
+    // enige wat eruit hoeft: op dit toestel komt dan weer het kaartje. De
+    // knop Openen staat in beide gevallen onder de pdf. Een iPad meldt zich
+    // als Mac, vandaar de check op een aanraakscherm.
+    var opIphoneOfIpad = /iPhone|iPad|iPod/.test(navigator.userAgent) ||
+      (/Macintosh/.test(navigator.userAgent) && navigator.maxTouchPoints > 1);
     var pdfInOverlay = navigator.pdfViewerEnabled === true &&
-      window.matchMedia("(any-pointer: fine)").matches;
+      (window.matchMedia("(any-pointer: fine)").matches || opIphoneOfIpad);
     var kanDelen = !!(navigator.share && navigator.canShare);
     // Het bestand voor delen wordt al opgehaald zodra het in beeld komt:
     // een telefoon laat delen alleen toe vlak na de tik, en een download
