@@ -94,6 +94,19 @@ def versies_van(bestand, bestandsnaam):
     except (UnidentifiedImageError, OSError, ValueError) as oorzaak:
         raise BestandNietLeesbaar("Dit bestand is niet als afbeelding te openen.") from oorzaak
 
+
+def thumbnail_van(bestand, bestandsnaam):
+    """Voorbeeldplaatje voor een foto die als document is geüpload (zie
+    klussen.views.bewaar_bijlage, forceer_document): het bestand zelf blijft
+    ongemoeid zoals elk document, dit is alleen voor de documentenlijst.
+
+    Geeft None terug als dit geen afbeelding is of niet te openen valt — dan
+    krijgt het document net als een niet-PDF gewoon geen thumbnail, zie
+    pdf_thumbnails.thumbnail_van hiernaast.
+    """
+    if is_niet_ondersteund(bestandsnaam) or not lijkt_afbeelding(bestandsnaam):
+        return None
+
     bestand.seek(0)
     try:
         with Image.open(bestand) as geopend:

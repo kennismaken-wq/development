@@ -88,6 +88,20 @@ class AfbeeldingenTest(TestCase):
         with self.assertRaises(afbeeldingen.BestandNietLeesbaar):
             afbeeldingen.versies_van(BytesIO(b"dit is geen plaatje"), "stuk.jpg")
 
+    def test_thumbnail_van_geeft_voorbeeld_voor_een_foto_als_document(self):
+        # bewaar_bijlage roept dit alleen aan met forceer_document=True: het
+        # bestand zelf blijft dan ongemoeid, alleen dit voorbeeldplaatje wordt
+        # gemaakt (zie klussen.views.bewaar_bijlage).
+        thumbnail = afbeeldingen.thumbnail_van(BytesIO(jpeg()), "tekening.jpg")
+        with Image.open(thumbnail) as klein:
+            self.assertEqual(max(klein.size), afbeeldingen.THUMB_ZIJDE)
+
+    def test_thumbnail_van_geeft_niets_voor_een_pdf(self):
+        self.assertIsNone(afbeeldingen.thumbnail_van(BytesIO(b"%PDF-1.4"), "offerte.pdf"))
+
+    def test_thumbnail_van_geeft_niets_voor_onleesbare_afbeelding(self):
+        self.assertIsNone(afbeeldingen.thumbnail_van(BytesIO(b"dit is geen plaatje"), "stuk.jpg"))
+
 
 class PdfThumbnailsTest(TestCase):
     """De PDF-voorbeeldplaatjes los, zonder database (zie AfbeeldingenTest)."""
@@ -176,31 +190,42 @@ class BijlageUploadTest(TestCase):
         self.client.post(reverse("bijlage_toevoegen"), {"bestanden": upload()})
         self.assertIsNone(Bijlage.objects.get().batch)
 
-    def test_foto_via_de_documentendialoog_wordt_toch_een_foto(self):
-        # Sinds 27-09-2026: een plaatje staat altijd bij de foto's, ook als
-        # het via "Document toevoegen" komt — en de melding zegt waar.
-        for naam in ("tekening.jpg", "plan.png", "schets.JPEG"):
-            antwoord = self.client.post(
+    def test_forceer_document_maakt_van_een_foto_toch_een_document(self):
+        # De documentendialoog op een klusdossier (_documentdialoog.html):
+        # een foto van bijvoorbeeld een tekening hoort hier ook, en moet dan
+        # niet tussen de werkfoto's in het fotoraster verschijnen. Op 27-09
+        # kort anders geweest (plaatje = altijd foto); op 29-09 teruggezet:
+        # de knop bepaalt het, niet het bestandstype.
+        for naam in ("tekening.jpg", "plan.png"):
+            self.client.post(
                 reverse("bijlage_toevoegen"),
-                {"bestanden": upload(naam), "klus": self.klus.pk, "documentdialoog": "1"},
-                follow=True,
+                {"bestanden": upload(naam), "klus": self.klus.pk, "forceer_document": "1"},
             )
             bijlage = Bijlage.objects.get(originele_naam=naam)
-            self.assertEqual(bijlage.soort, Bijlage.Soort.FOTO, naam)
-            self.assertContains(antwoord, f"{naam} staat bij de foto")
-            # verkleind en zonder GPS, zoals elke foto
-            with Image.open(bijlage.bestand) as bewaard:
-                self.assertLessEqual(max(bewaard.size), afbeeldingen.MAX_ZIJDE)
+            self.assertEqual(bijlage.soort, Bijlage.Soort.DOCUMENT, naam)
+            self.assertFalse(bijlage.is_foto)
+            # Wel een thumbnail, zodat de documentenlijst een voorbeeld toont.
+            self.assertTrue(bijlage.thumbnail)
+        # Het bestand zelf blijft ongemoeid, net als elk ander document —
+        # niet verkleind zoals een gewone foto-upload.
+        with Image.open(Bijlage.objects.get(originele_naam="tekening.jpg").bestand) as bewaard:
+            self.assertEqual(bewaard.size, Image.open(BytesIO(jpeg())).size)
 
-    def test_pdf_via_de_documentendialoog_blijft_een_document(self):
-        antwoord = self.client.post(
-            reverse("bijlage_toevoegen"),
-            {"bestanden": upload("Offerte.pdf", pdf(), "application/pdf"),
-             "klus": self.klus.pk, "documentdialoog": "1"},
-            follow=True,
+    def test_zelfde_plaatje_via_foto_toevoegen_wordt_een_foto(self):
+        self.client.post(
+            reverse("bijlage_toevoegen"), {"bestanden": upload("plan.png"), "klus": self.klus.pk}
         )
-        self.assertEqual(Bijlage.objects.get().soort, Bijlage.Soort.DOCUMENT)
-        self.assertNotContains(antwoord, "staat bij de foto")
+        self.assertEqual(Bijlage.objects.get().soort, Bijlage.Soort.FOTO)
+
+    def test_forceer_document_geldt_niet_in_de_fotodropbox(self):
+        # Zonder klus/uurblok is dit de fotodropbox, die geen documenten
+        # toont — forceer_document mag daar dus niet stiekem toch een
+        # document van maken (zie klussen.views.bijlage_toevoegen).
+        self.client.post(
+            reverse("bijlage_toevoegen"),
+            {"bestanden": upload("tekening.jpg"), "forceer_document": "1"},
+        )
+        self.assertEqual(Bijlage.objects.get().soort, Bijlage.Soort.FOTO)
 
     def test_twee_losse_uploads_delen_geen_batch(self):
         self.client.post(
@@ -794,16 +819,17 @@ class KlusBijlagenBijAanmakenTest(TestCase):
         self.assertEqual(bijlage.originele_naam, "Offerte.pdf")
         self.assertEqual(bijlage.toegevoegd_door, self.maarten)
 
-    def test_foto_in_het_documentenveld_wordt_een_foto(self):
-        # Sinds 27-09-2026 bepaalt het bestandstype waar iets staat, niet het
-        # vak: een plaatje komt altijd bij de foto's.
+    def test_gefotografeerde_tekening_blijft_een_document(self):
+        # Dit is waarom er twee velden zijn: een foto van een tekening hoort in
+        # de documentenlijst en niet tussen de werkfoto's in het fotoraster.
+        # Het bestand is een echte jpeg, alleen de bestemming verschilt.
         self.client.force_login(self.maarten)
-        antwoord = self.client.post(
-            reverse("klus_nieuw"), self.geldig(documenten=upload("tekening.jpg")), follow=True
+        self.client.post(
+            reverse("klus_nieuw"), self.geldig(documenten=upload("tekening.jpg"))
         )
         bijlage = Klus.objects.get().bijlagen.get()
-        self.assertEqual(bijlage.soort, Bijlage.Soort.FOTO)
-        self.assertContains(antwoord, "tekening.jpg staat bij de foto")
+        self.assertEqual(bijlage.soort, Bijlage.Soort.DOCUMENT)
+        self.assertFalse(bijlage.is_foto)
 
     def test_foto_in_het_fotoveld_blijft_een_foto(self):
         self.client.force_login(self.maarten)

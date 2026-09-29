@@ -7,6 +7,12 @@ stond gelijk: verkleinen, GPS eraf, nieuwe thumbnail, en de oude bestanden weg.
 
 Een bestand dat ontbreekt of niet te openen is, krijgt alleen de soort foto;
 aan de bestanden zelf verandert dan niets.
+
+Let op: op 29-09-2026 is die regel teruggedraaid. Sindsdien bepaalt weer de
+knop ("Document toevoegen" of de foto-upload) of iets een document of een
+foto is, niet het bestandstype — een tekening als png is soms echt een
+document. Deze migratie heeft op develop al gedraaid en blijft daarom staan;
+wat hij toen omzette, is een foto gebleven.
 """
 
 from io import BytesIO

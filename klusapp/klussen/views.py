@@ -57,23 +57,25 @@ def _doel_van(request):
     return klus, uurblok
 
 
-def bewaar_bijlage(bestand, datum, toelichting, klus, uurblok, gebruiker, batch=None):
+def bewaar_bijlage(bestand, datum, toelichting, klus, uurblok, gebruiker, batch=None, forceer_document=False):
     """Eén geüpload bestand wegschrijven. Foto's verkleind, documenten zoals ze zijn.
 
     `batch` is het gedeelde kenmerk van een upload met meerdere bestanden
     tegelijk (zie batch_van_upload hieronder) — daarmee kan het fotoraster ze
     als één post tonen. Leeg bij een upload van één bestand.
 
-    Een plaatje wordt altijd een foto, ook als het via "Document toevoegen"
-    binnenkomt. Tot 27-09-2026 kon dat een document blijven (de vlag
-    forceer_document), maar dan stond een foto van een tekening tussen de
-    pdf's in plaats van bij de foto's; Floris wilde ze juist bij elkaar.
+    `forceer_document` slaat het bestand altijd op als document, ook als het
+    er als foto uitziet — voor de documentenlijst van een klusdossier/uurblok,
+    waar bijvoorbeeld een foto van een tekening thuishoort en niet tussen de
+    werkfoto's in het fotoraster moet verschijnen (zie
+    klussen.views.bijlage_toevoegen). Zo'n bestand blijft dan ook ongemoeid
+    zoals elk ander document, in plaats van verkleind te worden.
 
     Publiek (geen underscore): ook het uren-toevoegformulier hangt hier een
     foto mee op (zie uren.views.uurblok_nieuw), niet alleen deze module.
     """
     naam = bestand.name
-    hoofd, thumbnail = afbeeldingen.versies_van(bestand, naam)
+    hoofd, thumbnail = (None, None) if forceer_document else afbeeldingen.versies_van(bestand, naam)
 
     bijlage = Bijlage(
         soort=Bijlage.Soort.FOTO if hoofd else Bijlage.Soort.DOCUMENT,
@@ -90,7 +92,7 @@ def bewaar_bijlage(bestand, datum, toelichting, klus, uurblok, gebruiker, batch=
         bijlage.bestand.save(f"{basis}.jpg", hoofd, save=False)
         bijlage.thumbnail.save(f"{basis}.jpg", thumbnail, save=False)
     else:
-        document_thumbnail = pdf_thumbnails.thumbnail_van(bestand, naam)
+        document_thumbnail = pdf_thumbnails.thumbnail_van(bestand, naam) or afbeeldingen.thumbnail_van(bestand, naam)
         bestand.seek(0)
         bijlage.bestand.save(naam, ContentFile(bestand.read()), save=False)
         if document_thumbnail:
@@ -127,9 +129,10 @@ def bijlage_toevoegen(request):
     # Daar mag geen document meer bij, want die heeft sinds het verdwijnen van
     # de documentenlijst op dat scherm nergens een plek om terug te vinden.
     alleen_fotos = klus is None and uurblok is None
-    # Gezet door _documentdialoog.html. Een foto die daar gekozen wordt, komt
-    # bij de foto's; dat zeggen we erbij, anders zoek je hem bij de documenten.
-    uit_documentdialoog = request.POST.get("documentdialoog") == "1"
+    # Gezet door _documentdialoog.html: die upload hoort in de documentenlijst,
+    # ook als het bestand een foto is. Kan dus nooit samen met alleen_fotos
+    # gelden — de fotodropbox toont die dialoog niet.
+    forceer_document = not alleen_fotos and request.POST.get("forceer_document") == "1"
     batch = batch_van_upload(formulier.cleaned_data["bestanden"])
     gelukt = 0
     for bestand in formulier.cleaned_data["bestanden"]:
@@ -137,15 +140,13 @@ def bijlage_toevoegen(request):
             messages.error(request, f"{bestand.name}: hier kan alleen een foto bij, geen document.")
             continue
         try:
-            bijlage = bewaar_bijlage(bestand, datum, toelichting, klus, uurblok, request.user, batch)
+            bewaar_bijlage(bestand, datum, toelichting, klus, uurblok, request.user, batch, forceer_document)
         except afbeeldingen.BestandNietLeesbaar as probleem:
             # De rest van de selectie wel doorzetten: wie acht foto's uploadt
             # wil niet alles opnieuw doen omdat er één niet deugt.
             messages.error(request, f"{bestand.name}: {probleem}")
         else:
             gelukt += 1
-            if uit_documentdialoog and bijlage.is_foto:
-                messages.info(request, f"{bestand.name} staat bij de foto's.")
 
     if gelukt:
         messages.success(request, f"{gelukt} bestand{'en' if gelukt > 1 else ''} toegevoegd.")
@@ -495,32 +496,31 @@ def klus_nieuw(request):
         datum = bijlagenformulier.cleaned_data["datum"] or timezone.localdate()
         toelichting = bijlagenformulier.cleaned_data["toelichting"]
 
-        # Waar een bestand terechtkomt, hangt af van wat het is, niet van het
-        # vak waarin het gekozen is: een plaatje wordt een foto, de rest een
-        # document. Staat iets in het verkeerde vak (een offerte bij de
-        # foto's, een foto bij de documenten), dan schuift het door in plaats
-        # van geweigerd te worden: de klus staat op dit punt al, dus weigeren
-        # betekent dat het bestand weg is. Wel zeggen we waar het staat.
-        fotos, documenten = [], []
-        for veld in ("bestanden", "documenten"):
-            for bestand in bijlagenformulier.cleaned_data[veld]:
-                if afbeeldingen.lijkt_afbeelding(bestand.name):
-                    fotos.append(bestand)
-                    if veld == "documenten":
-                        messages.info(request, f"{bestand.name} staat bij de foto's.")
-                else:
-                    documenten.append(bestand)
-                    if veld == "bestanden":
-                        messages.info(request, f"{bestand.name} staat bij de documenten.")
+        # Twee velden, twee bestemmingen (zie NieuweKlusBijlagenForm): het ene
+        # wordt een foto in het raster, het andere een document in de
+        # documentenlijst — ook als dat document een gefotografeerde tekening
+        # is. Wat in het fotoveld zit maar geen foto is (een offerte in het
+        # verkeerde vakje) schuift mee naar de documenten in plaats van
+        # geweigerd te worden: de klus staat op dit punt al, dus weigeren
+        # betekent dat de offerte weg is en Maarten 'm opnieuw moet zoeken.
+        fotos, documenten = [], list(bijlagenformulier.cleaned_data["documenten"])
+        for bestand in bijlagenformulier.cleaned_data["bestanden"]:
+            if afbeeldingen.lijkt_afbeelding(bestand.name):
+                fotos.append(bestand)
+            else:
+                documenten.append(bestand)
+                messages.info(request, f"{bestand.name} staat bij de documenten.")
 
-        for stapel in (fotos, documenten):
+        for stapel, als_document in ((fotos, False), (documenten, True)):
             # Eigen batch per stapel: het fotoraster groepeert een upload van
             # meerdere bestanden als één post, en de documenten horen daar niet
             # bij te zitten.
             batch = batch_van_upload(stapel)
             for bestand in stapel:
                 try:
-                    bewaar_bijlage(bestand, datum, toelichting, klus, None, request.user, batch)
+                    bewaar_bijlage(
+                        bestand, datum, toelichting, klus, None, request.user, batch, als_document
+                    )
                 except afbeeldingen.BestandNietLeesbaar as probleem:
                     # De klus staat er al; alleen het ene bestand mislukt, niet de rest.
                     messages.error(request, f"{bestand.name}: {probleem}")
