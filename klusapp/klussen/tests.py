@@ -334,6 +334,20 @@ class FotosKlusfilterTest(TestCase):
         self.assertIn(self.foto_op_klus, self._bijlagen(antwoord))
         self.assertNotIn(self.losse_foto, self._bijlagen(antwoord))
 
+    def test_filter_op_soort(self):
+        onderhoud = Klus.objects.create(naam="Onderhoud Dijk", soort=Klus.Soort.ONDERHOUD)
+        foto_onderhoud = Bijlage.objects.create(
+            klus=onderhoud, bestand=upload("o.jpg"), soort=Bijlage.Soort.FOTO, datum=date(2026, 9, 3),
+        )
+        antwoord = self.client.get(reverse("fotos"), {"soort": "onderhoud"})
+        self.assertEqual(self._bijlagen(antwoord), [foto_onderhoud])
+        antwoord = self.client.get(reverse("fotos"), {"soort": "aanleg", "scope": "actief"})
+        self.assertEqual(self._bijlagen(antwoord), [self.foto_op_klus])
+        # Onbekende soort: geen filter, dus alles.
+        antwoord = self.client.get(reverse("fotos"), {"soort": "kaboem"})
+        self.assertEqual(antwoord.context["soort"], "altijd")
+        self.assertIn(self.losse_foto, self._bijlagen(antwoord))
+
     def test_dropdown_bevat_elke_klus_ook_zonder_inhoud(self):
         antwoord = self.client.get(reverse("fotos"))
         namen = [klus.naam for klus in antwoord.context["klussen"]]

@@ -1,6 +1,7 @@
 /* Live zoeken op de foto tab: bij elke toetsaanslag (met een korte pauze
    erin, zodat niet elke letter apart een verzoek stuurt), bij het wisselen
-   van klus en bij het wisselen van scope (Alle/Actief/Niet actief) haalt dit
+   van klus en bij het wisselen van een pil (Eenmalig/Onderhoud, Actief/Niet
+   actief) haalt dit
    script dezelfde pagina opnieuw op en vervangt alleen het fotoraster — geen
    volledige page reload voor elke letter.
 
@@ -64,15 +65,22 @@
     klusKeuze.addEventListener("change", verversen);
   }
 
-  function scopeVeld() {
-    let veld = form.querySelector('input[name="scope"]');
+  // Verborgen veld per pillenrij in het zoekformulier, zodat de stand ook in
+  // de url en in een gewone submit meegaat. "altijd" (geen pil aan) laten we
+  // weg: dat is de standaard.
+  function zetVeld(naam, waarde) {
+    let veld = form.querySelector('input[name="' + naam + '"]');
+    if (waarde === "altijd") {
+      if (veld) veld.remove();
+      return;
+    }
     if (!veld) {
       veld = document.createElement("input");
       veld.type = "hidden";
-      veld.name = "scope";
+      veld.name = naam;
       form.appendChild(veld);
     }
-    return veld;
+    veld.value = waarde;
   }
 
   form.addEventListener("submit", function (e) {
@@ -83,9 +91,22 @@
 
   const kiezerWrapper = document.getElementById("klus-kiezer");
   initKlusKiezer("klus-kiezer", "klus-select", {
-    initialScope: kiezerWrapper ? kiezerWrapper.dataset.scope : undefined,
-    onScopeChange: function (scope) {
-      scopeVeld().value = scope;
+    // Geen "Alle"-pillen hier: niets aan is alles, nog eens tikken zet uit.
+    uitzetbaar: true,
+    assen: [
+      { kenmerk: "soort", pillen: [
+        { waarde: "aanleg", tekst: "Eenmalig" },
+        { waarde: "onderhoud", tekst: "Onderhoud" },
+      ] },
+      { kenmerk: "scope", pillen: [
+        { waarde: "actief", tekst: "Actief" },
+        { waarde: "inactief", tekst: "Niet actief" },
+      ] },
+    ],
+    beginstanden: kiezerWrapper ? { soort: kiezerWrapper.dataset.soort, scope: kiezerWrapper.dataset.scope } : undefined,
+    onScopeChange: function (scope, standen) {
+      zetVeld("soort", standen.soort);
+      zetVeld("scope", standen.scope);
       verversen();
     },
   });

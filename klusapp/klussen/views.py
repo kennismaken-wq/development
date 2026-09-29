@@ -240,11 +240,17 @@ def fotos(request):
     scope = request.GET.get("scope", "altijd")
     if scope not in ("actief", "inactief", "altijd"):
         scope = "altijd"
+    # Tweede pillenrij in de kiezer: Eenmalig/Onderhoud. Net als de scope
+    # staat hij standaard nergens op ("altijd") — dan tonen we beide soorten.
+    soort = request.GET.get("soort", "altijd")
+    if soort not in Klus.Soort.values:
+        soort = "altijd"
 
     context = {
         "zoek": zoek,
         "klus_pk": klus_pk,
         "scope": scope,
+        "soort": soort,
         "klussen": Klus.objects.all(),  # Meta.ordering = ["-actief", "naam"]
         "alleen_fotos": True,
         # Sta je al op een klus gefilterd, dan staat de uploaddialoog daar vast
@@ -272,10 +278,13 @@ def fotos(request):
         bijlagen = bijlagen.filter(klus__isnull=True)
     elif klus_pk:
         bijlagen = bijlagen.filter(klus_id=klus_pk)
-    elif scope == "actief":
-        bijlagen = bijlagen.filter(klus__actief=True)
-    elif scope == "inactief":
-        bijlagen = bijlagen.filter(klus__actief=False)
+    else:
+        if scope == "actief":
+            bijlagen = bijlagen.filter(klus__actief=True)
+        elif scope == "inactief":
+            bijlagen = bijlagen.filter(klus__actief=False)
+        if soort != "altijd":
+            bijlagen = bijlagen.filter(klus__soort=soort)
     context["foto_posts"] = groepeer_in_posts(b for b in bijlagen if b.is_foto)
     return render(request, "klussen/fotos.html", context)
 

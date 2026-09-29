@@ -7,7 +7,7 @@
    Gedeeld door drie schermen — zelfde widget, andere pillen boven de lijst,
    want per scherm is een andere as van de klussenlijst de verwarrende:
 
-     Galerij (fotozoeken.js)                  staat  Alle/Actief/Niet actief
+     Galerij (fotozoeken.js)                  soort + status, zonder "Alle"-pil
      uren schrijven (_uurblokformulier.html)  soort  Alle/Eenmalig/Onderhoud
      foto posten (_uploadveld.html)           allebei, twee rijen onder elkaar
 
@@ -19,10 +19,15 @@
    één as moet een optie aan álle assen tegelijk voldoen.
 
    `opts.initialScope` zet welke pil van de eerste as al aanstaat als de kiezer
-   opent (default "altijd"); `opts.onScopeChange(scope)` is optioneel en wordt
-   aangeroepen als er op een andere pil geklikt wordt — de Galerij gebruikt dat
-   om ook het fotoraster mee te filteren, niet alleen de opties in de kiezer
-   zelf. Op de twee formulieren filteren de pillen alleen de lijst: daar kies
+   opent (default "altijd"); `opts.beginstanden` doet dat per as, als
+   { kenmerk: waarde }. `opts.onScopeChange(scope, standen)` is optioneel en
+   wordt aangeroepen als er op een andere pil geklikt wordt, met de stand van
+   de eerste as en van alle assen samen — de Galerij gebruikt dat om ook het
+   fotoraster mee te filteren, niet alleen de opties in de kiezer zelf.
+
+   `opts.uitzetbaar` (de Galerij): een as zonder "Alle"-pil. Nog eens tikken
+   op de pil die aanstaat zet hem weer uit, en een rij zonder pil aan telt als
+   "altijd" — dus niets aan is gewoon alles. Op de twee formulieren filteren de pillen alleen de lijst: daar kies
    je een klus, je filtert geen pagina.
 
    Wrapper en select mogen als element of als id meegegeven worden. Als
@@ -44,8 +49,8 @@
      templates). `kenmerk` is het data-attribuut op de <option> waar de as zijn
      waarde uit leest. */
   const KLUS_KIEZER_ASSEN = {
-    // Galerij: welke klussen lopen er nog? (zie klussen/fotos.html, dat zijn
-    // opties zelf schrijft en daarom nog data-scope gebruikt)
+    // Standaard-as als een aanroeper geen `assen` meegeeft. De Galerij geeft
+    // zijn eigen assen mee (fotozoeken.js), maar leest dezelfde data-scope.
     status: {
       kenmerk: "scope",
       pillen: [
@@ -89,6 +94,7 @@
     if (wrapper.classList.contains("js-klaar")) return;
     opts = opts || {};
     const initialScope = opts.initialScope || "altijd";
+    const beginstanden = opts.beginstanden || {};
     const assen = opts.assen || [{ kenmerk: "scope", pillen: opts.scopes || KLUS_KIEZER_ASSEN.status.pillen }];
     // Eigen nummer per kiezer, anders delen twee kiezers op dezelfde pagina
     // één groep radio's en zet een klik op "Onderhoud" in de ene de pil van de
@@ -125,7 +131,7 @@
           // Alleen de eerste as start op `initialScope`; een tweede rij begint
           // altijd op "Alle", anders zou de Galerij-stand ook de soort-pil
           // verzetten.
-          const begin = nummer === 0 ? initialScope : "altijd";
+          const begin = beginstanden[as.kenmerk] || (nummer === 0 ? initialScope : "altijd");
           return (
             '<div class="keuzes klus-kiezer-scope">' +
             as.pillen
@@ -217,6 +223,12 @@
       leegmelding.hidden = zichtbaar !== 0;
     }
 
+    function alleStanden() {
+      const standen = {};
+      scopeVelden.forEach(function (rij) { standen[rij.as.kenmerk] = standVan(rij); });
+      return standen;
+    }
+
     function buitenKlik(e) {
       if (!wrapper.contains(e.target)) sluiten();
     }
@@ -256,11 +268,27 @@
         if (eerste) eerste.click();
       }
     });
+    function standGewijzigd() {
+      filteren();
+      if (opts.onScopeChange) opts.onScopeChange(huidigeScope(), alleStanden());
+    }
+
     scopeVelden.forEach(function (rij) {
+      // Wat er vóór deze klik aanstond: een radio vuurt geen "change" als je
+      // op de al gekozen pil tikt, dus dat moeten we zelf onthouden om hem
+      // bij `uitzetbaar` weer uit te kunnen zetten.
+      let vorige = standVan(rij);
       rij.velden.forEach(function (veld) {
+        veld.addEventListener("click", function () {
+          if (opts.uitzetbaar && veld.value === vorige) {
+            veld.checked = false;
+            vorige = "altijd";
+            standGewijzigd();
+          }
+        });
         veld.addEventListener("change", function () {
-          filteren();
-          if (opts.onScopeChange) opts.onScopeChange(huidigeScope());
+          vorige = standVan(rij);
+          standGewijzigd();
         });
       });
     });

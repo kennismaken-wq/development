@@ -6,15 +6,16 @@
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.6" y2="16.6"/></svg>
     <input type="search" name="q" value="{{ zoek }}" placeholder="Zoek op omschrijving, klus of adres…">
     {% if scope != "altijd" %}<input type="hidden" name="scope" value="{{ scope }}">{% endif %}
+    {% if soort != "altijd" %}<input type="hidden" name="soort" value="{{ soort }}">{% endif %}
   </form>
 
   <div class="foto-filterrij">
-    <div class="klus-kiezer" id="klus-kiezer" data-scope="{{ scope }}">
+    <div class="klus-kiezer" id="klus-kiezer" data-scope="{{ scope }}" data-soort="{{ soort }}">
       <select name="klus" id="klus-select" form="foto-zoekform" class="klus-kiezer-select" onchange="this.form.submit()">
-        <option value="" data-scope="altijd">Alle klussen</option>
-        <option value="algemeen" data-scope="altijd"{% if klus_pk == "algemeen" %} selected{% endif %}>Algemeen</option>
+        <option value="" data-scope="altijd" data-soort="altijd">Alle klussen</option>
+        <option value="algemeen" data-scope="altijd" data-soort="altijd"{% if klus_pk == "algemeen" %} selected{% endif %}>Algemeen</option>
         {% for klus in klussen %}
-          <option value="{{ klus.pk }}" data-scope="{% if klus.actief %}actief{% else %}inactief{% endif %}"{% if klus_pk == klus.pk|stringformat:"s" %} selected{% endif %}>{{ klus.naam }}{% if not klus.actief %} (afgerond){% endif %}</option>
+          <option value="{{ klus.pk }}" data-scope="{% if klus.actief %}actief{% else %}inactief{% endif %}" data-soort="{{ klus.soort }}"{% if klus_pk == klus.pk|stringformat:"s" %} selected{% endif %}>{{ klus.naam }}{% if not klus.actief %} (afgerond){% endif %}</option>
         {% endfor %}
       </select>
     </div>
