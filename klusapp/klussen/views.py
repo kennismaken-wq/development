@@ -287,21 +287,22 @@ def _lege_melding(soort, scope):
     in dit filter, en dan lijkt het alsof er niets bestaat in plaats van dat je
     te ver hebt gefilterd.
     """
-    staat = {"actief": "lopende", "afgerond": "afgeronde"}.get(scope, "")
-    if soort:
-        soortnaam = Klus.Soort(soort).label.lower()
-        return f"Geen {staat} klussen van de soort {soortnaam}.".replace("  ", " ")
-    if staat:
-        return f"Geen {staat} klussen."
-    return "Nog geen klussen."
+    staat = {"actief": "lopende", "afgerond": "afgeronde"}[scope]
+    soortnaam = Klus.Soort(soort).label.lower()
+    return f"Geen {staat} klussen van de soort {soortnaam}."
 
 
 @login_required
 def klus_lijst(request):
     """Overzicht van klussen, met één filterrij van twee gelijkwaardige groepen:
 
-        [ Alles | Eenmalig | Onderhoud ]   [ Alles | Actief | Afgerond ]
-                  soort = ritme                   scope = staat
+        [ Eenmalig | Onderhoud ]   [ Actief | Afgerond ]
+             soort = ritme             scope = staat
+
+    Geen "Alles" in een van beide groepen: eenmalige klussen en
+    onderhoudsadressen lopen nooit door elkaar, en een lijst die lopende en
+    afgeronde klussen mengt had geen gebruiker. Standaard staat Eenmalig +
+    Actief aan.
 
     Twee assen, dus twee groepen met dezelfde vorm naast elkaar — niet het ene
     filter onder het andere. Hier stond eerst een klus-kiezer met daarin
@@ -327,23 +328,17 @@ def klus_lijst(request):
     vandaag niet op staat.
     """
     zoek = request.GET.get("q", "").strip()
-    # Leeg is "alles"; een onbekende waarde valt daar ook op terug.
+    # Altijd één soort: een lege of onbekende waarde valt terug op eenmalig,
+    # de eerste pil.
     soort = request.GET.get("soort", "").strip()
     if soort not in Klus.Soort.values:
-        soort = ""
-    # "actief" is de standaard, niet "alles": je kijkt bijna altijd naar wat er
-    # loopt. Anders dan vroeger staat dat nu wél in beeld, als aangezette pil.
+        soort = Klus.Soort.AANLEG
+    # "actief" is de standaard: je kijkt bijna altijd naar wat er loopt.
     scope = request.GET.get("scope", "actief")
-    if scope not in ("alles", "actief", "afgerond"):
+    if scope not in ("actief", "afgerond"):
         scope = "actief"
 
-    klussen = Klus.objects.all()
-    if scope == "actief":
-        klussen = klussen.filter(actief=True)
-    elif scope == "afgerond":
-        klussen = klussen.filter(actief=False)
-    if soort:
-        klussen = klussen.filter(soort=soort)
+    klussen = Klus.objects.filter(soort=soort, actief=(scope == "actief"))
     if zoek:
         klussen = klussen.filter(
             Q(naam__icontains=zoek) | Q(adres__icontains=zoek) | Q(plaats__icontains=zoek)
@@ -372,10 +367,10 @@ def klus_lijst(request):
             "soort": soort,
             # Uit Klus.Soort, zodat de pillen meebewegen als die labels ooit
             # veranderen (zoals "Aanleg" → "Eenmalig" al gebeurd is).
-            "soort_keuzes": [("", "Alles"), *Klus.Soort.choices],
+            "soort_keuzes": Klus.Soort.choices,
             # Twee groepen met dezelfde vorm, zodat ze naast elkaar als twee
             # assen lezen en niet als één lijst keuzes.
-            "scope_keuzes": [("alles", "Alles"), ("actief", "Actief"), ("afgerond", "Afgerond")],
+            "scope_keuzes": [("actief", "Actief"), ("afgerond", "Afgerond")],
             # Voor de lege staat. "Nog geen klussen" is onwaar zodra er wel
             # klussen zijn maar niet in dit filter; dan lijkt het alsof er niets
             # bestaat. Hier staat dus welke twee knoppen niets opleverden.

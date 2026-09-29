@@ -9,8 +9,11 @@
 
   {% comment %} Eén filterrij, twee gelijkwaardige groepen:
 
-       [ Alles | Eenmalig | Onderhoud ]   [ Alles | Actief | Afgerond ]
-                 soort = ritme                   scope = staat
+       [ Eenmalig | Onderhoud ]   [ Actief | Afgerond ]
+            soort = ritme             scope = staat
+
+     Geen "Alles" meer in een van beide groepen: eenmalig en onderhoud lopen
+     nooit door elkaar. Zie de docstring van klussen.views.klus_lijst.
 
      Twee assen, dus twee groepen met dezelfde vorm naast elkaar in plaats van
      het ene filter onder het andere. Hier stond eerst de klus-kiezer onder de
@@ -20,9 +23,7 @@
      klussen.views.klus_lijst.
 
      Elke groep is één flex-kind met zijn eigen binnenkant, dus op een telefoon
-     breekt de rij tússen de groepen af en nooit middenin één groep. Dat is
-     belangrijk: allebei de groepen beginnen met "Alles", en die twee mogen
-     nooit naast elkaar op dezelfde regel eindigen.
+     breekt de rij tússen de groepen af en nooit middenin één groep.
 
      Radio's in een label, net als de standen op het aanwezigheidsscherm: werkt
      zonder een regel javascript, en met het form-attribuut horen ze bij de
