@@ -149,6 +149,25 @@ FILE_UPLOAD_MAX_MEMORY_SIZE = 5 * 1024 * 1024
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
+# Wekelijkse urenback-up per mail (uren/management/commands/mail_urenbackup.py).
+# Verstuurd vanuit Maartens eigen mailbox naar zichzelf, zodat de uren buiten
+# de server bewaard blijven zonder extra dienst. Zonder EMAIL_HOST gaat er niets
+# de deur uit: lokaal schrijft Django mail dan naar de console.
+EMAIL_HOST = os.environ.get("EMAIL_HOST", "")
+EMAIL_PORT = int(os.environ.get("EMAIL_PORT", "587"))
+EMAIL_HOST_USER = os.environ.get("EMAIL_HOST_USER", "")
+EMAIL_HOST_PASSWORD = os.environ.get("EMAIL_HOST_PASSWORD", "")
+EMAIL_USE_SSL = EMAIL_PORT == 465
+EMAIL_USE_TLS = not EMAIL_USE_SSL
+EMAIL_TIMEOUT = 30
+EMAIL_BACKEND = (
+    "django.core.mail.backends.smtp.EmailBackend"
+    if EMAIL_HOST
+    else "django.core.mail.backends.console.EmailBackend"
+)
+DEFAULT_FROM_EMAIL = EMAIL_HOST_USER or "klusapp@localhost"
+URENBACKUP_ADRES = os.environ.get("URENBACKUP_ADRES", EMAIL_HOST_USER)
+
 X_FRAME_OPTIONS = "DENY"
 SECURE_CONTENT_TYPE_NOSNIFF = True
 SECURE_REFERRER_POLICY = "same-origin"

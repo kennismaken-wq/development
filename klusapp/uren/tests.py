@@ -1,12 +1,18 @@
+import os
 import shutil
+from io import BytesIO
 from datetime import date, datetime, time, timedelta
 from datetime import timezone as dt_timezone
 from unittest.mock import patch
 
+from django.core import mail
 from django.core.exceptions import ValidationError
+from django.core.management import call_command
+from django.core.management.base import CommandError
 from django.db import IntegrityError, transaction
 from django.test import TestCase, override_settings
 from django.urls import reverse
+from openpyxl import load_workbook
 
 from . import kalender
 
@@ -991,3 +997,31 @@ class UrenNotatieTest(TestCase):
             (0, "0"), (30, "0,5"), (510, "8,5"), (285, "4,75"), (14400, "240"), (20, "0,33"),
         ):
             self.assertEqual(kalender.als_uren(minuten), verwacht, minuten)
+
+
+class UrenbackupMailTest(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        sam = Medewerker.objects.create_user("sam", password="x", first_name="Sam")
+        klus = Klus.objects.create(naam="Tuin Vermeer", soort=Klus.Soort.AANLEG)
+        # Eén blok van ver terug: de back-up bevat álles, niet alleen deze week.
+        Uurblok.objects.create(
+            medewerker=sam, klus=klus, datum=date(2025, 1, 6), begintijd=time(8, 0), eindtijd=time(12, 0)
+        )
+
+    @override_settings(URENBACKUP_ADRES="maarten@voorbeeld.nl")
+    def test_mailt_alle_uren_als_excel(self):
+        call_command("mail_urenbackup", stdout=open(os.devnull, "w"))
+
+        self.assertEqual(len(mail.outbox), 1)
+        bericht = mail.outbox[0]
+        self.assertEqual(bericht.to, ["maarten@voorbeeld.nl"])
+        naam, inhoud, _ = bericht.attachments[0]
+        self.assertTrue(naam.endswith(".xlsx"))
+        rijen = list(load_workbook(BytesIO(inhoud)).active.values)
+        self.assertIn("Tuin Vermeer", rijen[1])
+
+    @override_settings(URENBACKUP_ADRES="")
+    def test_zonder_adres_faalt_hard(self):
+        with self.assertRaises(CommandError):
+            call_command("mail_urenbackup")

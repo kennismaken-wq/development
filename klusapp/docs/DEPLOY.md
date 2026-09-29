@@ -20,6 +20,7 @@ recept om het mee te herstellen. Dit document is dat recept.
 | Database | **PostgreSQL 18**, database en user `klusapp`, via `DATABASE_URL` |
 | Media | `klusapp/media/` |
 | Back-up | `klusapp-backup.timer` → `/usr/local/bin/klusapp-backup.sh`, elke nacht 03:20 naar `/srv/backups/klusapp` |
+| Uren off-site | `klusapp-urenbackup.timer` → `manage.py mail_urenbackup`, maandag 06:00, Excel naar Maarten |
 
 De naam `develop-tool` is historisch: die service draaide eerst de Flask-huisstijl-
 tool. Hij draait nu de klusapp.
@@ -65,6 +66,10 @@ DJANGO_SECRET_KEY=<geheim>
 DJANGO_ALLOWED_HOSTS=develop.handigerai.nl,127.0.0.1,localhost
 DJANGO_CSRF_TRUSTED_ORIGINS=https://develop.handigerai.nl
 DATABASE_URL=postgres://klusapp:<geheim>@127.0.0.1:5432/klusapp
+EMAIL_HOST=<smtp-server van Maartens mail>
+EMAIL_PORT=587
+EMAIL_HOST_USER=<Maartens mailadres>
+EMAIL_HOST_PASSWORD=<app-wachtwoord>
 ```
 
 Zonder `DATABASE_URL` valt `settings.py` terug op SQLite. Dat is prima lokaal,
@@ -87,7 +92,8 @@ foutpagina de secret key en de omgeving aan wie de fout veroorzaakt.
    `develop-auto-deploy.timer` plaatsen in `/etc/systemd/system/` (zie hieronder),
    `systemctl enable --now` beide.
 7. nginx-site aanmaken (zie hieronder), daarna `certbot --nginx -d develop.handigerai.nl`.
-8. Back-up terugzetten: `db.sqlite3` en `media/` (zie "Back-ups").
+8. Back-up terugzetten: de database-dump en `media/` (zie "Back-ups"). Is de
+   server helemaal weg, dan staan de uren nog in de laatste urenback-upmail.
 
 ### develop-tool.service
 
@@ -193,9 +199,45 @@ systemctl restart develop-tool.service
 > bewuste tussenoplossing (besluit Thijmen, 16-09-2026) totdat er een Hetzner
 > Storage Box is; dan hoeft alleen het doelpad in het script te veranderen.
 
+### Uren off-site: wekelijkse mail naar Maarten
+
+Besluit 29-09-2026: alleen de **uren** hoeven off-site, en het moet gratis en
+simpel. Elke maandag om 06:00 mailt `manage.py mail_urenbackup` álle uren sinds
+het begin als Excel (dezelfde opmaak als de urenexport) vanuit Maartens eigen
+mailbox naar hemzelf. De nieuwste mail is dus altijd compleet; de oudere zijn
+eerdere versies. De SMTP-gegevens staan in `.env` (zie hierboven), met een
+**app-wachtwoord**, nooit zijn gewone wachtwoord.
+
+Foto's en klusdossiers gaan hier bewust niet mee. Die staan alleen op de VPS
+en in de lokale dump hierboven. De verwerkersovereenkomst moet daarop
+aangepast worden: die belooft nog off-site back-ups van alles.
+
+```ini
+# /etc/systemd/system/klusapp-urenbackup.service
+[Unit]
+Description=Wekelijkse urenback-up per mail naar Maarten
+[Service]
+Type=oneshot
+User=develop
+WorkingDirectory=/srv/handigerai/develop-tool/klusapp
+ExecStart=/srv/handigerai/develop-tool/.venv/bin/python manage.py mail_urenbackup
+
+# /etc/systemd/system/klusapp-urenbackup.timer
+[Timer]
+OnCalendar=Mon 06:00 Europe/Amsterdam
+Persistent=true
+[Install]
+WantedBy=timers.target
+```
+
+Handmatig testen of bekijken: `systemctl start klusapp-urenbackup.service` en
+`journalctl -u klusapp-urenbackup.service -n 20`. Een mislukte verzending laat
+de service falen (rood in `systemctl --failed`), niet stil slagen.
+
 ## Wat er nog niet staat
 
-1. **Off-site back-up** — zie hierboven. Het enige echt openstaande risico.
+1. **Off-site back-up van foto's en database** — de uren gaan sinds 29-09-2026
+   wekelijks per mail naar Maarten; de rest staat alleen op de VPS. Bewuste keuze.
 2. **X-Accel-Redirect staat klaar maar is niet aangesloten.** `GEBRUIK_X_ACCEL`
    in `settings.py` en de view `klussen.views.media_bestand` zijn er al; de
    `internal`-locatie in nginx ontbreekt. Nu gaat elke foto door gunicorn heen.
