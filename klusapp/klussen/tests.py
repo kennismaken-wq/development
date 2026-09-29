@@ -627,9 +627,9 @@ class MediaTest(TestCase):
 
 @override_settings(MEDIA_ROOT=TIJDELIJKE_MEDIA)
 class DocumentToevoegenKnopTest(TestCase):
-    """Het "Documenten"-tabblad en de knop erin moeten er staan vóórdat er
-    ooit een document is geweest — anders is er geen zichtbare manier om de
-    eerste pdf toe te voegen (zie klussen/_documentenlijst.html)."""
+    """Het +-vak onder "Bestanden" moet er staan vóórdat er ooit een bestand
+    is geweest — anders is er geen zichtbare manier om de eerste pdf toe te
+    voegen (zie klussen/_bestandenraster.html)."""
 
     @classmethod
     def setUpTestData(cls):
@@ -646,9 +646,9 @@ class DocumentToevoegenKnopTest(TestCase):
 
     def test_documentknop_staat_er_ook_zonder_bestaande_documenten(self):
         antwoord = self.client.get(self.klus.get_absolute_url())
-        self.assertContains(antwoord, "Documenten")
-        self.assertContains(antwoord, "Document toevoegen")
-        self.assertContains(antwoord, "Nog geen documenten.")
+        self.assertContains(antwoord, 'aria-label="Bestand toevoegen"')
+        self.assertContains(antwoord, "document-invoegen")
+        self.assertContains(antwoord, "Nog geen bestanden.")
 
     def test_geuploade_pdf_komt_in_de_documentenlijst_op_het_klusdossier(self):
         self.client.post(
@@ -1537,8 +1537,8 @@ class BestandOverlayTest(TestCase):
 
 
 class KlusTabbladenTest(TestCase):
-    """Twee tabbladen: Bestanden (documenten, daaronder foto's) en Uren.
-    Zie klussen/klus_detail.html."""
+    """Drie tabbladen: Bestanden (alles wat bij de klus hoort, door elkaar),
+    Uren en Media (foto's voor social media). Zie klussen/klus_detail.html."""
 
     @classmethod
     def setUpTestData(cls):
@@ -1549,13 +1549,16 @@ class KlusTabbladenTest(TestCase):
         self.client.force_login(self.sam)
         html = self.client.get(self.klus.get_absolute_url()).content.decode()
         tabs = re.findall(r'class="tabblad(?: actief)?" data-tab="(\w+)"', html)
-        self.assertEqual(tabs, ["bestanden", "uren"])
+        self.assertEqual(tabs, ["bestanden", "uren", "media"])
         self.assertIn('class="tabblad actief" data-tab="bestanden"', html)
         self.assertIn('data-tab="uren" hidden>', html)
-        # onder Bestanden eerst de documenten, daaronder de foto's
-        paneel = html[html.index('class="tabblad-paneel" data-tab="bestanden"'):html.index('data-tab="uren" hidden>')]
-        self.assertLess(paneel.index(">Documenten</h2>"), paneel.index(">Foto's</h2>"))
-        self.assertLess(paneel.index(">Foto's</h2>"), paneel.index('class="fotoraster"'))
+        self.assertIn('data-tab="media" hidden>', html)
+        # Bestanden: het +-vak voor documenten; Media: dat voor foto's
+        bestanden = html[html.index('class="tabblad-paneel" data-tab="bestanden"'):html.index('data-tab="uren" hidden>')]
+        media = html[html.index('data-tab="media" hidden>'):]
+        self.assertIn("getElementById('document-invoegen')", bestanden)
+        self.assertNotIn("getElementById('foto-invoegen')", bestanden)
+        self.assertIn("getElementById('foto-invoegen')", media)
         # en elk maar één keer: de uploaddialogen zitten erin
         self.assertEqual(html.count('id="foto-invoegen"'), 1)
         self.assertEqual(html.count('id="document-invoegen"'), 1)
@@ -1636,3 +1639,39 @@ class KlusTerugpijlTest(TestCase):
         for stiekem in ("https://evil.example/", "//evil.example/", "javascript:alert(1)"):
             adres = self.klus.get_absolute_url() + "?terug=" + stiekem
             self.assertEqual(self.pijl(adres), reverse("klussen"), stiekem)
+
+
+
+@override_settings(MEDIA_ROOT=TIJDELIJKE_MEDIA)
+class BestandenEnMediaTest(TestCase):
+    """Een tekening als png via Bestanden staat onder Bestanden, dezelfde png
+    via Media onder Media; een Word-bestand krijgt een tegel met de extensie."""
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.sam = Medewerker.objects.create_user("sam", password="x")
+        cls.klus = Klus.objects.create(naam="Tuin Vermeer")
+
+    @classmethod
+    def tearDownClass(cls):
+        shutil.rmtree(TIJDELIJKE_MEDIA, ignore_errors=True)
+        super().tearDownClass()
+
+    def test_wat_waar_staat(self):
+        self.client.force_login(self.sam)
+        for naam, extra in (("tekening.png", {"forceer_document": "1"}),
+                            ("Begroting.xlsx", {"forceer_document": "1"}),
+                            ("werkfoto.png", {})):
+            inhoud = b"PK nep" if naam.endswith("xlsx") else None
+            self.client.post(reverse("bijlage_toevoegen"),
+                             {"bestanden": upload(naam, inhoud), "klus": self.klus.pk, **extra})
+        html = self.client.get(self.klus.get_absolute_url()).content.decode()
+        bestanden = html[html.index('data-tab="bestanden">'):html.index('data-tab="uren" hidden>')]
+        media = html[html.index('data-tab="media" hidden>'):]
+        self.assertIn("tekening.png", bestanden)
+        self.assertIn("Begroting.xlsx", bestanden)
+        self.assertNotIn("werkfoto.png", bestanden)
+        self.assertIn("werkfoto.png", media)
+        self.assertNotIn("tekening.png", media)
+        # zonder voorbeeld: een tegel met de extensie
+        self.assertIn('<span class="bestandtegel-ext">XLSX</span>', bestanden)

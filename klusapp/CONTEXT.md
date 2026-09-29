@@ -68,8 +68,11 @@ stuurt dat veld nu ook echt het formulier (`klussen/forms.py`,
   of "Document toevoegen" binnenkomt, blijft een document (`forceer_document`), ook
   een tekening als png. Tussen 27 en 29-09-2026 was een plaatje kort altijd een foto;
   dat is teruggedraaid. Migratie `klussen/0010` uit die periode heeft de toen
-  bestaande plaatjes-als-document wel omgezet naar foto's. Het klusdossier heeft
-  twee tabbladen: Bestanden (documenten, daaronder foto's) en Uren.
+  bestaande plaatjes-als-document wel omgezet naar foto's.
+  **Klusdossier sinds 29-09-2026:** drie tabbladen. *Bestanden* = alles wat
+  inhoudelijk bij de klus hoort (in de database: documenten), foto of niet, door
+  elkaar in het fotoraster (`_bestandenraster.html`). *Uren*. *Media* = foto's die
+  eventueel op social media komen (in de database: foto's, `_fotoraster.html`).
 
 **Bijgewerkt 23-09-2026 (2): één filterrij met twee assen op de klussenlijst.**
 

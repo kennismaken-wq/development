@@ -1160,6 +1160,17 @@ input[type=file]:focus-visible + .bestandsknop{
   font-size:7px; font-weight:700; color:#fff; letter-spacing:.01em;
 }
 
+/* Bestanden op het klusdossier (_bestandenraster.html): dezelfde kaart, met
+   een link naar de overlay in plaats van een knop. Zonder voorbeeld (Word,
+   Excel) een vlak met een bestandsicoon en de extensie. */
+.fotokaart-open{ display:block; color:inherit; text-decoration:none; }
+.bestandtegel{
+  display:flex; flex-direction:column; align-items:center; justify-content:center; gap:.4rem;
+  aspect-ratio:4/3; background:rgba(0,0,0,0.2); color:rgba(255,255,255,0.6);
+}
+.bestandtegel svg{ width:40px; height:40px; }
+.bestandtegel-ext{ font-size:11.5px; font-weight:700; letter-spacing:.08em; color:var(--hi); }
+
 /* eerste tegel in het raster: lege plek met een plus, opent de invoegdialoog.
    Grid-kolommen hebben altijd dezelfde breedte (ook als dit de enige tegel
    is), dus geen aparte max-width meer nodig zoals bij de oude columns-layout. */

@@ -1,0 +1,64 @@
+{% comment %} Tabblad "Bestanden" op het klusdossier: alles wat inhoudelijk bij
+   de klus hoort — tekeningen, offertes, foto's van de situatie — door
+   elkaar, in hetzelfde raster als de foto's (zelfde .fotokaart en
+   .fotokaart-nieuw), zonder onderscheid tussen foto en document. Foto's voor
+   social media staan apart onder "Media" (_fotoraster.html).
+
+   Wat hier staat, is in de database een document (Bijlage.Soort.DOCUMENT):
+   het +-vak opent #document-invoegen (_documentdialoog.html), die elk
+   bestand als document opslaat, ook een plaatje — onverkleind, want een
+   tekening moet leesbaar blijven. Een tik op een tegel opent hem in de
+   overlay (data-overlay, zie _fotopopup.html).
+
+   Verwacht `document_bijlagen`, `terug` en de uploadcontext van
+   _uploadveld.html (formulier/upload_url, evt. klus_pk). {% endcomment %}
+{% load bijlagen %}
+{% load static %}
+<div class="fotoraster">
+  <button type="button" class="fotokaart-nieuw" onclick="document.getElementById('document-invoegen').showModal()" aria-label="Bestand toevoegen">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+  </button>
+  {% for bijlage in document_bijlagen %}
+    <figure class="fotokaart">
+      <a class="fotokaart-open" href="{% url 'media_bestand' bijlage.bestand.name %}" target="_blank" rel="noopener"
+         data-overlay="{{ bijlage.weergave }}"
+         data-titel="{{ bijlage.toonnaam }}"
+         data-meta="{{ bijlage.toegevoegd_door.naam|default:'onbekend' }} · {{ bijlage.datum|date:'j M Y' }}"
+         data-naam="{{ bijlage.originele_naam|default:bijlage.toonnaam }}"
+         {% if bijlage|mag_weg:user %}data-verwijder="{% url 'bijlage_verwijderen' bijlage.pk %}"{% endif %}>
+        {% if bijlage.thumbnail %}
+          <img src="{% url 'media_bestand' bijlage.thumbnail.name %}" alt="{{ bijlage.toonnaam }}" loading="lazy">
+        {% else %}
+          {% comment %} Geen voorbeeld (Word, Excel, ...): een bestandsicoon met
+             de extensie, in een vlak zo groot als een foto. {% endcomment %}
+          <span class="bestandtegel" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M7 3h7l4 4v13a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z"/><path d="M14 3v4h4"/></svg>
+            <span class="bestandtegel-ext">{{ bijlage.extensie }}</span>
+          </span>
+        {% endif %}
+      </a>
+      <figcaption>
+        <span class="wat">{{ bijlage.toonnaam }}</span>
+        <span class="wie">
+          {% if bijlage.toegevoegd_door %}
+            {% include "_medewerkerbol.html" with persoon=bijlage.toegevoegd_door klasse="fk-bol" %}
+          {% endif %}
+          {{ bijlage.toegevoegd_door.naam|default:"onbekend" }} · {{ bijlage.datum|date:"j M" }}
+        </span>
+      </figcaption>
+      {% if bijlage|mag_weg:user %}
+        <form method="post" action="{% url 'bijlage_verwijderen' bijlage.pk %}" class="weg"
+              onsubmit="return confirm('Dit bestand verwijderen?');">
+          {% csrf_token %}
+          <input type="hidden" name="terug" value="{{ terug }}">
+          <button type="submit" title="Verwijderen" aria-label="Verwijderen">{% include "uren/_prullenbak.html" %}</button>
+        </form>
+      {% endif %}
+    </figure>
+  {% endfor %}
+</div>
+{% if not document_bijlagen %}
+  <p class="leeg">Nog geen bestanden.</p>
+{% endif %}
+{% include "klussen/_documentdialoog.html" %}
+<script src="{% static 'js/fotoraster.js' %}"></script>

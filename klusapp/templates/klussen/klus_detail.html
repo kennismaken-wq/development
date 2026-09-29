@@ -27,12 +27,13 @@
     {% endif %}
   </div>
 
-  {% comment %} Twee tabbladen: Bestanden (documenten, met daaronder de
-     foto's) en Uren. Alles onder elkaar was op een telefoon een lange
-     scroll. static/js/klustabs.js wisselt op een klik; Bestanden staat hier
-     al open zodat de pagina ook zonder JS iets zinnigs toont.
-     Documenten bovenaan: dat lijstje is kort, het fotoraster kan lang
-     worden. {% endcomment %}
+  {% comment %} Drie tabbladen (29-09-2026):
+     - Bestanden: alles wat inhoudelijk bij de klus hoort, foto of document,
+       door elkaar (_bestandenraster.html);
+     - Uren: wie er hoeveel aan heeft gewerkt;
+     - Media: foto's die eventueel op social media komen (_fotoraster.html).
+     static/js/klustabs.js wisselt op een klik; Bestanden staat hier al open
+     zodat de pagina ook zonder JS iets zinnigs toont. {% endcomment %}
   <div class="tabbladen">
     <div class="tabbladen-kop">
       <button type="button" class="tabblad actief" data-tab="bestanden">
@@ -43,12 +44,14 @@
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">{{ "uren"|pictogram }}</svg>
         Uren
       </button>
+      <button type="button" class="tabblad" data-tab="media">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">{{ "fotos"|pictogram }}</svg>
+        Media
+      </button>
     </div>
 
     <div class="tabblad-paneel" data-tab="bestanden">
-      {% include "klussen/_documentenlijst.html" with klus_pk=klus.pk kop="Documenten" %}
-      <h2 class="sectiekop">Foto's</h2>
-      {% include "klussen/_fotoraster.html" with klus_pk=klus.pk %}
+      {% include "klussen/_bestandenraster.html" with klus_pk=klus.pk %}
     </div>
 
     <div class="tabblad-paneel" data-tab="uren" hidden>
@@ -98,6 +101,10 @@
       {% endif %}
     </div>
 
+
+    <div class="tabblad-paneel" data-tab="media" hidden>
+      {% include "klussen/_fotoraster.html" with klus_pk=klus.pk %}
+    </div>
   </div>
   <script src="{% static 'js/klustabs.js' %}"></script>
 {% endblock %}

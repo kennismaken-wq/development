@@ -185,6 +185,12 @@ class Bijlage(models.Model):
         return "bestand"
 
     @property
+    def extensie(self):
+        """"XLSX", "DOCX": op de bestandstegel als er geen voorbeeld is."""
+        naam = self.originele_naam or self.bestand.name
+        return naam.rsplit(".", 1)[-1].upper() if "." in naam else ""
+
+    @property
     def toonnaam(self):
         """Wat er in een lijst moet staan. Een foto heeft zelden een zinnige
         bestandsnaam, dus daar wint de toelichting."""

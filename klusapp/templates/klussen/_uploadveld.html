@@ -29,10 +29,14 @@
   <input type="hidden" name="terug" value="{{ terug }}">
   {% if forceer_document %}<input type="hidden" name="forceer_document" value="1">{% endif %}
 
-  <label for="{{ formulier.bestanden.id_for_label }}">{% if forceer_document %}Documenten{% elif alleen_fotos %}Foto's{% else %}Foto's of documenten{% endif %}</label>
+  <label for="{{ formulier.bestanden.id_for_label }}">{% if forceer_document and not uurblok_pk %}Bestanden{% elif forceer_document %}Documenten{% elif alleen_fotos %}Foto's{% else %}Foto's of documenten{% endif %}</label>
   {{ formulier.bestanden }}
   {% if forceer_document %}
-    <p class="uitleg">Ook een foto mag, bijvoorbeeld van een tekening — die komt dan niet bij de foto's te staan.</p>
+    {% if uurblok_pk %}
+      <p class="uitleg">Ook een foto mag, bijvoorbeeld van een tekening — die komt dan niet bij de foto's te staan.</p>
+    {% else %}
+      <p class="uitleg">Tekeningen, offertes, foto's van de situatie: alles wat bij de klus hoort. Foto's voor social media voeg je toe bij Media.</p>
+    {% endif %}
   {% endif %}
 
   <label for="{{ formulier.datum.id_for_label }}">Datum</label>
