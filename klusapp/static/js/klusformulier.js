@@ -104,17 +104,29 @@
       });
       lijst.appendChild(regel);
     });
+    plaatsLijst();
+    lijst.hidden = false;
+  }
+
+  function plaatsLijst() {
     const rand = opdrachtgeverVeld.getBoundingClientRect();
     lijst.style.top = rand.bottom + "px";
     lijst.style.left = rand.left + "px";
     lijst.style.width = rand.width + "px";
-    lijst.hidden = false;
   }
 
   function zoekOpdrachtgevers() {
     const getypt = sleutel(opdrachtgeverVeld.value);
+    // Leeg veld: alle bekende opdrachtgevers, zodat de lijst al openklapt bij
+    // het aantikken. Wie niet weet hoe de klant gespeld stond, kiest zo zonder
+    // eerst te moeten raden wat hij moet typen. De lijst scrolt zelf
+    // (max-height op .adres-suggesties), dus hier geen maximum.
     if (!getypt) {
-      verbergLijst();
+      toonLijst(
+        opdrachtgevers.map(function (groep) {
+          return groep.naam;
+        })
+      );
       return;
     }
     const treffers = opdrachtgevers
@@ -342,6 +354,13 @@
     zoekOpdrachtgevers();
     opdrachtgeverGewijzigd();
   });
+  // Openklappen bij het aantikken. Ook op click, niet alleen focus: na het
+  // kiezen van een naam heeft het veld de focus nog, en tik je er dan
+  // opnieuw op dan hoort de lijst weer te verschijnen.
+  opdrachtgeverVeld.addEventListener("focus", zoekOpdrachtgevers);
+  opdrachtgeverVeld.addEventListener("click", function () {
+    if (lijst.hidden) zoekOpdrachtgevers();
+  });
   opdrachtgeverVeld.addEventListener("blur", function () {
     setTimeout(verbergLijst, 150);
   });
@@ -356,8 +375,15 @@
     knop.addEventListener("change", bijwerken);
   });
 
-  window.addEventListener("scroll", verbergLijst, true);
-  window.addEventListener("resize", verbergLijst);
+  // Meeschuiven, niet verbergen: op een telefoon scrollt de pagina en krimpt
+  // het venster zodra het toetsenbord opent — precies op het moment dat de
+  // lijst bij het aantikken opengaat. En scrollen binnen de lijst zelf valt
+  // door de capture ook hieronder.
+  function volgVeld() {
+    if (!lijst.hidden) plaatsLijst();
+  }
+  window.addEventListener("scroll", volgVeld, true);
+  window.addEventListener("resize", volgVeld);
 
   // Ook meteen bij het openen: een formulier dat terugkomt met een
   // validatiefout moet dezelfde staat tonen als waarin het werd verstuurd.
