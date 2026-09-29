@@ -104,9 +104,13 @@
     // Alleen een computer met een ingebouwde pdf-lezer toont een pdf in de
     // overlay. Android heeft die lezer niet; een iPhone zegt van wel, maar
     // toont in een pagina alleen de eerste bladzijde — vandaar ook de
-    // voorwaarde van een muis.
+    // voorwaarde van een muis of trackpad. "any-pointer" en niet "pointer":
+    // een laptop met aanraakscherm meldt dat scherm soms als hoofdbediening,
+    // en kreeg dan ten onrechte het kaartje in plaats van de pdf (29-09).
+    // Staat in de browser "pdf's downloaden" aan, dan is pdfViewerEnabled
+    // false en blijft het kaartje: de browser zou hem dan ook niet tonen.
     var pdfInOverlay = navigator.pdfViewerEnabled === true &&
-      window.matchMedia("(hover: hover) and (pointer: fine)").matches;
+      window.matchMedia("(any-pointer: fine)").matches;
     var kanDelen = !!(navigator.share && navigator.canShare);
     // Het bestand voor delen wordt al opgehaald zodra het in beeld komt:
     // een telefoon laat delen alleen toe vlak na de tik, en een download
