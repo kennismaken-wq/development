@@ -212,6 +212,15 @@ h1{
   color:var(--hi);
 }
 .side-icon.nog-niet{ opacity:.35; }
+/* Mijn profiel toont je eigen avatarrondje (_medewerkerbol.html) i.p.v. een
+   icoon; actief krijgt het een accentring in plaats van de gevulde pil */
+.side-icon .nav-bol{
+  width:30px; height:30px; border-radius:999px; border:1px solid;
+  display:flex; align-items:center; justify-content:center;
+  font-size:10.5px; font-weight:700; color:#fff; letter-spacing:.02em;
+}
+.side-icon.actief:has(.nav-bol){ background:none; border-color:transparent; }
+.side-icon.actief .nav-bol{ box-shadow:0 0 0 2px var(--ink), 0 0 0 4px rgba(var(--accent-rgb),0.9); }
 /* zichtbaar voor schermlezers en voor de tegeltitels()-tests, niet in beeld */
 .side-icon .titel{
   position:absolute; width:1px; height:1px; padding:0; margin:-1px;
@@ -636,7 +645,7 @@ input[type=time]::-webkit-calendar-picker-indicator{ filter:invert(1); opacity:.
 .maanddag.buiten-maand{ opacity:.3; }
 .maanddag.vandaag{ border-color:rgba(var(--accent-rgb),0.6); background:rgba(var(--accent-rgb),0.18); }
 .maanddag .nr{ font-size:13px; font-weight:600; }
-.maanddag .uren{ font-size:9.5px; color:var(--hi); font-variant-numeric:tabular-nums; }
+.maanddag .uren{ font-size:12px; font-weight:600; line-height:1; color:var(--hi); font-variant-numeric:tabular-nums; }
 
 /* ══════════ MELDINGEN ══════════
    Zweven als tijdelijke toasts onderaan het scherm i.p.v. vast bovenaan de
