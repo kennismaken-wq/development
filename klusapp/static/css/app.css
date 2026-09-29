@@ -923,8 +923,14 @@ input[type=time]::-webkit-calendar-picker-indicator{ filter:invert(1); opacity:.
 #gegevensformulier:not(.bewerkt) .rijbewijs-groep:not(:has(input:checked)),
 #gegevensformulier:not(.bewerkt) .rijbewijzen .keuzepil:not(:has(input:checked)){ display:none; }
 #gegevensformulier:not(.bewerkt) .rijbewijzen .vlak{ cursor:default; }
+/* Leesstand: wat je hebt als bubbels op één rij, zonder groepsnamen —
+   "C", niet "Vrachtwagen: C". De groepen zijn er alleen om te kiezen. */
+#gegevensformulier:not(.bewerkt) .rijbewijzen{ display:flex; flex-wrap:wrap; gap:.4rem; }
+#gegevensformulier:not(.bewerkt) .rijbewijs-groep,
+#gegevensformulier:not(.bewerkt) .rijbewijzen .keuzes{ display:contents; }
+#gegevensformulier:not(.bewerkt) .rijbewijs-groepnaam{ display:none; }
 #gegevensformulier:not(.bewerkt) .rijbewijzen:not(:has(input:checked))::after{
-  content:"—"; display:block; padding:.8rem .9rem; border-radius:14px;
+  content:"—"; display:block; flex:1 1 100%; padding:.8rem .9rem; border-radius:14px;
   background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.09);
 }
 
