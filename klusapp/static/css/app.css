@@ -705,13 +705,29 @@ input[type=time]::-webkit-calendar-picker-indicator{ filter:invert(1); opacity:.
 }
 
 /* ══════════ PERIODEKALENDER (urenexport) ══════════
-   Begin- en einddatum kiezen in één maandraster; zie
+   Twee velden (begin, eind) die een maandraster openklappen; zie
    static/js/periodekalender.js. De periode is een doorlopende lime band,
    begin en einde zijn volle bolletjes erop. */
-.periodekalender{
-  padding:.9rem .9rem .6rem; border-radius:18px;
-  background:rgba(255,255,255,0.07); border:1px solid rgba(255,255,255,0.16);
+.pk-velden{ display:flex; align-items:center; gap:.5rem; }
+.pk-veld{
+  flex:1 1 0; min-width:0; display:flex; flex-direction:column; align-items:flex-start; gap:.15rem;
+  padding:.6rem .9rem; border-radius:14px; cursor:pointer; text-align:left;
+  background:rgba(255,255,255,0.10); border:1px solid rgba(255,255,255,0.20);
+  color:#fff; font-family:'Inter',sans-serif;
 }
+@media (hover:hover){ .pk-veld:hover{ background:rgba(255,255,255,0.15); } }
+.pk-veld.actief{ border-color:rgba(var(--accent-rgb),0.7); background:rgba(var(--accent-rgb),0.14); }
+.pk-veldlabel{ font-size:10px; font-weight:600; letter-spacing:.07em; text-transform:uppercase; color:rgba(255,255,255,0.5); }
+.pk-veld.actief .pk-veldlabel{ color:var(--hi); }
+.pk-waarde{ font-size:15px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:100%; }
+.pk-pijl{ color:rgba(255,255,255,0.4); flex-shrink:0; }
+.periodekalender{
+  margin-top:.5rem; padding:.9rem .9rem .6rem; border-radius:18px;
+  background:rgba(255,255,255,0.07); border:1px solid rgba(255,255,255,0.16);
+  animation:pk-open .18s ease-out; transform-origin:top center;
+}
+@keyframes pk-open{ from{ opacity:0; transform:translateY(-6px) scaleY(.96); } to{ opacity:1; transform:none; } }
+@media (prefers-reduced-motion:reduce){ .periodekalender{ animation:none; } }
 .pk-kop{ display:flex; align-items:center; justify-content:space-between; gap:.6rem; margin-bottom:.5rem; }
 .pk-titel{
   font-family:'Fraunces',serif; font-style:italic; font-weight:600; font-size:1.05rem;
