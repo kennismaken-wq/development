@@ -223,6 +223,9 @@ h1{
     left:50%; top:auto; bottom:calc(.7rem + env(safe-area-inset-bottom));
     transform:translateX(-50%);
     flex-direction:row; max-width:calc(100% - 1.4rem); max-height:none;
+    /* iets krapper dan op breed: met Loonstrook erbij heeft de eigenaar
+       zeven iconen, en die passen met .3rem net niet op 375px */
+    gap:.2rem;
     overflow-x:auto; overflow-y:visible;
     /* er passen meestal niet alle iconen op 375px; deze rand-vervaging is
        het enige signaal dat de balk nog verder scrolt. Smal houden: bij 14px/22px

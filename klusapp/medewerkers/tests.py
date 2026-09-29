@@ -35,9 +35,10 @@ class StartschermTest(TestCase):
         self.client.force_login(self.eigenaar)
         titels = tegeltitels(self.client.get(reverse("start")).content.decode())
         self.assertIn("Aanwezigheid", titels)
-        # Planbord, Overzichten, Loonstrook en Beheer staan niet meer in de
-        # balk zelf maar op het profielscherm, zie ProfielschermTest hieronder.
-        for verplaatst in ("Weekoverzicht", "Urenexport", "Loonstrook", "Beheer"):
+        self.assertIn("Loonstrook", titels)
+        # Weekoverzicht, Urenexport en Beheer staan niet meer in de balk zelf
+        # maar op het profielscherm, zie ProfielschermTest hieronder.
+        for verplaatst in ("Weekoverzicht", "Urenexport", "Beheer"):
             self.assertNotIn(verplaatst, titels)
 
     def test_medewerker_ziet_geen_beheerderstegels(self):
@@ -45,6 +46,7 @@ class StartschermTest(TestCase):
         titels = tegeltitels(self.client.get(reverse("start")).content.decode())
         self.assertIn("Uren schrijven", titels)
         self.assertIn("Mijn profiel", titels)
+        self.assertIn("Loonstrook", titels)
         for verboden in ("Weekoverzicht", "Aanwezigheid", "Beheer", "Urenexport"):
             self.assertNotIn(verboden, titels)
 

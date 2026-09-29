@@ -25,9 +25,10 @@ LOONDOSSIER_WEB = "https://mijn.loondossier.nl/Aanmelden"
 # "icoon" wijst naar een sleutel in pictogrammen.PICTOGRAMMEN — de zijbalk
 # tekent daarmee een lijnicoon i.p.v. een los teken.
 #
-# TEGELS zijn de vaste iconen in de navigatiebalk zelf: bewust maar vijf voor
-# iedereen (Start staat los in basis.html, dus hier vier) plus Aanwezigheid
-# als extra voor de eigenaar, die dat scherm dagelijks gebruikt. Alles wat
+# TEGELS zijn de vaste iconen in de navigatiebalk zelf: zes voor iedereen
+# (Start staat los in basis.html, dus hier vijf) plus Aanwezigheid als extra
+# voor de eigenaar, die dat scherm dagelijks gebruikt. Loonstrook staat sinds
+# 29-09-2026 op verzoek van Thijmen ook in de balk. Alles wat
 # minder vaak nodig is staat in PROFIEL_TEGELS, bereikbaar via die vijfde
 # tegel "Mijn profiel" — zo blijft de balk kort in plaats van dat hij vol
 # loopt met elk scherm dat er ooit bijkomt.
@@ -36,6 +37,7 @@ TEGELS = [
     {"titel": "Klussen", "icoon": "klussen", "url_naam": "klussen", "rollen": ["medewerker", "eigenaar"]},
     {"titel": "Galerij", "icoon": "fotos", "url_naam": "fotos", "rollen": ["medewerker", "eigenaar"]},
     {"titel": "Aanwezigheid", "icoon": "aanwezigheid", "url_naam": "aanwezigheid", "rollen": ["eigenaar"]},
+    {"titel": "Loonstrook", "icoon": "loonstrook", "url_naam": "loonstrook", "rollen": ["medewerker", "eigenaar"]},
     {"titel": "Mijn profiel", "icoon": "profiel", "url_naam": "mijn_profiel", "rollen": ["medewerker", "eigenaar"]},
 ]
 
@@ -45,7 +47,6 @@ PROFIEL_TEGELS = [
     {"titel": "Urenexport", "icoon": "export", "url_naam": "urenexport", "rollen": ["eigenaar"]},
     # Niet in de balk: je mensen beheer je af en toe, niet dagelijks.
     {"titel": "Medewerkers", "icoon": "medewerkers", "url_naam": "medewerkers", "rollen": ["eigenaar"]},
-    {"titel": "Loonstrook", "icoon": "loonstrook", "url_naam": "loonstrook", "rollen": ["medewerker", "eigenaar"]},
     # TIJDELIJK — zolang er geen apart beheeraccount is, komt de eigenaar hier
     # ook in. Zie de opmerking bij Medewerker.save().
     {"titel": "Beheer", "icoon": "beheer", "url": "/beheer/", "rollen": ["eigenaar"]},
