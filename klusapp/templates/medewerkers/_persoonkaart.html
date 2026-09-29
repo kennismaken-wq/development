@@ -39,8 +39,7 @@
 
   <h3 class="persoonkaart-kop">Rijbewijs</h3>
   <div class="klusinfo">
-    <p class="regel"><span class="lbl">Categorie</span>{{ persoon.get_rijbewijs_display }}</p>
-    <p class="regel"><span class="lbl">Aanhanger</span>{% if persoon.aanhanger %}Ja, BE{% else %}Nee{% endif %}</p>
+    <p class="regel"><span class="lbl">Categorieën</span>{{ persoon.rijbewijzen_tekst }}</p>
   </div>
 
   {% if persoon.in_dienst_sinds %}

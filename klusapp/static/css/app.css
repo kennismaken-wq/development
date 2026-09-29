@@ -908,7 +908,25 @@ input[type=time]::-webkit-calendar-picker-indicator{ filter:invert(1); opacity:.
 }
 .bewerkt .gegeven dt label{ color:var(--hi); }
 .gegeven input[type=checkbox]:disabled{ opacity:.6; }
-.gegeven input[type=color]:disabled{ width:44px; padding:0; border:1px solid rgba(255,255,255,0.2); }
+/* Kleur: een klein vlakje, geen balk over de volle breedte — in beide
+   standen dezelfde maat, zodat er niets verspringt bij wijzigen. */
+.gegeven input[type=color]{ width:64px; height:40px; padding:.2rem; }
+.gegeven input[type=color]:disabled{ border:1px solid rgba(255,255,255,0.12); cursor:default; }
+
+/* Rijbewijscategorieën (medewerkers/widgets/rijbewijzen.html): per groep een
+   rij pillen. In de leesstand alleen wat je hebt; niets aangevinkt geeft een
+   streepje, zoals bij een leeg veld. */
+.rijbewijzen{ display:grid; gap:.55rem; }
+.rijbewijs-groep{ display:grid; gap:.3rem; }
+.rijbewijs-groepnaam{ font-size:11.5px; color:rgba(255,255,255,0.55); }
+.rijbewijzen .keuzepil .vlak{ min-width:48px; }
+#gegevensformulier:not(.bewerkt) .rijbewijs-groep:not(:has(input:checked)),
+#gegevensformulier:not(.bewerkt) .rijbewijzen .keuzepil:not(:has(input:checked)){ display:none; }
+#gegevensformulier:not(.bewerkt) .rijbewijzen .vlak{ cursor:default; }
+#gegevensformulier:not(.bewerkt) .rijbewijzen:not(:has(input:checked))::after{
+  content:"—"; display:block; padding:.8rem .9rem; border-radius:14px;
+  background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.09);
+}
 
 /* Zelfde "op slot ziet eruit als gegevens" als .gegeven hierboven, nu voor
    het uurblok-detailscherm (_uurblokdetail_inhoud.html): vóór een klik op het

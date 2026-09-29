@@ -1,0 +1,17 @@
+{% comment %} Rijbewijscategorieën als aanvinkbare pillen, per groep op een rij
+   (medewerkers.forms.RijbewijzenWidget). Zelfde .keuzepil-vormtaal als de
+   aanwezigheid: het vinkje zelf staat buiten beeld, het label is de pil.
+   Op slot (leesstand) zijn de vinkjes disabled; de pillen tonen dan alleen
+   wat aangevinkt is, zie .rijbewijzen in app.css. {% endcomment %}
+<div class="rijbewijzen">
+  {% for groep, opties, index in widget.optgroups %}
+    <div class="rijbewijs-groep">
+      <span class="rijbewijs-groepnaam">{{ groep }}</span>
+      <span class="keuzes">
+        {% for optie in opties %}
+          <label class="keuzepil ja"><input type="checkbox" name="{{ optie.name }}" value="{{ optie.value }}"{% include "django/forms/widgets/attrs.html" with widget=optie %}><span class="vlak">{{ optie.label }}</span></label>
+        {% endfor %}
+      </span>
+    </div>
+  {% endfor %}
+</div>

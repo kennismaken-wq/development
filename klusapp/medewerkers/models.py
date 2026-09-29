@@ -4,6 +4,18 @@ from django.contrib.auth.models import AbstractUser
 from django.db import models
 
 
+# Alle Nederlandse rijbewijscategorieën, per soort voertuig. De volgorde is
+# die van het rijbewijs zelf; zo worden ze ook opgeslagen en getoond.
+RIJBEWIJS_GROEPEN = [
+    ("Bromfiets en motor", ["AM", "A1", "A2", "A"]),
+    ("Auto", ["B", "BE"]),
+    ("Vrachtwagen", ["C1", "C1E", "C", "CE"]),
+    ("Bus", ["D1", "D1E", "D", "DE"]),
+    ("Trekker", ["T"]),
+]
+RIJBEWIJS_VOLGORDE = [code for _, codes in RIJBEWIJS_GROEPEN for code in codes]
+
+
 def profielfoto_pad(instance, bestandsnaam):
     """Eigen bestandsnaam: telefoons leveren allemaal IMG_0001.jpg aan."""
     return f"profielfotos/{uuid.uuid4().hex}.jpg"
@@ -47,17 +59,11 @@ class Medewerker(AbstractUser):
 
     # ── rijbewijs ─────────────────────────────────────────────────────────
     # Bepaalt wie met de bus, de kipper of de aanhanger met de minigraver weg
-    # mag. Alleen de categorie en de aanhanger; certificaten die verlopen
-    # houden we er bewust buiten.
-    class Rijbewijs(models.TextChoices):
-        GEEN = "", "Geen"
-        B = "B", "B — personenauto"
-        C = "C", "C — vrachtwagen"
-
-    rijbewijs = models.CharField(max_length=2, choices=Rijbewijs.choices, blank=True)
-    aanhanger = models.BooleanField(
-        "aanhanger (BE)", default=False, help_text="Mag met een zware aanhanger rijden."
-    )
+    # mag. Een lijst categorieën uit RIJBEWIJS_GROEPEN, zoals ["B", "BE", "C"];
+    # BE is dus gewoon een categorie en geen los vinkje meer (29-09-2026).
+    # Certificaten die verlopen houden we er bewust buiten. Een JSON-lijst en
+    # geen ArrayField: dat werkt alleen op Postgres, en lokaal is het SQLite.
+    rijbewijzen = models.JSONField(default=list, blank=True)
     kleur = models.CharField(
         max_length=7,
         blank=True,
@@ -97,6 +103,11 @@ class Medewerker(AbstractUser):
         # aparte rol; zie de gesprekken over de rol "systeembeheerder".
         self.is_staff = self.rol == self.Rol.EIGENAAR or self.is_superuser
         super().save(*args, **kwargs)
+
+    @property
+    def rijbewijzen_tekst(self):
+        """Voor de persoonskaart: "B, BE, C", of "Geen"."""
+        return ", ".join(self.rijbewijzen) or "Geen"
 
     @property
     def is_eigenaar(self):

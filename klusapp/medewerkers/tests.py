@@ -457,13 +457,14 @@ class MijnProfielTest(TestCase):
         antwoord = self.client.post(
             reverse("mijn_profiel"),
             {"first_name": "Sam", "last_name": "de Wit", "telefoon": "0687654321",
-             "kleur": "#5B8FA8", "rijbewijs": "B"},
+             "kleur": "#5B8FA8", "rijbewijzen": ["BE", "B"]},
         )
         self.assertEqual(antwoord.status_code, 302)
         self.assertEqual(antwoord.headers["Location"], reverse("mijn_profiel"))
         self.sam.refresh_from_db()
         self.assertEqual(self.sam.telefoon, "0687654321")
-        self.assertEqual(self.sam.rijbewijs, "B")
+        # in de volgorde van het rijbewijs, niet in die van het aanvinken
+        self.assertEqual(self.sam.rijbewijzen, ["B", "BE"])
 
     def test_je_kunt_jezelf_geen_andere_rol_geven(self):
         self.client.post(
@@ -710,7 +711,7 @@ class PersoonskaartTest(TestCase):
         cls.sam = Medewerker.objects.create_user(
             "sam", password="x", first_name="Sam", last_name="de Wit",
             telefoon="06 12345678", noodcontact_naam="Anne", noodcontact_relatie="partner",
-            noodcontact_telefoon="06 87654321", rijbewijs="B", aanhanger=True,
+            noodcontact_telefoon="06 87654321", rijbewijzen=["B", "BE"],
         )
 
     def test_eigenaar_ziet_de_gegevens(self):
@@ -719,8 +720,7 @@ class PersoonskaartTest(TestCase):
         self.assertIn("Sam de Wit", html)
         self.assertIn('href="tel:06 12345678"', html)
         self.assertIn("Anne (partner)", html)
-        self.assertIn("B — personenauto", html)
-        self.assertIn("Ja, BE", html)
+        self.assertIn("B, BE", html)
         self.assertIn(reverse("medewerker_bewerken", args=[self.sam.pk]), html)
 
     def test_medewerker_niet(self):
@@ -828,3 +828,59 @@ class LeegDatumveldTest(TestCase):
         # in de bewerkstand gewoon een datumveld
         html = self.client.get(reverse("medewerker_bewerken", args=[leeg.pk]) + "?bewerken=1").content.decode()
         self.assertRegex(html, r'<input type="date" name="in_dienst_sinds"')
+
+
+
+class RijbewijzenEnKleurTest(TestCase):
+    """Rijbewijs als aanvinkbare categorieën, "Kleur" zonder eigen kopje en
+    geen uitleg meer onder "Relatie" (29-09-2026)."""
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.sam = Medewerker.objects.create_user("sam", password="x", first_name="Sam")
+
+    def setUp(self):
+        self.client.force_login(self.sam)
+
+    def test_alle_categorieen_aan_te_vinken(self):
+        html = self.client.get(reverse("mijn_profiel") + "?bewerken=1").content.decode()
+        for code in ("AM", "A1", "A2", "A", "B", "BE", "C1", "C1E", "C", "CE", "D1", "D1E", "D", "DE", "T"):
+            self.assertIn(f'value="{code}"', html, code)
+        self.assertEqual(html.count('name="rijbewijzen"'), 15)
+        for groep in ("Bromfiets en motor", "Auto", "Vrachtwagen", "Bus", "Trekker"):
+            self.assertIn(groep, html)
+
+    def test_kleurvlak_toont_de_kleur_van_je_rondje(self):
+        # Nog nooit een kleur gekozen: het vlakje toont de uitgerekende kleur
+        # van je rondje, niet een vaste blauwe.
+        from uren.kalender import medewerker_kleur_van
+        html = self.client.get(reverse("mijn_profiel")).content.decode()
+        self.assertIn(f'name="kleur" value="{medewerker_kleur_van(self.sam)}"', html)
+
+    def test_onbekende_categorie_wordt_geweigerd(self):
+        self.client.post(reverse("mijn_profiel"), {"first_name": "Sam", "kleur": "#5B8FA8", "rijbewijzen": ["X"]})
+        self.sam.refresh_from_db()
+        self.assertEqual(self.sam.rijbewijzen, [])
+
+    def test_geen_in_de_app_en_geen_relatie_uitleg(self):
+        html = self.client.get(reverse("mijn_profiel")).content.decode()
+        self.assertNotIn("In de app", html)
+        self.assertNotIn("Bijvoorbeeld partner", html)
+        self.assertIn(">Kleur</label>", html)
+
+    def test_migratie_zet_de_oude_velden_over(self):
+        import importlib
+        from types import SimpleNamespace
+        overzetten = importlib.import_module("medewerkers.migrations.0005_rijbewijzen").overzetten
+        opgeslagen = []
+
+        class Nep(SimpleNamespace):
+            def save(self, update_fields):
+                opgeslagen.append((self.username, self.rijbewijzen))
+
+        mensen = [Nep(username="piet", rijbewijs="B", aanhanger=False),
+                  Nep(username="kees", rijbewijs="C", aanhanger=True),
+                  Nep(username="jan", rijbewijs="", aanhanger=False)]
+        apps = SimpleNamespace(get_model=lambda *a: SimpleNamespace(objects=SimpleNamespace(all=lambda: mensen)))
+        overzetten(apps, None)
+        self.assertEqual(opgeslagen, [("piet", ["B"]), ("kees", ["B", "BE", "C"])])

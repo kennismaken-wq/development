@@ -4,7 +4,7 @@ from django.core.files.uploadedfile import UploadedFile
 from django.utils.safestring import mark_safe
 
 from . import profielfotos
-from .models import Medewerker
+from .models import RIJBEWIJS_GROEPEN, RIJBEWIJS_VOLGORDE, Medewerker
 
 
 class ProfielfotoMixin:
@@ -44,7 +44,44 @@ WACHTWOORD_EISEN = mark_safe(
 )
 
 
-class MedewerkerForm(ProfielfotoMixin, forms.ModelForm):
+def beginkleur(formulier):
+    """Een kleurkiezer kan niet leeg zijn; zonder beginwaarde toont de browser
+    zwart. Wie nog nooit een kleur koos, heeft wél een kleur: die rekent de
+    app uit voor zijn rondje (uren.kalender.medewerker_kleur_van). Die tonen
+    we dan ook, en niet een vaste blauwe — anders staat er een andere kleur
+    dan je ziet, en wordt je kleur bij de eerste keer opslaan ongemerkt
+    blauw. Een nieuwe medewerker (nog geen pk) krijgt wel het vaste blauw."""
+    from uren.kalender import medewerker_kleur_van
+
+    if not formulier.initial.get("kleur"):
+        persoon = formulier.instance
+        formulier.initial["kleur"] = medewerker_kleur_van(persoon) if persoon.pk else "#5B8FA8"
+
+
+class RijbewijzenWidget(forms.CheckboxSelectMultiple):
+    """Vinkjes als pillen, per groep op een rij; zie
+    medewerkers/templates/medewerkers/widgets/rijbewijzen.html."""
+
+    template_name = "medewerkers/widgets/rijbewijzen.html"
+
+
+class RijbewijzenMixin(forms.Form):
+    """Rijbewijscategorieën: aanvinken wat je hebt, meerdere tegelijk."""
+
+    rijbewijzen = forms.MultipleChoiceField(
+        label="Categorieën",
+        required=False,
+        choices=[(groep, [(code, code) for code in codes]) for groep, codes in RIJBEWIJS_GROEPEN],
+        widget=RijbewijzenWidget,
+    )
+
+    def clean_rijbewijzen(self):
+        # altijd in de volgorde van het rijbewijs, hoe je ze ook aanvinkt
+        gekozen = set(self.cleaned_data["rijbewijzen"])
+        return [code for code in RIJBEWIJS_VOLGORDE if code in gekozen]
+
+
+class MedewerkerForm(RijbewijzenMixin, ProfielfotoMixin, forms.ModelForm):
     """Een medewerker aanmaken of bijwerken. Alleen de eigenaar komt hier.
 
     Bewust weinig velden: alles wat met rechten en systeembeheer te maken
@@ -59,7 +96,7 @@ class MedewerkerForm(ProfielfotoMixin, forms.ModelForm):
             "first_name", "last_name", "username", "functie", "rol",
             "telefoon", "email", "adres", "postcode", "woonplaats",
             "noodcontact_naam", "noodcontact_relatie", "noodcontact_telefoon",
-            "rijbewijs", "aanhanger",
+            "rijbewijzen",
             "kleur", "in_dienst_sinds",
         ]
         widgets = {
@@ -90,21 +127,22 @@ class MedewerkerForm(ProfielfotoMixin, forms.ModelForm):
             "noodcontact_naam": "Naam",
             "noodcontact_relatie": "Relatie",
             "noodcontact_telefoon": "Telefoon",
-            "rijbewijs": "Rijbewijs",
-            "aanhanger": "Mag met een zware aanhanger (BE)",
-            "kleur": "Kleur in het planbord",
+            "kleur": "Kleur",
             "in_dienst_sinds": "In dienst sinds",
         }
-        # Alleen bij de relatie helpt een voorbeeld; de rest spreekt voor zich.
-        help_texts = {veld: "" for veld in fields if veld != "noodcontact_relatie"}
+        # Geen uitleg bij de velden: ze spreken voor zich (ook "Relatie" — het
+        # voorbeeld "partner, moeder" is op 29-09-2026 weggehaald).
+        help_texts = {veld: "" for veld in fields}
 
     # Kopjes boven de velden, zodat het geen lange rij invulvakken wordt.
     GROEPEN = [
-        ("", ["first_name", "last_name", "username", "functie", "rol"]),
+        # De kleur (van je rondje en je blokjes op het weekoverzicht) staat
+        # bij je naam; een eigen kopje "In de app" voor één veld was te veel.
+        ("", ["first_name", "last_name", "username", "functie", "rol", "kleur"]),
         ("Contact", ["telefoon", "email", "adres", "postcode", "woonplaats"]),
         ("Bij nood bellen", ["noodcontact_naam", "noodcontact_relatie", "noodcontact_telefoon"]),
-        ("Rijbewijs", ["rijbewijs", "aanhanger"]),
-        ("In de app", ["kleur", "in_dienst_sinds"]),
+        ("Rijbewijs", ["rijbewijzen"]),
+        ("In dienst", ["in_dienst_sinds"]),
     ]
 
     # Velden die de template zelf plaatst en die dus niet in de restgroep
@@ -130,10 +168,7 @@ class MedewerkerForm(ProfielfotoMixin, forms.ModelForm):
         super().__init__(*args, **kwargs)
         self.fields["first_name"].required = True
 
-        # Een kleurkiezer kan niet leeg zijn; zonder beginwaarde toont de
-        # browser zwart en lijkt er een kleur gekozen die er niet is.
-        if not self.initial.get("kleur"):
-            self.initial["kleur"] = "#5B8FA8"
+        beginkleur(self)
 
 
 class NieuweMedewerkerForm(MedewerkerForm):
@@ -163,7 +198,7 @@ class NieuweMedewerkerForm(MedewerkerForm):
         return medewerker
 
 
-class EigenGegevensForm(ProfielfotoMixin, forms.ModelForm):
+class EigenGegevensForm(RijbewijzenMixin, ProfielfotoMixin, forms.ModelForm):
     """Wat je van jezelf mag wijzigen op /mijn-profiel/.
 
     Niet je rol, gebruikersnaam, functie of datum in dienst: dat zijn
@@ -179,21 +214,20 @@ class EigenGegevensForm(ProfielfotoMixin, forms.ModelForm):
             "first_name", "last_name",
             "telefoon", "email", "adres", "postcode", "woonplaats",
             "noodcontact_naam", "noodcontact_relatie", "noodcontact_telefoon",
-            "rijbewijs", "aanhanger", "kleur",
+            "rijbewijzen", "kleur",
         ]
         widgets = MedewerkerForm.Meta.widgets
         labels = MedewerkerForm.Meta.labels
-        help_texts = {veld: "" for veld in fields if veld != "noodcontact_relatie"}
+        help_texts = {veld: "" for veld in fields}
 
     # De foto plaatst de template zelf, als penknopje in de kop.
     BUITEN_GROEPEN = frozenset({"profielfoto"})
 
     GROEPEN = [
-        ("", ["first_name", "last_name"]),
+        ("", ["first_name", "last_name", "kleur"]),
         ("Contact", ["telefoon", "email", "adres", "postcode", "woonplaats"]),
         ("Bij nood bellen", ["noodcontact_naam", "noodcontact_relatie", "noodcontact_telefoon"]),
-        ("Rijbewijs", ["rijbewijs", "aanhanger"]),
-        ("In de app", ["kleur"]),
+        ("Rijbewijs", ["rijbewijzen"]),
     ]
 
     groepen = MedewerkerForm.groepen
@@ -201,8 +235,7 @@ class EigenGegevensForm(ProfielfotoMixin, forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.fields["first_name"].required = True
-        if not self.initial.get("kleur"):
-            self.initial["kleur"] = "#5B8FA8"
+        beginkleur(self)
 
 
 class EigenWachtwoordForm(forms.Form):
