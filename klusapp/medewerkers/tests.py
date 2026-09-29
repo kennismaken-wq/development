@@ -186,16 +186,17 @@ class ProfielschermTest(TestCase):
         self.assertIn(f'href="{reverse("loonstrook")}"', html)
         self.assertNotIn("mijn.loondossier.nl", html)
 
-    def test_eigenaar_ziet_de_beheertegel_en_een_medewerker_niet(self):
-        # Tijdelijk: zolang er geen apart beheeraccount is, komt de eigenaar
-        # in /beheer/. Zie de opmerking bij Medewerker.save().
+    def test_geen_beheertegel_maar_het_adres_werkt_nog(self):
+        # Sinds 29-09-2026 geen tegel meer; het adres blijft voor wie het kent.
+        # Tijdelijk mag een eigenaar er nog in, zie Medewerker.save().
+        for persoon in (self.eigenaar, self.medewerker):
+            self.client.force_login(persoon)
+            html = self.client.get(reverse("start")).content.decode()
+            self.assertNotIn('href="/beheer/"', html)
         self.client.force_login(self.eigenaar)
-        titels = [t["titel"] for t in self.client.get(reverse("start")).context["onderdelen"]]
-        self.assertIn("Beheer", titels)
-
+        self.assertEqual(self.client.get("/beheer/").status_code, 200)
         self.client.force_login(self.medewerker)
-        titels = [t["titel"] for t in self.client.get(reverse("start")).context["onderdelen"]]
-        self.assertNotIn("Beheer", titels)
+        self.assertNotEqual(self.client.get("/beheer/").status_code, 200)
 
     def test_uitloggen_staat_op_het_profielscherm(self):
         self.client.force_login(self.medewerker)

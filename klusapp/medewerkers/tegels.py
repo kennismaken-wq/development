@@ -47,9 +47,9 @@ PROFIEL_TEGELS = [
     {"titel": "Urenexport", "icoon": "export", "url_naam": "urenexport", "rollen": ["eigenaar"]},
     # Niet in de balk: je mensen beheer je af en toe, niet dagelijks.
     {"titel": "Medewerkers", "icoon": "medewerkers", "url_naam": "medewerkers", "rollen": ["eigenaar"]},
-    # TIJDELIJK — zolang er geen apart beheeraccount is, komt de eigenaar hier
-    # ook in. Zie de opmerking bij Medewerker.save().
-    {"titel": "Beheer", "icoon": "beheer", "url": "/beheer/", "rollen": ["eigenaar"]},
+    # Geen tegel voor /beheer/ (sinds 29-09-2026): het Django-beheerscherm is
+    # voor HandigerAI, niet voor Maarten. Het adres werkt nog wel; zie de
+    # opmerking bij Medewerker.save().
 ]
 
 # Het weekoverzicht (url_naam "planbord") is op 17-09-2026 op verzoek van Thijmen
