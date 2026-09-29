@@ -1,16 +1,23 @@
 {% extends "basis.html" %}
+{% load static %}
 {% block titel %}Urenexport{% endblock %}
 {% block kop %}Urenexport{% endblock %}
 {% block inhoud %}
   <form method="get">
-    <label for="id_maand">Maand</label>
-    <select id="id_maand" name="maand" onchange="this.form.submit()">
-      {% for optie in maandopties %}
-        <option value="{{ optie|date:'Y-m' }}" {% if optie|date:'Y-m' == gekozen_maand|date:'Y-m' %}selected{% endif %}>
-          {{ optie|date:"F Y"|capfirst }}
-        </option>
+    <label id="periode-label">Periode</label>
+    {% comment %} Zonder javascript twee gewone datumvelden; periodekalender.js
+       verbergt ze en zet er een kalender voor in de plaats die dezelfde
+       velden invult. {% endcomment %}
+    <div class="periode-velden" data-periodekalender aria-labelledby="periode-label">
+      <input type="date" name="van" value="{{ van|date:'Y-m-d' }}" aria-label="Van" required>
+      <input type="date" name="tot" value="{{ tot|date:'Y-m-d' }}" aria-label="Tot en met" required>
+    </div>
+    <div class="periode-snelkeuzes">
+      {% for titel, begin, eind in snelkeuzes %}
+        <a class="pil{% if begin == van and eind == tot %} actief{% endif %}"
+           href="?van={{ begin|date:'Y-m-d' }}&tot={{ eind|date:'Y-m-d' }}{% if medewerker_pk %}&medewerker={{ medewerker_pk }}{% endif %}">{{ titel }}</a>
       {% endfor %}
-    </select>
+    </div>
 
     <label for="id_medewerker">Medewerker</label>
     <select id="id_medewerker" name="medewerker" onchange="this.form.submit()">
@@ -25,7 +32,15 @@
     <noscript><p style="margin-top:1rem"><button type="submit" class="knop-stil">Bekijken</button></p></noscript>
   </form>
 
-  <p class="sectiekop" style="margin-top:1.6rem">Uren in {{ gekozen_maand|date:"F Y" }}</p>
+  <p class="sectiekop" style="margin-top:1.6rem">
+    {% if hele_maand %}
+      Uren in {{ van|date:"F Y" }}
+    {% elif van == tot %}
+      Uren op {{ van|date:"j F Y" }}
+    {% else %}
+      Uren van {{ van|date:"j F" }}{% if van.year != tot.year %} {{ van|date:"Y" }}{% endif %} t/m {{ tot|date:"j F Y" }}
+    {% endif %}
+  </p>
   {% if totalen %}
     <ul class="klussenlijst">
       {% for regel in totalen %}
@@ -41,8 +56,9 @@
 
   <p style="margin-top:1.4rem">
     <a class="knop"
-       href="?maand={{ gekozen_maand|date:'Y-m' }}{% if medewerker_pk %}&medewerker={{ medewerker_pk }}{% endif %}&download=1">
+       href="?van={{ van|date:'Y-m-d' }}&tot={{ tot|date:'Y-m-d' }}{% if medewerker_pk %}&medewerker={{ medewerker_pk }}{% endif %}&download=1">
       Downloaden als Excel
     </a>
   </p>
+  <script src="{% static 'js/periodekalender.js' %}"></script>
 {% endblock %}

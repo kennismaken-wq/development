@@ -574,35 +574,48 @@ def _aanwezigheid_opslaan(request, dag, medewerkers):
         )
 
 
-def _maandopties(vandaag, aantal=14):
-    """De laatste veertien kalendermaanden, nieuwste eerst — ruim genoeg om
-    terug te kunnen tot de start van de app zonder een aparte jaarkeuze."""
-    opties = []
-    jaar, maand = vandaag.year, vandaag.month
-    for _ in range(aantal):
-        opties.append(date(jaar, maand, 1))
-        maand -= 1
-        if maand == 0:
-            maand, jaar = 12, jaar - 1
-    return opties
-
-
-def _gekozen_maand(request, vandaag):
-    gevraagd = request.GET.get("maand", "")
+def _datum_uit(waarde):
     try:
-        jaar, maand = (int(deel) for deel in gevraagd.split("-", 1))
-        return date(jaar, maand, 1)
+        return date.fromisoformat(waarde)
     except (TypeError, ValueError):
-        return vandaag.replace(day=1)
+        return None
+
+
+def _gekozen_periode(request, vandaag):
+    """Begin- en einddatum (beide inclusief) uit ?van= en ?tot=.
+
+    Zonder geldige periode valt het terug op ?maand=JJJJ-MM — de oude
+    maandkiezer, zodat bewaarde links blijven werken — en anders op de
+    lopende kalendermaand. Een omgedraaide periode wordt rechtgezet in plaats
+    van een lege export op te leveren."""
+    van, tot = _datum_uit(request.GET.get("van")), _datum_uit(request.GET.get("tot"))
+    if van and tot:
+        return (van, tot) if van <= tot else (tot, van)
+
+    try:
+        jaar, maand = (int(deel) for deel in request.GET.get("maand", "").split("-", 1))
+        eerste = date(jaar, maand, 1)
+    except (TypeError, ValueError):
+        eerste = vandaag.replace(day=1)
+    return eerste, eerste.replace(day=calendar.monthrange(eerste.year, eerste.month)[1])
+
+
+def _is_hele_maand(van, tot):
+    return (
+        van.day == 1
+        and (van.year, van.month) == (tot.year, tot.month)
+        and tot.day == calendar.monthrange(tot.year, tot.month)[1]
+    )
 
 
 @login_required
 def urenexport(request):
-    """Exportscherm voor de boekhouder: uren van een kalendermaand als Excel.
+    """Exportscherm voor de boekhouder: uren van een gekozen periode als Excel.
 
-    Periode is de kalendermaand-fallback uit docs/VRAGEN-MAARTEN.md; Maarten
-    heeft op 15-09-2026 wel al bevestigd dat het bestand Excel moet zijn, geen
-    CSV, zodat de boekhouding er verder in kan werken.
+    De periode kies je met begin- en einddatum in een kalender
+    (static/js/periodekalender.js); standaard is dat de lopende
+    kalendermaand. Maarten heeft op 15-09-2026 bevestigd dat het bestand
+    Excel moet zijn, geen CSV, zodat de boekhouding er verder in kan werken.
 
     Alleen de eigenaar mag dit openen: de boekhouder krijgt geen account in de
     app, hij krijgt het gedownloade bestand toegestuurd (SPEC §2, punt 6).
@@ -611,13 +624,12 @@ def urenexport(request):
         raise Http404
 
     vandaag = timezone.localdate()
-    gekozen_maand = _gekozen_maand(request, vandaag)
-    laatste_dag = calendar.monthrange(gekozen_maand.year, gekozen_maand.month)[1]
-    eind_maand = gekozen_maand.replace(day=laatste_dag)
+    van, tot = _gekozen_periode(request, vandaag)
+    hele_maand = _is_hele_maand(van, tot)
 
     medewerker_pk = request.GET.get("medewerker", "")
     blokken = (
-        Uurblok.objects.filter(datum__range=(gekozen_maand, eind_maand))
+        Uurblok.objects.filter(datum__range=(van, tot))
         .select_related("medewerker", "klus")
         .order_by(
             "medewerker__first_name", "medewerker__last_name", "medewerker__username", "datum", "begintijd"
@@ -628,12 +640,17 @@ def urenexport(request):
     blokken = list(blokken)
 
     if request.GET.get("download") == "1":
-        boek = export.werkboek_bouwen(blokken, f"Uren {gekozen_maand:%m-%Y}")
+        if hele_maand:
+            bladtitel, bestandsnaam = f"Uren {van:%m-%Y}", f"uren-{van:%Y-%m}"
+        else:
+            bladtitel = f"Uren {van:%d-%m-%Y} - {tot:%d-%m-%Y}"
+            bestandsnaam = f"uren-{van:%Y-%m-%d}-tot-{tot:%Y-%m-%d}"
+        boek = export.werkboek_bouwen(blokken, bladtitel)
         antwoord = HttpResponse(
             export.werkboek_als_bytes(boek),
             content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         )
-        antwoord["Content-Disposition"] = f'attachment; filename="uren-{gekozen_maand:%Y-%m}.xlsx"'
+        antwoord["Content-Disposition"] = f'attachment; filename="{bestandsnaam}.xlsx"'
         return antwoord
 
     totalen = []
@@ -644,13 +661,22 @@ def urenexport(request):
     for regel in totalen:
         regel["totaal"] = kalender.als_uren(regel["minuten"])
 
+    vorige_maand_eind = vandaag.replace(day=1) - timedelta(days=1)
     return render(
         request,
         "uren/export.html",
         {
-            "gekozen_maand": gekozen_maand,
+            "van": van,
+            "tot": tot,
+            "hele_maand": hele_maand,
             "medewerker_pk": medewerker_pk,
-            "maandopties": _maandopties(vandaag),
+            # Snelkeuzes onder de kalender: de boekhouder vraagt bijna altijd
+            # om een hele maand, meestal de vorige.
+            "snelkeuzes": [
+                ("Deze maand", vandaag.replace(day=1), vandaag.replace(
+                    day=calendar.monthrange(vandaag.year, vandaag.month)[1])),
+                ("Vorige maand", vorige_maand_eind.replace(day=1), vorige_maand_eind),
+            ],
             # Iedereen die uren kán schrijven, niet alleen rol "medewerker":
             # Maarten doet zelf het onderhoud — zes tot acht adressen op een
             # dag — dus zijn uren staan gewoon in het bestand. Zonder hem in

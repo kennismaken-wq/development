@@ -775,6 +775,34 @@ class UrenexportTest(TestCase):
         totalen = {rij["medewerker"].username: rij["totaal"] for rij in gefilterd.context["totalen"]}
         self.assertEqual(totalen, {"maarten": "3"})
 
+    def test_periode_met_begin_en_einddatum(self):
+        """De kalender kiest een vrije periode: alleen uren tussen van en tot
+        (beide inclusief) tellen mee."""
+        self.client.force_login(self.maarten)
+        antwoord = self.client.get("/export/?van=2026-08-04&tot=2026-09-01")
+        totalen = {rij["medewerker"].username: rij["totaal"] for rij in antwoord.context["totalen"]}
+        self.assertEqual(totalen, {"sam": "12"})
+        self.assertFalse(antwoord.context["hele_maand"])
+
+    def test_omgedraaide_periode_wordt_rechtgezet(self):
+        self.client.force_login(self.maarten)
+        antwoord = self.client.get("/export/?van=2026-08-31&tot=2026-08-01")
+        self.assertEqual(antwoord.context["van"], date(2026, 8, 1))
+        self.assertEqual(antwoord.context["tot"], date(2026, 8, 31))
+        self.assertTrue(antwoord.context["hele_maand"])
+
+    def test_bestandsnaam_noemt_een_vrije_periode(self):
+        self.client.force_login(self.maarten)
+        antwoord = self.client.get("/export/?van=2026-08-03&tot=2026-08-04&download=1")
+        self.assertIn("uren-2026-08-03-tot-2026-08-04.xlsx", antwoord["Content-Disposition"])
+
+    def test_zonder_periode_de_lopende_maand(self):
+        self.client.force_login(self.maarten)
+        with patch("uren.views.timezone.localdate", return_value=date(2026, 8, 17)):
+            antwoord = self.client.get("/export/?van=onzin")
+        self.assertEqual(antwoord.context["van"], date(2026, 8, 1))
+        self.assertEqual(antwoord.context["tot"], date(2026, 8, 31))
+
 
 class DecimaleUrenTest(TestCase):
     """Uren als getal, zoals ze op het planbord naast een klusnaam staan."""

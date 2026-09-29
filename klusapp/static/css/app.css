@@ -704,6 +704,46 @@ input[type=time]::-webkit-calendar-picker-indicator{ filter:invert(1); opacity:.
   background:rgba(var(--accent-rgb),0.32); border-color:rgba(var(--accent-rgb),0.55); color:var(--hi);
 }
 
+/* ══════════ PERIODEKALENDER (urenexport) ══════════
+   Begin- en einddatum kiezen in één maandraster; zie
+   static/js/periodekalender.js. De periode is een doorlopende lime band,
+   begin en einde zijn volle bolletjes erop. */
+.periodekalender{
+  padding:.9rem .9rem .6rem; border-radius:18px;
+  background:rgba(255,255,255,0.07); border:1px solid rgba(255,255,255,0.16);
+}
+.pk-kop{ display:flex; align-items:center; justify-content:space-between; gap:.6rem; margin-bottom:.5rem; }
+.pk-titel{
+  font-family:'Fraunces',serif; font-style:italic; font-weight:600; font-size:1.05rem;
+}
+.pk-titel::first-letter{ text-transform:uppercase; }
+.pk-raster{ width:100%; border-collapse:separate; border-spacing:0 3px; table-layout:fixed; }
+.pk-raster th{
+  font-size:10.5px; font-weight:600; letter-spacing:.07em; text-transform:uppercase;
+  color:rgba(255,255,255,0.45); padding:.2rem 0 .4rem;
+}
+.pk-raster td{ padding:0; text-align:center; }
+.pk-raster button{
+  width:40px; height:40px; max-width:100%; border-radius:50%; border:1px solid transparent;
+  background:none; color:#fff; font-family:'Inter',sans-serif; font-size:14px;
+  cursor:pointer; font-variant-numeric:tabular-nums;
+}
+@media (hover:hover){ .pk-raster button:hover{ background:rgba(255,255,255,0.14); } }
+.pk-raster button:focus-visible{ outline:2px solid var(--accent); outline-offset:1px; }
+.pk-raster td.buiten button{ color:rgba(255,255,255,0.3); }
+.pk-raster button.vandaag{ color:var(--hi); font-weight:700; border-color:rgba(var(--accent-rgb),0.5); }
+.pk-raster td.in-periode{ background:rgba(var(--accent-rgb),0.2); }
+/* band rond afmaken aan begin en eind, en aan de randen van elke week */
+.pk-raster td.in-periode:first-child, .pk-raster td.begin{ border-top-left-radius:999px; border-bottom-left-radius:999px; }
+.pk-raster td.in-periode:last-child, .pk-raster td.eind{ border-top-right-radius:999px; border-bottom-right-radius:999px; }
+.pk-raster td.begin button, .pk-raster td.eind button{
+  background:linear-gradient(135deg, rgba(var(--accent-rgb),0.95), rgba(var(--accent-rgb),0.72));
+  color:var(--ink); font-weight:700;
+}
+.pk-hint{ margin:.3rem 0 0; min-height:1.2em; font-size:12.5px; color:var(--hi); text-align:center; }
+.periode-velden{ display:flex; gap:.6rem; }
+.periode-snelkeuzes{ display:flex; gap:.4rem; flex-wrap:wrap; margin-top:.6rem; }
+
 .sectiekop{
   font-family:'Fraunces',serif; font-style:italic; font-weight:600;
   font-size:1.15rem; margin:1.8rem 0 .8rem;
