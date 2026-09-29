@@ -23,7 +23,12 @@
         {% if tegel.url %}
           <a class="side-icon{% if tegel.url_naam == request.resolver_match.url_name %} actief{% endif %}"
              href="{{ tegel.url }}"{% if tegel.extern %} target="_blank" rel="noopener"{% endif %}>
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">{{ tegel.icoon|pictogram }}</svg>
+            {% if tegel.icoon == "profiel" %}
+              {# Mijn profiel: je eigen avatarrondje in plaats van het poppetje #}
+              {% include "_medewerkerbol.html" with persoon=user klasse="nav-bol" %}
+            {% else %}
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">{{ tegel.icoon|pictogram }}</svg>
+            {% endif %}
             <span class="titel">{{ tegel.titel }}</span>
           </a>
         {% else %}
