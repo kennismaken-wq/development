@@ -19,6 +19,14 @@
                               dat geen veld: die wijzig je niet zelf)
               opslaan_tekst   tekst op de opslaanknop
 {% endcomment %}
+{% comment %} Opslaan en Annuleren ook rechtsboven, zolang je aan het wijzigen
+   bent: je hoeft dan niet eerst helemaal naar beneden. De opslaanknop staat
+   buiten het formulier en hangt eraan via form="gegevensformulier". {% endcomment %}
+<div class="bewerkacties" id="bewerkacties"{% if not bewerken %} hidden{% endif %}>
+  <a class="knop-stil" href="{{ annuleren_url }}">Annuleren</a>
+  <button type="submit" form="gegevensformulier" class="knop knop-klein">{{ opslaan_tekst|default:"Opslaan" }}</button>
+</div>
+
 <div class="profielkop">
   {% comment %} Het penknopje hoort bij het invoerveld verderop in het
      formulier; een label met "for" bedient dat veld ook op afstand. Zo staat
@@ -104,6 +112,7 @@
     var knop = document.getElementById('wijzig-knop');
     var formulier = document.getElementById('gegevensformulier');
     var opslaan = document.getElementById('opslaanrij');
+    var kopacties = document.getElementById('bewerkacties');
     if (!knop || !formulier) return;
 
     function openBewerken() {
@@ -122,6 +131,7 @@
       if (wissel) { wissel.classList.add('aan'); }
       knop.hidden = true;
       opslaan.hidden = false;
+      if (kopacties) { kopacties.hidden = false; }
     }
 
     knop.addEventListener('click', function (gebeurtenis) {

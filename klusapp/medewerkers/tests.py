@@ -884,3 +884,19 @@ class RijbewijzenEnKleurTest(TestCase):
         apps = SimpleNamespace(get_model=lambda *a: SimpleNamespace(objects=SimpleNamespace(all=lambda: mensen)))
         overzetten(apps, None)
         self.assertEqual(opgeslagen, [("piet", ["B"]), ("kees", ["B", "BE", "C"])])
+
+
+class OpslaanRechtsbovenTest(TestCase):
+    """Tijdens het wijzigen staan Opslaan en Annuleren ook rechtsboven."""
+
+    def test_alleen_in_de_bewerkstand_en_aan_het_formulier_gekoppeld(self):
+        sam = Medewerker.objects.create_user("sam", password="x", first_name="Sam")
+        self.client.force_login(sam)
+        html = self.client.get(reverse("mijn_profiel")).content.decode()
+        self.assertIn('id="bewerkacties" hidden', html)
+        html = self.client.get(reverse("mijn_profiel") + "?bewerken=1").content.decode()
+        self.assertNotIn('id="bewerkacties" hidden', html)
+        self.assertIn('<button type="submit" form="gegevensformulier"', html)
+        # en de knop rechtsboven slaat echt op
+        antwoord = self.client.post(reverse("mijn_profiel"), {"first_name": "Samuel", "kleur": "#5B8FA8"})
+        self.assertRedirects(antwoord, reverse("mijn_profiel"))
