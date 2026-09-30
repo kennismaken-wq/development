@@ -238,6 +238,7 @@ zet 'm in de `urls.py` van je eigen app, en haal de vlag `in_aanbouw` uit de teg
 | `/medewerkers/<pk>/` | `medewerker_bewerken` | werkt als Mijn profiel (`_gegevens.html`) | ✅ af |
 | `/medewerkers/<pk>/kaart/` | `medewerker_kaart` | persoonskaart als venster op het weekoverzicht | ✅ af |
 | `/medewerkers/<pk>/dienst/` | `medewerker_dienst` | uit/in dienst zetten | ✅ af |
+| `/wachtwoord-vergeten/` (+ `/verstuurd/`, `/wachtwoord-herstellen/<uid>/<token>/`, `/wachtwoord-herstellen/klaar/`) | `wachtwoord_vergeten` e.a. | reset via mail naar het adres op het profiel; Django's eigen flow, link werkt 24 uur | ✅ af (30-09) |
 | `/mijn-profiel/` | `mijn_profiel` | eigen gegevens + wachtwoord; een wachtwoord wijzigt ieder alleen zelf — het wachtwoordscherm voor de eigenaar is op 28-09-2026 weggehaald | ✅ af |
 
 ## 3. Werkafspraken

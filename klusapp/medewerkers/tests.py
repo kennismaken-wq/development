@@ -900,3 +900,79 @@ class OpslaanRechtsbovenTest(TestCase):
         # en de knop rechtsboven slaat echt op
         antwoord = self.client.post(reverse("mijn_profiel"), {"first_name": "Samuel", "kleur": "#5B8FA8"})
         self.assertRedirects(antwoord, reverse("mijn_profiel"))
+
+
+class WachtwoordVergetenTest(TestCase):
+    """"Wachtwoord vergeten" op de inlogpagina (config/urls.py)."""
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.sam = Medewerker.objects.create_user(
+            "sam", password="oudwachtwoord26", first_name="Sam", email="sam@voorbeeld.nl"
+        )
+
+    def aanvragen(self, adres):
+        return self.client.post(reverse("wachtwoord_vergeten"), {"email": adres})
+
+    def link_uit_mail(self):
+        from django.core import mail
+        return re.search(r"https?://[^/\s]+(/wachtwoord-herstellen/\S+/)", mail.outbox[-1].body).group(1)
+
+    def test_inlogpagina_heeft_de_link(self):
+        html = self.client.get(reverse("inloggen")).content.decode()
+        self.assertIn(f'href="{reverse("wachtwoord_vergeten")}"', html)
+
+    def test_mail_met_link_en_gebruikersnaam_naar_het_profieladres(self):
+        from django.core import mail
+        antwoord = self.aanvragen("sam@voorbeeld.nl")
+        self.assertRedirects(antwoord, reverse("wachtwoord_verstuurd"))
+        self.assertEqual(len(mail.outbox), 1)
+        self.assertEqual(mail.outbox[0].to, ["sam@voorbeeld.nl"])
+        self.assertIn("Je gebruikersnaam is: sam", mail.outbox[0].body)
+        self.assertIn("/wachtwoord-herstellen/", mail.outbox[0].body)
+        self.assertNotIn("\n", mail.outbox[0].subject)
+
+    def test_nieuw_wachtwoord_zetten_en_inloggen(self):
+        self.aanvragen("sam@voorbeeld.nl")
+        link = self.link_uit_mail()
+        # Django stuurt eerst door naar een adres zonder token in de url
+        antwoord = self.client.get(link, follow=True)
+        self.assertContains(antwoord, "Nieuw wachtwoord")
+        formulieradres = antwoord.redirect_chain[-1][0]
+        antwoord = self.client.post(
+            formulieradres, {"new_password1": "zomertuin2026", "new_password2": "zomertuin2026"}
+        )
+        self.assertRedirects(antwoord, reverse("wachtwoord_klaar"))
+        self.assertTrue(self.client.login(username="sam", password="zomertuin2026"))
+        self.assertFalse(self.client.login(username="sam", password="oudwachtwoord26"))
+
+    def test_link_werkt_maar_een_keer(self):
+        self.aanvragen("sam@voorbeeld.nl")
+        link = self.link_uit_mail()
+        formulieradres = self.client.get(link, follow=True).redirect_chain[-1][0]
+        self.client.post(formulieradres, {"new_password1": "zomertuin2026", "new_password2": "zomertuin2026"})
+        self.client.logout()
+        antwoord = self.client.get(link, follow=True)
+        self.assertContains(antwoord, "Deze link werkt niet meer")
+
+    def test_te_zwak_wachtwoord_wordt_geweigerd(self):
+        self.aanvragen("sam@voorbeeld.nl")
+        formulieradres = self.client.get(self.link_uit_mail(), follow=True).redirect_chain[-1][0]
+        antwoord = self.client.post(formulieradres, {"new_password1": "1234", "new_password2": "1234"})
+        self.assertEqual(antwoord.status_code, 200)
+        self.sam.refresh_from_db()
+        self.assertTrue(self.sam.check_password("oudwachtwoord26"))
+        self.assertContains(antwoord, "Minstens 8 tekens")
+
+    def test_onbekend_adres_zelfde_pagina_geen_mail(self):
+        from django.core import mail
+        antwoord = self.aanvragen("niemand@voorbeeld.nl")
+        self.assertRedirects(antwoord, reverse("wachtwoord_verstuurd"))
+        self.assertEqual(len(mail.outbox), 0)
+
+    def test_uit_dienst_krijgt_geen_mail(self):
+        from django.core import mail
+        self.sam.is_active = False
+        self.sam.save()
+        self.aanvragen("sam@voorbeeld.nl")
+        self.assertEqual(len(mail.outbox), 0)

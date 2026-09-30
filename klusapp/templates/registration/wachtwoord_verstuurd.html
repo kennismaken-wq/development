@@ -1,0 +1,15 @@
+{% extends "basis.html" %}
+{% block titel %}Kijk in je mail{% endblock %}
+{% block kaartklasse %}inloggen{% endblock %}
+{% block kop %}Kijk in je mail{% endblock %}
+{% block inhoud %}
+  {% comment %} Altijd dezelfde tekst, ook bij een onbekend adres: anders kan
+     iemand uitproberen welke adressen bij ons bekend zijn. {% endcomment %}
+  {% if mail_niet_ingesteld %}
+    <p class="fout">Mail versturen is op deze server nog niet ingesteld, dus er is niets verstuurd. Vraag Maarten om je te helpen.</p>
+  {% else %}
+    <p class="uitleg">Als dit e-mailadres bij ons bekend is, staat er nu een mail met een link om een nieuw wachtwoord te kiezen. De link werkt 24 uur.</p>
+    <p class="uitleg">Niets gekregen? Kijk ook even bij je ongewenste mail.</p>
+  {% endif %}
+  <p class="inloglink"><a href="{% url 'inloggen' %}">‹ Terug naar inloggen</a></p>
+{% endblock %}

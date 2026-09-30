@@ -1,0 +1,8 @@
+{% extends "basis.html" %}
+{% block titel %}Wachtwoord gewijzigd{% endblock %}
+{% block kaartklasse %}inloggen{% endblock %}
+{% block kop %}Gelukt{% endblock %}
+{% block inhoud %}
+  <p class="uitleg">Je wachtwoord is gewijzigd. Log in met je nieuwe wachtwoord.</p>
+  <p style="margin-top:1.2rem"><a class="knop" href="{% url 'inloggen' %}">Inloggen</a></p>
+{% endblock %}

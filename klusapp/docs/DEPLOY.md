@@ -72,6 +72,12 @@ EMAIL_HOST_USER=<Maartens mailadres>
 EMAIL_HOST_PASSWORD=<app-wachtwoord>
 ```
 
+Dezelfde `EMAIL_*`-regels versturen ook de "wachtwoord vergeten"-mails. Zonder
+`EMAIL_HOST` gaat er niets de deur uit, en zeggen de reset-schermen dat eerlijk
+("mail versturen is op deze server nog niet ingesteld"). Afzender is
+`EMAIL_HOST_USER`; afspraak 30-09: een eigen adres van De Groene M, bv.
+`klusapp@degroenem.nl`, niet Maartens persoonlijke mailbox.
+
 Zonder `DATABASE_URL` valt `settings.py` terug op SQLite. Dat is prima lokaal,
 maar niet op de server: SQLite vergrendelt bij schrijven en zes man die 's avonds
 tegelijk hun uren invullen lopen dan tegen "database is locked" aan.

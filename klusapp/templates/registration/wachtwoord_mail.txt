@@ -1,0 +1,11 @@
+{% autoescape off %}Hoi {{ user.first_name|default:user.username }},
+
+Je hebt gevraagd om een nieuw wachtwoord voor de klusapp van De Groene M. Klik op deze link om er een te kiezen:
+
+{{ protocol }}://{{ domain }}{% url 'wachtwoord_herstellen' uidb64=uid token=token %}
+
+De link werkt 24 uur en maar één keer.
+Je gebruikersnaam is: {{ user.get_username }}
+
+Heb je dit niet aangevraagd? Dan kun je deze mail negeren; je wachtwoord blijft dan gewoon hetzelfde.
+{% endautoescape %}

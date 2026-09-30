@@ -168,6 +168,11 @@ EMAIL_BACKEND = (
 DEFAULT_FROM_EMAIL = EMAIL_HOST_USER or "klusapp@localhost"
 URENBACKUP_ADRES = os.environ.get("URENBACKUP_ADRES", EMAIL_HOST_USER)
 
+# De link in een "wachtwoord vergeten"-mail werkt een dag, niet de standaard
+# drie: lang genoeg om hem 's avonds pas te openen, kort genoeg dat een oude
+# mail in een inbox geen open deur blijft.
+PASSWORD_RESET_TIMEOUT = 60 * 60 * 24
+
 X_FRAME_OPTIONS = "DENY"
 SECURE_CONTENT_TYPE_NOSNIFF = True
 SECURE_REFERRER_POLICY = "same-origin"

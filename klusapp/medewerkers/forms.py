@@ -1,4 +1,5 @@
 from django import forms
+from django.contrib.auth.forms import PasswordResetForm, SetPasswordForm
 from django.contrib.auth.password_validation import validate_password
 from django.core.files.uploadedfile import UploadedFile
 from django.utils.safestring import mark_safe
@@ -268,3 +269,28 @@ class EigenWachtwoordForm(forms.Form):
     def opslaan(self):
         self.gebruiker.set_password(self.cleaned_data["nieuw"])
         self.gebruiker.save()
+
+
+class WachtwoordVergetenForm(PasswordResetForm):
+    """"Wachtwoord vergeten" op de inlogpagina: je e-mailadres, en er gaat een
+    link naar het adres op je profiel. Wat er gebeurt en wat niet (geen mail
+    naar wie uit dienst is, dezelfde melding bij een onbekend adres) doet
+    Django's eigen formulier; hier alleen het Nederlandse label."""
+
+    email = forms.EmailField(
+        label="E-mailadres",
+        max_length=254,
+        widget=forms.EmailInput(attrs={"autocomplete": "email", "inputmode": "email", "autofocus": True}),
+    )
+
+
+class NieuwWachtwoordForm(SetPasswordForm):
+    """Het nieuwe wachtwoord kiezen via de link uit de mail, met dezelfde
+    eisen erbij als op Mijn profiel."""
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["new_password1"].label = "Nieuw wachtwoord"
+        self.fields["new_password1"].help_text = WACHTWOORD_EISEN
+        self.fields["new_password2"].label = "Nog een keer"
+        self.fields["new_password2"].help_text = ""

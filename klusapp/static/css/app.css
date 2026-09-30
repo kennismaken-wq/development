@@ -155,6 +155,11 @@ a, button, .knop, .knop-stil, .pil, .side-icon, .klusregel, .profielregel,
 .kaart.inloggen{ max-width:420px; }
 .kaart.inloggen .kop{ flex-direction:column; align-items:center; text-align:center; gap:.9rem; }
 .kaart.inloggen .merk{ width:96px; margin-top:.4rem; }
+/* "Wachtwoord vergeten?" en "Terug naar inloggen": rustige link onder het
+   formulier, geen tweede knop naast de hoofdactie */
+.inloglink{ margin:1.2rem 0 0; text-align:center; font-size:13px; }
+.inloglink a{ color:rgba(255,255,255,0.65); }
+@media (hover:hover){ .inloglink a:hover{ color:#fff; } }
 /* Zonder kaartkader (zie "TELEFOON: DE APP IS HET SCHERM") plakt een
    inlogscherm bovenaan met een half scherm leegte eronder. Verticaal
    centreren geeft hetzelfde beeld als het inlogscherm van een echte app. */
