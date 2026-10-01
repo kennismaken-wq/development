@@ -2256,7 +2256,35 @@ label:has(> input[type=checkbox]), input[type=checkbox] + label{ cursor:pointer;
   -webkit-tap-highlight-color:transparent; touch-action:manipulation;
 }
 .wp-weken{ display:flex; gap:.4rem; flex-wrap:wrap; }
-.wp-weken .pil{ padding:.4rem .85rem; }
+.wp-weken .pil{ padding:.4rem .85rem; cursor:pointer; }
+/* het bord rekt niet op tot de kaart: elke dag is precies --dag breed */
+.wp-bord{ min-width:0; width:max-content; }
+.wp-kop .nr{ display:none; }
+/* De hoek boven de namen dekt de kopregel af als je opzij scrolt; anders
+   schuiven de dagen er zichtbaar onderdoor. Zelfde ondergrond als .bord-naam. */
+.wp-bord .bord-hoek{
+  background:
+    linear-gradient(150deg, rgba(255,255,255,0.125), rgba(255,255,255,0.05)),
+    linear-gradient(160deg, #20211C, #282C21);
+}
+
+/* Zoom "Maand": een dag is 26px. Daar past alleen kleur in: tekst wordt
+   een rondje, de kop alleen het dagnummer. De tekst staat in de tooltip. */
+.wp-zoom-maand .wp-kop .dag, .wp-zoom-maand .wp-kop .datum, .wp-zoom-maand .wp-telling .van{ display:none; }
+.wp-zoom-maand .wp-kop .nr{ display:block; font-size:10px; font-weight:600; }
+.wp-zoom-maand .wp-kop .feest{ width:6px; height:6px; padding:0; margin:.2rem auto 0; font-size:0; }
+.wp-zoom-maand .wp-kop{ padding-left:0; padding-right:0; overflow:visible; }
+.wp-zoom-maand .vandaag-label{ font-size:8px; padding:0 .25rem; position:relative; z-index:5; }
+.wp-zoom-maand .wp-telling .n{ font-size:10.5px; }
+.wp-zoom-maand .wp-cel, .wp-zoom-maand .wp-kc{ padding:.25rem 2px; }
+.wp-zoom-maand .wp-cel .tekst, .wp-zoom-maand .wp-kc .tekst, .wp-zoom-maand .wp-mensen,
+.wp-zoom-maand .wp-kluslijn .naam, .wp-zoom-maand .wp-notitie .tekst{ display:none; }
+.wp-zoom-maand .wp-cel:has(.wp-kluslijn){ display:flex; flex-wrap:wrap; align-content:flex-start; gap:2px; }
+.wp-zoom-maand .wp-notitie:has(.tekst)::before{
+  content:""; display:block; width:5px; height:5px; margin:auto; border-radius:999px; background:currentColor;
+}
+/* Zoom "Dag": breed genoeg om een hele opmerking of locatie te lezen */
+.wp-zoom-dag .wp-cel .tekst, .wp-zoom-dag .wp-kc .tekst{ white-space:normal; }
 
 /* Vandaag: een groene verticale lijn door de hele kolom, van de kop tot de
    onderste medewerker, met "Vandaag" boven de dag. Na .weekstart in de

@@ -5,19 +5,20 @@
 {% block inhoud %}
   <div class="navbalk">
     <div class="navlinks">
-      <a class="knop-stil" href="?dag={{ vorige|date:'Y-m-d' }}&weergave={{ weergave }}" aria-label="Eerder">‹</a>
-      <a class="knop-stil" href="?dag={{ volgende|date:'Y-m-d' }}&weergave={{ weergave }}" aria-label="Later">›</a>
-      {% comment %} Doorlopend: altijd zichtbaar, want je scrolt in hetzelfde
-         jaar ook weg van vandaag. Staat vandaag op het bord, dan scrolt
+      <a class="knop-stil" href="?dag={{ vorige|date:'Y-m-d' }}" aria-label="Vorig jaar">‹</a>
+      <a class="knop-stil" href="?dag={{ volgende|date:'Y-m-d' }}" aria-label="Volgend jaar">›</a>
+      {% comment %} Altijd zichtbaar, want je scrolt in hetzelfde jaar ook
+         weg van vandaag. Staat vandaag op het bord, dan scrolt
          werkplanning.js ernaartoe in plaats van de pagina te herladen. {% endcomment %}
-      {% if weergave == "doorlopend" or not is_huidige_periode %}
-        <a class="knop-stil" href="?weergave={{ weergave }}" data-naar-vandaag>Vandaag</a>
-      {% endif %}
-      <span class="periodetitel">{% if weergave == "doorlopend" %}{{ eerste|date:"Y" }}{% else %}{{ eerste|date:"j M" }} – {{ laatste|date:"j M Y" }}{% endif %}</span>
+      <a class="knop-stil" href="{% url 'aanwezigheid' %}" data-naar-vandaag>Vandaag</a>
+      <span class="periodetitel">{{ eerste|date:"Y" }}</span>
     </div>
-    <div class="wp-weken" role="group" aria-label="Weergave">
-      <a class="pil{% if weergave == 'week' %} actief{% endif %}" href="?dag={{ maandag|date:'Y-m-d' }}&weergave=week">Deze week</a>
-      <a class="pil{% if weergave == 'doorlopend' %} actief{% endif %}" href="?dag={{ maandag|date:'Y-m-d' }}&weergave=doorlopend">Doorlopend</a>
+    {% comment %} Hoe breed een dag is; het bord blijft het hele jaar.
+       werkplanning.js wisselt zonder te herladen en onthoudt de keuze. {% endcomment %}
+    <div class="wp-weken" role="group" aria-label="Zoom">
+      <button type="button" class="pil" data-zoom="dag">Dag</button>
+      <button type="button" class="pil actief" data-zoom="week">Week</button>
+      <button type="button" class="pil" data-zoom="maand">Maand</button>
     </div>
   </div>
 
@@ -31,8 +32,8 @@
      op een naam kiest al zijn dagen, een klik op een dag iedereen op die dag.
   {% endcomment %}
   <div class="bord-scroll wp-scroll">
-    <div class="bord wp-bord wp-{{ weergave }}" id="wp-bord" data-startkolom="{{ startkolom }}"
-         style="grid-template-columns:{{ bordkolommen }}; min-width:{{ bordbreedte }}px">
+    <div class="bord wp-bord wp-zoom-week" id="wp-bord" data-startkolom="{{ startkolom }}"
+         style="grid-template-columns:{{ bordkolommen }}">
       <div class="bord-hoek"></div>
       {% for kopdag in kopdagen %}
         <button type="button" class="bord-kop wp-kop{% if kopdag.is_vandaag %} vandaag{% endif %}{% if kopdag.is_weekstart %} weekstart{% endif %}{% if kopdag.feestdag_vrij %} feestdag{% endif %}"
@@ -40,6 +41,7 @@
           {% if kopdag.is_vandaag %}<span class="vandaag-label">Vandaag</span>{% endif %}
           <span class="dag">{{ kopdag.datum|date:"D" }}</span>
           <span class="datum">{{ kopdag.datum|date:"j M" }}</span>
+          <span class="nr">{{ kopdag.datum|date:"j" }}</span>
           {% if kopdag.feestdag %}<span class="feest" title="{{ kopdag.feestdag }}{% if not kopdag.feestdag_vrij %} (geen vrije dag){% endif %}">{{ kopdag.feestdag }}</span>{% endif %}
         </button>
       {% endfor %}
@@ -162,7 +164,7 @@
      velden "cel" en de titel; de rest is een gewoon formulier, en na opslaan
      komt dezelfde periode terug. {% endcomment %}
   <dialog class="uren-invoegen wp-dialoog" id="wp-cellen" aria-labelledby="wp-cellen-titel">
-    <form class="uurblokformulier glas" method="post" action="?weergave={{ weergave }}{% if extra %}&extra={{ extra }}{% endif %}">
+    <form class="uurblokformulier glas" method="post" action="{% if extra %}?extra={{ extra }}{% endif %}">
       <div class="sheet-hendel" aria-hidden="true"></div>
       <div class="sheet-kop">
         <button type="button" class="dialog-sluiten" data-sluit aria-label="Sluiten">×</button>
@@ -223,7 +225,7 @@
   </dialog>
 
   <dialog class="uren-invoegen wp-dialoog" id="wp-notitie" aria-labelledby="wp-notitie-titel">
-    <form class="uurblokformulier glas" method="post" action="?weergave={{ weergave }}{% if extra %}&extra={{ extra }}{% endif %}">
+    <form class="uurblokformulier glas" method="post" action="{% if extra %}?extra={{ extra }}{% endif %}">
       <div class="sheet-hendel" aria-hidden="true"></div>
       <div class="sheet-kop">
         <button type="button" class="dialog-sluiten" data-sluit aria-label="Sluiten">×</button>
@@ -241,7 +243,7 @@
   </dialog>
 
   <dialog class="uren-invoegen wp-dialoog" id="wp-klusdagen" aria-labelledby="wp-klusdagen-titel">
-    <form class="uurblokformulier glas" method="post" action="?weergave={{ weergave }}{% if extra %}&extra={{ extra }}{% endif %}">
+    <form class="uurblokformulier glas" method="post" action="{% if extra %}?extra={{ extra }}{% endif %}">
       <div class="sheet-hendel" aria-hidden="true"></div>
       <div class="sheet-kop">
         <button type="button" class="dialog-sluiten" data-sluit aria-label="Sluiten">×</button>

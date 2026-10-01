@@ -20,6 +20,7 @@
   const notitieVenster = document.getElementById("wp-notitie");
   if (!bord || !venster) return;
 
+  const scroller = bord.closest(".wp-scroll");
   const cellen = Array.from(bord.querySelectorAll("button.wp-cel"));
   const kluscellen = Array.from(bord.querySelectorAll("button.wp-kc"));
   const klusVenster = document.getElementById("wp-klusdagen");
@@ -378,9 +379,34 @@
     });
   }
 
+  // Zoom: Dag, Week of Maand bepaalt hoe breed een dag is. Het bord blijft
+  // het hele jaar; alleen --dag verandert, dus geen herladen. De dag die
+  // links in beeld stond, blijft daar staan. Onthouden per browser.
+  const ZOOM = { dag: 240, week: 112, maand: 26 };
+  const zoomSleutel = "werkplanning-zoom";
+  let zoom = "week";
+  function zetZoom(nieuw) {
+    if (!ZOOM[nieuw]) return;
+    const links = Math.round(scroller.scrollLeft / ZOOM[zoom]);
+    zoom = nieuw;
+    bord.style.setProperty("--dag", ZOOM[zoom] + "px");
+    Object.keys(ZOOM).forEach(function (z) {
+      bord.classList.toggle("wp-zoom-" + z, z === zoom);
+    });
+    document.querySelectorAll("[data-zoom]").forEach(function (knop) {
+      knop.classList.toggle("actief", knop.dataset.zoom === zoom);
+      knop.setAttribute("aria-pressed", knop.dataset.zoom === zoom ? "true" : "false");
+    });
+    scroller.scrollLeft = links * ZOOM[zoom];
+    try { localStorage.setItem(zoomSleutel, zoom); } catch (fout) { /* dan maar niet onthouden */ }
+  }
+  document.querySelectorAll("[data-zoom]").forEach(function (knop) {
+    knop.addEventListener("click", function () { zetZoom(knop.dataset.zoom); });
+  });
+  try { zetZoom(localStorage.getItem(zoomSleutel) || "week"); } catch (fout) { zetZoom("week"); }
+
   // Na opslaan laadt de pagina opnieuw. Onthoud waar je stond, anders
   // springt het bord na elke wijziging terug naar boven en naar links.
-  const scroller = bord.closest(".wp-scroll");
   const sleutel = "werkplanning-plek";
   document.querySelectorAll(".wp-dialoog form").forEach(function (f) {
     f.addEventListener("submit", function () {
@@ -403,7 +429,5 @@
 
   // Doorlopend is het hele jaar; open op vandaag (of de gekozen dag), met
   // twee dagen ervoor nog in beeld zodat je ziet waar je vandaan komt.
-  if (bord.classList.contains("wp-doorlopend")) {
-    naarKolom(Number(bord.dataset.startkolom) - 2);
-  }
+  naarKolom(Number(bord.dataset.startkolom) - 2);
 })();

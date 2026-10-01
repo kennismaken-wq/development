@@ -428,8 +428,9 @@ klik door naar het blokdetail uit F1. Zwaarste taak, en het scherm waar Maarten 
 in kijkt.
 
 **F4 · Aanwezigheid.** Was een dagscherm (groen/rood per persoon). Sinds 01-10-2026
-een rooster als vervanger van Maartens Excel "Werkplanning": "Doorlopend" (standaard) is het hele jaar,
-1 jan t/m 31 dec, opent op vandaag (groene lijn); "Deze week" is zeven dagen.
+een rooster als vervanger van Maartens Excel "Werkplanning": altijd het hele jaar, 1 jan t/m
+31 dec, opent op vandaag (groene lijn). Zoom Dag/Week/Maand zet alleen de dagbreedte (CSS-variabele
+--dag, in werkplanning.js), zonder herladen.
 mensen als rijen, ma–zo als kolommen, bovenaan per dag hoeveel man er is.
 Rekenwerk in `uren/bezetting.py`: geen `Aanwezigheid`-rij betekent "volgens rooster"
 (`Medewerker.vaste_werkdagen`, feestdagen vrij); een rij is een afwijking met
@@ -441,8 +442,8 @@ dag heen gaat (`uren.models.Inzet`, los van Aanwezigheid): de cel krijgt de
 kleur en naam van de klus. Afwezig zetten haalt de klussen weg; een klus op een
 vrije dag maakt iemand aanwezig. Onder de mensen staat, zoals in de Excel, een
 klussenblok (`uren.models.Klusdag`): per klus en dag gepland of niet, met een
-notitie (bij Van Ee de locatie), en "2 man" uit het blok erboven. Alleen klussen
-die in de periode iets hebben, plus "Klus toevoegen" (?extra=).
+notitie (bij Van Ee de locatie), en "2 man" uit het blok erboven. Alle lopende
+klussen, met fotowaaier en een minteken om het blok in te klappen.
 
 ## 7. Spoor Thijmen — foto's, export en productie (≈ 15 uur)
 

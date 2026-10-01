@@ -501,13 +501,10 @@ BORD_SMAL = 52
 BORD_WEEK = 72
 
 
-# Twee weergaven. "Deze week": zeven dagen die precies in de vaste
-# kaartbreedte passen (.kaart in app.css, 1040px), met ruimte voor
-# "tandarts 12.30" in de cel. "Doorlopend": het hele jaar, 1 januari tot en
-# met 31 december, waar je opzij doorheen scrolt zoals in de Excel; hij
-# opent op vandaag. De breedte is per dag, in px.
-PLANNING_WEERGAVEN = {"week": 112, "doorlopend": 76}
-PLANNING_STANDAARD_WEERGAVE = "doorlopend"
+# De werkplanning is altijd het hele jaar, 1 januari tot en met 31
+# december, waar je opzij doorheen scrolt zoals in de Excel. Hoe breed een
+# dag is (Dag/Week/Maand) kiest werkplanning.js zonder te herladen, via de
+# CSS-variabele --dag op het bord.
 # Een heel jaar voor twintig man is ruim 7000 cellen; een grotere post is
 # geknoei, geen selectie.
 PLANNING_MAX_CELLEN = 8000
@@ -519,11 +516,6 @@ def _zelfde_dag_in(dag, jaar):
         return dag.replace(year=jaar)
     except ValueError:
         return dag.replace(year=jaar, day=28)
-
-
-def _planning_weergave(request):
-    weergave = request.GET.get("weergave")
-    return weergave if weergave in PLANNING_WEERGAVEN else PLANNING_STANDAARD_WEERGAVE
 
 
 @alleen_eigenaar
@@ -543,30 +535,20 @@ def aanwezigheid(request):
     zondag gepland, maar Thijmen wil hem erbij (01-10-2026). Zonder vaste
     werkdag is hij gewoon leeg.
     """
-    weergave = _planning_weergave(request)
-
     if request.method == "POST":
         _planning_opslaan(request)
-        # Terug naar dezelfde weken, als GET: verversen mag de post niet
+        # Terug naar hetzelfde jaar, als GET: verversen mag de post niet
         # nog een keer versturen.
         dag = _datum_uit(request.POST.get("terug")) or periode.vandaag()
         extra = ",".join(pk for pk in request.GET.get("extra", "").split(",") if pk.isdigit())
         return redirect(
-            f"{reverse('aanwezigheid')}?dag={dag.isoformat()}&weergave={weergave}"
-            + (f"&extra={extra}" if extra else "")
+            f"{reverse('aanwezigheid')}?dag={dag.isoformat()}" + (f"&extra={extra}" if extra else "")
         )
 
     dag = periode.gekozen_dag(request)
     vandaag = periode.vandaag()
-    maandag, _ = periode.week_van(dag)
-    if weergave == "doorlopend":
-        eerste, laatste = date(dag.year, 1, 1), date(dag.year, 12, 31)
-        vorige, volgende = _zelfde_dag_in(dag, dag.year - 1), _zelfde_dag_in(dag, dag.year + 1)
-    else:
-        # max(): de week van 1 januari 2000 begint in 1999, buiten het
-        # bereik van periode.binnen_bereik.
-        eerste, laatste = max(maandag, periode.EERSTE_DAG), maandag + timedelta(days=6)
-        vorige, volgende = maandag - timedelta(weeks=1), maandag + timedelta(weeks=1)
+    eerste, laatste = date(dag.year, 1, 1), date(dag.year, 12, 31)
+    vorige, volgende = _zelfde_dag_in(dag, dag.year - 1), _zelfde_dag_in(dag, dag.year + 1)
     dagen = [eerste + timedelta(days=n) for n in range((laatste - eerste).days + 1)]
     medewerkers = bezetting.medewerkers_tussen(dagen[0], dagen[-1])
     cellen = bezetting.rooster(medewerkers, dagen)
@@ -597,27 +579,24 @@ def aanwezigheid(request):
     for kopdag in kopdagen:
         kopdag["klussen"] = sum(1 for rij in klusrijen if rij["gepland_per_dag"][kopdag["index"]])
 
-    breedte = PLANNING_WEERGAVEN[weergave]
     return render(
         request,
         "uren/aanwezigheid.html",
         {
             "dag": dag,
             "vandaag": vandaag,
-            "maandag": maandag,
             "eerste": dagen[0],
             "laatste": dagen[-1],
-            "weergave": weergave,
             "vorige": vorige,
             "volgende": volgende,
             "is_huidige_periode": dagen[0] <= vandaag <= dagen[-1],
-            # de kolom waar de doorlopende weergave bij openen heen scrolt:
-            # vandaag als dat in dit jaar valt, anders de gekozen dag
+            # de kolom waar het bord bij openen heen scrolt: vandaag als dat
+            # in dit jaar valt, anders de gekozen dag
             "startkolom": ((vandaag if dagen[0] <= vandaag <= dagen[-1] else dag) - dagen[0]).days,
             "kopdagen": kopdagen,
             "rijen": rijen,
-            "bordkolommen": f"{BORD_NAAM}px repeat({len(dagen)}, minmax({breedte}px, 1fr))",
-            "bordbreedte": BORD_NAAM + breedte * len(dagen),
+            # --dag zet werkplanning.js (Dag/Week/Maand); 112px is "Week"
+            "bordkolommen": f"{BORD_NAAM}px repeat({len(dagen)}, var(--dag, 112px))",
             "redenen": Aanwezigheid.Reden.choices,
             "klussen": _planbare_klussen(cellen.values()),
             "klusrijen": klusrijen,
