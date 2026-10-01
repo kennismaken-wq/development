@@ -98,17 +98,83 @@
     return kop ? kop.dataset.datum : "";
   }
 
-  // De tooltip pas maken als je een cel aanwijst, niet voor alle cellen
-  // van het jaar vooraf in de html.
+  // ── Notitie-popup ──────────────────────────────────────────────────────
+  // Staat er een notitie in een cel die je niet (helemaal) kunt lezen —
+  // in de maandzoom is een dag 26px, in de week valt een lange notitie weg
+  // achter "…" — dan verschijnt hij bij aanwijzen meteen in een popje.
+  // Zonder wachten, dus geen title: die komt pas na een seconde, en dan
+  // stonden er twee. Leesbare notities en lege cellen houden de gewone
+  // tooltip, die pas gemaakt wordt bij aanwijzen (niet voor 365 cellen
+  // per rij vooraf in de html).
+  const popje = document.createElement("div");
+  popje.className = "wp-popje";
+  popje.hidden = true;
+  popje.innerHTML = '<span class="wp-popje-tekst"></span><span class="wp-popje-sub"></span>';
+  document.body.appendChild(popje);
+  let popjeCel = null;
+
+  // Het element waar de notitie van deze cel op het scherm staat: de cel
+  // zelf, of in een reeks (app.css, .reeks) de eerste cel daarvan.
+  function getoondeTekst(cel) {
+    let c = cel;
+    const tekst = cel.querySelector(".tekst").textContent;
+    for (let n = 0; c && n < 400; n++) {
+      const t = c.querySelector(":scope > .tekst");
+      if (!t || t.textContent !== tekst) return null;
+      if (t.offsetParent !== null) return t;
+      c = c.previousElementSibling;
+    }
+    return null;
+  }
+
+  function teKlein(cel) {
+    const t = getoondeTekst(cel);
+    return !t || t.scrollWidth > t.clientWidth + 1;
+  }
+
+  function toonPopje(cel) {
+    const wie = cel.classList.contains("wp-notitie") ? "Notitie"
+      : cel.dataset.q ? klusVan(cel).querySelector(".wie").textContent.trim() : naamVan(cel);
+    const datum = cel.classList.contains("wp-notitie") ? cel.dataset.titel : datumVan(cel);
+    popje.querySelector(".wp-popje-tekst").textContent = cel.querySelector(".tekst").textContent.trim();
+    popje.querySelector(".wp-popje-sub").textContent = [wie, datum].filter(Boolean).join(" · ");
+    popje.hidden = false;
+    popjeCel = cel;
+    // boven de cel, of eronder als daar geen plek is; nooit buiten beeld
+    const r = cel.getBoundingClientRect();
+    const b = popje.offsetWidth, h = popje.offsetHeight;
+    const links = Math.min(Math.max(8, r.left + r.width / 2 - b / 2), window.innerWidth - b - 8);
+    const boven = r.top - h - 6 < 8 ? r.bottom + 6 : r.top - h - 6;
+    popje.style.left = links + "px";
+    popje.style.top = boven + "px";
+  }
+
+  function verbergPopje() {
+    popje.hidden = true;
+    popjeCel = null;
+  }
+
   bord.addEventListener("mouseover", function (e) {
-    const cel = e.target.closest("button.wp-cel, button.wp-kc");
-    if (!cel || cel.title) return;
+    const cel = e.target.closest("button.wp-cel, button.wp-kc, button.wp-notitie");
+    if (cel && cel === popjeCel) return;
+    verbergPopje();
+    if (!cel || sleept) return;
+    if (cel.querySelector(".tekst") && teKlein(cel)) {
+      cel.removeAttribute("title");
+      toonPopje(cel);
+      return;
+    }
+    if (cel.title || cel.classList.contains("wp-notitie")) return;
     const delen = [cel.dataset.q ? klusVan(cel).querySelector(".wie").textContent.trim() : naamVan(cel), datumVan(cel)];
     cel.querySelectorAll(".wp-kluslijn .naam, .tekst").forEach(function (t) {
       delen.push(t.textContent.trim());
     });
     cel.title = delen.filter(Boolean).join(" · ");
   });
+  bord.addEventListener("mouseleave", verbergPopje);
+  bord.addEventListener("mousedown", verbergPopje);
+  scroller.addEventListener("scroll", verbergPopje, { passive: true });
+  window.addEventListener("scroll", verbergPopje, { passive: true });
 
   function zetRadio(naam, waarde) {
     formulier.querySelectorAll("[name=" + naam + "]").forEach(function (keuze) {
