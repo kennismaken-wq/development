@@ -73,18 +73,18 @@
                  title="{{ rij.medewerker.naam }} is op {{ cel.datum|date:'j F' }} niet in dienst"></div>
           {% else %}
             <button type="button"
-                    class="bord-cel wp-cel {{ cel.stand }}{% if not cel.standaard %} gezet{% endif %}{% if cel.datum == vandaag %} vandaag{% endif %}{% if cel.datum.weekday == 0 and not forloop.first %} weekstart{% endif %}{% if cel.klussen %} met-klus{% endif %}"
-                    {% if cel.klussen %}style="--klus:{{ cel.klussen.0.kleur }}"{% endif %}
+                    class="bord-cel wp-cel {{ cel.stand }}{% if not cel.standaard %} gezet{% endif %}{% if cel.datum == vandaag %} vandaag{% endif %}{% if cel.datum.weekday == 0 and not forloop.first %} weekstart{% endif %}"
                     data-r="{{ r }}" data-k="{{ forloop.counter0 }}"
                     data-cel="{{ rij.medewerker.pk }}:{{ cel.datum|date:'Y-m-d' }}"
                     data-stand="{% if cel.standaard %}standaard{% elif cel.stand == 'aanwezig' %}ja{% else %}nee{% endif %}"
                     data-reden="{{ cel.reden }}" data-opmerking="{{ cel.opmerking }}" data-klussen="{{ cel.klus_ids }}"
                     title="{{ rij.medewerker.naam }} · {{ cel.datum|date:'D j M' }} · {% if cel.stand == 'aanwezig' %}aanwezig{% elif cel.stand == 'afwezig' %}afwezig{% else %}geen werkdag{% endif %}{% if cel.reden_tekst %} · {{ cel.reden_tekst }}{% endif %}{% if cel.opmerking %} · {{ cel.opmerking }}{% endif %}{% if cel.standaard %} (rooster){% endif %}{% for klus in cel.klussen %}{% if forloop.first %}&#10;{% else %}, {% endif %}{{ klus.naam }}{% endfor %}">
-              {% comment %} Een klus gaat voor: dat is waar hij die dag
-                 heen moet. De balk links heeft de kleur van de eerste klus,
-                 ook bij vier weken waar de tekst niet meer past. {% endcomment %}
-              {% if cel.klussen %}<span class="tekst klusnaam">{{ cel.klussen.0.naam }}</span>{% if cel.klussen|length > 1 %}<span class="meer">+{{ cel.klussen|length|add:"-1" }}</span>{% endif %}{% if cel.opmerking %}<span class="tekst sub">{{ cel.opmerking }}</span>{% endif %}
-              {% elif cel.opmerking %}<span class="tekst">{{ cel.opmerking }}</span>{% elif cel.reden_tekst %}<span class="tekst">{{ cel.reden_tekst }}</span>{% endif %}
+              {% comment %} De achtergrond van de cel gaat alleen over er zijn of
+                 niet (groen/rood). Een klus is daarom een rondje in zijn eigen
+                 kleur met de naam erachter, één regel per klus. Bij vier weken
+                 past de naam niet meer en blijven alleen de rondjes over. {% endcomment %}
+              {% for klus in cel.klussen %}<span class="wp-kluslijn"><i style="background:{{ klus.kleur }}"></i><span class="naam">{{ klus.naam }}</span></span>{% endfor %}
+              {% if cel.opmerking %}<span class="tekst{% if cel.klussen %} sub{% endif %}">{{ cel.opmerking }}</span>{% elif cel.reden_tekst %}<span class="tekst">{{ cel.reden_tekst }}</span>{% endif %}
             </button>
           {% endif %}
         {% endfor %}

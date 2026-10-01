@@ -2338,19 +2338,19 @@ label:has(> input[type=checkbox]), input[type=checkbox] + label{ cursor:pointer;
 .wp-dialoogsub:empty{ display:none; }
 .wp-standen{ margin:.9rem 0 .2rem; }
 
-/* Ingepland op een klus: een balk in de kleur van de klus aan de linkerkant,
-   de klusnaam erin. Bij vier weken blijft alleen de balk over. */
-.wp-cel.met-klus{ box-shadow:inset 4px 0 0 var(--klus); padding-left:.5rem; }
-.wp-w4 .wp-cel.met-klus{ box-shadow:inset 0 0 0 999px color-mix(in srgb, var(--klus) 55%, transparent); }
-.wp-cel .klusnaam{ font-weight:600; }
-.wp-cel .tekst.sub{ color:rgba(255,255,255,0.65); font-size:10px; }
-.wp-cel .meer{
-  position:absolute; right:3px; bottom:3px; font-size:9.5px; font-weight:700;
-  padding:0 .3rem; border-radius:999px; background:rgba(0,0,0,0.35); color:#fff;
+/* Ingepland op een klus: een rondje in de kleur van de klus met de naam
+   erachter, één regel per klus. De celkleur zelf blijft voor aanwezig/
+   afwezig. Bij vier weken alleen de rondjes, naast elkaar. */
+.wp-kluslijn{ display:flex; align-items:center; gap:.3rem; min-width:0; }
+.wp-kluslijn i{
+  width:8px; height:8px; border-radius:999px; flex-shrink:0;
+  box-shadow:0 0 0 1px rgba(0,0,0,0.25);
 }
-.wp-cel.met-klus{ position:relative; }
-.wp-w4 .wp-cel .meer{ display:none; }
-.wp-stip.klus{ background:linear-gradient(90deg, #E8B04B 0 4px, rgba(var(--accent-rgb),0.55) 4px); }
+.wp-kluslijn .naam{ font-weight:600; color:#fff; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.wp-cel .tekst.sub{ color:rgba(255,255,255,0.65); font-size:10px; }
+.wp-w4 .wp-cel:has(.wp-kluslijn){ display:flex; flex-wrap:wrap; align-content:flex-start; gap:3px; padding:.3rem .25rem; }
+.wp-w4 .wp-kluslijn .naam{ display:none; }
+.wp-stip.klus{ width:8px; height:8px; border-radius:999px; background:#E8B04B; border:0; }
 
 /* kluskiezer in het venster: doorzoekbaar, aangevinkt bovenaan */
 .wp-kluszoek{ margin-bottom:.5rem; }
