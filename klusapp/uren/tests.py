@@ -874,12 +874,25 @@ class UrenexportTest(TestCase):
         antwoord = self.client.get("/export/?van=2026-08-03&tot=2026-08-04&download=1")
         self.assertIn("uren-2026-08-03-tot-2026-08-04.xlsx", antwoord["Content-Disposition"])
 
-    def test_zonder_periode_de_lopende_maand(self):
+    def test_zonder_periode_de_lopende_week(self):
+        # De administratie werkt per week (gesprek Maarten, 01-10-2026).
         self.client.force_login(self.maarten)
-        with patch("uren.views.timezone.localdate", return_value=date(2026, 8, 17)):
+        with patch("uren.views.timezone.localdate", return_value=date(2026, 8, 19)):
             antwoord = self.client.get("/export/?van=onzin")
+        self.assertEqual(antwoord.context["van"], date(2026, 8, 17))
+        self.assertEqual(antwoord.context["tot"], date(2026, 8, 23))
+        self.assertContains(antwoord, "Uren in week 34")
+
+    def test_oude_maandlink_blijft_een_maand(self):
+        self.client.force_login(self.maarten)
+        antwoord = self.client.get("/export/?maand=2026-08")
         self.assertEqual(antwoord.context["van"], date(2026, 8, 1))
         self.assertEqual(antwoord.context["tot"], date(2026, 8, 31))
+
+    def test_weekbestand_heet_naar_de_week(self):
+        self.client.force_login(self.maarten)
+        antwoord = self.client.get("/export/?van=2026-08-17&tot=2026-08-23&download=1")
+        self.assertIn('filename="uren-2026-week-34.xlsx"', antwoord["Content-Disposition"])
 
 
 class DecimaleUrenTest(TestCase):
@@ -1026,14 +1039,17 @@ class MaandHeatmapTest(TestCase):
             nep.today.return_value = date(2026, 9, 23)
             antwoord = self.client.get("/")
         self.assertEqual(antwoord.context["maandwidget"]["totaal"], "8")
-        self.assertContains(antwoord, "uur deze maand")
+        # Groot de week, klein de maand (gesprek Maarten, 01-10-2026).
+        self.assertContains(antwoord, "uur deze week")
+        self.assertContains(antwoord, "Week 39")
+        self.assertContains(antwoord, "8 u in september")
         # De widget moet laten zien dát hij ergens heen gaat, en waarheen.
         self.assertContains(antwoord, "Maandoverzicht")
 
 
 class KlusKiezerOpUrenformulierTest(TestCase):
     """De klus kies je op het urenformulier via de zoekbare kiezer van
-    static/js/kluskiezer.js, met de pillen Alle/Eenmalig/Onderhoud. Dat script
+    static/js/kluskiezer.js, met de pillen Alle/Aanleg/Onderhoud. Dat script
     leest de soort per optie uit `data-soort`; zonder dat attribuut filteren
     de pillen niets meer weg."""
 

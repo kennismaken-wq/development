@@ -1,5 +1,8 @@
 from django import forms
+from django.db.models.functions import Lower
 from django.utils import timezone
+
+from medewerkers.models import Medewerker
 
 from .models import Klus
 
@@ -7,7 +10,7 @@ from .models import Klus
 class KlusSelect(forms.Select):
     """Keuzelijst van klussen met soort en staat per optie erbij, zodat
     static/js/kluskiezer.js er een zoekbare lijst met pillen van kan maken —
-    Alle/Eenmalig/Onderhoud, Alle/Actief/Afgerond, of allebei. Welke rijen een
+    Alle/Aanleg/Onderhoud, Alle/Actief/Afgerond, of allebei. Welke rijen een
     scherm toont staat in `data-pillen` op de wrapper in de template; deze
     widget levert alleen de gegevens waar dat script op filtert.
 
@@ -27,6 +30,16 @@ class KlusSelect(forms.Select):
             optie["attrs"]["data-staat"] = "altijd"
         else:
             optie["attrs"]["data-staat"] = "actief" if klus.actief else "inactief"
+            # Waar de klus is, om op te zoeken en om te tonen. Een medewerker
+            # weet vaak niet hoe een klus heet, wel dat hij in Leiden was; en
+            # een vaste opdrachtgever heeft klussen op tien adressen (gesprek
+            # Maarten, 01-10-2026).
+            waar = ", ".join(deel for deel in (klus.adres, klus.plaats) if deel)
+            if waar:
+                optie["attrs"]["data-waar"] = waar
+            optie["attrs"]["data-zoek"] = " ".join(
+                deel for deel in (klus.naam, klus.opdrachtgever, waar) if deel
+            )
         return optie
 
 
@@ -49,6 +62,19 @@ class KlusForm(forms.ModelForm):
     javascript blijft het een gewoon formulier waarin je alles zelf typt en
     valideert de server hetzelfde.
     """
+
+    # Twee keuzepillen in plaats van een vinkje "Actief": wat een vinkje uit
+    # betekent moest je weten, "Afgerond" leest iedereen (gesprek Maarten,
+    # 01-10-2026). Zelfde woord als de pil op het klussenoverzicht. "True"/
+    # "False" als waarden zodat een bestaande klus vanzelf op de goede pil
+    # staat: Django vergelijkt de beginwaarde als tekst.
+    actief = forms.TypedChoiceField(
+        label="Staat",
+        choices=[("True", "Actief"), ("False", "Afgerond")],
+        coerce=lambda waarde: waarde == "True",
+        widget=forms.RadioSelect,
+        initial="True",
+    )
 
     class Meta:
         model = Klus
@@ -86,7 +112,6 @@ class KlusForm(forms.ModelForm):
             "plaats": "Plaats",
             "beschrijving": "Beschrijving",
             "kleur": "Kleur in het planbord",
-            "actief": "Actief",
         }
         help_texts = {veld: "" for veld in fields}
 
@@ -186,6 +211,23 @@ class BijlageForm(forms.Form):
         required=False,
         widget=forms.Textarea(attrs={"rows": 2}),
     )
+    # Alleen bij een document, en alleen voor de eigenaar in beeld (zie
+    # klussen/_uploadveld.html en klussen.views.bijlage_toevoegen). Niemand
+    # aangevinkt is iedereen; zie Bijlage.zichtbaar_voor.
+    zichtbaar_voor = forms.ModelMultipleChoiceField(
+        label="Alleen zichtbaar voor",
+        queryset=Medewerker.objects.none(),
+        required=False,
+        widget=forms.CheckboxSelectMultiple,
+    )
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # De eigenaar ziet altijd alles, en wie uit dienst is hoeft niets te
+        # zien: die staan er dus niet tussen.
+        self.fields["zichtbaar_voor"].queryset = Medewerker.objects.filter(
+            rol=Medewerker.Rol.MEDEWERKER, uit_dienst_sinds__isnull=True
+        ).order_by(Lower("first_name"), Lower("last_name"))
 
 
 class AlleenFotosForm(BijlageForm):

@@ -89,7 +89,7 @@ def _onderdelen_met_cijfers(gebruiker, vandaag, maandag, zondag, uren):
 
 @login_required
 def start(request):
-    """Het beginscherm: een begroeting, je uren van deze maand als widget, de
+    """Het beginscherm: een begroeting, je uren van deze week als widget, de
     klussen waar je het laatst uren op hebt geschreven en de laatst toegevoegde
     foto's.
     Navigatie zit niet meer hier maar in de zijbalk (basis.html) — die krijgt
@@ -111,7 +111,7 @@ def start(request):
         .prefetch_related(
             Prefetch(
                 "bijlagen",
-                queryset=Bijlage.objects.order_by("-datum", "-toegevoegd_op"),
+                queryset=Bijlage.objects.zichtbaar_voor(request.user).order_by("-datum", "-toegevoegd_op"),
                 to_attr="voorbeeld_bijlagen",
             )
         )
@@ -124,7 +124,8 @@ def start(request):
     uren_stats = totalen.totaal_en_week(request.user, maandag, zondag)
 
     recente_fotos = (
-        Bijlage.objects.filter(soort=Bijlage.Soort.FOTO, klus__isnull=False)
+        Bijlage.objects.zichtbaar_voor(request.user)
+        .filter(soort=Bijlage.Soort.FOTO, klus__isnull=False)
         .select_related("klus")
         .order_by("-toegevoegd_op")[:20]
     )

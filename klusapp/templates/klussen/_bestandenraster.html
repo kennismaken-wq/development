@@ -45,6 +45,7 @@
           {% endif %}
           {{ bijlage.toegevoegd_door.naam|default:"onbekend" }} · {{ bijlage.datum|date:"j M" }}
         </span>
+        {% include "klussen/_afgeschermd.html" %}
       </figcaption>
       {% if bijlage|mag_weg:user %}
         <form method="post" action="{% url 'bijlage_verwijderen' bijlage.pk %}" class="weg"

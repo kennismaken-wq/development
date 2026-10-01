@@ -4,7 +4,7 @@
 {% block kop %}Hai, {{ user.first_name|default:user.naam }}{% endblock %}
 {% block sub %}{{ vandaag|date:"l j F Y"|capfirst }}{% endblock %}
 {% block inhoud %}
-  {% comment %} Helemaal bovenaan je eigen uren van deze maand: dat is het cijfer
+  {% comment %} Helemaal bovenaan je eigen uren van deze week (de maand eronder): dat is het cijfer
      waar iedereen die de app opent als eerste naar kijkt, en het stond eerder
      als twee losse tegels onder de apps — ver onder de vouw, precies waar je
      er niets aan hebt.

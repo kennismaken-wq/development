@@ -24,13 +24,25 @@ class KwartierSelect(forms.Select):
         return super().format_value(value)
 
 
-def _tijdkeuzes():
-    keuzes = [("", "--:--")]
-    for uur in range(24):
-        for minuut in (0, 15, 30, 45):
-            waarde = f"{uur:02d}:{minuut:02d}"
-            keuzes.append((waarde, waarde))
-    return keuzes
+# Vroeger begint niemand: hoveniers starten tussen vijf en acht. Zonder deze
+# grens begint de tijdkiezer van de telefoon op 00:00 en scrol je eerst twintig
+# kwartieren voorbij voordat je bij een werktijd bent (gesprek Maarten,
+# 01-10-2026).
+WERKDAG_BEGIN = datetime.time(5, 0)
+
+
+def _tijdkeuzes(vanaf=WERKDAG_BEGIN, ook=()):
+    """De kwartieren vanaf `vanaf`, plus de tijden in `ook` die daarvoor
+    vallen — een bestaand blok van 04:30 moet bij bewerken gewoon op 04:30
+    blijven staan in plaats van leeg."""
+    tijden = {
+        datetime.time(uur, minuut)
+        for uur in range(24)
+        for minuut in (0, 15, 30, 45)
+        if datetime.time(uur, minuut) >= vanaf
+    }
+    tijden.update(t for t in ook if isinstance(t, datetime.time))
+    return [("", "--:--")] + [(t.strftime("%H:%M"),) * 2 for t in sorted(tijden)]
 
 
 class UurblokForm(forms.ModelForm):
@@ -38,7 +50,7 @@ class UurblokForm(forms.ModelForm):
 
     class Meta:
         model = Uurblok
-        fields = ["klus", "datum", "begintijd", "eindtijd", "toelichting"]
+        fields = ["klus", "datum", "begintijd", "eindtijd", "toelichting", "extra_werk"]
         widgets = {
             # De klasse hoort bij de zoekbare kiezer die static/js/kluskiezer.js
             # eroverheen bouwt (zie _uurblokformulier.html): daarmee verdwijnt
@@ -54,6 +66,7 @@ class UurblokForm(forms.ModelForm):
             "eindtijd": KwartierSelect(choices=_tijdkeuzes()),
             # data-dicteer: microfoonknop erin, zie static/js/dicteren.js.
             "toelichting": forms.Textarea(attrs={"rows": 3, "data-dicteer": ""}),
+            "extra_werk": forms.Textarea(attrs={"rows": 2, "data-dicteer": ""}),
         }
         labels = {
             "klus": "Klus",
@@ -61,6 +74,7 @@ class UurblokForm(forms.ModelForm):
             "begintijd": "Van",
             "eindtijd": "Tot",
             "toelichting": "Werkzaamheden",
+            "extra_werk": "Extra werk",
         }
         # Duidelijke tekst voor de foutpopup (zie _uurblokformulier.html): de
         # standaard "Dit veld is verplicht." zegt in die popup niet genoeg
@@ -81,6 +95,14 @@ class UurblokForm(forms.ModelForm):
         self.fields["klus"].queryset = Klus.objects.filter(actief=True)
         self.fields["klus"].empty_label = "Kies een klus"
         self.fields["toelichting"].required = False
+        # Tijden van vóór WERKDAG_BEGIN alleen als ze er al staan (bestaand
+        # blok, of een vak dat in de kalender is aangetikt).
+        bestaand = [
+            self.initial.get(veld) or getattr(self.instance, veld, None)
+            for veld in ("begintijd", "eindtijd")
+        ]
+        for veld in ("begintijd", "eindtijd"):
+            self.fields[veld].widget.choices = _tijdkeuzes(ook=bestaand)
 
     def clean(self):
         gegevens = super().clean()

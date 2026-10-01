@@ -1,0 +1,17 @@
+{% comment %} Wie een document mag zien. Niemand aangevinkt is iedereen; vink je
+   mensen aan, dan zien alleen zij het (plus de eigenaar en wie het toevoegde).
+   Voor de offerte met prijzen, die alleen de voorman nodig heeft — zie
+   Bijlage.zichtbaar_voor. Zelfde keuzepillen als soort en staat op het
+   klusformulier, alleen mag je er hier meer tegelijk kiezen.
+
+   Verwacht `veld`: het zichtbaar_voor-veld van een BijlageForm. Alleen voor
+   de eigenaar; de view negeert het voor iedereen anders. {% endcomment %}
+{% if veld.field.queryset.exists %}
+  <label id="{{ veld.auto_id }}-label">{{ veld.label }}</label>
+  <div class="keuzes" role="group" aria-labelledby="{{ veld.auto_id }}-label">
+    {% for keuze in veld %}
+      <label class="keuzepil kies">{{ keuze.tag }}<span class="vlak">{{ keuze.choice_label }}</span></label>
+    {% endfor %}
+  </div>
+  {% for fout in veld.errors %}<p class="fout">{{ fout }}</p>{% endfor %}
+{% endif %}

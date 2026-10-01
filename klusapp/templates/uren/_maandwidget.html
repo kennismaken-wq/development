@@ -1,6 +1,8 @@
 {% comment %} De maandwidget bovenaan het startscherm: hoeveel uur je deze
-   maand hebt geschreven, met daarnaast hoe die uren over de maand verdeeld
-   liggen. Bewust zonder getallen in de vakjes — anders dan in het
+   week hebt geschreven, met daarnaast hoe je uren over de maand verdeeld
+   liggen. Het grote getal is de week en niet de maand, want De Groene M
+   werkt per week: dan zie je vrijdag nog of je iets bent vergeten (gesprek
+   Maarten, 01-10-2026). De maand staat er klein onder. Bewust zonder getallen in de vakjes — anders dan in het
    maandoverzicht zelf (uren/_maandraster.html) gaat het hier om het patroon
    in één oogopslag; voor de cijfers tik je door naar dat overzicht.
 
@@ -10,12 +12,12 @@
 
    Verwacht `maandwidget` uit uren/totalen.py:maand_heatmap. {% endcomment %}
 <a class="maandwidget" href="{% url 'mijn_uren' %}?weergave=maand"
-   aria-label="Je uren van {{ maandwidget.maand|date:'F Y' }}: {{ maandwidget.totaal }} uur. Opent het maandoverzicht.">
+   aria-label="Je uren in week {{ vandaag|date:'W' }}: {{ uren_stats.week }} uur. Opent het maandoverzicht.">
   <div class="maandwidget-cijfers">
-    <span class="maand">{{ maandwidget.maand|date:"F Y"|capfirst }}</span>
-    <span class="n">{{ maandwidget.totaal }}</span>
-    <span class="l">uur deze maand</span>
-    <span class="neven">{{ uren_stats.week }} u deze week · {{ uren_stats.totaal }} u totaal</span>
+    <span class="maand">Week {{ vandaag|date:"W" }}</span>
+    <span class="n">{{ uren_stats.week }}</span>
+    <span class="l">uur deze week</span>
+    <span class="neven">{{ maandwidget.totaal }} u in {{ maandwidget.maand|date:"F" }} · {{ uren_stats.totaal }} u totaal</span>
     {% comment %} Een <span>, geen link: een link in een link mag niet en de
        kaart eromheen vangt de tik al. Hij staat er om te laten zien dát de
        widget ergens heen gaat én waarheen — een kaal pijltje in de hoek doet

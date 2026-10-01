@@ -39,7 +39,12 @@
     }
     dialoog.querySelector("form").action = nieuwUrl + "?dag=" + dag;
     document.getElementById("id_datum").value = dag;
-    document.getElementById("id_begintijd").value = vanTijd;
+    const begin = document.getElementById("id_begintijd");
+    begin.value = vanTijd;
+    // Eerst laten weten dat Van veranderd is: tijdkiezer.js zet dan de
+    // keuzes van Tot opnieuw neer, vanaf deze begintijd. Andersom zou Tot
+    // een tijd krijgen die er (nog) niet tussen staat, en leeg blijven.
+    begin.dispatchEvent(new Event("change", { bubbles: true }));
     document.getElementById("id_eindtijd").value = totTijd;
     window.openSheet(dialoog);
   }

@@ -26,6 +26,13 @@ class Uurblok(models.Model):
     begintijd = models.TimeField()
     eindtijd = models.TimeField()
     toelichting = models.TextField(blank=True)
+    # Wat er bovenop de afspraak bij kwam: materiaal, kosten, werk dat niet in
+    # de offerte staat ("regenpijp vervangen, 3 palen, 40 euro benzine"). Los
+    # van de toelichting omdat dit doorbelast wordt: het gaat mee in de
+    # urenexport, zodat de administratie het niet uit de werkzaamheden hoeft
+    # te vissen. Gewoon tekst, geen bedrag — de prijs zet de administratie
+    # erbij (gesprek Maarten, 01-10-2026).
+    extra_werk = models.TextField(blank=True)
     aangemaakt_op = models.DateTimeField(auto_now_add=True)
     gewijzigd_op = models.DateTimeField(auto_now=True)
 

@@ -1,6 +1,6 @@
 /* Live zoeken op de foto tab: bij elke toetsaanslag (met een korte pauze
    erin, zodat niet elke letter apart een verzoek stuurt), bij het wisselen
-   van klus en bij het wisselen van een pil (Eenmalig/Onderhoud, Actief/Niet
+   van klus en bij het wisselen van een pil (Aanleg/Onderhoud, Actief/Niet
    actief) haalt dit
    script dezelfde pagina opnieuw op en vervangt alleen het fotoraster — geen
    volledige page reload voor elke letter.
@@ -95,7 +95,7 @@
     uitzetbaar: true,
     assen: [
       { kenmerk: "soort", pillen: [
-        { waarde: "aanleg", tekst: "Eenmalig" },
+        { waarde: "aanleg", tekst: "Aanleg" },
         { waarde: "onderhoud", tekst: "Onderhoud" },
       ] },
       { kenmerk: "scope", pillen: [

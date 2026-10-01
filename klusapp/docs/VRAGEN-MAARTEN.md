@@ -3,7 +3,8 @@
 Vragen die de bouw van fase 1 echt verschuiven. Ze komen uit SPEC §7, uit de
 contractreview (SPEC §8) en uit het gespreksverslag. Thijmen belt.
 
-**Nog openstaand (24-09-2026):** 2, 3, 4, 6, 7, 8, 9 en 10. En: Maarten zou zijn eigen
+**Nog openstaand (01-10-2026):** 2, 3, 6, 7 en 9. Vraag 4, 8 en 10 zijn
+beantwoord in het gesprek van 01-10-2026 (zie de antwoorden hieronder). En: Maarten zou zijn eigen
 lijst met negen onderdelen opsturen ("die 12 kantjes") — die is nooit binnengekomen.
 Vraag die er nog een keer bij; we bouwen nu op het verslag alleen.
 
@@ -77,7 +78,11 @@ erna.
 
 **Als er geen antwoord komt:** puur uren. De app maakt sowieso geen facturen.
 
-**Antwoord:**
+**Antwoord (01-10-2026):** ja, maar als tekst en zonder prijs. Bij het uren
+schrijven staat nu een veld **Extra werk** naast de werkzaamheden: materiaal, kosten
+en werk dat niet in de offerte zit ("regenpijp vervangen, 3 palen, 40 euro benzine").
+Dat gaat als eigen kolom mee in de urenexport; de administratie zet er de prijs bij.
+Op de klus zelf hoeft het van Maarten niet. Zie `Uurblok.extra_werk`.
 
 ---
 
@@ -154,7 +159,11 @@ label op **Eenmalig**; de databasewaarde is ongewijzigd `aanleg`, dus terugdraai
 Maartens eigen taal (zo staat het ook in SPEC §1), dus het is het vragen waard of het
 woord uit het scherm halen niet verwarrender is dan het probleem dat het oplost.
 
-**Antwoord:**
+**Antwoord (01-10-2026):** nee, terug naar **Aanleg / Onderhoud**. Staat zo in de
+app. Maarten noemde nog een derde soort voor een vaste klant waarvoor het hele jaar
+gewerkt wordt (verstaan als "Van E"), maar in het gesprek kwam dat neer op een eigen
+uitvoeradres per klus, en dat kon al. Een derde soort is níet gebouwd; vraag het na
+als het terugkomt.
 
 ---
 
@@ -193,6 +202,14 @@ een document als "alleen voor de eigenaar" markeren is dat wel (~2 uur).
 
 **Als er geen antwoord komt:** het blijft zoals het is. Maar dan wél benoemen bij
 oplevering, zodat het geen verrassing is de eerste keer dat iemand een offerte opent.
+
+**Antwoord (01-10-2026):** de voorman heeft de offerte nodig voor de
+werkbeschrijving, de rest niet. Gebouwd: bij het toevoegen van een document kiest de
+eigenaar onder **Alleen zichtbaar voor** de mensen die het mogen zien. Niemand
+aangevinkt is iedereen. Per persoon en niet per rol, want wie voorman is wisselt per
+klus. De eigenaar en wie het bestand toevoegde zien het altijd. Het slot geldt ook
+voor de download en het voorbeeldplaatje, niet alleen voor de lijst. Achteraf wijzigen
+kan nog niet: verwijderen en opnieuw toevoegen. Zie `Bijlage.zichtbaar_voor`.
 
 ---
 

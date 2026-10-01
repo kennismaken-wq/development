@@ -283,7 +283,7 @@ def _uurblok_detail_context(request, pk, formulier_override=None, bewerken=None)
         for veld in uurblok_formulier.fields.values():
             veld.widget.attrs["disabled"] = True
 
-    bijlagen = blok.bijlagen.select_related("toegevoegd_door").order_by("-toegevoegd_op")
+    bijlagen = blok.bijlagen.zichtbaar_voor(request.user).select_related("toegevoegd_door").order_by("-toegevoegd_op")
     return {
         "blok": blok,
         "duur": kalender.als_uren(blok.duur_minuten),
@@ -586,8 +586,10 @@ def _gekozen_periode(request, vandaag):
 
     Zonder geldige periode valt het terug op ?maand=JJJJ-MM — de oude
     maandkiezer, zodat bewaarde links blijven werken — en anders op de
-    lopende kalendermaand. Een omgedraaide periode wordt rechtgezet in plaats
-    van een lege export op te leveren."""
+    lopende week: De Groene M maakt elke week de lijst op van wat er gedaan
+    is, en de administratie maakt daar de facturen van (gesprek Maarten,
+    01-10-2026). Een omgedraaide periode wordt rechtgezet in plaats van een
+    lege export op te leveren."""
     van, tot = _datum_uit(request.GET.get("van")), _datum_uit(request.GET.get("tot"))
     if van and tot:
         return (van, tot) if van <= tot else (tot, van)
@@ -598,8 +600,12 @@ def _gekozen_periode(request, vandaag):
         if eerste is None:
             raise ValueError
     except (TypeError, ValueError):
-        eerste = vandaag.replace(day=1)
+        return periode.week_van(vandaag)
     return eerste, eerste.replace(day=calendar.monthrange(eerste.year, eerste.month)[1])
+
+
+def _is_hele_week(van, tot):
+    return van.weekday() == 0 and tot == van + timedelta(days=6)
 
 
 def _is_hele_maand(van, tot):
@@ -615,8 +621,9 @@ def urenexport(request):
     """Exportscherm voor de boekhouder: uren van een gekozen periode als Excel.
 
     De periode kies je met begin- en einddatum in een kalender
-    (static/js/periodekalender.js); standaard is dat de lopende
-    kalendermaand. Maarten heeft op 15-09-2026 bevestigd dat het bestand
+    (static/js/periodekalender.js); standaard is dat de lopende week, want
+    zo werkt de administratie (zie _gekozen_periode). Een maand kan nog
+    altijd, met de snelkeuzes of de kalender. Maarten heeft op 15-09-2026 bevestigd dat het bestand
     Excel moet zijn, geen CSV, zodat de boekhouding er verder in kan werken.
 
     Alleen de eigenaar mag dit openen: de boekhouder krijgt geen account in de
@@ -628,6 +635,7 @@ def urenexport(request):
     vandaag = timezone.localdate()
     van, tot = _gekozen_periode(request, vandaag)
     hele_maand = _is_hele_maand(van, tot)
+    hele_week = _is_hele_week(van, tot)
 
     # Alleen cijfers: ?medewerker=bla liet het filter hieronder een 500
     # geven. Een onbekend getal levert gewoon een lege lijst op.
@@ -648,6 +656,9 @@ def urenexport(request):
     if request.GET.get("download") == "1":
         if hele_maand:
             bladtitel, bestandsnaam = f"Uren {van:%m-%Y}", f"uren-{van:%Y-%m}"
+        elif hele_week:
+            jaar, week, _ = van.isocalendar()
+            bladtitel, bestandsnaam = f"Uren week {week} {jaar}", f"uren-{jaar}-week-{week:02d}"
         else:
             bladtitel = f"Uren {van:%d-%m-%Y} - {tot:%d-%m-%Y}"
             bestandsnaam = f"uren-{van:%Y-%m-%d}-tot-{tot:%Y-%m-%d}"
@@ -668,6 +679,8 @@ def urenexport(request):
         regel["totaal"] = kalender.als_uren(regel["minuten"])
 
     vorige_maand_eind = vandaag.replace(day=1) - timedelta(days=1)
+    deze_week = periode.week_van(vandaag)
+    vorige_week = periode.week_van(vandaag - timedelta(days=7))
     return render(
         request,
         "uren/export.html",
@@ -675,10 +688,14 @@ def urenexport(request):
             "van": van,
             "tot": tot,
             "hele_maand": hele_maand,
+            "hele_week": hele_week,
+            "weeknummer": van.isocalendar()[1],
             "medewerker_pk": medewerker_pk,
-            # Snelkeuzes onder de kalender: de boekhouder vraagt bijna altijd
-            # om een hele maand, meestal de vorige.
+            # Snelkeuzes onder de kalender: per week, zoals de administratie
+            # werkt, en de maand voor wie toch een maand wil.
             "snelkeuzes": [
+                ("Deze week", *deze_week),
+                ("Vorige week", *vorige_week),
                 ("Deze maand", vandaag.replace(day=1), vandaag.replace(
                     day=calendar.monthrange(vandaag.year, vandaag.month)[1])),
                 ("Vorige maand", vorige_maand_eind.replace(day=1), vorige_maand_eind),

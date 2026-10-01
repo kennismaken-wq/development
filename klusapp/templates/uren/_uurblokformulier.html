@@ -46,7 +46,7 @@
          klussen is scrollen door de systeemlijst van de telefoon geen doen.
          static/js/kluskiezer.js pakt deze wrapper vanzelf op aan
          data-pillen en zet er een knop + popover overheen — met een zoekveld
-         en de pillen Alle/Eenmalig/Onderhoud, waarvan de waarden uit
+         en de pillen Alle/Aanleg/Onderhoud, waarvan de waarden uit
          Klus.Soort komen (zie klussen.forms.KlusSelect, die ze per optie als
          data-soort meegeeft). Zonder javascript blijft de <select>
          hieronder gewoon staan en werkt het formulier onveranderd. {% endcomment %}
@@ -114,6 +114,8 @@
    scripts erin opnieuw uitvoert — het is met opzet bestand tegen twee keer
    draaien. {% endcomment %}
 <script src="{% static 'js/kluskiezer.js' %}"></script>
+{# "Tot" begint vanaf "Van" in plaats van op 05:00 — zie het script zelf. #}
+<script src="{% static 'js/tijdkiezer.js' %}"></script>
 
 {% if bijlagenformulier %}<script src="{% static 'js/bestandsveld.js' %}"></script>{% endif %}
 

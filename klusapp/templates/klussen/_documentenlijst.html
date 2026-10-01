@@ -45,6 +45,7 @@
           <span class="doc-naam">{{ bijlage.toonnaam }}</span>
           {% if bijlage.toelichting %}<span class="wat">{{ bijlage.toelichting }}</span>{% endif %}
           <span class="wie">{{ bijlage.toegevoegd_door.naam|default:"onbekend" }} · {{ bijlage.datum|date:"j M Y" }}</span>
+          {% include "klussen/_afgeschermd.html" %}
         </span>
       </a>
       {% if bijlage|mag_weg:user %}

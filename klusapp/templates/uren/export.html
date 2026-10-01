@@ -35,6 +35,8 @@
   <p class="sectiekop" style="margin-top:1.6rem">
     {% if hele_maand %}
       Uren in {{ van|date:"F Y" }}
+    {% elif hele_week %}
+      Uren in week {{ weeknummer }} ({{ van|date:"j F" }} t/m {{ tot|date:"j F Y" }})
     {% elif van == tot %}
       Uren op {{ van|date:"j F Y" }}
     {% else %}

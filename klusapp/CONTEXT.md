@@ -193,6 +193,27 @@ Vier dingen die bij diezelfde controle boven water kwamen en meteen zijn opgelos
    schrijft zelf uren — onderhoud, zes tot acht adressen per dag — dus hij stond wél
    in het bestand maar kon niet op zichzelf filteren.
 
+**Bijgewerkt 01-10-2026: feedback uit de demo met Maarten verwerkt.** Maarten keurde
+fase 1 goed en gaf per app akkoord voor fase 2. Wat er uit het gesprek veranderde:
+
+1. **Tijdkiezer:** Van begint op 05:00 (`uren.forms.WERKDAG_BEGIN`), Tot begint na
+   de gekozen begintijd (`static/js/tijdkiezer.js`). Een bestaand blok van vóór
+   05:00 houdt zijn tijd.
+2. **Aanleg / Onderhoud** in plaats van Eenmalig / Onderhoud (VRAGEN-MAARTEN 8).
+3. **Klus-kiezer zoekt ook op opdrachtgever, adres en plaats**, en toont adres en
+   plaats onder de naam: "Leiden" vindt de klus in Leiden.
+4. **Actief / Afgerond** als keuzepillen op het klusformulier in plaats van een vinkje.
+5. **Extra werk** bij een uurblok, als eigen kolom in de urenexport (VRAGEN-MAARTEN 4).
+6. **Urenexport standaard per week**, met snelkeuzes Deze week / Vorige week / Deze
+   maand / Vorige maand. Een oude `?maand=`-link blijft een maand.
+7. **Startscherm: groot de uren van deze week**, klein de maand en het totaal.
+8. **Per document kiezen wie het mag zien** (`Bijlage.zichtbaar_voor`,
+   VRAGEN-MAARTEN 10). Geldt ook voor de download en het voorbeeldplaatje.
+
+Nog niet gedaan, want dat hoort bij de overstap en niet bij de bouw: testdata
+opruimen, verhuizen naar het domein van De Groene M, en "Bekijk als medewerker"
+weghalen (zie `../CLAUDE.md`). Maarten wil per 1 januari 2027 volledig over.
+
 Productie: draait op Postgres met een nachtelijke dump (restore één keer echt
 getest). Wat daar nog open staat — een échte off-site back-up, X-Accel en de
 data-export bij beëindiging — staat in [docs/DEPLOY.md](docs/DEPLOY.md).
@@ -462,7 +483,8 @@ Plus de export bij beëindiging: uren als CSV, foto's als zip.
 2. **Moet uren schrijven offline werken?** Achter in een tuin is niet altijd bereik.
    Groot verschil in bouwtijd — bij "ja" is dit meerwerk, niet fase 1.
 3. **Hoeveel foto's per maand** verwachten ze? Bepaalt T2 en T5.
-4. **Worden materialen doorbelast**, of gaat het puur om uren?
+4. **Worden materialen doorbelast**, of gaat het puur om uren? *Beantwoord 01-10-2026:
+   als tekst in "Extra werk" bij het uurblok, mee in de export. Zie VRAGEN-MAARTEN 4.*
 5. **Moet de eigenaar zelf medewerkers kunnen toevoegen en uit dienst zetten?** Dat kan
    nu alleen via `/beheer/`, en dat is bewust niet voor de klant. Contractpunt 8 heet
    "inlogbeheer", dus dit valt waarschijnlijk binnen scope — ~2 uur.

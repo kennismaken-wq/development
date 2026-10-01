@@ -33,9 +33,9 @@ Wat nog open staat, is geen contractpunt maar komt wel uit de contractreview
 - De productiepunten in [docs/DEPLOY.md](docs/DEPLOY.md) — een échte off-site
   back-up voorop. De klusfoto's bestaan nergens anders.
 - Data-export bij beëindiging en een periode op slot kunnen zetten.
-- Vier vragen in [docs/VRAGEN-MAARTEN.md](docs/VRAGEN-MAARTEN.md) hebben nog
-  geen antwoord, en er staat er sinds 24-09 een tiende bij: wie mag de
-  offerte-PDF met prijzen zien?
+- Vijf vragen in [docs/VRAGEN-MAARTEN.md](docs/VRAGEN-MAARTEN.md) hebben nog
+  geen antwoord (2, 3, 6, 7 en 9). Vraag 4, 8 en 10 zijn op 01-10-2026
+  beantwoord en gebouwd; zie CONTEXT.md §1.
 - De lijst met negen onderdelen die Maarten zelf zou opsturen, is nooit
   binnengekomen. We bouwen tot nu toe op het gespreksverslag.
 

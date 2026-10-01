@@ -21,11 +21,11 @@ class Klus(models.Model):
     """
 
     class Soort(models.TextChoices):
-        # Databasewaarde blijft "aanleg" (zo staat het in SPEC §1 en in alle
-        # bestaande rijen); het label is "Eenmalig" omdat de as die dit veld
-        # beschrijft ritme is en geen soort werk — een snoeiklus of het
-        # opruimen van stormschade is eenmalig, maar geen aanleg.
-        AANLEG = "aanleg", "Eenmalig"
+        # Het label was van 22-09 tot 01-10-2026 "Eenmalig" (de as is ritme,
+        # geen soort werk). Maarten wil "Aanleg / Onderhoud": zo praten ze er
+        # in het bedrijf over (gesprek 01-10-2026). De databasewaarde is
+        # altijd "aanleg" gebleven.
+        AANLEG = "aanleg", "Aanleg"
         ONDERHOUD = "onderhoud", "Onderhoud"
 
     naam = models.CharField(max_length=120)
@@ -95,9 +95,27 @@ def thumbnail_pad(instance, bestandsnaam):
     return f"thumbnails/{map_naam}/{uuid.uuid4().hex}{achtervoegsel}"
 
 
+class BijlageQuerySet(models.QuerySet):
+    def zichtbaar_voor(self, gebruiker):
+        """Wat deze gebruiker mag zien: alles voor de eigenaar; voor een
+        medewerker wat voor iedereen is, wat voor hem is opengezet, en wat
+        hij zelf heeft toegevoegd. Zie Bijlage.zichtbaar_voor."""
+        if gebruiker.is_eigenaar:
+            return self
+        toegestaan = Bijlage.zichtbaar_voor.through.objects.filter(medewerker=gebruiker)
+        beperkt = Bijlage.zichtbaar_voor.through.objects.values("bijlage")
+        return self.filter(
+            ~models.Q(pk__in=beperkt)
+            | models.Q(pk__in=toegestaan.values("bijlage"))
+            | models.Q(toegevoegd_door=gebruiker)
+        )
+
+
 class Bijlage(models.Model):
     """Een foto of document. Hangt aan een klus, aan een uurblok binnen een
     klus, of aan geen van beide — dat laatste is de fotodropbox."""
+
+    objects = BijlageQuerySet.as_manager()
 
     class Soort(models.TextChoices):
         FOTO = "foto", "Foto"
@@ -148,6 +166,16 @@ class Bijlage(models.Model):
     # tonen in plaats van los tussen andere foto's. Leeg bij een upload van
     # één bestand — daar is niets te groeperen.
     batch = models.UUIDField(null=True, blank=True, editable=False, db_index=True)
+    # Leeg: iedereen ziet het bestand. Staan hier mensen in, dan zien alleen
+    # zij het (en de eigenaar, en wie het toevoegde). Voor de offerte met
+    # prijzen: die heeft de voorman nodig voor de werkbeschrijving, de rest van
+    # de ploeg niet (gesprek Maarten, 01-10-2026; VRAGEN-MAARTEN vraag 10).
+    # Per persoon en niet per rol, want wie voorman is wisselt per klus.
+    zichtbaar_voor = models.ManyToManyField(
+        settings.AUTH_USER_MODEL,
+        blank=True,
+        related_name="zichtbare_bijlagen",
+    )
 
     class Meta:
         verbose_name = "bijlage"
@@ -202,6 +230,13 @@ class Bijlage(models.Model):
         """Je eigen bijlage, of je bent de eigenaar. Een medewerker haalt dus
         niet per ongeluk de tekening van een ander weg."""
         return gebruiker.is_eigenaar or self.toegevoegd_door_id == gebruiker.pk
+
+    def mag_zien(self, gebruiker):
+        """Zelfde regel als BijlageQuerySet.zichtbaar_voor, voor één bijlage."""
+        if gebruiker.is_eigenaar or self.toegevoegd_door_id == gebruiker.pk:
+            return True
+        lijst = self.zichtbaar_voor.all()
+        return not lijst or gebruiker in lijst
 
 
 class Notitie(models.Model):

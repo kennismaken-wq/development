@@ -139,18 +139,27 @@ def bijlage_toevoegen(request):
     # gelden — de fotodropbox toont die dialoog niet.
     forceer_document = not alleen_fotos and request.POST.get("forceer_document") == "1"
     batch = batch_van_upload(formulier.cleaned_data["bestanden"])
+    # Afschermen kan alleen de eigenaar, en alleen een document: het veld
+    # staat ook alleen dan in beeld (klussen/_uploadveld.html). Een foto is
+    # voor het hele team, en een medewerker die iets post moet niet per
+    # ongeluk zijn collega's buitensluiten.
+    afgeschermd_voor = (
+        formulier.cleaned_data["zichtbaar_voor"] if request.user.is_eigenaar and forceer_document else []
+    )
     gelukt = 0
     for bestand in formulier.cleaned_data["bestanden"]:
         if alleen_fotos and not afbeeldingen.lijkt_afbeelding(bestand.name):
             messages.error(request, f"{bestand.name}: hier kan alleen een foto bij, geen document.")
             continue
         try:
-            bewaar_bijlage(bestand, datum, toelichting, klus, uurblok, request.user, batch, forceer_document)
+            bijlage = bewaar_bijlage(bestand, datum, toelichting, klus, uurblok, request.user, batch, forceer_document)
         except afbeeldingen.BestandNietLeesbaar as probleem:
             # De rest van de selectie wel doorzetten: wie acht foto's uploadt
             # wil niet alles opnieuw doen omdat er één niet deugt.
             messages.error(request, f"{bestand.name}: {probleem}")
         else:
+            if afgeschermd_voor:
+                bijlage.zichtbaar_voor.set(afgeschermd_voor)
             gelukt += 1
 
     if gelukt:
@@ -207,6 +216,11 @@ def media_bestand(request, pad):
         raise Http404
 
     hoofdbijlage = Bijlage.objects.filter(bestand=pad).first()
+    # Ook het voorbeeldplaatje van een afgeschermd bestand: van een pdf-offerte
+    # is de eerste pagina met de prijzen precies wat er in de thumbnail staat.
+    eigenaar_bijlage = hoofdbijlage or Bijlage.objects.filter(thumbnail=pad).first()
+    if eigenaar_bijlage and not eigenaar_bijlage.mag_zien(request.user):
+        raise Http404
     # inline, niet attachment: een pdf moet in de browser te bekijken zijn
     # zonder eerst gedownload te worden. naam blijft gezet zodat "bewaren als"
     # in de browser een leesbare naam voorstelt in plaats van de opslag-uuid.
@@ -245,7 +259,7 @@ def fotos(request):
     scope = request.GET.get("scope", "altijd")
     if scope not in ("actief", "inactief", "altijd"):
         scope = "altijd"
-    # Tweede pillenrij in de kiezer: Eenmalig/Onderhoud. Net als de scope
+    # Tweede pillenrij in de kiezer: Aanleg/Onderhoud. Net als de scope
     # staat hij standaard nergens op ("altijd") — dan tonen we beide soorten.
     soort = request.GET.get("soort", "altijd")
     if soort not in Klus.Soort.values:
@@ -265,7 +279,11 @@ def fotos(request):
         "terug": request.get_full_path(),
     }
 
-    bijlagen = Bijlage.objects.select_related("toegevoegd_door", "klus").order_by("-datum", "-toegevoegd_op")
+    bijlagen = (
+        Bijlage.objects.zichtbaar_voor(request.user)
+        .select_related("toegevoegd_door", "klus")
+        .order_by("-datum", "-toegevoegd_op")
+    )
     if zoek:
         # Zelfde belofte als de placeholder in de zoekbalk: "omschrijving, klus
         # of adres" — dus ook de klus waar de foto aan hangt doorzoeken, niet
@@ -310,12 +328,12 @@ def _lege_melding(soort, scope):
 def klus_lijst(request):
     """Overzicht van klussen, met één filterrij van twee gelijkwaardige groepen:
 
-        [ Eenmalig | Onderhoud ]   [ Actief | Afgerond ]
+        [ Aanleg | Onderhoud ]   [ Actief | Afgerond ]
              soort = ritme             scope = staat
 
     Geen "Alles" in een van beide groepen: eenmalige klussen en
     onderhoudsadressen lopen nooit door elkaar, en een lijst die lopende en
-    afgeronde klussen mengt had geen gebruiker. Standaard staat Eenmalig +
+    afgeronde klussen mengt had geen gebruiker. Standaard staat Aanleg +
     Actief aan.
 
     Twee assen, dus twee groepen met dezelfde vorm naast elkaar — niet het ene
@@ -342,7 +360,7 @@ def klus_lijst(request):
     vandaag niet op staat.
     """
     zoek = request.GET.get("q", "").strip()
-    # Altijd één soort: een lege of onbekende waarde valt terug op eenmalig,
+    # Altijd één soort: een lege of onbekende waarde valt terug op aanleg,
     # de eerste pil.
     soort = request.GET.get("soort", "").strip()
     if soort not in Klus.Soort.values:
@@ -364,7 +382,7 @@ def klus_lijst(request):
         klussen.prefetch_related(
             Prefetch(
                 "bijlagen",
-                queryset=Bijlage.objects.order_by("-datum", "-toegevoegd_op"),
+                queryset=Bijlage.objects.zichtbaar_voor(request.user).order_by("-datum", "-toegevoegd_op"),
                 to_attr="voorbeeld_bijlagen",
             )
         )
@@ -380,7 +398,7 @@ def klus_lijst(request):
             "scope": scope,
             "soort": soort,
             # Uit Klus.Soort, zodat de pillen meebewegen als die labels ooit
-            # veranderen (zoals "Aanleg" → "Eenmalig" al gebeurd is).
+            # veranderen (zoals "Aanleg" → "Eenmalig" → "Aanleg" al gebeurd is).
             "soort_keuzes": Klus.Soort.choices,
             # Twee groepen met dezelfde vorm, zodat ze naast elkaar als twee
             # assen lezen en niet als één lijst keuzes.
@@ -405,7 +423,7 @@ def klus_detail(request, pk):
         Klus.objects.prefetch_related(
             Prefetch(
                 "bijlagen",
-                queryset=Bijlage.objects.order_by("-datum", "-toegevoegd_op"),
+                queryset=Bijlage.objects.zichtbaar_voor(request.user).order_by("-datum", "-toegevoegd_op"),
                 to_attr="voorbeeld_bijlagen",
             )
         ),
@@ -418,7 +436,14 @@ def klus_detail(request, pk):
     # klus zit. Zie klussen/_klushero.html.
     klus.voorbeeld_items, klus.voorbeeld_meer = voorbeeld.items_voor_stapel(klus)
     klus.hero_items = [None] * (3 - len(klus.voorbeeld_items)) + klus.voorbeeld_items
-    bijlagen = klus.bijlagen.select_related("toegevoegd_door").order_by("-toegevoegd_op")
+    # Een bestand dat voor anderen is afgeschermd (de offerte met prijzen)
+    # valt hier gewoon weg: zie Bijlage.zichtbaar_voor.
+    bijlagen = (
+        klus.bijlagen.zichtbaar_voor(request.user)
+        .select_related("toegevoegd_door")
+        .prefetch_related("zichtbaar_voor")
+        .order_by("-toegevoegd_op")
+    )
     # Het volledige dossier mag iedereen zien, de uren van je collega's niet:
     # "een medewerker ziet alleen zijn eigen uren, maar wél het volledige
     # klusdossier" (SPEC §2). Wie op een klus heeft gewerkt is de vraag van
@@ -557,9 +582,12 @@ def klus_nieuw(request):
             batch = batch_van_upload(stapel)
             for bestand in stapel:
                 try:
-                    bewaar_bijlage(
+                    bijlage = bewaar_bijlage(
                         bestand, datum, toelichting, klus, None, request.user, batch, als_document
                     )
+                    # Alleen de documenten afschermen, zie bijlage_toevoegen.
+                    if als_document and bijlagenformulier.cleaned_data["zichtbaar_voor"]:
+                        bijlage.zichtbaar_voor.set(bijlagenformulier.cleaned_data["zichtbaar_voor"])
                 except afbeeldingen.BestandNietLeesbaar as probleem:
                     # De klus staat er al; alleen het ene bestand mislukt, niet de rest.
                     messages.error(request, f"{bestand.name}: {probleem}")

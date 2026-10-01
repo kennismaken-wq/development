@@ -17,8 +17,12 @@ from io import BytesIO
 from openpyxl import Workbook
 from openpyxl.styles import Font
 
-KOPPEN = ["Medewerker", "Datum", "Klus", "Opdrachtgever", "Adres", "Van", "Tot", "Uren", "Toelichting"]
-KOLOMBREEDTES = [22, 12, 26, 22, 32, 8, 8, 8, 45]
+# "Extra werk" als laatste kolom en niet in de toelichting: dat is wat er
+# doorbelast moet worden bovenop de offerte, en de administratie moet het in
+# één oogopslag kunnen vinden (gesprek Maarten, 01-10-2026).
+KOPPEN = ["Medewerker", "Datum", "Klus", "Opdrachtgever", "Adres", "Van", "Tot", "Uren", "Toelichting", "Extra werk"]
+KOLOMBREEDTES = [22, 12, 26, 22, 32, 8, 8, 8, 45, 45]
+LEGE_REGEL = [""] * len(KOPPEN)
 
 
 def _vet(blad, rijnummer):
@@ -27,7 +31,7 @@ def _vet(blad, rijnummer):
 
 
 def _subtotaal_schrijven(blad, naam, minuten):
-    blad.append([f"Totaal {naam}", "", "", "", "", "", "", round(minuten / 60, 2), ""])
+    blad.append([f"Totaal {naam}", "", "", "", "", "", "", round(minuten / 60, 2), "", ""])
     _vet(blad, blad.max_row)
 
 
@@ -43,7 +47,7 @@ def werkboek_bouwen(uurblokken, bladtitel):
 
     blad.append(KOPPEN)
     _vet(blad, 1)
-    for kolom, breedte in zip("ABCDEFGHI", KOLOMBREEDTES):
+    for kolom, breedte in zip("ABCDEFGHIJ", KOLOMBREEDTES):
         blad.column_dimensions[kolom].width = breedte
 
     huidige_medewerker = None
@@ -74,6 +78,7 @@ def werkboek_bouwen(uurblokken, bladtitel):
                 blok.eindtijd.strftime("%H:%M"),
                 round(blok.duur_minuten / 60, 2),
                 blok.toelichting,
+                blok.extra_werk,
             ]
         )
         blad.cell(row=blad.max_row, column=2).number_format = "DD-MM-YYYY"
@@ -81,11 +86,11 @@ def werkboek_bouwen(uurblokken, bladtitel):
         totaal_minuten += blok.duur_minuten
 
     if huidige_medewerker is None:
-        blad.append(["Geen uren geschreven in deze periode.", "", "", "", "", "", "", "", ""])
+        blad.append(["Geen uren geschreven in deze periode."] + LEGE_REGEL[1:])
         return boek
 
     _subtotaal_schrijven(blad, huidige_medewerker, subtotaal_minuten)
-    blad.append(["Totaal alle medewerkers", "", "", "", "", "", "", round(totaal_minuten / 60, 2), ""])
+    blad.append(["Totaal alle medewerkers", "", "", "", "", "", "", round(totaal_minuten / 60, 2), "", ""])
     _vet(blad, blad.max_row)
     return boek
 

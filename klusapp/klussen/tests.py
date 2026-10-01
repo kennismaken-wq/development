@@ -686,7 +686,7 @@ class KlusBeheerTest(TestCase):
             "plaats": "Maasdijk",
             "beschrijving": "Volledige aanleg achtertuin",
             "kleur": "#95BF1D",
-            "actief": "on",
+            "actief": "True",
         }
         gegevens.update(afwijkend)
         return gegevens
@@ -733,19 +733,19 @@ class KlusBeheerTest(TestCase):
         self.client.force_login(self.maarten)
         inhoud = self.client.get(reverse("klus_nieuw")).content.decode()
         self.assertIn('type="radio" name="soort"', inhoud)
-        self.assertIn("Eenmalig", inhoud)
+        self.assertIn("Aanleg", inhoud)
         self.assertIn("Onderhoud", inhoud)
         # ritme → wie → waar → naam, niet het alfabet en niet de modelvolgorde
         self.assertLess(inhoud.index('name="soort"'), inhoud.index('name="opdrachtgever"'))
         self.assertLess(inhoud.index('name="opdrachtgever"'), inhoud.index('name="adres"'))
         self.assertLess(inhoud.index('name="adres"'), inhoud.index('name="naam"'))
 
-    def test_label_van_aanleg_is_eenmalig(self):
-        # De databasewaarde blijft "aanleg"; alleen wat Maarten leest verandert,
-        # want de as die dit veld beschrijft is ritme en geen soort werk.
+    def test_label_van_aanleg_is_aanleg(self):
+        # Maarten wil "Aanleg / Onderhoud" (gesprek 01-10-2026); tussendoor
+        # heette het "Eenmalig". De databasewaarde is altijd "aanleg" gebleven.
         klus = Klus.objects.create(naam="Tuin Vermeer", soort=Klus.Soort.AANLEG)
         self.assertEqual(klus.soort, "aanleg")
-        self.assertEqual(klus.get_soort_display(), "Eenmalig")
+        self.assertEqual(klus.get_soort_display(), "Aanleg")
 
     def test_onderhoudsklant_heeft_geen_startdatum(self):
         # Een onderhoudsklant is een terugkerende afspraak zonder begin.
@@ -808,7 +808,7 @@ class KlusBijlagenBijAanmakenTest(TestCase):
             "opdrachtgever": "Fam. Vermeer",
             "adres": "Dijkweg 12",
             "plaats": "Maasdijk",
-            "actief": "on",
+            "actief": "True",
         }
         gegevens.update(afwijkend)
         return gegevens
@@ -993,7 +993,7 @@ class KlusKleurTest(TestCase):
             "opdrachtgever": "Fam. Vermeer",
             "adres": "Dijkweg 12",
             "plaats": "Maasdijk",
-            "actief": "on",
+            "actief": "True",
         }
         gegevens.update(afwijkend)
         return gegevens
@@ -1267,7 +1267,7 @@ class BekendeOpdrachtgeversTest(TestCase):
 
 class KlussenlijstFilterTest(TestCase):
     """De filterrij boven de klussenlijst: twee gelijkwaardige groepen,
-    Eenmalig/Onderhoud (ritme) en Actief/Afgerond (staat). Geen "Alles":
+    Aanleg/Onderhoud (ritme) en Actief/Afgerond (staat). Geen "Alles":
     eenmalige klussen en onderhoudsadressen lopen nooit door elkaar.
 
     SPEC §1: aanleg versus onderhoud bepaalt bijna elke ontwerpkeuze. Met een
@@ -1378,7 +1378,7 @@ class KlussenlijstFilterTest(TestCase):
 
     def test_lege_uitkomst_noemt_ook_de_staat(self):
         antwoord = self.client.get(reverse("klussen"), {"scope": "afgerond"})
-        self.assertContains(antwoord, "Geen afgeronde klussen van de soort eenmalig")
+        self.assertContains(antwoord, "Geen afgeronde klussen van de soort aanleg")
 
 
 

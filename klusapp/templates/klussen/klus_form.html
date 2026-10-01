@@ -92,8 +92,14 @@
     {% endif %}
     {% for fout in formulier.kleur.errors %}<p class="fout">{{ fout }}</p>{% endfor %}
 
-    <label for="{{ formulier.actief.id_for_label }}">{{ formulier.actief.label }}</label>
-    {{ formulier.actief }}
+    {% comment %} Actief of afgerond: dezelfde keuzepillen als de soort bovenaan,
+          zie forms.KlusForm.actief. ── {% endcomment %}
+    <label id="actief-label">{{ formulier.actief.label }}</label>
+    <div class="keuzes" role="radiogroup" aria-labelledby="actief-label">
+      {% for keuze in formulier.actief %}
+        <label class="keuzepil kies">{{ keuze.tag }}<span class="vlak">{{ keuze.choice_label }}</span></label>
+      {% endfor %}
+    </div>
     {% for fout in formulier.actief.errors %}<p class="fout">{{ fout }}</p>{% endfor %}
 
     {% if bijlagenformulier %}
@@ -109,6 +115,7 @@
       <label for="{{ bijlagenformulier.documenten.id_for_label }}">{{ bijlagenformulier.documenten.label }}</label>
       {{ bijlagenformulier.documenten }}
       {% for fout in bijlagenformulier.documenten.errors %}<p class="fout">{{ fout }}</p>{% endfor %}
+      {% include "klussen/_zichtbaarvoor.html" with veld=bijlagenformulier.zichtbaar_voor %}
     {% endif %}
 
     <p style="margin-top:1.8rem"><button type="submit" class="knop">Opslaan</button></p>

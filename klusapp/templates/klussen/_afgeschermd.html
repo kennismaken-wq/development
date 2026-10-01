@@ -1,0 +1,10 @@
+{% comment %} Slotje met de namen erbij als een document maar voor een paar
+   mensen zichtbaar is (Bijlage.zichtbaar_voor). Zo ziet Maarten aan de tegel
+   of de offerte goed is afgeschermd, en ziet de voorman waarom zijn collega's
+   hem niet hebben. Verwacht `bijlage`. {% endcomment %}
+{% with lijst=bijlage.zichtbaar_voor.all %}{% if lijst %}
+  <span class="afgeschermd">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
+    Alleen {{ lijst|join:", " }}
+  </span>
+{% endif %}{% endwith %}

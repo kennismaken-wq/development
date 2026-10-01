@@ -107,7 +107,8 @@ Deze verschuiven de bouw echt, dus stel ze vóór of tijdens de bouw van fase 1:
 - **Moet uren schrijven offline werken?** Achter in een tuin is er niet altijd
   bereik. Dit is een groot verschil in bouwtijd.
 - **Hoeveel foto's per maand** verwachten ze te uploaden?
-- **Worden materialen doorbelast**, of gaat het puur om uren?
+- **Worden materialen doorbelast**, of gaat het puur om uren? *Ja, als tekst
+  zonder prijs: "Extra werk" bij het uurblok, mee in de export (01-10-2026).*
 
 ## 8. Uit de contractreview, mee te nemen in de bouw
 

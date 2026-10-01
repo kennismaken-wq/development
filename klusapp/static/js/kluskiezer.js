@@ -8,7 +8,7 @@
    want per scherm is een andere as van de klussenlijst de verwarrende:
 
      Galerij (fotozoeken.js)                  soort + status, zonder "Alle"-pil
-     uren schrijven (_uurblokformulier.html)  soort  Alle/Eenmalig/Onderhoud
+     uren schrijven (_uurblokformulier.html)  soort  Alle/Aanleg/Onderhoud
      foto posten (_uploadveld.html)           allebei, twee rijen onder elkaar
 
    Welke assen het worden zegt `opts.assen` (of `opts.scopes` voor één rij).
@@ -59,13 +59,13 @@
         { waarde: "inactief", tekst: "Niet actief" },
       ],
     },
-    // Eenmalige klus of onderhoudsklant? De waarden zijn die van Klus.Soort in
-    // de database — "aanleg" heet in beeld "Eenmalig".
+    // Aanlegklus of onderhoudsklant? De waarden zijn die van Klus.Soort in
+    // de database.
     soort: {
       kenmerk: "soort",
       pillen: [
         { waarde: "altijd", tekst: "Alle" },
-        { waarde: "aanleg", tekst: "Eenmalig" },
+        { waarde: "aanleg", tekst: "Aanleg" },
         { waarde: "onderhoud", tekst: "Onderhoud" },
       ],
     },
@@ -171,8 +171,17 @@
       assen.forEach(function (as) {
         knop.dataset[as.kenmerk] = optie.kenmerken[as.kenmerk] || "altijd";
       });
-      knop.dataset.tekst = optie.tekst.toLowerCase();
+      // Zoeken gaat ook op opdrachtgever, adres en plaats (data-zoek, zie
+      // klussen.forms.KlusSelect): "Leiden" vindt de klus in Leiden, ook als
+      // je niet meer weet hoe hij heet.
+      knop.dataset.tekst = (optie.kenmerken.zoek || optie.tekst).toLowerCase();
       knop.textContent = optie.tekst;
+      if (optie.kenmerken.waar) {
+        const waar = document.createElement("span");
+        waar.className = "klus-kiezer-waar";
+        waar.textContent = optie.kenmerken.waar;
+        knop.appendChild(waar);
+      }
       knop.addEventListener("click", function () {
         select.value = optie.waarde;
         select.dispatchEvent(new Event("change", { bubbles: true }));
