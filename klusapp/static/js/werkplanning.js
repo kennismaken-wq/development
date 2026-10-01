@@ -233,6 +233,11 @@
       return;
     }
 
+    if (e.target.closest("[data-namen-inklappen]")) {
+      zetNamenSmal(!bord.classList.contains("namen-smal"));
+      return;
+    }
+
     const inklap = e.target.closest("[data-klussen-inklappen]");
     if (inklap) {
       zetKlussenDicht(!bord.classList.contains("klussen-dicht"));
@@ -352,6 +357,24 @@
   try {
     if (localStorage.getItem(inklapSleutel) === "1") zetKlussenDicht(true);
   } catch (fout) { /* open laten */ }
+
+  // De namenkolom inklappen met het pijltje in de hoek: alleen bol of
+  // waaier blijft staan. Ook onthouden per browser.
+  const namenSleutel = "werkplanning-namen-smal";
+  function zetNamenSmal(smal) {
+    bord.classList.toggle("namen-smal", smal);
+    const knop = bord.querySelector("[data-namen-inklappen]");
+    if (knop) {
+      knop.textContent = smal ? "›" : "‹";
+      knop.setAttribute("aria-expanded", smal ? "false" : "true");
+      knop.title = smal ? "Namen uitklappen" : "Namen inklappen";
+      knop.setAttribute("aria-label", knop.title);
+    }
+    try { localStorage.setItem(namenSleutel, smal ? "1" : ""); } catch (fout) { /* dan maar niet onthouden */ }
+  }
+  try {
+    if (localStorage.getItem(namenSleutel) === "1") zetNamenSmal(true);
+  } catch (fout) { /* breed laten */ }
 
   function naarKolom(k, vloeiend) {
     const kop = bord.querySelector('.wp-kop[data-k="' + Math.max(k, 0) + '"]');

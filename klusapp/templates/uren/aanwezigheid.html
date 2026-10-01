@@ -34,7 +34,11 @@
   <div class="bord-scroll wp-scroll">
     <div class="bord wp-bord wp-zoom-week" id="wp-bord" data-startkolom="{{ startkolom }}"
          style="grid-template-columns:{{ bordkolommen }}">
-      <div class="bord-hoek"></div>
+      {% comment %} Het pijltje klapt de namenkolom in tot alleen de bol of
+         de fotowaaier, voor meer dagen in beeld; werkplanning.js onthoudt het. {% endcomment %}
+      <div class="bord-hoek wp-hoek">
+        <button type="button" class="wp-inklap wp-namen-inklap" data-namen-inklappen aria-expanded="true" aria-label="Namen inklappen" title="Namen inklappen">‹</button>
+      </div>
       {% for kopdag in kopdagen %}
         <button type="button" class="bord-kop wp-kop{% if kopdag.is_vandaag %} vandaag{% endif %}{% if kopdag.is_weekstart %} weekstart{% endif %}{% if kopdag.is_maandstart %} maandstart{% endif %}{% if kopdag.feestdag_vrij %} feestdag{% endif %}"
                 data-k="{{ kopdag.index }}" data-datum="{{ kopdag.datum|date:'D j M' }}" data-iso="{{ kopdag.datum|date:'Y-m-d' }}" title="Iedereen op {{ kopdag.datum|date:'l j F' }} kiezen">
@@ -48,7 +52,7 @@
         </button>
       {% endfor %}
 
-      <div class="bord-naam wp-rijkop"><span class="wie">Aanwezig</span></div>
+      <div class="bord-naam wp-rijkop" title="Aanwezig"><span class="wie">Aanwezig</span></div>
       {% for kopdag in kopdagen %}
         <div class="bord-cel wp-telling{% if kopdag.is_vandaag %} vandaag{% endif %}{% if kopdag.is_weekstart %} weekstart{% endif %}"
              title="{{ kopdag.aanwezig }} van {{ kopdag.in_dienst }} aanwezig{% if kopdag.feestdag %} · {{ kopdag.feestdag }}{% endif %}">
@@ -56,7 +60,7 @@
         </div>
       {% endfor %}
 
-      <div class="bord-naam wp-rijkop"><span class="wie">Klussen</span></div>
+      <div class="bord-naam wp-rijkop" title="Klussen"><span class="wie">Klussen</span></div>
       {% for kopdag in kopdagen %}
         <div class="bord-cel wp-telling{% if kopdag.is_vandaag %} vandaag{% endif %}{% if kopdag.is_weekstart %} weekstart{% endif %}"
              title="{{ kopdag.klussen }} klus{{ kopdag.klussen|pluralize:'sen' }} gepland">
@@ -64,7 +68,7 @@
         </div>
       {% endfor %}
 
-      <div class="bord-naam wp-rijkop"><span class="wie">Notitie</span></div>
+      <div class="bord-naam wp-rijkop" title="Notitie"><span class="wie">Notitie</span></div>
       {% for kopdag in kopdagen %}
         <button type="button" class="bord-cel wp-notitie{% if kopdag.is_vandaag %} vandaag{% endif %}{% if kopdag.is_weekstart %} weekstart{% endif %}"
                 data-datum="{{ kopdag.datum|date:'Y-m-d' }}" data-titel="{{ kopdag.datum|date:'l j F'|capfirst }}"

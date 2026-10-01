@@ -596,8 +596,9 @@ def aanwezigheid(request):
             "startkolom": ((vandaag if dagen[0] <= vandaag <= dagen[-1] else dag) - dagen[0]).days,
             "kopdagen": kopdagen,
             "rijen": rijen,
-            # --dag zet werkplanning.js (Dag/Week/Maand); 112px is "Week"
-            "bordkolommen": f"{BORD_NAAM}px repeat({len(dagen)}, var(--dag, 112px))",
+            # --dag zet werkplanning.js (Dag/Week/Maand); 112px is "Week".
+            # --naam ook: ingeklapt is de namenkolom alleen bol of waaier
+            "bordkolommen": f"var(--naam, {BORD_NAAM}px) repeat({len(dagen)}, var(--dag, 112px))",
             "redenen": Aanwezigheid.Reden.choices,
             "klussen": _planbare_klussen(cellen.values()),
             "klusrijen": klusrijen,

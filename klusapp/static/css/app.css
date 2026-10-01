@@ -2459,6 +2459,16 @@ a.wp-klus{ text-decoration:none; }
 /* ingeklapt: alleen de kopregel blijft staan */
 .klussen-dicht .wp-klusnaam, .klussen-dicht .wp-kc, .klussen-dicht .wp-klusleeg{ display:none; }
 
+/* Namen ingeklapt: de kolom wordt zo smal als de fotowaaier en houdt alleen
+   de bol of de waaier over. De naam staat dan nog in de tooltip. */
+.wp-hoek{ display:flex; align-items:flex-end; justify-content:flex-end; padding:0 .45rem .45rem; }
+.wp-namen-inklap{ font-size:18px; }
+.namen-smal{ --naam:64px; }
+.namen-smal .wp-hoek{ justify-content:center; padding-right:0; padding-left:0; }
+.namen-smal .bord-naam{ justify-content:center; padding-left:0; padding-right:0; }
+.namen-smal .bord-naam-tekst, .namen-smal .wp-rijkop .wie{ display:none; }
+.namen-smal .wp-waaier{ margin-left:0; margin-right:0; }
+
 /* fotowaaier bij de klusnaam: de stapel van de klussenlijst, kleiner */
 .wp-klusnaam{ gap:.65rem; }
 .wp-waaier{ width:38px; height:38px; margin:.25rem .2rem .25rem .3rem; flex-shrink:0; }
