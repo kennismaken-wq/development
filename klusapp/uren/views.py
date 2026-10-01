@@ -3,6 +3,7 @@ from datetime import date, time, timedelta
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
+from django.db.models import Q
 from django.db.models.functions import Lower
 from django.http import Http404, HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
@@ -19,7 +20,7 @@ from medewerkers.rechten import alleen_eigenaar
 
 from . import bezetting, export, kalender, periode, totalen
 from .forms import UurblokForm, UurblokFotosForm
-from .models import Aanwezigheid, Dagnotitie, Uurblok
+from .models import Aanwezigheid, Dagnotitie, Inzet, Uurblok
 
 
 def _tijd_uit(waarde):
@@ -503,7 +504,7 @@ BORD_WEEK = 72
 # past (.kaart in app.css, 1040px) zonder horizontaal te scrollen: één week
 # met ruimte voor "tandarts 12.30" in de cel, vier weken als het Excel-
 # overzicht waar alleen nog de kleur in past.
-PLANNING_WEKEN = {1: 128, 2: 64, 4: 32}
+PLANNING_WEKEN = {1: 112, 2: 56, 4: 28}
 PLANNING_STANDAARD_WEKEN = 2
 # Meer cellen dan vier weken lang twintig man passen niet op het bord; een
 # grotere post is geknoei, geen selectie.
@@ -531,8 +532,9 @@ def aanwezigheid(request):
     Maarten wil dat zo houden (gesprek 01-10-2026). Gemaakt voor een laptop —
     op een telefoon scrolt het bord opzij, maar daar is het niet voor.
 
-    Zondag staat er niet op: daar werd in heel 2026 niet één keer iets
-    ingepland.
+    Alle zeven dagen staan erop, zondag ook: in de Excel werd er nooit op
+    zondag gepland, maar Thijmen wil hem erbij (01-10-2026). Zonder vaste
+    werkdag is hij gewoon leeg.
     """
     weken = _gekozen_weken(request)
 
@@ -546,9 +548,7 @@ def aanwezigheid(request):
     dag = periode.gekozen_dag(request)
     vandaag = periode.vandaag()
     maandag, _ = periode.week_van(dag)
-    dagen = [
-        maandag + timedelta(days=n) for n in range(7 * weken) if (maandag + timedelta(days=n)).weekday() != 6
-    ]
+    dagen = [maandag + timedelta(days=n) for n in range(7 * weken)]
     medewerkers = bezetting.medewerkers_tussen(dagen[0], dagen[-1])
     cellen = bezetting.rooster(medewerkers, dagen)
     vrij = bezetting.feestdagen_tussen(dagen[0], dagen[-1])
@@ -594,8 +594,21 @@ def aanwezigheid(request):
             "bordkolommen": f"{BORD_NAAM}px repeat({len(dagen)}, minmax({breedte}px, 1fr))",
             "bordbreedte": BORD_NAAM + breedte * len(dagen),
             "redenen": Aanwezigheid.Reden.choices,
+            "klussen": _planbare_klussen(cellen.values()),
         },
     )
+
+
+def _planbare_klussen(cellen):
+    """De klussen in het venster: alle lopende, plus een afgeronde die in
+    deze weken nog op iemand staat — anders verdwijnt hij bij opslaan
+    ongemerkt uit die cel. Lopend eerst, dan op naam, net als de
+    klussenlijst."""
+    al_gepland = {klus.pk for cel in cellen for klus in cel.klussen}
+    klussen = list(Klus.objects.filter(Q(actief=True) | Q(pk__in=al_gepland)))
+    for klus in klussen:
+        klus.kleur = kalender.kleur_van(klus)
+    return klussen
 
 
 def _planning_opslaan(request):
@@ -634,20 +647,49 @@ def _planning_opslaan(request):
             gevraagd.add((int(pk), datum))
     medewerkers = Medewerker.objects.in_bulk({pk for pk, _ in gevraagd})
 
+    # De klussen alleen aanraken als het venster dat zegt. Kies je tien
+    # cellen met elk een andere klus en zet je ze alleen op "aanwezig", dan
+    # moeten hun klussen blijven staan (static/js/werkplanning.js).
+    klussen_wijzigen = request.POST.get("klussen_wijzigen") == "1"
+    klus_ids = [pk for pk in request.POST.getlist("klus") if pk.isdigit()]
+    klussen = list(Klus.objects.filter(pk__in=klus_ids)) if klussen_wijzigen else []
+    if gevraagd:
+        dagen = [datum for _, datum in gevraagd]
+        vrij = bezetting.feestdagen_tussen(min(dagen), max(dagen))
+
     for pk, datum in gevraagd:
         medewerker = medewerkers.get(pk)
         if medewerker is None or not bezetting.in_dienst_op(medewerker, datum):
             continue
         if stand == "standaard":
             Aanwezigheid.objects.filter(medewerker=medewerker, datum=datum).delete()
+        else:
+            # update_or_create: op (medewerker, datum) ligt een unieke
+            # sleutel, en een dubbel verstuurd formulier mag daar niet op
+            # stuklopen.
+            Aanwezigheid.objects.update_or_create(
+                medewerker=medewerker,
+                datum=datum,
+                defaults={"aanwezig": stand == "ja", "reden": reden, "opmerking": opmerking},
+            )
+
+        inzet = Inzet.objects.filter(medewerker=medewerker, datum=datum)
+        if stand == "nee":
+            # wie afwezig is, gaat nergens heen
+            inzet.delete()
             continue
-        # update_or_create: op (medewerker, datum) ligt een unieke sleutel,
-        # en een dubbel verstuurd formulier mag daar niet op stuklopen.
-        Aanwezigheid.objects.update_or_create(
-            medewerker=medewerker,
-            datum=datum,
-            defaults={"aanwezig": stand == "ja", "reden": reden, "opmerking": opmerking},
-        )
+        if not klussen_wijzigen:
+            continue
+        inzet.exclude(klus__in=klussen).delete()
+        for klus in klussen:
+            Inzet.objects.get_or_create(medewerker=medewerker, datum=datum, klus=klus)
+        # Op een klus gezet op een dag dat hij volgens rooster vrij is (een
+        # zaterdag, een oproepkracht): dan is hij er dus wél.
+        if klussen and stand == "standaard":
+            if bezetting.cel(medewerker, datum, feestdag=vrij.get(datum, "")).stand != bezetting.AANWEZIG:
+                Aanwezigheid.objects.update_or_create(
+                    medewerker=medewerker, datum=datum, defaults={"aanwezig": True, "reden": "", "opmerking": ""}
+                )
 
 
 def _datum_uit(waarde):

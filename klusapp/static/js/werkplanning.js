@@ -24,6 +24,11 @@
   const sub = venster.querySelector("[data-sub]");
   const redenBlok = venster.querySelector("[data-reden-blok]");
   const opmerking = venster.querySelector("[name=opmerking]");
+  const klussenBlok = venster.querySelector("[data-klussen-blok]");
+  const klussenWijzigen = venster.querySelector("[name=klussen_wijzigen]");
+  const klusZoek = venster.querySelector(".wp-kluszoek");
+  const klusGemengd = venster.querySelector("[data-klus-gemengd]");
+  const klusVinkjes = Array.from(venster.querySelectorAll("[name=klus]"));
 
   let anker = null;   // de cel waar het slepen of shift-klikken van uitgaat
   let sleept = false;
@@ -67,6 +72,8 @@
   function toonReden() {
     const stand = formulier.querySelector("[name=stand]:checked");
     redenBlok.hidden = !stand || stand.value !== "nee";
+    // wie afwezig is, gaat nergens heen: de server haalt zijn klussen weg
+    klussenBlok.hidden = !!stand && stand.value === "nee";
     // "Volgens rooster" haalt de afwijking weg, opmerking en al.
     opmerking.closest("[data-opmerking-blok]").hidden = !!stand && stand.value === "standaard";
   }
@@ -100,12 +107,46 @@
     zetRadio("reden", gedeeld(lijst, "reden"));
     const tekst = gedeeld(lijst, "opmerking");
     opmerking.value = tekst === null ? "" : tekst;
+
+    // Dezelfde klussen in elke cel: die staan aangevinkt, en opslaan zet
+    // precies wat er dan aangevinkt is. Verschillende klussen: niets
+    // aangevinkt, en alleen als je zelf iets aanvinkt gaan ze mee.
+    const klussen = gedeeld(lijst, "klussen");
+    const gekozenKlussen = klussen ? klussen.split(",") : [];
+    klusVinkjes.forEach(function (vinkje) {
+      vinkje.checked = gekozenKlussen.indexOf(vinkje.value) !== -1;
+    });
+    klussenWijzigen.value = klussen === null ? "0" : "1";
+    klusGemengd.hidden = klussen !== null;
+    klusZoek.value = "";
+    filterKlussen();
     toonReden();
 
     window.openSheet(venster);
   }
 
-  formulier.addEventListener("change", toonReden);
+  function filterKlussen() {
+    const woorden = klusZoek.value.toLowerCase().split(/\s+/).filter(Boolean);
+    klusVinkjes.forEach(function (vinkje) {
+      const regel = vinkje.closest(".wp-klus");
+      const tekst = regel.dataset.zoek;
+      regel.hidden = !vinkje.checked && !woorden.every(function (w) { return tekst.indexOf(w) !== -1; });
+    });
+  }
+
+  klusZoek.addEventListener("input", filterKlussen);
+  // Enter in het zoekveld verstuurt anders het hele formulier.
+  klusZoek.addEventListener("keydown", function (e) {
+    if (e.key === "Enter") e.preventDefault();
+  });
+
+  formulier.addEventListener("change", function (e) {
+    if (e.target.name === "klus") {
+      klussenWijzigen.value = "1";
+      klusGemengd.hidden = true;
+    }
+    toonReden();
+  });
 
   // Muis: indrukken begint een selectie, eroverheen bewegen rekt hem op,
   // loslaten opent het venster.

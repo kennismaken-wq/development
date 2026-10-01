@@ -126,3 +126,30 @@ class Dagnotitie(models.Model):
 
     def __str__(self):
         return f"{self.datum:%d-%m-%Y} · {self.tekst}"
+
+
+class Inzet(models.Model):
+    """Wie op welke dag naar welke klus gaat, vooruit gepland in de
+    werkplanning. Los van Aanwezigheid: een klus inplannen is geen afwijking
+    van het rooster, en wie volgens rooster werkt krijgt er geen stip van.
+    Meer klussen op één dag mag — bij onderhoud doe je er zes."""
+
+    medewerker = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="inzet",
+    )
+    datum = models.DateField()
+    klus = models.ForeignKey("klussen.Klus", on_delete=models.CASCADE, related_name="inzet")
+    aangemaakt_op = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = "inzet"
+        verbose_name_plural = "inzet"
+        ordering = ["datum", "aangemaakt_op"]
+        constraints = [
+            models.UniqueConstraint(fields=["medewerker", "datum", "klus"], name="een_klus_eenmaal_per_dag")
+        ]
+
+    def __str__(self):
+        return f"{self.medewerker} · {self.datum:%d-%m-%Y} · {self.klus}"

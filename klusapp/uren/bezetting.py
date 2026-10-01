@@ -15,12 +15,13 @@ Een cel heeft één van vier standen:
 `standaard` zegt of de stand uit het rooster komt of door iemand is gezet.
 """
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import date, timedelta
 
 from medewerkers.models import Medewerker
 
-from .models import Aanwezigheid
+from .kalender import kleur_van
+from .models import Aanwezigheid, Inzet
 
 AANWEZIG = "aanwezig"
 AFWEZIG = "afwezig"
@@ -98,6 +99,12 @@ class Cel:
     reden: str = ""
     opmerking: str = ""
     feestdag: str = ""
+    # De klussen waar hij die dag heen gaat (Inzet), elk met een .kleur.
+    klussen: list = field(default_factory=list)
+
+    @property
+    def klus_ids(self):
+        return ",".join(str(k.pk) for k in self.klussen)
 
     @property
     def reden_tekst(self):
@@ -129,7 +136,7 @@ def cel(medewerker, dag, registratie=None, feestdag=""):
 
 def rooster(medewerkers, dagen):
     """{(medewerker_id, datum): Cel} voor elke medewerker op elke dag, met
-    één query voor alle afwijkingen."""
+    één query voor alle afwijkingen en één voor de ingeplande klussen."""
     if not dagen:
         return {}
     van, tot = min(dagen), max(dagen)
@@ -140,11 +147,18 @@ def rooster(medewerkers, dagen):
             datum__range=(van, tot), medewerker__in=medewerkers
         )
     }
-    return {
-        (m.pk, dag): cel(m, dag, registraties.get((m.pk, dag)), vrij.get(dag, ""))
-        for m in medewerkers
-        for dag in dagen
-    }
+    ingepland = {}
+    for inzet in Inzet.objects.filter(datum__range=(van, tot), medewerker__in=medewerkers).select_related("klus"):
+        inzet.klus.kleur = kleur_van(inzet.klus)
+        ingepland.setdefault((inzet.medewerker_id, inzet.datum), []).append(inzet.klus)
+    uitkomst = {}
+    for m in medewerkers:
+        for dag in dagen:
+            c = cel(m, dag, registraties.get((m.pk, dag)), vrij.get(dag, ""))
+            if c.stand != BUITEN:
+                c.klussen = ingepland.get((m.pk, dag), [])
+            uitkomst[(m.pk, dag)] = c
+    return uitkomst
 
 
 def aantal_aanwezig(dag):

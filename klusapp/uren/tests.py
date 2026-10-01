@@ -21,7 +21,7 @@ from klussen.tests import TIJDELIJKE_MEDIA, upload
 from medewerkers.models import Medewerker
 
 from . import bezetting, export, totalen
-from .models import Aanwezigheid, Dagnotitie, Uurblok
+from .models import Aanwezigheid, Dagnotitie, Inzet, Uurblok
 
 
 class UurblokTest(TestCase):
@@ -623,10 +623,10 @@ class WerkplanningTest(TestCase):
         self.assertEqual(antwoord.status_code, 404)
         self.assertFalse(Aanwezigheid.objects.exists())
 
-    def test_rooster_zonder_zondag_met_telling(self):
+    def test_rooster_van_maandag_tot_zondag_met_telling(self):
         antwoord = self.client.get("/aanwezigheid/?dag=2026-09-09&weken=1")
         kop = antwoord.context["kopdagen"]
-        self.assertEqual([k["datum"] for k in kop], [self.maandag + timedelta(days=n) for n in range(6)])
+        self.assertEqual([k["datum"] for k in kop], [self.maandag + timedelta(days=n) for n in range(7)])
         # maandag: Maarten en Sam volgens rooster; Joep heeft geen vaste
         # dagen en Kees is pas vanaf woensdag in dienst
         self.assertEqual((kop[0]["aanwezig"], kop[0]["in_dienst"]), (2, 3))
@@ -638,8 +638,8 @@ class WerkplanningTest(TestCase):
         self.assertIn(self.nieuw, namen)
 
     def test_twee_en_vier_weken(self):
-        self.assertEqual(len(self.client.get("/aanwezigheid/?dag=2026-09-07").context["kopdagen"]), 12)
-        self.assertEqual(len(self.client.get("/aanwezigheid/?weken=4").context["kopdagen"]), 24)
+        self.assertEqual(len(self.client.get("/aanwezigheid/?dag=2026-09-07").context["kopdagen"]), 14)
+        self.assertEqual(len(self.client.get("/aanwezigheid/?weken=4").context["kopdagen"]), 28)
         # een onbekend aantal weken valt terug op de standaard
         self.assertEqual(self.client.get("/aanwezigheid/?weken=99").context["weken"], 2)
 
@@ -728,6 +728,55 @@ class WerkplanningTest(TestCase):
         self.assertEqual(bezetting.aantal_aanwezig(self.maandag), (2, 3))
         Aanwezigheid.objects.create(medewerker=self.sam, datum=self.maandag, aanwezig=False, reden="ziek")
         self.assertEqual(bezetting.aantal_aanwezig(self.maandag), (1, 3))
+
+    def test_klussen_inplannen_per_persoon_per_dag(self):
+        tuin = Klus.objects.create(naam="Tuin Vermeer", soort=Klus.Soort.AANLEG, plaats="Leiden")
+        vanee = Klus.objects.create(naam="Van Ee Kristal", soort=Klus.Soort.VAN_EE)
+        dagen = [self.cel(self.sam, self.maandag), self.cel(self.maarten, self.maandag)]
+        self.zet(dagen, "standaard", klussen_wijzigen="1", klus=[str(tuin.pk), str(vanee.pk)])
+        self.assertEqual(Inzet.objects.filter(datum=self.maandag).count(), 4)
+        # volgens rooster een werkdag: geen afwijking, geen stip
+        self.assertFalse(Aanwezigheid.objects.exists())
+        rij = self.client.get("/aanwezigheid/?dag=2026-09-07&weken=1").context["rijen"]
+        sam = next(r for r in rij if r["medewerker"] == self.sam)
+        self.assertEqual([k.naam for k in sam["cellen"][0].klussen], ["Tuin Vermeer", "Van Ee Kristal"])
+
+        # opnieuw zetten vervangt, en dubbel opslaan klapt niet
+        self.zet(dagen, "ja", klussen_wijzigen="1", klus=[str(tuin.pk)])
+        self.zet(dagen, "ja", klussen_wijzigen="1", klus=[str(tuin.pk)])
+        self.assertEqual(set(Inzet.objects.values_list("klus__naam", flat=True)), {"Tuin Vermeer"})
+        self.assertEqual(Inzet.objects.count(), 2)
+
+    def test_klussen_blijven_staan_als_het_venster_ze_niet_wijzigt(self):
+        tuin = Klus.objects.create(naam="Tuin Vermeer", soort=Klus.Soort.AANLEG)
+        Inzet.objects.create(medewerker=self.sam, datum=self.maandag, klus=tuin)
+        self.zet([self.cel(self.sam, self.maandag)], "ja", opmerking="tot 14.15")
+        self.assertTrue(Inzet.objects.exists())
+        # leeg met klussen_wijzigen haalt ze wél weg
+        self.zet([self.cel(self.sam, self.maandag)], "ja", klussen_wijzigen="1")
+        self.assertFalse(Inzet.objects.exists())
+
+    def test_afwezig_haalt_de_klussen_weg(self):
+        tuin = Klus.objects.create(naam="Tuin Vermeer", soort=Klus.Soort.AANLEG)
+        Inzet.objects.create(medewerker=self.sam, datum=self.maandag, klus=tuin)
+        self.zet([self.cel(self.sam, self.maandag)], "nee", reden="ziek", klussen_wijzigen="1", klus=[str(tuin.pk)])
+        self.assertFalse(Inzet.objects.exists())
+
+    def test_klus_op_een_vrije_dag_maakt_hem_aanwezig(self):
+        tuin = Klus.objects.create(naam="Tuin Vermeer", soort=Klus.Soort.AANLEG)
+        zondag = self.maandag + timedelta(days=6)
+        self.zet([self.cel(self.joep, zondag)], "standaard", klussen_wijzigen="1", klus=[str(tuin.pk)])
+        self.assertTrue(Aanwezigheid.objects.get(medewerker=self.joep, datum=zondag).aanwezig)
+        kop = self.client.get("/aanwezigheid/?dag=2026-09-07&weken=1").context["kopdagen"]
+        self.assertEqual(kop[6]["aanwezig"], 1)
+
+    def test_afgeronde_klus_die_nog_gepland_staat_blijft_kiesbaar(self):
+        oud = Klus.objects.create(naam="Oude tuin", soort=Klus.Soort.AANLEG, actief=False)
+        Klus.objects.create(naam="Nog ouder", soort=Klus.Soort.AANLEG, actief=False)
+        Inzet.objects.create(medewerker=self.sam, datum=self.maandag, klus=oud)
+        namen = [k.naam for k in self.client.get("/aanwezigheid/?dag=2026-09-07").context["klussen"]]
+        self.assertIn("Oude tuin", namen)
+        self.assertNotIn("Nog ouder", namen)
 
     def test_vaste_werkdagen_op_het_medewerkersscherm(self):
         html = self.client.get(reverse("medewerker_bewerken", args=[self.sam.pk])).content.decode()

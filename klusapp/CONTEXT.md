@@ -166,7 +166,7 @@ schrijft zijn opties nog steeds zelf in de template en blijft op `data-scope`.
 | 4 | Beheerdersoverzicht / planbord | 🟢 100% | — `/planbord/`, vaste eerste kolom op mobiel (F3) |
 | 5 | Fotodropbox | 🟢 100% | — raster, zoeken, filter per klus |
 | 6 | Urenexport voor de boekhouder | 🟢 100% | — Excel per kalendermaand, getest (antwoord Maarten 15-09) |
-| 7 | Aanwezigheidsregistratie | 🟢 100% | — `/aanwezigheid/`: sinds 01-10-2026 een werkplanning-rooster in plaats van een dagscherm, naar de Excel van Maarten. Vaste werkdagen per medewerker, afwijkingen met reden, feestdagen vanzelf vrij, telling per dag, dagnotitie. Alleen eigenaar, gemaakt voor de laptop. Fase 2 (klussen in hetzelfde rooster) volgt |
+| 7 | Aanwezigheidsregistratie | 🟢 100% | — `/aanwezigheid/`: sinds 01-10-2026 een werkplanning-rooster in plaats van een dagscherm, naar de Excel van Maarten. Vaste werkdagen per medewerker, afwijkingen met reden, feestdagen vanzelf vrij, telling per dag, dagnotitie. Alle zeven dagen; per persoon per dag in te plannen op één of meer klussen (`Inzet`). Alleen eigenaar, gemaakt voor de laptop |
 | 8 | Inlogbeheer rolgebaseerd | 🟢 100% | — `/medewerkers/`: toevoegen, bewerken, wachtwoord zetten, uit dienst. Vraag 5 aan Maarten is daarmee ingehaald |
 | 9 | Loonstrook-snelkoppeling | 🟢 100% | Klaar, iOS/Android afgehandeld, getest |
 
@@ -429,14 +429,16 @@ in kijkt.
 
 **F4 · Aanwezigheid.** Was een dagscherm (groen/rood per persoon). Sinds 01-10-2026
 een rooster over 1, 2 of 4 weken, als vervanger van Maartens Excel "Werkplanning":
-mensen als rijen, ma–za als kolommen, bovenaan per dag hoeveel man er is.
+mensen als rijen, ma–zo als kolommen, bovenaan per dag hoeveel man er is.
 Rekenwerk in `uren/bezetting.py`: geen `Aanwezigheid`-rij betekent "volgens rooster"
 (`Medewerker.vaste_werkdagen`, feestdagen vrij); een rij is een afwijking met
 `reden` en `opmerking`. `Dagnotitie` is één regel per dag voor iedereen. Alleen de
 eigenaar — Maarten wil niet dat de medewerkers dit zien (gesprek 01-10-2026).
 Selecteren als in Excel (klik, slepen, shift-klik, naam, dag) in
-`static/js/werkplanning.js`. Volgende stap: de klussen als tweede blok in
-hetzelfde rooster, met werknummer op de klus.
+`static/js/werkplanning.js`. Per cel kies je ook de klus(sen) waar iemand die
+dag heen gaat (`uren.models.Inzet`, los van Aanwezigheid): de cel krijgt de
+kleur en naam van de klus. Afwezig zetten haalt de klussen weg; een klus op een
+vrije dag maakt iemand aanwezig.
 
 ## 7. Spoor Thijmen — foto's, export en productie (≈ 15 uur)
 
