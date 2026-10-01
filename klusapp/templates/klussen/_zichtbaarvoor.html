@@ -5,12 +5,17 @@
    klusformulier, alleen mag je er hier meer tegelijk kiezen.
 
    Verwacht `veld`: het zichtbaar_voor-veld van een BijlageForm. Alleen voor
-   de eigenaar; de view negeert het voor iedereen anders. {% endcomment %}
+   de eigenaar; de view negeert het voor iedereen anders. Optioneel `kop`: een
+   ander kopje dan het veldlabel, zoals op het klusformulier waar er ook een
+   fotoveld staat en dus gezegd moet worden wélke bestanden het betreft.
+
+   Elke pil krijgt het avatarrondje van die medewerker: aan een gezicht
+   herken je sneller wie het is dan aan een rij namen. {% endcomment %}
 {% if veld.field.queryset.exists %}
-  <label id="{{ veld.auto_id }}-label">{{ veld.label }}</label>
+  <label id="{{ veld.auto_id }}-label">{{ kop|default:veld.label }}</label>
   <div class="keuzes" role="group" aria-labelledby="{{ veld.auto_id }}-label">
     {% for keuze in veld %}
-      <label class="keuzepil kies">{{ keuze.tag }}<span class="vlak">{{ keuze.choice_label }}</span></label>
+      <label class="keuzepil kies">{{ keuze.tag }}<span class="vlak met-bol">{% include "_medewerkerbol.html" with persoon=keuze.data.value.instance klasse="zv-bol" %}{{ keuze.choice_label }}</span></label>
     {% endfor %}
   </div>
   {% for fout in veld.errors %}<p class="fout">{{ fout }}</p>{% endfor %}

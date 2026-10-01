@@ -119,7 +119,7 @@
       <label for="{{ bijlagenformulier.documenten.id_for_label }}">{{ bijlagenformulier.documenten.label }}</label>
       {{ bijlagenformulier.documenten }}
       {% for fout in bijlagenformulier.documenten.errors %}<p class="fout">{{ fout }}</p>{% endfor %}
-      {% include "klussen/_zichtbaarvoor.html" with veld=bijlagenformulier.zichtbaar_voor %}
+      {% include "klussen/_zichtbaarvoor.html" with veld=bijlagenformulier.zichtbaar_voor kop="Technische documenten zichtbaar voor:" %}
     {% endif %}
 
     <p style="margin-top:1.8rem"><button type="submit" class="knop">Opslaan</button></p>

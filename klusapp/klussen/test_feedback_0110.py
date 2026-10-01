@@ -95,6 +95,18 @@ class DocumentAfschermenTest(TestCase):
         self.assertContains(antwoord, "Alleen Henk")
 
 
+class ZichtbaarVoorBijNieuweKlusTest(TestCase):
+    def test_kopje_en_avatars(self):
+        Medewerker.objects.create_user("henk", password="x", first_name="Henk", last_name="Bos")
+        self.client.force_login(
+            Medewerker.objects.create_user("maarten", password="x", rol=Medewerker.Rol.EIGENAAR)
+        )
+        antwoord = self.client.get(reverse("klus_nieuw"))
+        self.assertContains(antwoord, "Technische documenten zichtbaar voor:")
+        self.assertContains(antwoord, 'class="zv-bol"')
+        self.assertContains(antwoord, ">HB</span>\nHenk Bos")
+
+
 class AanlegEnStaatTest(TestCase):
     def test_staat_als_keuzepillen_actief_en_afgerond(self):
         html = KlusForm().as_p()

@@ -2526,6 +2526,16 @@ html.klus-terug-navigatie .kaart:has(.terug-pijl){
   background:rgba(var(--accent-rgb),0.32); border-color:rgba(var(--accent-rgb),0.6); color:var(--hi);
 }
 
+/* "Zichtbaar voor" (klussen/_zichtbaarvoor.html): een pil met het
+   avatarrondje van de medewerker ervoor. Links minder ruimte, zodat het
+   rondje net binnen de ronding van de pil valt. */
+.keuzepil .vlak.met-bol{ gap:.5rem; padding-left:.35rem; }
+.keuzepil .zv-bol{
+  flex-shrink:0; width:26px; height:26px; border-radius:999px; border:1px solid;
+  display:flex; align-items:center; justify-content:center;
+  font-size:10px; font-weight:700; color:#fff; letter-spacing:.02em;
+}
+
 #bekende-adressen[hidden], #klusbotsing[hidden]{ display:none; }
 
 .klusbotsing-kaart{
