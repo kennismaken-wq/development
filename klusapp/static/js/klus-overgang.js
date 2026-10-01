@@ -1,7 +1,7 @@
 /* Slide-animatie voor het terugpijltje (zie app.css: .kaart.klus-uit-animatie).
-   Dit onderschept de klik, start de uitschuifanimatie op de kaart en
-   navigeert tegelijk; de browser houdt deze pagina in beeld tot de volgende
-   er is, dus de animatie overbrugt het laden in plaats van erop te wachten.
+   Dit onderschept de klik, laat de kaart naar rechts wegschuiven en
+   navigeert pas daarna. Tegelijk navigeren is geprobeerd (01-10), maar dan
+   breekt de browser het wegschuiven meteen af en zie je geen animatie meer.
 
    Vóór (deze regel staat als eerste, dus loopt vóór <body> is geparst — geen
    flits): als de vórige klik een terugpijl was, schuift deze kaart nu
@@ -55,17 +55,24 @@ document.addEventListener("click", function (gebeurtenis) {
   if (!terugInGeschiedenis && !animeren) return;
 
   gebeurtenis.preventDefault();
-  // Uitschuiven en laden tegelijk, niet na elkaar: eerst de animatie
-  // afwachten en dan pas de volgende pagina opvragen voelde traag. Het
-  // uitschuiven wordt daardoor vaak afgebroken; het eigenlijke "terug"-gevoel
-  // komt van de pagina waar je aankomt, die van links inschuift (de vlag).
-  if (animeren) {
-    kaart.classList.add("klus-uit-animatie");
-    sessionStorage.setItem("klus-terug-navigatie", "1");
+  var verder = function () {
+    if (terugInGeschiedenis) history.back();
+    else window.location.href = doel;
+  };
+  if (!animeren) {
+    verder();
+    return;
   }
-  if (terugInGeschiedenis) {
-    history.back();
-  } else {
-    window.location.href = doel;
-  }
+
+  sessionStorage.setItem("klus-terug-navigatie", "1");
+  var weg = false;
+  var naWegschuiven = function (e) {
+    if (weg || (e && e.target !== kaart)) return; // animaties binnen de kaart tellen niet
+    weg = true;
+    kaart.removeEventListener("animationend", naWegschuiven);
+    verder();
+  };
+  kaart.addEventListener("animationend", naWegschuiven);
+  setTimeout(naWegschuiven, 300); // vangnet als animationend niet komt
+  kaart.classList.add("klus-uit-animatie");
 });

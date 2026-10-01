@@ -2511,9 +2511,9 @@ a.wp-klus{ text-decoration:none; }
      kop (.terug-pijl bestaat alleen op een scherm dat je "in" een klus
      toont), dus dit hoeft niet los aangezet te worden per pagina.
    - Teruggaan: static/js/klus-overgang.js onderschept de klik op dat
-     pijltje en start de uitschuifanimatie terwijl de volgende pagina al
-     laadt (eerst afwachten en dan pas laden voelde traag); is het doel de
-     vorige pagina in de geschiedenis, dan via browser-terug.
+     pijltje, laat de kaart wegschuiven en navigeert daarna; is het doel de
+     vorige pagina in de geschiedenis, dan via browser-terug (vaak direct
+     uit de cache, dus geen wachttijd na de animatie).
    Was eerder een cross-document View Transition (native browser-API); die
    bleek in de praktijk niet overal te animeren, dit werkt zonder
    afhankigheid van die (nog jonge) API.
@@ -2540,12 +2540,20 @@ a.wp-klus{ text-decoration:none; }
 html.klus-terug-navigatie .kaart{
   animation:klus-in-van-links .28s cubic-bezier(.2,.8,.2,1) both;
 }
+/* Wegschuiven over de volle breedte, maar zonder glasvervaging (op de
+   kaart zelf en op de glazen rijen en knoppen erin, die op een telefoon elk
+   hun eigen vervaging hebben): die per frame opnieuw berekenen liet het
+   haperen. In de beweging valt het verschil niet op. */
 .kaart.klus-uit-animatie{
-  animation:klus-uit-naar-rechts .18s ease-in both;
+  animation:klus-uit-naar-rechts .22s cubic-bezier(.4,0,.9,.6) both;
+  will-change:transform;
+}
+.kaart.klus-uit-animatie, .kaart.klus-uit-animatie *{
+  backdrop-filter:none !important; -webkit-backdrop-filter:none !important;
 }
 @keyframes klus-in-van-rechts{ from{ opacity:0; transform:translateX(64px); } to{ opacity:1; transform:none; } }
 @keyframes klus-in-van-links{ from{ opacity:0; transform:translateX(-64px); } to{ opacity:1; transform:none; } }
-@keyframes klus-uit-naar-rechts{ from{ opacity:1; transform:none; } to{ opacity:.3; transform:translateX(64px); } }
+@keyframes klus-uit-naar-rechts{ from{ transform:none; } to{ transform:translateX(100%); } }
 @media (prefers-reduced-motion: reduce){
   .kaart:has(.terug-pijl), html.klus-terug-navigatie .kaart,
   .kaart.klus-uit-animatie{ animation:none; }
