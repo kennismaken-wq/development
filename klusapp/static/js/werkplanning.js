@@ -233,11 +233,6 @@
       return;
     }
 
-    const klusnaam = e.target.closest(".wp-klusnaam");
-    if (klusnaam) {
-      openKlusVenster(kluscellen.filter(function (c) { return c.dataset.q === klusnaam.dataset.q; }));
-      return;
-    }
     const inklap = e.target.closest("[data-klussen-inklappen]");
     if (inklap) {
       zetKlussenDicht(!bord.classList.contains("klussen-dicht"));
