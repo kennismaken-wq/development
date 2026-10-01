@@ -333,20 +333,17 @@ input[type=time]::-webkit-calendar-picker-indicator{ filter:invert(1); opacity:.
   white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
 }
 
-/* Eén <select> i.p.v. drie knoppen naast elkaar: de browser geeft de native
-   platformkeuzelijst (wieltje op iOS, dropdown op Android) er gratis bij —
-   geen eigen JS-menu om open/dicht/toetsenbord/focus voor te bouwen. De
-   pijl staat los achter het (doorzichtige) select-element, met
-   pointer-events:none zodat een tik er dwars doorheen bij het select komt. */
-.weergave-kiezer{ position:relative; flex-shrink:0; }
-.weergave-kiezer select{
-  width:auto; margin:0; padding:.4rem 1.8rem .4rem .85rem; font-size:12.5px; font-weight:600;
-  border-radius:999px; background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.18);
-  color:#fff; cursor:pointer;
-}
-.weergave-kiezer svg{
-  position:absolute; top:50%; right:.6rem; transform:translateY(-50%);
-  width:13px; height:13px; color:rgba(255,255,255,0.6); pointer-events:none;
+/* Dag/Week/Maand als drie pillen, net als de zoomknoppen op Aanwezigheid
+   (.wp-weken). Ze krimpen niet; als het krap wordt, kort de datumtitel in. */
+.weergave-knoppen{ display:flex; gap:.4rem; flex-shrink:0; }
+.weergave-knoppen .pil{ padding:.4rem .85rem; }
+.urentop .periodetitel .kort{ display:none; }
+@media (max-width:480px){
+  .weergave-knoppen{ gap:.3rem; }
+  .weergave-knoppen .pil{ padding:.4rem .6rem; }
+  /* naast de pillen past "Donderdag 1 oktober" niet; dan "Do 1 Okt" */
+  .urentop .periodetitel .lang{ display:none; }
+  .urentop .periodetitel .kort{ display:inline; }
 }
 
 /* ══════════ FOTO'S: ZOEKBARE KLUS-KIEZER ══════════

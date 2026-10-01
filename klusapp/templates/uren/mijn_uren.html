@@ -5,27 +5,23 @@
 {% block inhoud %}
   {% comment %} Compacte kopregel i.p.v. drie losse blokken (weergave-pillen,
      navbalk, "Uren toevoegen"): pijlen + datum op één regel, Dag/Week/Maand
-     als één dropdown i.p.v. drie knoppen naast elkaar (zie .weergave-kiezer
-     in app.css — een echte <select> geeft de native, toegankelijke
-     platformkeuzelijst gratis mee). {% endcomment %}
+     als drie pillen ernaast, net als op Aanwezigheid (zie .weergave-knoppen
+     in app.css). {% endcomment %}
   <div class="urentop">
     <div class="urentop-nav">
       <a class="urenpijl" data-urennav="vorige" href="?weergave={{ weergave }}&dag={{ vorige|date:'Y-m-d' }}" aria-label="Vorige periode">‹</a>
       <span class="periodetitel">
         {% if weergave == "week" %}{{ maandag|date:"j M" }} – {{ zondag|date:"j M" }}
         {% elif weergave == "maand" %}{{ dag|date:"F Y"|capfirst }}
-        {% else %}{{ dag|date:"l j F"|capfirst }}{% endif %}
+        {% else %}<span class="lang">{{ dag|date:"l j F"|capfirst }}</span><span class="kort">{{ dag|date:"D j M"|capfirst }}</span>{% endif %}
       </span>
       <a class="urenpijl" data-urennav="volgende" href="?weergave={{ weergave }}&dag={{ volgende|date:'Y-m-d' }}" aria-label="Volgende periode">›</a>
     </div>
-    <label class="weergave-kiezer">
-      <select onchange="if(this.value) window.location.href=this.value">
-        <option value="?weergave=dag&dag={{ dag|date:'Y-m-d' }}"{% if weergave == "dag" %} selected{% endif %}>Dag</option>
-        <option value="?weergave=week&dag={{ dag|date:'Y-m-d' }}"{% if weergave == "week" %} selected{% endif %}>Week</option>
-        <option value="?weergave=maand&dag={{ dag|date:'Y-m-d' }}"{% if weergave == "maand" %} selected{% endif %}>Maand</option>
-      </select>
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
-    </label>
+    <div class="weergave-knoppen" role="group" aria-label="Weergave">
+      <a class="pil{% if weergave == 'dag' %} actief{% endif %}" href="?weergave=dag&dag={{ dag|date:'Y-m-d' }}"{% if weergave == "dag" %} aria-current="page"{% endif %}>Dag</a>
+      <a class="pil{% if weergave == 'week' %} actief{% endif %}" href="?weergave=week&dag={{ dag|date:'Y-m-d' }}"{% if weergave == "week" %} aria-current="page"{% endif %}>Week</a>
+      <a class="pil{% if weergave == 'maand' %} actief{% endif %}" href="?weergave=maand&dag={{ dag|date:'Y-m-d' }}"{% if weergave == "maand" %} aria-current="page"{% endif %}>Maand</a>
+    </div>
   </div>
 
   <div class="urensub">

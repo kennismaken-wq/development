@@ -317,7 +317,7 @@ class UrenSchrijvenTest(TestCase):
 
 
 class UrenCompacteKopTest(TestCase):
-    """De compacte kop (dropdown i.p.v. drie knoppen, swipe-doelen, "+"-knop
+    """De compacte kop (drie weergave-pillen, swipe-doelen, "+"-knop
     i.p.v. "Uren toevoegen") — zie templates/uren/mijn_uren.html."""
 
     @classmethod
@@ -327,13 +327,14 @@ class UrenCompacteKopTest(TestCase):
     def setUp(self):
         self.client.force_login(self.sam)
 
-    def test_dropdown_heeft_drie_weergaven_met_juiste_selectie(self):
+    def test_drie_weergavepillen_met_juiste_selectie(self):
         html = self.client.get("/uren/?dag=2026-09-07&weergave=week").content.decode()
-        self.assertIn('class="weergave-kiezer"', html)
+        self.assertIn('class="weergave-knoppen"', html)
         self.assertIn(">Dag<", html)
         self.assertIn(">Week<", html)
         self.assertIn(">Maand<", html)
-        self.assertIn('value="?weergave=week&dag=2026-09-07" selected', html)
+        self.assertIn('class="pil actief" href="?weergave=week&dag=2026-09-07"', html)
+        self.assertIn('class="pil" href="?weergave=dag&dag=2026-09-07"', html)
 
     def test_swipe_doelen_staan_in_de_dagweergave(self):
         # kalender.js zoekt hierop om te weten welke kant op te navigeren.
