@@ -54,6 +54,13 @@ class Uurblok(models.Model):
     def __str__(self):
         return f"{self.medewerker} · {self.datum:%d-%m-%Y} · {self.klus}"
 
+    def save(self, *args, **kwargs):
+        """Geen klus op een dag dat iemand afwezig staat. Weigeren in plaats
+        van stil overslaan: wie dit probeert, moet het merken."""
+        if Aanwezigheid.objects.filter(medewerker_id=self.medewerker_id, datum=self.datum, aanwezig=False).exists():
+            raise ValidationError("Op een dag dat iemand afwezig is, kan hij niet op een klus staan.")
+        super().save(*args, **kwargs)
+
     def clean(self):
         if self.begintijd and self.eindtijd and self.eindtijd <= self.begintijd:
             raise ValidationError({"eindtijd": "De eindtijd moet na de begintijd liggen."})
@@ -109,6 +116,14 @@ class Aanwezigheid(models.Model):
         stand = "aanwezig" if self.aanwezig else "afwezig"
         return f"{self.medewerker} · {self.datum:%d-%m-%Y} · {stand}"
 
+    def save(self, *args, **kwargs):
+        """Wie afwezig is, gaat nergens heen: zijn klussen voor die dag gaan
+        mee weg. Hier en niet alleen in de view, zodat het ook geldt voor
+        het beheerscherm, een script of een import."""
+        super().save(*args, **kwargs)
+        if not self.aanwezig:
+            Inzet.objects.filter(medewerker_id=self.medewerker_id, datum=self.datum).delete()
+
 
 class Dagnotitie(models.Model):
     """Eén regel tekst bij een dag in de werkplanning, voor iedereen tegelijk:
@@ -153,3 +168,10 @@ class Inzet(models.Model):
 
     def __str__(self):
         return f"{self.medewerker} · {self.datum:%d-%m-%Y} · {self.klus}"
+
+    def save(self, *args, **kwargs):
+        """Geen klus op een dag dat iemand afwezig staat. Weigeren in plaats
+        van stil overslaan: wie dit probeert, moet het merken."""
+        if Aanwezigheid.objects.filter(medewerker_id=self.medewerker_id, datum=self.datum, aanwezig=False).exists():
+            raise ValidationError("Op een dag dat iemand afwezig is, kan hij niet op een klus staan.")
+        super().save(*args, **kwargs)

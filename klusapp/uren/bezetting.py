@@ -155,7 +155,9 @@ def rooster(medewerkers, dagen):
     for m in medewerkers:
         for dag in dagen:
             c = cel(m, dag, registraties.get((m.pk, dag)), vrij.get(dag, ""))
-            if c.stand != BUITEN:
+            # Op een rode dag geen klus, ook niet als er nog een in de
+            # database staat (een feestdag die er later bij kwam, bv.).
+            if c.stand not in (BUITEN, AFWEZIG):
                 c.klussen = ingepland.get((m.pk, dag), [])
             uitkomst[(m.pk, dag)] = c
     return uitkomst

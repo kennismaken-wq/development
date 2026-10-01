@@ -762,6 +762,37 @@ class WerkplanningTest(TestCase):
         self.zet([self.cel(self.sam, self.maandag)], "nee", reden="ziek", klussen_wijzigen="1", klus=[str(tuin.pk)])
         self.assertFalse(Inzet.objects.exists())
 
+    def test_afwezig_en_klus_kan_op_geen_enkele_manier(self):
+        tuin = Klus.objects.create(naam="Tuin Vermeer", soort=Klus.Soort.AANLEG)
+        # afwezig zetten buiten het scherm om (beheer, script) ruimt ook op
+        Inzet.objects.create(medewerker=self.sam, datum=self.maandag, klus=tuin)
+        Aanwezigheid.objects.create(medewerker=self.sam, datum=self.maandag, aanwezig=False, reden="ziek")
+        self.assertFalse(Inzet.objects.exists())
+        # en een klus op een afwezige dag wordt geweigerd
+        with self.assertRaises(ValidationError):
+            Inzet.objects.create(medewerker=self.sam, datum=self.maandag, klus=tuin)
+        # via het scherm: "aanwezig" met een klus maakt hem weer aanwezig
+        self.zet([self.cel(self.sam, self.maandag)], "ja", klussen_wijzigen="1", klus=[str(tuin.pk)])
+        self.assertTrue(Inzet.objects.exists())
+
+    def test_op_een_feestdag_geen_klus_in_beeld(self):
+        tuin = Klus.objects.create(naam="Tuin Vermeer", soort=Klus.Soort.AANLEG)
+        kerst = date(2026, 12, 25)
+        Inzet.objects.create(medewerker=self.sam, datum=kerst, klus=tuin)
+        cel = bezetting.rooster([self.sam], [kerst])[(self.sam.pk, kerst)]
+        self.assertEqual((cel.stand, cel.klussen), (bezetting.AFWEZIG, []))
+
+    def test_migratie_ruimt_afwezig_met_klus_op(self):
+        import importlib
+        from django.apps import apps
+        tuin = Klus.objects.create(naam="Tuin Vermeer", soort=Klus.Soort.AANLEG)
+        Inzet.objects.create(medewerker=self.sam, datum=self.maandag, klus=tuin)
+        Inzet.objects.create(medewerker=self.joep, datum=self.maandag, klus=tuin)
+        # buiten save() om, zoals de oude data op develop
+        Aanwezigheid.objects.bulk_create([Aanwezigheid(medewerker=self.sam, datum=self.maandag, aanwezig=False)])
+        importlib.import_module("uren.migrations.0005_afwezig_zonder_klus").opruimen(apps, None)
+        self.assertEqual(list(Inzet.objects.values_list("medewerker", flat=True)), [self.joep.pk])
+
     def test_klus_op_een_vrije_dag_maakt_hem_aanwezig(self):
         tuin = Klus.objects.create(naam="Tuin Vermeer", soort=Klus.Soort.AANLEG)
         zondag = self.maandag + timedelta(days=6)
