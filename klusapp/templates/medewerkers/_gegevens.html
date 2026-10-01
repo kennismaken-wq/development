@@ -105,6 +105,37 @@
   </p>
 </form>
 
+{% if formulier.errors %}
+  {% comment %} Zelfde popup als bij een uurblok (uren/_uurblokformulier.html).
+     Zonder dit kwam een afgekeurd formulier ongemerkt terug: de melding
+     stond onderaan bij het wachtwoord, buiten beeld, en het leek alsof er
+     niets gebeurd was (01-10-2026, "medewerker toevoegen lukt niet"). Met
+     het veld erbij, want op dit lange formulier zegt "Dit veld is
+     verplicht." alleen niet waar. {% endcomment %}
+  <dialog class="foutpopup" id="gegevens-foutpopup">
+    <div class="foutpopup-kaart glas">
+      <button type="button" class="dialog-sluiten" onclick="this.closest('dialog').close()" aria-label="Sluiten">×</button>
+      <h2 class="sectiekop" style="margin-top:0">Nog niet opgeslagen</h2>
+      <ul class="foutpopup-lijst">
+        {% for fout in formulier.non_field_errors %}<li>{{ fout }}</li>{% endfor %}
+        {% for veld in formulier %}
+          {% for fout in veld.errors %}<li><strong>{{ veld.label }}:</strong> {{ fout }}</li>{% endfor %}
+        {% endfor %}
+      </ul>
+    </div>
+  </dialog>
+  <script>
+    (function () {
+      var popup = document.getElementById("gegevens-foutpopup");
+      popup.showModal();
+      requestAnimationFrame(function () {
+        requestAnimationFrame(function () { popup.classList.add("open-anim"); });
+      });
+      popup.addEventListener("click", function (e) { if (e.target === this) this.close(); });
+    })();
+  </script>
+{% endif %}
+
 <script>
   // De knop is een gewone link naar ?bewerken=1; met javascript openen we de
   // velden meteen, zodat de pagina niet opnieuw hoeft te laden.

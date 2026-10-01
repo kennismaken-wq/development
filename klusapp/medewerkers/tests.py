@@ -266,6 +266,17 @@ class MedewerkersBeherenTest(TestCase):
         )
         self.assertFalse(Medewerker.objects.filter(username="joep").exists())
 
+    def test_afgekeurd_formulier_zegt_in_een_popup_wat_er_mis_is(self):
+        # 01-10-2026: de melding stond alleen onderaan bij het veld, buiten
+        # beeld, en het leek alsof toevoegen niets deed.
+        html = self.client.post(
+            reverse("medewerker_nieuw"),
+            {"first_name": "Sam", "username": "sam", "rol": "medewerker",
+             "kleur": "#5B8FA8", "wachtwoord": "tuinbaas2026"},
+        ).content.decode()
+        self.assertIn('id="gegevens-foutpopup"', html)
+        self.assertIn("<strong>Gebruikersnaam:</strong>", html)
+
     def test_uit_dienst_bewaart_de_persoon(self):
         self.client.post(reverse("medewerker_dienst", args=[self.sam.pk]))
         self.sam.refresh_from_db()
