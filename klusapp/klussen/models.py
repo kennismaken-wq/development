@@ -202,3 +202,33 @@ class Bijlage(models.Model):
         """Je eigen bijlage, of je bent de eigenaar. Een medewerker haalt dus
         niet per ongeluk de tekening van een ander weg."""
         return gebruiker.is_eigenaar or self.toegevoegd_door_id == gebruiker.pk
+
+
+class Notitie(models.Model):
+    """Een korte aantekening in het klusdossier ("hek staat open, sleutel bij
+    de buren"). Ze staan onder elkaar, de nieuwste bovenaan, als een logboek:
+    wat er eenmaal geschreven is wordt niet bewerkt, hooguit weggehaald en
+    opnieuw geschreven. Zo blijft zichtbaar wie wat wanneer meldde."""
+
+    klus = models.ForeignKey(Klus, on_delete=models.CASCADE, related_name="notities")
+    tekst = models.TextField(max_length=2000)
+    geschreven_door = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        on_delete=models.SET_NULL,
+        related_name="notities",
+    )
+    geschreven_op = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = "notitie"
+        verbose_name_plural = "notities"
+        ordering = ["-geschreven_op"]
+
+    def __str__(self):
+        return f"Notitie bij {self.klus} van {self.geschreven_door or 'onbekend'}"
+
+    def mag_verwijderen(self, gebruiker):
+        """Zelfde regel als bij een bijlage: je eigen notitie, of je bent de
+        eigenaar."""
+        return gebruiker.is_eigenaar or self.geschreven_door_id == gebruiker.pk

@@ -1861,6 +1861,53 @@ dialog.foutpopup::backdrop{ background:rgba(10,10,8,0.75); backdrop-filter:blur(
   color:rgba(255,255,255,0.78);
 }
 
+/* Notities in het klusdossier: tekstvak + logboek eronder. De lijst krijgt
+   een maximale hoogte en scrolt zelf, anders groeit het dossier bij een
+   lange klus eindeloos door voordat je bij de tabbladen bent. */
+.notities{ margin:-.4rem 0 1.6rem; }
+.notities > .lbl{
+  display:block; margin-bottom:.5rem; font-size:10.5px; font-weight:600;
+  letter-spacing:.05em; text-transform:uppercase; color:rgba(255,255,255,0.45);
+}
+.notitie-nieuw{ display:flex; gap:.5rem; align-items:flex-end; }
+.notitie-nieuw textarea{ flex:1; min-height:48px; padding:.65rem .85rem; line-height:1.4; }
+.notitie-nieuw .knop-stil{ min-height:48px; flex-shrink:0; }
+.notitielijst{
+  list-style:none; margin:.7rem 0 0; padding:0 .2rem 0 0;
+  display:grid; gap:.4rem;
+  max-height:min(320px, 45vh); overflow-y:auto; overscroll-behavior:contain;
+  scrollbar-width:thin; scrollbar-color:rgba(255,255,255,0.25) transparent;
+}
+.notitielijst li{
+  display:flex; gap:.65rem; align-items:flex-start;
+  border-radius:14px; padding:.65rem .75rem;
+  background:rgba(255,255,255,0.07); border:1px solid rgba(255,255,255,0.14);
+}
+.notitielijst .nt-bol{
+  flex-shrink:0; width:28px; height:28px; border-radius:999px; border:1px solid;
+  display:flex; align-items:center; justify-content:center;
+  font-size:10px; font-weight:700; color:#fff; letter-spacing:.02em;
+}
+.notitielijst .nt-bol.leeg-bol{ background:rgba(255,255,255,0.06); border:1px dashed rgba(255,255,255,0.3); }
+.nt-inhoud{ flex:1; min-width:0; }
+.nt-inhoud .wie{ display:block; font-size:12.5px; font-weight:600; }
+.nt-inhoud .wanneer{ margin-left:.35rem; font-weight:400; color:rgba(255,255,255,0.45); }
+.nt-inhoud p{
+  margin:.2rem 0 0; font-size:13.5px; line-height:1.5; color:rgba(255,255,255,0.85);
+  overflow-wrap:anywhere;
+}
+.nt-weg{ margin:0; flex-shrink:0; }
+.nt-weg button{
+  position:relative; width:30px; height:30px; border-radius:50%; cursor:pointer;
+  display:flex; align-items:center; justify-content:center; padding:0;
+  background:none; color:rgba(255,255,255,0.5); border:1px solid transparent;
+  -webkit-tap-highlight-color:transparent; touch-action:manipulation;
+}
+.nt-weg button::after{ content:''; position:absolute; inset:-7px; border-radius:50%; }
+.nt-weg svg{ width:16px; height:16px; }
+.nt-weg button:active{ background:rgba(255,255,255,0.18); }
+@media (hover:hover){ .nt-weg button:hover{ color:var(--rood); border-color:rgba(255,255,255,0.18); } }
+
 .urenlijst{ list-style:none; margin:0; padding:0; display:grid; gap:.4rem; }
 .urenlijst li{
   display:grid; grid-template-columns:auto 1fr auto; gap:.15rem .7rem;

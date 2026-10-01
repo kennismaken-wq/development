@@ -2,6 +2,7 @@
 {% load kleuren %}
 {% load pictogrammen %}
 {% load static %}
+{% load bijlagen %}
 {% block titel %}{{ klus.naam }}{% endblock %}
 {% block kaartklasse %}klus-dossier{% endblock %}
 {% block kop %}<span class="vlek" style="background:linear-gradient(150deg, {{ klus|kleur_van }}D9, {{ klus|kleur_van }}73); border-color:{{ klus|kleur_van }}"></span>{{ klus.naam }}{% endblock %}
@@ -26,6 +27,47 @@
       <p class="beschrijving">{{ klus.beschrijving|linebreaksbr }}</p>
     {% endif %}
   </div>
+
+  {% comment %} Notities (01-10-2026): een logboek per klus, nieuwste bovenaan.
+     De lijst heeft een vaste maximale hoogte en scrolt daarbinnen, zodat een
+     klus met veertig notities de tabbladen eronder niet van het scherm duwt.
+     Weghalen mag met dezelfde regel als een bijlage (mag_weg). {% endcomment %}
+  <section class="notities" id="notities">
+    <span class="lbl">Notities</span>
+    <form method="post" action="{% url 'notitie_toevoegen' klus.pk %}" class="notitie-nieuw">
+      {% csrf_token %}
+      <textarea name="tekst" rows="2" maxlength="2000" required
+                placeholder="Schrijf een notitie…" aria-label="Nieuwe notitie"></textarea>
+      <button type="submit" class="knop-stil">Plaatsen</button>
+    </form>
+    {% if notities %}
+      <ol class="notitielijst">
+        {% for notitie in notities %}
+          <li>
+            {% if notitie.geschreven_door %}
+              {% include "_medewerkerbol.html" with persoon=notitie.geschreven_door klasse="nt-bol" %}
+            {% else %}
+              <span class="nt-bol leeg-bol"></span>
+            {% endif %}
+            <div class="nt-inhoud">
+              <span class="wie">
+                {{ notitie.geschreven_door.naam|default:"onbekend" }}
+                <span class="wanneer">{{ notitie.geschreven_op|date:"j M · H:i" }}</span>
+              </span>
+              <p>{{ notitie.tekst|linebreaksbr }}</p>
+            </div>
+            {% if notitie|mag_weg:user %}
+              <form method="post" action="{% url 'notitie_verwijderen' notitie.pk %}" class="nt-weg"
+                    onsubmit="return confirm('Deze notitie verwijderen?');">
+                {% csrf_token %}
+                <button type="submit" title="Verwijderen" aria-label="Notitie verwijderen">{% include "uren/_prullenbak.html" %}</button>
+              </form>
+            {% endif %}
+          </li>
+        {% endfor %}
+      </ol>
+    {% endif %}
+  </section>
 
   {% comment %} Drie tabbladen (29-09-2026):
      - Bestanden: alles wat inhoudelijk bij de klus hoort, foto of document,

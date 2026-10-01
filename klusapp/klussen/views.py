@@ -21,7 +21,7 @@ from uren import totalen
 from . import afbeeldingen, kleuren, opdrachtgevers, pdf_thumbnails, voorbeeld
 from .forms import AlleenFotosForm, BijlageForm, KlusForm, KlusFotoForm, NieuweKlusBijlagenForm
 from .fotoposts import groepeer_in_posts
-from .models import Bijlage, Klus
+from .models import Bijlage, Klus, Notitie
 
 
 def _terug_naar(request, standaard):
@@ -442,6 +442,7 @@ def klus_detail(request, pk):
             "totaal": totalen.totaal_van(gewerkt),
             "foto_posts": groepeer_in_posts(los for los in bijlagen if los.is_foto),
             "document_bijlagen": [los for los in bijlagen if not los.is_foto],
+            "notities": klus.notities.select_related("geschreven_door"),
             "formulier": BijlageForm(),
             "foto_formulier": KlusFotoForm(),
             "upload_url": reverse("bijlage_toevoegen"),
@@ -449,6 +450,35 @@ def klus_detail(request, pk):
             "terugpijl": terugpijl,
         },
     )
+
+
+@login_required
+def notitie_toevoegen(request, pk):
+    """Het tekstvak onder de kerngegevens in het klusdossier. Iedereen die het
+    dossier ziet mag er iets bij schrijven, net als bij foto's en documenten."""
+    if request.method != "POST":
+        return HttpResponseNotAllowed(["POST"])
+    klus = get_object_or_404(Klus, pk=pk)
+    tekst = request.POST.get("tekst", "").strip()
+    max_lengte = Notitie._meta.get_field("tekst").max_length
+    if not tekst:
+        messages.error(request, "Er staat nog niets in de notitie.")
+    elif len(tekst) > max_lengte:
+        messages.error(request, f"Een notitie mag hooguit {max_lengte} tekens zijn.")
+    else:
+        Notitie.objects.create(klus=klus, tekst=tekst, geschreven_door=request.user)
+    return redirect(f"{klus.get_absolute_url()}#notities")
+
+
+@login_required
+def notitie_verwijderen(request, pk):
+    if request.method != "POST":
+        return HttpResponseNotAllowed(["POST"])
+    notitie = get_object_or_404(Notitie, pk=pk)
+    if not notitie.mag_verwijderen(request.user):
+        raise Http404
+    notitie.delete()
+    return redirect(f"{notitie.klus.get_absolute_url()}#notities")
 
 
 @alleen_eigenaar
