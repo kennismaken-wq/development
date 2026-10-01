@@ -17,9 +17,9 @@ from klussen.views import batch_van_upload, bewaar_bijlage
 from medewerkers.models import Medewerker
 from medewerkers.rechten import alleen_eigenaar
 
-from . import export, kalender, periode, totalen
+from . import bezetting, export, kalender, periode, totalen
 from .forms import UurblokForm, UurblokFotosForm
-from .models import Aanwezigheid, Uurblok
+from .models import Aanwezigheid, Dagnotitie, Uurblok
 
 
 def _tijd_uit(waarde):
@@ -484,8 +484,6 @@ def planbord(request):
     )
 
 
-AANWEZIG_KEUZES = {"ja", "nee"}
-
 # Kolombreedtes van het planbord, in px. De namenkolom is zo breed dat een
 # naam als "Youssef el Amrani" op één regel past: een naam over twee regels
 # maakte de hele rij hoger dan zijn uurblokken nodig hadden.
@@ -500,80 +498,155 @@ BORD_SMAL = 52
 BORD_WEEK = 72
 
 
-@login_required
+# Hoeveel weken de werkplanning tegelijk laat zien, en hoe breed een dag dan
+# is. De breedtes zijn zo gekozen dat het hele bord in de vaste kaartbreedte
+# past (.kaart in app.css, 1040px) zonder horizontaal te scrollen: één week
+# met ruimte voor "tandarts 12.30" in de cel, vier weken als het Excel-
+# overzicht waar alleen nog de kleur in past.
+PLANNING_WEKEN = {1: 128, 2: 64, 4: 32}
+PLANNING_STANDAARD_WEKEN = 2
+# Meer cellen dan vier weken lang twintig man passen niet op het bord; een
+# grotere post is geknoei, geen selectie.
+PLANNING_MAX_CELLEN = 1000
+
+
+def _gekozen_weken(request):
+    try:
+        weken = int(request.GET.get("weken", ""))
+    except ValueError:
+        return PLANNING_STANDAARD_WEKEN
+    return weken if weken in PLANNING_WEKEN else PLANNING_STANDAARD_WEKEN
+
+
+@alleen_eigenaar
 def aanwezigheid(request):
-    """Contractpunt 7: per dag bijhouden wie er is, groen of rood.
+    """De werkplanning: wie is er wanneer, als rooster over meerdere weken.
 
-    Bewust geen @alleen_eigenaar, als enige beheerdersscherm: de medewerkers
-    mogen deze dag wél inzien — wie is er vandaag, wie is er ziek — alleen niet
-    zetten. De rolcontrole staat daarom in de view, en óók op de POST: knoppen
-    weglaten in een template is geen rechtencontrole.
+    Vervangt de Excel "Werkplanning" van Maarten: mensen als rijen, dagen als
+    kolommen, groen en rood, en bovenaan per dag hoeveel man er is. Dat getal
+    tikte hij met de hand in en klopte op een kwart van de dagen niet; hier
+    telt het zichzelf (uren/bezetting.py).
 
-    Drie standen, niet twee. "Nog niet ingevuld" is iets anders dan "afwezig",
-    maar `aanwezig` is een BooleanField dat niet leeg mag zijn. Onbekend is
-    hier dus het ontbreken van een rij, en de keuze wissen gooit de rij weer
-    weg — dat scheelt een migratie op een model dat al in gebruik is.
+    Alleen voor de eigenaar: de medewerkers zagen de Excel ook niet, en
+    Maarten wil dat zo houden (gesprek 01-10-2026). Gemaakt voor een laptop —
+    op een telefoon scrolt het bord opzij, maar daar is het niet voor.
+
+    Zondag staat er niet op: daar werd in heel 2026 niet één keer iets
+    ingepland.
     """
-    dag = periode.gekozen_dag(request)
-    vandaag = periode.vandaag()
-    medewerkers = list(Medewerker.objects.filter(uit_dienst_sinds__isnull=True))
+    weken = _gekozen_weken(request)
 
     if request.method == "POST":
-        if not request.user.is_eigenaar:
-            raise Http404
-        _aanwezigheid_opslaan(request, dag, medewerkers)
-        # Terug naar dezelfde dag, als GET: anders levert verversen een
-        # herhaalde post op, en dit scherm wordt op een telefoon gebruikt.
-        return redirect(f"{reverse('aanwezigheid')}?dag={dag.isoformat()}")
+        _planning_opslaan(request)
+        # Terug naar dezelfde weken, als GET: verversen mag de post niet
+        # nog een keer versturen.
+        dag = _datum_uit(request.POST.get("terug")) or periode.vandaag()
+        return redirect(f"{reverse('aanwezigheid')}?dag={dag.isoformat()}&weken={weken}")
 
-    registraties = {
-        registratie.medewerker_id: registratie
-        for registratie in Aanwezigheid.objects.filter(datum=dag)
-    }
-    rijen = [
-        {"medewerker": medewerker, "registratie": registraties.get(medewerker.pk)}
-        for medewerker in medewerkers
+    dag = periode.gekozen_dag(request)
+    vandaag = periode.vandaag()
+    maandag, _ = periode.week_van(dag)
+    dagen = [
+        maandag + timedelta(days=n) for n in range(7 * weken) if (maandag + timedelta(days=n)).weekday() != 6
     ]
+    medewerkers = bezetting.medewerkers_tussen(dagen[0], dagen[-1])
+    cellen = bezetting.rooster(medewerkers, dagen)
+    vrij = bezetting.feestdagen_tussen(dagen[0], dagen[-1])
+    notities = {n.datum: n.tekst for n in Dagnotitie.objects.filter(datum__range=(dagen[0], dagen[-1]))}
+
+    kopdagen = []
+    for k, datum in enumerate(dagen):
+        kolom = [cellen[(m.pk, datum)] for m in medewerkers]
+        kopdagen.append(
+            {
+                "datum": datum,
+                "index": k,
+                "is_vandaag": datum == vandaag,
+                "is_weekstart": datum.weekday() == 0 and k > 0,
+                "is_zaterdag": datum.weekday() == 5,
+                "feestdag": vrij.get(datum, ""),
+                "notitie": notities.get(datum, ""),
+                "aanwezig": sum(1 for c in kolom if c.stand == bezetting.AANWEZIG),
+                "in_dienst": sum(1 for c in kolom if c.stand != bezetting.BUITEN),
+            }
+        )
+    rijen = [
+        {"medewerker": m, "cellen": [cellen[(m.pk, datum)] for datum in dagen]} for m in medewerkers
+    ]
+
+    breedte = PLANNING_WEKEN[weken]
     return render(
         request,
         "uren/aanwezigheid.html",
         {
             "dag": dag,
             "vandaag": vandaag,
-            "vorige": dag - timedelta(days=1),
-            "volgende": dag + timedelta(days=1),
-            "is_huidige_periode": dag == vandaag,
+            "maandag": maandag,
+            "laatste": dagen[-1],
+            "weken": weken,
+            "weekkeuzes": list(PLANNING_WEKEN),
+            "vorige": maandag - timedelta(days=7 * weken),
+            "volgende": maandag + timedelta(days=7 * weken),
+            "is_huidige_periode": maandag <= vandaag <= dagen[-1],
+            "kopdagen": kopdagen,
             "rijen": rijen,
-            "mag_zetten": request.user.is_eigenaar,
-            "aantal_aanwezig": sum(
-                1 for rij in rijen if rij["registratie"] and rij["registratie"].aanwezig
-            ),
-            "aantal_medewerkers": len(rijen),
+            "smal": weken > 1,
+            "bordkolommen": f"{BORD_NAAM}px repeat({len(dagen)}, minmax({breedte}px, 1fr))",
+            "bordbreedte": BORD_NAAM + breedte * len(dagen),
+            "redenen": Aanwezigheid.Reden.choices,
         },
     )
 
 
-def _aanwezigheid_opslaan(request, dag, medewerkers):
-    """Het hele dagformulier in één keer wegschrijven.
+def _planning_opslaan(request):
+    """Eén post uit de werkplanning wegschrijven: een selectie cellen, of de
+    notitie bij een dag.
 
-    update_or_create en geen create: op (medewerker, datum) ligt een unieke
-    sleutel, en zonder dit klapt hij eruit zodra iemand het formulier twee keer
-    verstuurt — wat op een telefoon met een halve streep bereik gewoon gebeurt.
+    Een cel komt binnen als "medewerker-id:JJJJ-MM-DD". Wat niet te lezen is,
+    van iemand die niet bestaat of op een dag dat hij niet in dienst is,
+    slaan we over in plaats van de hele post te laten mislukken: de rest van
+    de selectie is wél goed bedoeld.
     """
-    for medewerker in medewerkers:
-        keuze = request.POST.get(f"aanwezig_{medewerker.pk}", "")
-        if keuze not in AANWEZIG_KEUZES:
-            Aanwezigheid.objects.filter(medewerker=medewerker, datum=dag).delete()
+    if request.POST.get("actie") == "notitie":
+        datum = _datum_uit(request.POST.get("datum"))
+        if not datum:
+            return
+        tekst = request.POST.get("tekst", "").strip()[:120]
+        if tekst:
+            Dagnotitie.objects.update_or_create(datum=datum, defaults={"tekst": tekst})
+        else:
+            Dagnotitie.objects.filter(datum=datum).delete()
+        return
+
+    stand = request.POST.get("stand")
+    if stand not in {"standaard", "ja", "nee"}:
+        return
+    reden = request.POST.get("reden", "")
+    if stand != "nee" or reden not in Aanwezigheid.Reden.values:
+        reden = ""
+    opmerking = request.POST.get("opmerking", "").strip()[:200]
+
+    gevraagd = set()
+    for waarde in request.POST.getlist("cel")[:PLANNING_MAX_CELLEN]:
+        pk, _, datum = waarde.partition(":")
+        datum = _datum_uit(datum)
+        if pk.isdigit() and datum:
+            gevraagd.add((int(pk), datum))
+    medewerkers = Medewerker.objects.in_bulk({pk for pk, _ in gevraagd})
+
+    for pk, datum in gevraagd:
+        medewerker = medewerkers.get(pk)
+        if medewerker is None or not bezetting.in_dienst_op(medewerker, datum):
             continue
+        if stand == "standaard":
+            Aanwezigheid.objects.filter(medewerker=medewerker, datum=datum).delete()
+            continue
+        # update_or_create: op (medewerker, datum) ligt een unieke sleutel,
+        # en een dubbel verstuurd formulier mag daar niet op stuklopen.
         Aanwezigheid.objects.update_or_create(
             medewerker=medewerker,
-            datum=dag,
-            defaults={
-                "aanwezig": keuze == "ja",
-                # Afkappen op de veldlengte: een te lange opmerking hoort dit
-                # formulier niet te laten stranden op een validatiefout.
-                "opmerking": request.POST.get(f"opmerking_{medewerker.pk}", "").strip()[:200],
-            },
+            datum=datum,
+            defaults={"aanwezig": stand == "ja", "reden": reden, "opmerking": opmerking},
         )
 
 

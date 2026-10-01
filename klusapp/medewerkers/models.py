@@ -16,6 +16,15 @@ RIJBEWIJS_GROEPEN = [
 RIJBEWIJS_VOLGORDE = [code for _, codes in RIJBEWIJS_GROEPEN for code in codes]
 
 
+WEEKDAGEN = ["ma", "di", "wo", "do", "vr", "za", "zo"]
+
+
+def standaard_werkdagen():
+    """Maandag tot en met vrijdag. Een functie en geen lijst als default: een
+    veranderlijke default wordt anders door alle medewerkers gedeeld."""
+    return [0, 1, 2, 3, 4]
+
+
 def profielfoto_pad(instance, bestandsnaam):
     """Eigen bestandsnaam: telefoons leveren allemaal IMG_0001.jpg aan."""
     return f"profielfotos/{uuid.uuid4().hex}.jpg"
@@ -69,6 +78,12 @@ class Medewerker(AbstractUser):
         blank=True,
         help_text="Hexkleur waarmee deze medewerker in het planbord wordt getoond.",
     )
+    # De dagen waarop iemand standaard werkt, als weekdagnummers (0 = maandag).
+    # De werkplanning zet hem op die dagen vanzelf op aanwezig, zoals Maarten
+    # in zijn Excel aan het begin van het jaar iedereen groen maakte; alleen
+    # wat daarvan afwijkt wordt als Aanwezigheid opgeslagen. Een lege lijst is
+    # een oproep- of seizoenskracht: die staat alleen op dagen die je zelf zet.
+    vaste_werkdagen = models.JSONField(default=standaard_werkdagen, blank=True)
     in_dienst_sinds = models.DateField(null=True, blank=True)
     uit_dienst_sinds = models.DateField(
         null=True,

@@ -70,8 +70,19 @@ class Uurblok(models.Model):
 
 
 class Aanwezigheid(models.Model):
-    """Per dag bijhouden wie er is. De eigenaar zet dit; medewerkers zien het
-    alleen. Groen of rood, met eventueel een reden."""
+    """Een afwijking van het vaste rooster: op deze dag wél of juist níet.
+
+    Geen rij betekent "volgens rooster" — de vaste werkdagen van de
+    medewerker, met feestdagen vrij (zie uren/bezetting.py). Zo hoeft de
+    eigenaar alleen vakantie, ziekte en losse dagen in te vullen, net als in
+    zijn Excel waar het hele jaar al groen stond. Alleen de eigenaar ziet en
+    zet dit."""
+
+    class Reden(models.TextChoices):
+        VAKANTIE = "vakantie", "Vakantie"
+        ZIEK = "ziek", "Ziek"
+        VRIJ = "vrij", "Vrij"
+        ANDERS = "anders", "Anders"
 
     medewerker = models.ForeignKey(
         settings.AUTH_USER_MODEL,
@@ -80,6 +91,9 @@ class Aanwezigheid(models.Model):
     )
     datum = models.DateField()
     aanwezig = models.BooleanField(default=True)
+    # Alleen bij afwezig. Los van de opmerking, zodat "ziek" telbaar blijft en
+    # de opmerking vrij blijft voor "tandarts 12.30–15.00" of "Van Ee".
+    reden = models.CharField(max_length=20, choices=Reden.choices, blank=True)
     opmerking = models.CharField(max_length=200, blank=True)
     gewijzigd_op = models.DateTimeField(auto_now=True)
 
@@ -94,3 +108,21 @@ class Aanwezigheid(models.Model):
     def __str__(self):
         stand = "aanwezig" if self.aanwezig else "afwezig"
         return f"{self.medewerker} · {self.datum:%d-%m-%Y} · {stand}"
+
+
+class Dagnotitie(models.Model):
+    """Eén regel tekst bij een dag in de werkplanning, voor iedereen tegelijk:
+    "Zeevissen", "op tijd weg", "MT-overleg". In de Excel stond dit in een
+    losse rij en tussen de getallen in de rij van Maarten."""
+
+    datum = models.DateField(unique=True)
+    tekst = models.CharField(max_length=120)
+    gewijzigd_op = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "dagnotitie"
+        verbose_name_plural = "dagnotities"
+        ordering = ["datum"]
+
+    def __str__(self):
+        return f"{self.datum:%d-%m-%Y} · {self.tekst}"

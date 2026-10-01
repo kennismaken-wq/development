@@ -5,7 +5,7 @@ from django.core.files.uploadedfile import UploadedFile
 from django.utils.safestring import mark_safe
 
 from . import profielfotos
-from .models import RIJBEWIJS_GROEPEN, RIJBEWIJS_VOLGORDE, Medewerker
+from .models import RIJBEWIJS_GROEPEN, RIJBEWIJS_VOLGORDE, WEEKDAGEN, Medewerker
 
 
 class ProfielfotoMixin:
@@ -82,6 +82,13 @@ class RijbewijzenMixin(forms.Form):
         return [code for code in RIJBEWIJS_VOLGORDE if code in gekozen]
 
 
+class WerkdagenWidget(forms.CheckboxSelectMultiple):
+    """Ma t/m zo als pillen op één rij; zie
+    medewerkers/templates/medewerkers/widgets/werkdagen.html."""
+
+    template_name = "medewerkers/widgets/werkdagen.html"
+
+
 class MedewerkerForm(RijbewijzenMixin, ProfielfotoMixin, forms.ModelForm):
     """Een medewerker aanmaken of bijwerken. Alleen de eigenaar komt hier.
 
@@ -98,7 +105,7 @@ class MedewerkerForm(RijbewijzenMixin, ProfielfotoMixin, forms.ModelForm):
             "telefoon", "email", "adres", "postcode", "woonplaats",
             "noodcontact_naam", "noodcontact_relatie", "noodcontact_telefoon",
             "rijbewijzen",
-            "kleur", "in_dienst_sinds",
+            "kleur", "vaste_werkdagen", "in_dienst_sinds",
         ]
         widgets = {
             # format="%Y-%m-%d" is verplicht bij type="date": zonder dat rendert
@@ -143,7 +150,8 @@ class MedewerkerForm(RijbewijzenMixin, ProfielfotoMixin, forms.ModelForm):
         ("Contact", ["telefoon", "email", "adres", "postcode", "woonplaats"]),
         ("Bij nood bellen", ["noodcontact_naam", "noodcontact_relatie", "noodcontact_telefoon"]),
         ("Rijbewijs", ["rijbewijzen"]),
-        ("In dienst", ["in_dienst_sinds"]),
+        # Bepaalt wie de werkplanning op welke dag vanzelf op aanwezig zet.
+        ("In dienst", ["vaste_werkdagen", "in_dienst_sinds"]),
     ]
 
     # Velden die de template zelf plaatst en die dus niet in de restgroep
@@ -164,6 +172,19 @@ class MedewerkerForm(RijbewijzenMixin, ProfielfotoMixin, forms.ModelForm):
         rest = [veld for veld in self if veld.name not in gebruikt]
         if rest:
             yield "Wachtwoord", rest
+
+    # Een eigen veld over het JSON-veld heen: aanvinken in plaats van een
+    # lijst typen, en altijd als getallen in de volgorde van de week.
+    vaste_werkdagen = forms.TypedMultipleChoiceField(
+        label="Vaste werkdagen",
+        required=False,
+        coerce=int,
+        choices=list(enumerate(WEEKDAGEN)),
+        widget=WerkdagenWidget,
+    )
+
+    def clean_vaste_werkdagen(self):
+        return sorted(set(self.cleaned_data["vaste_werkdagen"]))
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)

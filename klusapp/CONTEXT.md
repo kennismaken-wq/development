@@ -166,7 +166,7 @@ schrijft zijn opties nog steeds zelf in de template en blijft op `data-scope`.
 | 4 | Beheerdersoverzicht / planbord | 🟢 100% | — `/planbord/`, vaste eerste kolom op mobiel (F3) |
 | 5 | Fotodropbox | 🟢 100% | — raster, zoeken, filter per klus |
 | 6 | Urenexport voor de boekhouder | 🟢 100% | — Excel per kalendermaand, getest (antwoord Maarten 15-09) |
-| 7 | Aanwezigheidsregistratie | 🟢 100% | — `/aanwezigheid/`, groen/rood/onbekend (F4) |
+| 7 | Aanwezigheidsregistratie | 🟢 100% | — `/aanwezigheid/`: sinds 01-10-2026 een werkplanning-rooster in plaats van een dagscherm, naar de Excel van Maarten. Vaste werkdagen per medewerker, afwijkingen met reden, feestdagen vanzelf vrij, telling per dag, dagnotitie. Alleen eigenaar, gemaakt voor de laptop. Fase 2 (klussen in hetzelfde rooster) volgt |
 | 8 | Inlogbeheer rolgebaseerd | 🟢 100% | — `/medewerkers/`: toevoegen, bewerken, wachtwoord zetten, uit dienst. Vraag 5 aan Maarten is daarmee ingehaald |
 | 9 | Loonstrook-snelkoppeling | 🟢 100% | Klaar, iOS/Android afgehandeld, getest |
 
@@ -252,7 +252,7 @@ zet 'm in de `urls.py` van je eigen app, en haal de vlag `in_aanbouw` uit de teg
 | `/klussen/` | `klussen` | klussenlijst | 0b Floris |
 | `/klussen/<pk>/` | `klus_detail` | klusdossier | 0b Floris |
 | `/planbord/` | `planbord` | planbord eigenaar | F3 Floris |
-| `/aanwezigheid/` | `aanwezigheid` | groen/rood | F4 Floris |
+| `/aanwezigheid/` | `aanwezigheid` | werkplanning: rooster mensen × dagen | F4 Floris, rooster Thijmen |
 | `/export/` | `urenexport` | boekhouder | T3 Thijmen |
 | `/klussen/<pk>/uren-export/` | `klus_uren_export` | uren van één klus als Excel | ✅ af — alleen eigenaar |
 | `/medewerkers/` | `medewerkers` | ploeglijst, alleen eigenaar | ✅ af |
@@ -427,10 +427,16 @@ duur, niet de omschrijving; de kleur draagt de klusidentiteit. Hergebruik
 klik door naar het blokdetail uit F1. Zwaarste taak, en het scherm waar Maarten dagelijks
 in kijkt.
 
-**F4 · Aanwezigheid.** Dagscherm voor de eigenaar: alle medewerkers op een rij,
-groen/rood tikken, optionele opmerking. Model, unique-constraint en test bestaan al
-(`uren/models.py:Aanwezigheid`). Medewerker ziet het alleen-lezen. Hoort in dit spoor
-omdat het dezelfde weeknavigatie en medewerkersrij gebruikt als het planbord.
+**F4 · Aanwezigheid.** Was een dagscherm (groen/rood per persoon). Sinds 01-10-2026
+een rooster over 1, 2 of 4 weken, als vervanger van Maartens Excel "Werkplanning":
+mensen als rijen, ma–za als kolommen, bovenaan per dag hoeveel man er is.
+Rekenwerk in `uren/bezetting.py`: geen `Aanwezigheid`-rij betekent "volgens rooster"
+(`Medewerker.vaste_werkdagen`, feestdagen vrij); een rij is een afwijking met
+`reden` en `opmerking`. `Dagnotitie` is één regel per dag voor iedereen. Alleen de
+eigenaar — Maarten wil niet dat de medewerkers dit zien (gesprek 01-10-2026).
+Selecteren als in Excel (klik, slepen, shift-klik, naam, dag) in
+`static/js/werkplanning.js`. Volgende stap: de klussen als tweede blok in
+hetzelfde rooster, met werknummer op de klus.
 
 ## 7. Spoor Thijmen — foto's, export en productie (≈ 15 uur)
 

@@ -20,8 +20,8 @@ from klussen.models import Bijlage, Klus
 from klussen.tests import TIJDELIJKE_MEDIA, upload
 from medewerkers.models import Medewerker
 
-from . import export, totalen
-from .models import Aanwezigheid, Uurblok
+from . import bezetting, export, totalen
+from .models import Aanwezigheid, Dagnotitie, Uurblok
 
 
 class UurblokTest(TestCase):
@@ -151,7 +151,6 @@ class UrenSchrijvenTest(TestCase):
             for weergave in ("dag", "week", "maand"):
                 antwoord = self.client.get(f"/uren/?dag={dag}&weergave={weergave}")
                 self.assertEqual(antwoord.status_code, 200, f"{dag} {weergave}")
-            self.assertEqual(self.client.get(f"/aanwezigheid/?dag={dag}").status_code, 200, dag)
 
     @override_settings(MEDIA_ROOT=TIJDELIJKE_MEDIA)
     def test_geen_foto_bij_het_uurblok_van_een_ander(self):
@@ -585,120 +584,162 @@ class PlanbordTest(TestCase):
         self.assertNotIn(andere_klus, klussen)
 
 
-class AanwezigheidSchermTest(TestCase):
+class WerkplanningTest(TestCase):
+    """De aanwezigheid als rooster (Excel "Werkplanning" van Maarten, 01-10-2026)."""
+
     @classmethod
     def setUpTestData(cls):
         cls.maarten = Medewerker.objects.create_user(
             "maarten", password="x", first_name="Maarten", rol=Medewerker.Rol.EIGENAAR
         )
         cls.sam = Medewerker.objects.create_user("sam", password="x", first_name="Sam")
-        cls.joep = Medewerker.objects.create_user("joep", password="x", first_name="Joep")
+        # oproepkracht: geen vaste dagen
+        cls.joep = Medewerker.objects.create_user("joep", password="x", first_name="Joep", vaste_werkdagen=[])
         cls.vertrokken = Medewerker.objects.create_user(
             "wim", password="x", first_name="Wim", uit_dienst_sinds=date(2026, 1, 1)
         )
-        cls.dag = date(2026, 9, 7)
-
-    def dagformulier(self, **velden):
-        basis = {
-            f"aanwezig_{self.maarten.pk}": "",
-            f"aanwezig_{self.sam.pk}": "",
-            f"aanwezig_{self.joep.pk}": "",
-        }
-        basis.update(velden)
-        return basis
-
-    def test_inloggen_vereist(self):
-        antwoord = self.client.get("/aanwezigheid/")
-        self.assertEqual(antwoord.status_code, 302)
-
-    def test_medewerker_ziet_het_scherm_maar_krijgt_geen_formulier(self):
-        # Dit is het enige beheerdersscherm dat een medewerker wél mag inzien:
-        # wie is er vandaag, wie is er ziek. Zetten mag hij niet.
-        Aanwezigheid.objects.create(medewerker=self.sam, datum=self.dag, aanwezig=True)
-        self.client.force_login(self.sam)
-        antwoord = self.client.get("/aanwezigheid/?dag=2026-09-07")
-        self.assertEqual(antwoord.status_code, 200)
-        self.assertFalse(antwoord.context["mag_zetten"])
-        self.assertNotContains(antwoord, f'name="aanwezig_{self.sam.pk}"')
-        self.assertNotContains(antwoord, "Opslaan")
-        self.assertContains(antwoord, "Aanwezig")
-
-    def test_post_van_een_medewerker_verandert_niets(self):
-        # De knoppen weglaten in de template is geen rechtencontrole.
-        self.client.force_login(self.sam)
-        antwoord = self.client.post(
-            "/aanwezigheid/?dag=2026-09-07",
-            self.dagformulier(**{f"aanwezig_{self.sam.pk}": "ja"}),
+        cls.nieuw = Medewerker.objects.create_user(
+            "kees", password="x", first_name="Kees", in_dienst_sinds=date(2026, 9, 9)
         )
+        cls.maandag = date(2026, 9, 7)
+
+    def setUp(self):
+        self.client.force_login(self.maarten)
+
+    def cel(self, persoon, dag):
+        return f"{persoon.pk}:{dag.isoformat()}"
+
+    def zet(self, cellen, stand, **velden):
+        return self.client.post(
+            "/aanwezigheid/?weken=1",
+            {"actie": "cellen", "terug": "2026-09-07", "cel": cellen, "stand": stand, **velden},
+        )
+
+    def test_alleen_voor_de_eigenaar(self):
+        # De medewerkers zagen de Excel ook niet (gesprek 01-10-2026).
+        self.client.force_login(self.sam)
+        self.assertEqual(self.client.get("/aanwezigheid/").status_code, 404)
+        antwoord = self.zet([self.cel(self.sam, self.maandag)], "nee")
         self.assertEqual(antwoord.status_code, 404)
         self.assertFalse(Aanwezigheid.objects.exists())
 
-    def test_eigenaar_zet_groen_en_rood(self):
-        self.client.force_login(self.maarten)
-        antwoord = self.client.post(
-            "/aanwezigheid/?dag=2026-09-07",
-            self.dagformulier(
-                **{
-                    f"aanwezig_{self.sam.pk}": "ja",
-                    f"aanwezig_{self.joep.pk}": "nee",
-                    f"opmerking_{self.joep.pk}": "Ziek gemeld",
-                }
-            ),
-        )
-        self.assertEqual(antwoord.status_code, 302)
-        self.assertEqual(Aanwezigheid.objects.count(), 2)
-        self.assertTrue(Aanwezigheid.objects.get(medewerker=self.sam, datum=self.dag).aanwezig)
-        joep = Aanwezigheid.objects.get(medewerker=self.joep, datum=self.dag)
-        self.assertFalse(joep.aanwezig)
-        self.assertEqual(joep.opmerking, "Ziek gemeld")
+    def test_rooster_zonder_zondag_met_telling(self):
+        antwoord = self.client.get("/aanwezigheid/?dag=2026-09-09&weken=1")
+        kop = antwoord.context["kopdagen"]
+        self.assertEqual([k["datum"] for k in kop], [self.maandag + timedelta(days=n) for n in range(6)])
+        # maandag: Maarten en Sam volgens rooster; Joep heeft geen vaste
+        # dagen en Kees is pas vanaf woensdag in dienst
+        self.assertEqual((kop[0]["aanwezig"], kop[0]["in_dienst"]), (2, 3))
+        self.assertEqual((kop[2]["aanwezig"], kop[2]["in_dienst"]), (3, 4))
+        # zaterdag werkt niemand volgens rooster
+        self.assertEqual(kop[5]["aanwezig"], 0)
+        namen = [rij["medewerker"] for rij in antwoord.context["rijen"]]
+        self.assertNotIn(self.vertrokken, namen)
+        self.assertIn(self.nieuw, namen)
 
-    def test_tweede_post_werkt_bij_in_plaats_van_te_klappen(self):
-        # Op (medewerker, datum) ligt een unieke sleutel; zonder
-        # update_or_create geeft een tweede verzending een IntegrityError.
-        self.client.force_login(self.maarten)
+    def test_twee_en_vier_weken(self):
+        self.assertEqual(len(self.client.get("/aanwezigheid/?dag=2026-09-07").context["kopdagen"]), 12)
+        self.assertEqual(len(self.client.get("/aanwezigheid/?weken=4").context["kopdagen"]), 24)
+        # een onbekend aantal weken valt terug op de standaard
+        self.assertEqual(self.client.get("/aanwezigheid/?weken=99").context["weken"], 2)
+
+    def test_geknoeide_datum_geeft_vandaag(self):
+        for dag in ("9999-12-31", "0001-01-01", "morgen"):
+            self.assertEqual(self.client.get(f"/aanwezigheid/?dag={dag}").status_code, 200, dag)
+
+    def test_vakantie_over_meerdere_dagen_in_een_keer(self):
+        dagen = [self.maandag + timedelta(days=n) for n in range(3)]
+        antwoord = self.zet([self.cel(self.sam, d) for d in dagen], "nee", reden="vakantie", opmerking="Texel")
+        self.assertEqual(antwoord.headers["Location"], "/aanwezigheid/?dag=2026-09-07&weken=1")
+        rijen = Aanwezigheid.objects.filter(medewerker=self.sam)
+        self.assertEqual(rijen.count(), 3)
+        self.assertTrue(all(not r.aanwezig and r.reden == "vakantie" and r.opmerking == "Texel" for r in rijen))
+        kop = self.client.get("/aanwezigheid/?dag=2026-09-07&weken=1").context["kopdagen"]
+        self.assertEqual(kop[0]["aanwezig"], 1)
+
+    def test_volgens_rooster_haalt_de_afwijking_weg(self):
+        Aanwezigheid.objects.create(medewerker=self.sam, datum=self.maandag, aanwezig=False, reden="ziek")
+        self.zet([self.cel(self.sam, self.maandag)], "standaard")
+        self.assertFalse(Aanwezigheid.objects.exists())
+
+    def test_tweede_keer_zetten_werkt_bij(self):
+        self.zet([self.cel(self.sam, self.maandag)], "nee", reden="ziek")
+        self.zet([self.cel(self.sam, self.maandag)], "ja", reden="ziek", opmerking="Van Ee")
+        rij = Aanwezigheid.objects.get()
+        self.assertTrue(rij.aanwezig)
+        # een reden hoort alleen bij afwezig
+        self.assertEqual((rij.reden, rij.opmerking), ("", "Van Ee"))
+
+    def test_oproepkracht_op_een_losse_dag(self):
+        zaterdag = self.maandag + timedelta(days=5)
+        self.zet([self.cel(self.joep, zaterdag)], "ja")
+        kop = self.client.get("/aanwezigheid/?dag=2026-09-07&weken=1").context["kopdagen"]
+        self.assertEqual(kop[5]["aanwezig"], 1)
+
+    def test_onzin_en_buiten_dienst_worden_overgeslagen(self):
+        self.zet(
+            [
+                self.cel(self.vertrokken, self.maandag),
+                self.cel(self.nieuw, self.maandag),  # pas vanaf de 9e in dienst
+                "999:2026-09-07",
+                "abc:2026-09-07",
+                f"{self.sam.pk}:9999-99-99",
+                self.cel(self.sam, self.maandag),
+            ],
+            "nee",
+            reden="geen-reden",
+        )
+        rij = Aanwezigheid.objects.get()
+        self.assertEqual((rij.medewerker, rij.reden), (self.sam, ""))
+
+    def test_onbekende_stand_doet_niets(self):
+        self.zet([self.cel(self.sam, self.maandag)], "misschien")
+        self.assertFalse(Aanwezigheid.objects.exists())
+
+    def test_dagnotitie_zetten_en_weghalen(self):
+        bericht = {"actie": "notitie", "terug": "2026-09-07", "datum": "2026-09-08", "tekst": " Zeevissen "}
+        self.client.post("/aanwezigheid/", bericht)
+        self.assertEqual(Dagnotitie.objects.get().tekst, "Zeevissen")
+        kop = self.client.get("/aanwezigheid/?dag=2026-09-07").context["kopdagen"]
+        self.assertEqual(kop[1]["notitie"], "Zeevissen")
+        self.client.post("/aanwezigheid/", {**bericht, "tekst": ""})
+        self.assertFalse(Dagnotitie.objects.exists())
+
+    def test_feestdag_is_vrij_tenzij_anders_gezet(self):
+        hemelvaart = date(2026, 5, 14)
+        cel = bezetting.cel(self.sam, hemelvaart, feestdag="Hemelvaartsdag")
+        self.assertEqual((cel.stand, cel.reden_tekst), (bezetting.AFWEZIG, "Hemelvaartsdag"))
+        self.zet([self.cel(self.sam, hemelvaart)], "ja")
+        cellen = bezetting.rooster([self.sam], [hemelvaart])
+        self.assertEqual(cellen[(self.sam.pk, hemelvaart)].stand, bezetting.AANWEZIG)
+
+    def test_feestdagen(self):
+        # zoals ze in de Excel van 2026 rood staan
+        vrij = bezetting.feestdagen(2026)
+        for dag in ("2026-01-01", "2026-04-06", "2026-04-27", "2026-05-14", "2026-05-25", "2026-12-25", "2026-12-26"):
+            self.assertIn(date.fromisoformat(dag), vrij, dag)
+        # op Bevrijdingsdag werd gewoon gewerkt
+        self.assertNotIn(date(2026, 5, 5), vrij)
+        self.assertEqual(bezetting.pasen(2027), date(2027, 3, 28))
+        # 27 april 2025 was een zondag: Koningsdag op de 26e
+        self.assertIn(date(2025, 4, 26), bezetting.feestdagen(2025))
+
+    def test_startscherm_telt_volgens_rooster(self):
+        self.assertEqual(bezetting.aantal_aanwezig(self.maandag), (2, 3))
+        Aanwezigheid.objects.create(medewerker=self.sam, datum=self.maandag, aanwezig=False, reden="ziek")
+        self.assertEqual(bezetting.aantal_aanwezig(self.maandag), (1, 3))
+
+    def test_vaste_werkdagen_op_het_medewerkersscherm(self):
+        html = self.client.get(reverse("medewerker_bewerken", args=[self.sam.pk])).content.decode()
+        self.assertIn("Vaste werkdagen", html)
+        self.assertEqual(html.count('name="vaste_werkdagen"'), 7)
         self.client.post(
-            "/aanwezigheid/?dag=2026-09-07",
-            self.dagformulier(**{f"aanwezig_{self.sam.pk}": "ja"}),
+            reverse("medewerker_bewerken", args=[self.sam.pk]),
+            {"first_name": "Sam", "username": "sam", "rol": "medewerker", "kleur": "#5B8FA8",
+             "vaste_werkdagen": ["3", "0", "0", "1"]},
         )
-        antwoord = self.client.post(
-            "/aanwezigheid/?dag=2026-09-07",
-            self.dagformulier(
-                **{f"aanwezig_{self.sam.pk}": "nee", f"opmerking_{self.sam.pk}": "Tandarts"}
-            ),
-        )
-        self.assertEqual(antwoord.status_code, 302)
-        registratie = Aanwezigheid.objects.get(medewerker=self.sam, datum=self.dag)
-        self.assertFalse(registratie.aanwezig)
-        self.assertEqual(registratie.opmerking, "Tandarts")
-        self.assertEqual(Aanwezigheid.objects.count(), 1)
-
-    def test_keuze_wissen_haalt_de_rij_weg(self):
-        # Derde stand: "nog niet ingevuld" is iets anders dan "afwezig", en
-        # past niet in een BooleanField dat niet leeg mag zijn.
-        Aanwezigheid.objects.create(medewerker=self.sam, datum=self.dag, aanwezig=True)
-        self.client.force_login(self.maarten)
-        self.client.post("/aanwezigheid/?dag=2026-09-07", self.dagformulier())
-        self.assertFalse(Aanwezigheid.objects.filter(medewerker=self.sam, datum=self.dag).exists())
-
-    def test_alleen_wie_in_dienst_is_krijgt_een_rij(self):
-        self.client.force_login(self.maarten)
-        antwoord = self.client.get("/aanwezigheid/?dag=2026-09-07")
-        getoond = [rij["medewerker"] for rij in antwoord.context["rijen"]]
-        self.assertIn(self.sam, getoond)
-        self.assertNotIn(self.vertrokken, getoond)
-
-    def test_een_andere_dag_staat_los(self):
-        Aanwezigheid.objects.create(medewerker=self.sam, datum=self.dag, aanwezig=True)
-        self.client.force_login(self.maarten)
-        antwoord = self.client.get("/aanwezigheid/?dag=2026-09-08")
-        self.assertEqual(antwoord.context["dag"], date(2026, 9, 8))
-        self.assertEqual(antwoord.context["aantal_aanwezig"], 0)
-        self.assertTrue(all(rij["registratie"] is None for rij in antwoord.context["rijen"]))
-
-    def test_opslaan_gaat_terug_naar_dezelfde_dag(self):
-        self.client.force_login(self.maarten)
-        antwoord = self.client.post("/aanwezigheid/?dag=2026-09-07", self.dagformulier())
-        self.assertEqual(antwoord.headers["Location"], "/aanwezigheid/?dag=2026-09-07")
+        self.sam.refresh_from_db()
+        self.assertEqual(self.sam.vaste_werkdagen, [0, 1, 3])
 
 
 class UurblokDetailTest(TestCase):

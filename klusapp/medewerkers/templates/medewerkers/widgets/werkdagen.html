@@ -1,0 +1,12 @@
+{% comment %} Vaste werkdagen als pillen op één rij (medewerkers.forms.WerkdagenWidget).
+   Leent de opmaak van de rijbewijzen, ook in de leesstand: alleen de
+   aangevinkte dagen, of een streepje als er geen enkele is. {% endcomment %}
+<div class="rijbewijzen werkdagen">
+  <div class="rijbewijs-groep">
+    <span class="keuzes">
+      {% for groep, opties, index in widget.optgroups %}{% for optie in opties %}
+        <label class="keuzepil ja"><input type="checkbox" name="{{ optie.name }}" value="{{ optie.value }}"{% include "django/forms/widgets/attrs.html" with widget=optie %}><span class="vlak">{{ optie.label }}</span></label>
+      {% endfor %}{% endfor %}
+    </span>
+  </div>
+</div>

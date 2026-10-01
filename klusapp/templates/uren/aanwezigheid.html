@@ -1,97 +1,160 @@
 {% extends "basis.html" %}
-{% load kleuren %}
+{% load static %}
 {% block titel %}Aanwezigheid{% endblock %}
 {% block kop %}Aanwezigheid{% endblock %}
 {% block inhoud %}
   <div class="navbalk">
     <div class="navlinks">
-      <a class="knop-stil" href="?dag={{ vorige|date:'Y-m-d' }}">‹</a>
-      <a class="knop-stil" href="?dag={{ volgende|date:'Y-m-d' }}">›</a>
+      <a class="knop-stil" href="?dag={{ vorige|date:'Y-m-d' }}&weken={{ weken }}" aria-label="Eerder">‹</a>
+      <a class="knop-stil" href="?dag={{ volgende|date:'Y-m-d' }}&weken={{ weken }}" aria-label="Later">›</a>
       {% if not is_huidige_periode %}
-        <a class="knop-stil" href="{% url 'aanwezigheid' %}">Vandaag</a>
+        <a class="knop-stil" href="?weken={{ weken }}">Vandaag</a>
       {% endif %}
-      <span class="periodetitel">{{ dag|date:"l j F"|capfirst }}</span>
+      <span class="periodetitel">{{ maandag|date:"j M" }} – {{ laatste|date:"j M Y" }}</span>
     </div>
-    <div class="totaal-chip">
-      <span class="n">{{ aantal_aanwezig }}/{{ aantal_medewerkers }}</span>
-      <span class="l">aanwezig</span>
+    <div class="wp-weken" role="group" aria-label="Hoeveel weken">
+      {% for keuze in weekkeuzes %}
+        <a class="pil{% if keuze == weken %} actief{% endif %}" href="?dag={{ maandag|date:'Y-m-d' }}&weken={{ keuze }}">{{ keuze }} {% if keuze == 1 %}week{% else %}weken{% endif %}</a>
+      {% endfor %}
     </div>
   </div>
 
-  {% if mag_zetten %}
-    {% comment %} Eén formulier voor de hele dag: zes mensen achter elkaar
-       aantikken en één keer opslaan, in plaats van zes keer wachten op de
-       server. {% endcomment %}
-    <form method="post">
-      {% csrf_token %}
-      <ul class="aanwezigheidslijst">
-        {% for rij in rijen %}
-          <li class="aanwezig-rij{% if not rij.registratie %} onbekend{% endif %}">
-            <div class="wie">
-              {% include "_medewerkerbol.html" with persoon=rij.medewerker klasse="aw-bol" %}
-              <span class="wie-tekst">
-                {{ rij.medewerker.naam }}
-                {% if rij.medewerker.functie %}<span class="functie">{{ rij.medewerker.functie }}</span>{% endif %}
-              </span>
-            </div>
-            <div class="keuzes">
-              <label class="keuzepil ja">
-                <input type="radio" name="aanwezig_{{ rij.medewerker.pk }}" value="ja"
-                       {% if rij.registratie and rij.registratie.aanwezig %}checked{% endif %}>
-                <span class="vlak">Aanwezig</span>
-              </label>
-              <label class="keuzepil nee">
-                <input type="radio" name="aanwezig_{{ rij.medewerker.pk }}" value="nee"
-                       {% if rij.registratie and not rij.registratie.aanwezig %}checked{% endif %}>
-                <span class="vlak">Afwezig</span>
-              </label>
-              {% comment %} De derde stand: geen registratie. Kiezen betekent
-                 de rij weggooien, want "nog niet ingevuld" past niet in een
-                 BooleanField dat niet leeg mag zijn. {% endcomment %}
-              <label class="keuzepil onbekend">
-                <input type="radio" name="aanwezig_{{ rij.medewerker.pk }}" value=""
-                       {% if not rij.registratie %}checked{% endif %}>
-                <span class="vlak">Onbekend</span>
-              </label>
-            </div>
-            <input type="text" class="opmerkingveld" name="opmerking_{{ rij.medewerker.pk }}"
-                   maxlength="200" value="{{ rij.registratie.opmerking }}"
-                   aria-label="Opmerking bij {{ rij.medewerker.naam }}">
-          </li>
-        {% empty %}
-          <li><p class="leeg">Er is niemand in dienst.</p></li>
-        {% endfor %}
-      </ul>
+  {% comment %} Het rooster. Rijen zijn mensen, kolommen dagen — net als de
+     Excel waar dit scherm voor in de plaats komt. Bovenaan per dag hoeveel man
+     er is; die rij telt zichzelf (uren/bezetting.py).
 
-      {% if rijen %}
-        <p style="margin-top:1.4rem"><button type="submit" class="knop">Opslaan</button></p>
-      {% endif %}
-    </form>
-  {% else %}
-    <ul class="aanwezigheidslijst">
-      {% for rij in rijen %}
-        <li class="aanwezig-rij{% if not rij.registratie %} onbekend{% endif %}">
-          <div class="wie">
-            {% include "_medewerkerbol.html" with persoon=rij.medewerker klasse="aw-bol" %}
-            <span class="wie-tekst">
-              {{ rij.medewerker.naam }}
-              {% if rij.medewerker.functie %}<span class="functie">{{ rij.medewerker.functie }}</span>{% endif %}
-            </span>
-          </div>
-          {% if not rij.registratie %}
-            <span class="stand onbekend">Niet ingevuld</span>
-          {% elif rij.registratie.aanwezig %}
-            <span class="stand ja">Aanwezig</span>
-          {% else %}
-            <span class="stand nee">Afwezig</span>
-          {% endif %}
-          {% if rij.registratie.opmerking %}
-            <span class="opmerking">{{ rij.registratie.opmerking }}</span>
-          {% endif %}
-        </li>
-      {% empty %}
-        <li><p class="leeg">Er is niemand in dienst.</p></li>
+     Elke cel is een knop. Klikken, slepen over meerdere dagen of mensen, of
+     shift-klikken kiest een blok cellen; daarna gaat het venster hieronder
+     open om ze in één keer te zetten (static/js/werkplanning.js). Een klik
+     op een naam kiest al zijn dagen, een klik op een dag iedereen op die dag.
+  {% endcomment %}
+  <div class="bord-scroll wp-scroll">
+    <div class="bord wp-bord wp-w{{ weken }}" id="wp-bord"
+         style="grid-template-columns:{{ bordkolommen }}; min-width:{{ bordbreedte }}px">
+      <div class="bord-hoek"></div>
+      {% for kopdag in kopdagen %}
+        <button type="button" class="bord-kop wp-kop{% if kopdag.is_vandaag %} vandaag{% endif %}{% if kopdag.is_weekstart %} weekstart{% endif %}{% if kopdag.feestdag %} feestdag{% endif %}"
+                data-k="{{ kopdag.index }}" title="Iedereen op {{ kopdag.datum|date:'l j F' }} kiezen">
+          <span class="dag">{{ kopdag.datum|date:"D" }}</span>
+          <span class="datum">{% if smal %}{{ kopdag.datum|date:"j" }}{% else %}{{ kopdag.datum|date:"j M" }}{% endif %}</span>
+        </button>
       {% endfor %}
-    </ul>
-  {% endif %}
+
+      <div class="bord-naam wp-rijkop"><span class="wie">Aanwezig</span></div>
+      {% for kopdag in kopdagen %}
+        <div class="bord-cel wp-telling{% if kopdag.is_vandaag %} vandaag{% endif %}{% if kopdag.is_weekstart %} weekstart{% endif %}"
+             title="{{ kopdag.aanwezig }} van {{ kopdag.in_dienst }} aanwezig{% if kopdag.feestdag %} · {{ kopdag.feestdag }}{% endif %}">
+          <span class="n{% if not kopdag.aanwezig %} nul{% endif %}">{{ kopdag.aanwezig }}</span>{% if not smal %}<span class="van">/{{ kopdag.in_dienst }}</span>{% endif %}
+        </div>
+      {% endfor %}
+
+      <div class="bord-naam wp-rijkop"><span class="wie">Notitie</span></div>
+      {% for kopdag in kopdagen %}
+        <button type="button" class="bord-cel wp-notitie{% if kopdag.is_vandaag %} vandaag{% endif %}{% if kopdag.is_weekstart %} weekstart{% endif %}{% if kopdag.feestdag and not kopdag.notitie %} is-feestdag{% endif %}"
+                data-datum="{{ kopdag.datum|date:'Y-m-d' }}" data-titel="{{ kopdag.datum|date:'l j F'|capfirst }}"
+                data-tekst="{{ kopdag.notitie }}"
+                title="{% if kopdag.notitie %}{{ kopdag.notitie }}{% elif kopdag.feestdag %}{{ kopdag.feestdag }}{% else %}Notitie bij {{ kopdag.datum|date:'j F' }}{% endif %}">
+          {% if kopdag.notitie %}<span class="tekst">{{ kopdag.notitie }}</span>{% elif kopdag.feestdag %}<span class="tekst">{{ kopdag.feestdag }}</span>{% endif %}
+        </button>
+      {% endfor %}
+
+      {% for rij in rijen %}
+        {% with r=forloop.counter0 %}
+        <button type="button" class="bord-naam wp-naam" data-r="{{ r }}" title="Alle dagen van {{ rij.medewerker.naam }} kiezen">
+          {% include "_medewerkerbol.html" with persoon=rij.medewerker klasse="bol" %}
+          <span class="bord-naam-tekst">
+            <span class="wie">{{ rij.medewerker.naam }}</span>
+            {% if not rij.medewerker.vaste_werkdagen %}<span class="functie">geen vaste dagen</span>{% elif rij.medewerker.functie %}<span class="functie">{{ rij.medewerker.functie }}</span>{% endif %}
+          </span>
+        </button>
+        {% for cel in rij.cellen %}
+          {% if cel.stand == "buiten" %}
+            <div class="bord-cel wp-cel buiten{% if cel.datum.weekday == 0 and not forloop.first %} weekstart{% endif %}"
+                 title="{{ rij.medewerker.naam }} is op {{ cel.datum|date:'j F' }} niet in dienst"></div>
+          {% else %}
+            <button type="button"
+                    class="bord-cel wp-cel {{ cel.stand }}{% if not cel.standaard %} gezet{% endif %}{% if cel.datum == vandaag %} vandaag{% endif %}{% if cel.datum.weekday == 0 and not forloop.first %} weekstart{% endif %}"
+                    data-r="{{ r }}" data-k="{{ forloop.counter0 }}"
+                    data-cel="{{ rij.medewerker.pk }}:{{ cel.datum|date:'Y-m-d' }}"
+                    data-stand="{% if cel.standaard %}standaard{% elif cel.stand == 'aanwezig' %}ja{% else %}nee{% endif %}"
+                    data-reden="{{ cel.reden }}" data-opmerking="{{ cel.opmerking }}"
+                    title="{{ rij.medewerker.naam }} · {{ cel.datum|date:'D j M' }} · {% if cel.stand == 'aanwezig' %}aanwezig{% elif cel.stand == 'afwezig' %}afwezig{% else %}geen werkdag{% endif %}{% if cel.reden_tekst %} · {{ cel.reden_tekst }}{% endif %}{% if cel.opmerking %} · {{ cel.opmerking }}{% endif %}{% if cel.standaard %} (rooster){% endif %}">
+              {% if cel.opmerking %}<span class="tekst">{{ cel.opmerking }}</span>{% elif cel.reden_tekst %}<span class="tekst">{{ cel.reden_tekst }}</span>{% endif %}
+            </button>
+          {% endif %}
+        {% endfor %}
+        {% endwith %}
+      {% empty %}
+        <p class="leeg" style="grid-column:1 / -1">Er is niemand in dienst.</p>
+      {% endfor %}
+    </div>
+  </div>
+
+  <div class="legenda wp-legenda">
+    <span><i class="wp-stip aanwezig"></i>Aanwezig</span>
+    <span><i class="wp-stip afwezig"></i>Afwezig</span>
+    <span><i class="wp-stip vrij"></i>Geen werkdag</span>
+    <span><i class="wp-stip gezet"></i>Afwijking van het rooster</span>
+    <span class="wp-hint">Klik of sleep over de cellen om ze te zetten · shift-klik voor een blok</span>
+  </div>
+
+  {% comment %} Venster voor een selectie cellen. Het script vult de verborgen
+     velden "cel" en de titel; de rest is een gewoon formulier, en na opslaan
+     komt dezelfde periode terug. {% endcomment %}
+  <dialog class="uren-invoegen wp-dialoog" id="wp-cellen" aria-labelledby="wp-cellen-titel">
+    <form class="uurblokformulier glas" method="post" action="?weken={{ weken }}">
+      <div class="sheet-hendel" aria-hidden="true"></div>
+      <div class="sheet-kop">
+        <button type="button" class="dialog-sluiten" data-sluit aria-label="Sluiten">×</button>
+        <button type="submit" class="knop knop-klein">Opslaan</button>
+      </div>
+      {% csrf_token %}
+      <input type="hidden" name="actie" value="cellen">
+      <input type="hidden" name="terug" value="{{ maandag|date:'Y-m-d' }}">
+      <div data-cellen></div>
+      <h2 class="wp-dialoogtitel" id="wp-cellen-titel"></h2>
+      <p class="wp-dialoogsub" data-sub></p>
+
+      <div class="keuzes wp-standen">
+        <label class="keuzepil ja"><input type="radio" name="stand" value="ja" required><span class="vlak">Aanwezig</span></label>
+        <label class="keuzepil nee"><input type="radio" name="stand" value="nee"><span class="vlak">Afwezig</span></label>
+        <label class="keuzepil onbekend"><input type="radio" name="stand" value="standaard"><span class="vlak">Volgens rooster</span></label>
+      </div>
+
+      <div data-reden-blok hidden>
+        <label>Reden</label>
+        <div class="keuzes">
+          {% for waarde, tekst in redenen %}
+            <label class="keuzepil nee"><input type="radio" name="reden" value="{{ waarde }}"><span class="vlak">{{ tekst }}</span></label>
+          {% endfor %}
+        </div>
+      </div>
+
+      <div data-opmerking-blok>
+        <label for="wp-opmerking">Opmerking</label>
+        <input type="text" id="wp-opmerking" name="opmerking" maxlength="200" placeholder="Van Ee, tot 14.15, tandarts…" autocomplete="off">
+      </div>
+    </form>
+  </dialog>
+
+  <dialog class="uren-invoegen wp-dialoog" id="wp-notitie" aria-labelledby="wp-notitie-titel">
+    <form class="uurblokformulier glas" method="post" action="?weken={{ weken }}">
+      <div class="sheet-hendel" aria-hidden="true"></div>
+      <div class="sheet-kop">
+        <button type="button" class="dialog-sluiten" data-sluit aria-label="Sluiten">×</button>
+        <button type="submit" class="knop knop-klein">Opslaan</button>
+      </div>
+      {% csrf_token %}
+      <input type="hidden" name="actie" value="notitie">
+      <input type="hidden" name="terug" value="{{ maandag|date:'Y-m-d' }}">
+      <input type="hidden" name="datum">
+      <h2 class="wp-dialoogtitel" id="wp-notitie-titel"></h2>
+      <p class="wp-dialoogsub">Voor iedereen op deze dag. Leeg laten haalt de notitie weg.</p>
+      <label for="wp-notitietekst">Notitie</label>
+      <input type="text" id="wp-notitietekst" name="tekst" maxlength="120" placeholder="Zeevissen, op tijd weg…" autocomplete="off">
+    </form>
+  </dialog>
+
+  <script src="{% static 'js/bottomsheet.js' %}"></script>
+  <script src="{% static 'js/werkplanning.js' %}"></script>
 {% endblock %}

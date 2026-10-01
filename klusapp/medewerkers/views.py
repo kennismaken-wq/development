@@ -11,8 +11,8 @@ from django.urls import reverse
 
 from klussen import voorbeeld
 from klussen.models import Bijlage, Klus
-from uren.models import Aanwezigheid, Uurblok
-from uren import totalen
+from uren.models import Uurblok
+from uren import bezetting, totalen
 
 from .forms import (
     EigenGegevensForm,
@@ -54,7 +54,10 @@ def _onderdelen_met_cijfers(gebruiker, vandaag, maandag, zondag, uren):
 
     if gebruiker.is_eigenaar:
         in_dienst = Medewerker.objects.filter(uit_dienst_sinds__isnull=True).count()
-        aanwezig = Aanwezigheid.objects.filter(datum=vandaag, aanwezig=True).count()
+        # Zelfde rekensom als de werkplanning: het vaste rooster, met wat
+        # er voor vandaag is afgeweken. Alleen de rijen tellen zou op een
+        # gewone dag 0 geven, want die staan er alleen bij een afwijking.
+        aanwezig, ingeroosterd = bezetting.aantal_aanwezig(vandaag)
         gewerkt_deze_week = (
             Uurblok.objects.filter(datum__range=(maandag, zondag))
             .values("medewerker")
@@ -62,7 +65,7 @@ def _onderdelen_met_cijfers(gebruiker, vandaag, maandag, zondag, uren):
             .count()
         )
         info["medewerkers"] = f"{in_dienst} in dienst"
-        info["aanwezigheid"] = f"{aanwezig} van {in_dienst} aanwezig"
+        info["aanwezigheid"] = f"{aanwezig} van {ingeroosterd} aanwezig"
         info["urenexport"] = f"{vandaag:%B}".lower()
         info["planbord"] = f"{gewerkt_deze_week} aan het werk"
 

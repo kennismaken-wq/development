@@ -2200,43 +2200,14 @@ label:has(> input[type=checkbox]), input[type=checkbox] + label{ cursor:pointer;
 }
 .legenda a.alle{ padding-left:.8rem; color:rgba(255,255,255,0.8); }
 
-/* ══════════ AANWEZIGHEID ══════════
-   Eén rij per medewerker, op een telefoon onder elkaar: naam, dan de drie
-   standen, dan de opmerking. Drie en niet twee — "nog niet ingevuld" is iets
-   anders dan "afwezig", en die rij staat daarom gedimd tot er iets gekozen is.
-
-   De keuzeknoppen zijn radio's in een label: de radio zelf staat buiten beeld
-   en het label eromheen is de pil. Dat is dezelfde vormtaal als .pil, werkt
+/* ══════════ KEUZEPILLEN ══════════
+   Radio's of vinkjes in een label: de knop zelf staat buiten beeld en het
+   label eromheen is de pil. Dat is dezelfde vormtaal als .pil, werkt
    zonder een regel JavaScript, en houdt toetsenbord- en schermlezerbediening
    intact. Het vinkje wordt met de buur-selector gestyled (input:checked +
    .vlak), niet met :has() — dezelfde look op elke browser die de mannen op
-   hun telefoon hebben staan. */
-.aanwezigheidslijst{ list-style:none; margin:0; padding:0; display:grid; gap:.5rem; }
-.aanwezig-rij{
-  border-radius:18px; padding:.85rem 1rem;
-  background:rgba(255,255,255,0.07); border:1px solid rgba(255,255,255,0.14);
-  display:grid; gap:.55rem;
-}
-.aanwezig-rij.onbekend{ background:rgba(255,255,255,0.035); border-color:rgba(255,255,255,0.10); }
-.aanwezig-rij .wie{
-  font-size:13.5px; font-weight:600;
-  display:flex; align-items:center; gap:.6rem;
-}
-.aanwezig-rij.onbekend .wie{ color:rgba(255,255,255,0.6); font-weight:500; }
-/* Zelfde avatarrondje als bij de medewerkerslijst en de gewerkte uren
-   (initialen op de eigen/palet-kleur van de medewerker). */
-.aanwezig-rij .aw-bol{
-  flex-shrink:0; width:30px; height:30px; border-radius:999px; border:1px solid;
-  display:flex; align-items:center; justify-content:center;
-  font-size:10.5px; font-weight:700; color:#fff; letter-spacing:.02em;
-}
-.aanwezig-rij.onbekend .aw-bol{ opacity:.55; }
-.aanwezig-rij .functie{
-  margin-left:.45rem; font-size:10.5px; font-weight:500; padding:.1rem .5rem;
-  border-radius:999px; color:var(--hi);
-  background:rgba(var(--accent-rgb),0.16); border:1px solid rgba(var(--accent-rgb),0.34);
-}
-
+   hun telefoon hebben staan. Ja/nee/onbekend kleuren groen/rood/grijs, zoals
+   in de werkplanning. */
 .keuzes{ display:flex; flex-wrap:wrap; gap:.4rem; }
 /* een <label> is in dit stylesheet een formulierkopje (klein, hoofdletters,
    eigen marge); die opmaak moet er hier weer af, want dit label ís de knop */
@@ -2268,24 +2239,104 @@ label:has(> input[type=checkbox]), input[type=checkbox] + label{ cursor:pointer;
 }
 .keuzepil input:focus-visible + .vlak{ outline:2px solid rgba(var(--accent-rgb),0.9); outline-offset:2px; }
 
-.opmerkingveld{ font-size:13.5px; padding:.6rem .85rem; }
+/* ══════════ WERKPLANNING ══════════
+   templates/uren/aanwezigheid.html: het rooster dat de Excel van Maarten
+   vervangt. Leent het raamwerk van het planbord (.bord, .bord-naam,
+   .bord-kop) en kleurt de cellen zoals hij gewend is: groen aanwezig, rood
+   afwezig. Gemaakt voor een laptop; de kolombreedtes staan in de view
+   (PLANNING_WEKEN in uren/views.py) zodat het bord in de kaart past.
 
-/* leesweergave voor een medewerker: dezelfde standen, zonder knoppen */
-.aanwezig-rij .stand{
-  justify-self:start; padding:.3rem .8rem; border-radius:999px;
-  font-size:11.5px; font-weight:600;
+   Kop, namen en cellen zijn knoppen (klikken kiest, zie
+   static/js/werkplanning.js). Daarom eerst de knopopmaak eraf. */
+/* Alleen de familie erven, niet de hele font-regel: die zou de kleine
+   maten van .bord-kop en .wp-cel overschrijven (deze selector weegt zwaarder). */
+.wp-bord button{
+  font-family:inherit; color:inherit; text-align:inherit; margin:0; cursor:pointer;
+  -webkit-tap-highlight-color:transparent; touch-action:manipulation;
 }
-.aanwezig-rij .stand.ja{
-  background:rgba(var(--accent-rgb),0.22); border:1px solid rgba(var(--accent-rgb),0.45); color:var(--hi);
+.wp-weken{ display:flex; gap:.4rem; flex-wrap:wrap; }
+.wp-weken .pil{ padding:.4rem .85rem; }
+
+.wp-kop{ background:none; border:0; border-radius:8px; display:grid; justify-items:center; }
+@media (hover:hover){ .wp-kop:hover{ background:rgba(255,255,255,0.08); } }
+.wp-kop.feestdag .dag, .wp-kop.feestdag .datum{ color:#F6C7B6; }
+/* een nieuwe week begint met een duidelijker lijn: in vier weken naast
+   elkaar raak je anders de tel kwijt */
+.wp-bord .weekstart{ border-left-color:rgba(255,255,255,0.32); }
+
+/* De rijen "Aanwezig" en "Notitie" bovenaan: dezelfde band als de regel
+   "Per dag" op het planbord, want ook dit zijn de totalen. */
+.wp-rijkop{ align-items:center; }
+.wp-rijkop .wie{ font-size:11px; font-weight:600; color:rgba(255,255,255,0.6); }
+.wp-telling{
+  background:rgba(255,255,255,0.07); align-content:center; justify-content:center;
+  grid-auto-flow:column; gap:.1rem; font-variant-numeric:tabular-nums;
 }
-.aanwezig-rij .stand.nee{
-  background:rgba(224,123,95,0.22); border:1px solid rgba(224,123,95,0.48); color:#F6C7B6;
+.wp-telling .n{ font-size:13px; font-weight:700; color:#fff; }
+.wp-telling .n.nul{ color:rgba(255,255,255,0.3); font-weight:500; }
+.wp-telling .van{ font-size:10.5px; color:rgba(255,255,255,0.45); align-self:end; }
+.wp-notitie{
+  min-height:28px; border-right:0; border-bottom:0;
+  font-size:10.5px; color:var(--hi); overflow:hidden;
 }
-.aanwezig-rij .stand.onbekend{
-  background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.18);
-  color:rgba(255,255,255,0.55);
+.wp-notitie.is-feestdag{ color:#F6C7B6; }
+@media (hover:hover){ .wp-notitie:hover{ background:rgba(255,255,255,0.10); } }
+
+/* namen zijn knoppen: klikken kiest al zijn dagen */
+.wp-naam{ border-right:0; border-bottom:0; border-left:0; width:100%; }
+@media (hover:hover){ .wp-naam:hover .wie{ color:var(--hi); } }
+
+/* De cellen. Geen gap in het raster maar een dunne lijn, zoals in de Excel:
+   een rij groen leest dan als één balk. */
+.wp-cel{
+  min-height:34px; padding:.25rem .35rem; border-right:0; border-bottom:0;
+  display:block; overflow:hidden; font-size:10.5px; line-height:1.25;
+  transition:filter .1s;
 }
-.aanwezig-rij .opmerking{ font-size:12.5px; color:rgba(255,255,255,0.7); }
+.wp-cel.aanwezig{ background:rgba(var(--accent-rgb),0.30); }
+.wp-cel.afwezig{ background:rgba(224,123,95,0.38); }
+.wp-cel.vrij{ background:rgba(255,255,255,0.025); }
+/* niet in dienst: gearceerd en niet aan te klikken */
+.wp-cel.buiten{
+  background:repeating-linear-gradient(135deg, rgba(255,255,255,0.04) 0 4px, transparent 4px 8px);
+}
+@media (hover:hover){ button.wp-cel:hover{ filter:brightness(1.25); } }
+/* Zelf gezet, niet uit het rooster: een stip rechtsboven. Dan zie je
+   welke dagen iemand bewust heeft ingevuld. */
+.wp-cel.gezet{ position:relative; }
+.wp-cel.gezet::after{
+  content:""; position:absolute; top:4px; right:4px;
+  width:5px; height:5px; border-radius:999px; background:rgba(255,255,255,0.75);
+}
+.wp-cel.gekozen{ outline:2px solid #fff; outline-offset:-2px; filter:brightness(1.2); }
+.wp-cel .tekst, .wp-notitie .tekst{
+  display:block; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+}
+.wp-cel .tekst{ color:#fff; padding-right:.35rem; }
+/* bij vier weken is een cel 32px: daar past alleen de kleur in, de tekst
+   staat in de tooltip */
+.wp-w4 .wp-cel .tekst, .wp-w4 .wp-notitie .tekst{ display:none; }
+.wp-w4 .wp-notitie:has(.tekst)::before{
+  content:""; display:block; width:6px; height:6px; margin:auto;
+  border-radius:999px; background:currentColor;
+}
+
+.wp-legenda{ display:flex; flex-wrap:wrap; gap:.5rem 1.1rem; margin-top:1rem; font-size:11.5px; color:rgba(255,255,255,0.7); }
+.wp-legenda span{ display:inline-flex; align-items:center; gap:.4rem; }
+.wp-stip{ width:12px; height:12px; border-radius:3px; display:inline-block; border:1px solid rgba(255,255,255,0.2); }
+.wp-stip.aanwezig{ background:rgba(var(--accent-rgb),0.55); }
+.wp-stip.afwezig{ background:rgba(224,123,95,0.6); }
+.wp-stip.vrij{ background:rgba(255,255,255,0.05); }
+.wp-stip.gezet{ width:6px; height:6px; border-radius:999px; background:rgba(255,255,255,0.75); border:0; }
+.wp-legenda .wp-hint{ margin-left:auto; color:rgba(255,255,255,0.45); }
+
+.wp-dialoogtitel{
+  margin:.2rem 0 .15rem; font-family:'Fraunces',serif; font-style:italic;
+  font-weight:600; font-size:1.2rem; color:#fff;
+}
+.wp-dialoogsub{ margin:0 0 .4rem; font-size:12px; color:rgba(255,255,255,0.55); }
+.wp-dialoogsub:empty{ display:none; }
+.wp-standen{ margin:.9rem 0 .2rem; }
 
 /* ══════════ PAGINA-OVERGANG: KLUS OPENEN/SLUITEN ══════════
    Dit is een gewone server-gerenderde navigatie (geen SPA), dus er bestaat
