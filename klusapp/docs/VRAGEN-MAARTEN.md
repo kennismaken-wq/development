@@ -160,10 +160,10 @@ Maartens eigen taal (zo staat het ook in SPEC §1), dus het is het vragen waard 
 woord uit het scherm halen niet verwarrender is dan het probleem dat het oplost.
 
 **Antwoord (01-10-2026):** nee, terug naar **Aanleg / Onderhoud**. Staat zo in de
-app. Maarten noemde nog een derde soort voor een vaste klant waarvoor het hele jaar
-gewerkt wordt (verstaan als "Van E"), maar in het gesprek kwam dat neer op een eigen
-uitvoeradres per klus, en dat kon al. Een derde soort is níet gebouwd; vraag het na
-als het terugkomt.
+app. Daarnaast een derde soort, **Van Ee**: één vaste opdrachtgever waarvoor het hele jaar
+losse klussen op steeds andere adressen gedaan worden. Eigen tab op het
+klussenoverzicht en eigen keuze bij een nieuwe klus; verder als aanleg (eigen
+uitvoeradres, startdatum). Databasewaarde `van_ee`.
 
 ---
 

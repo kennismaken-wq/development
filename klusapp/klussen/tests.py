@@ -715,7 +715,7 @@ class KlusBeheerTest(TestCase):
         self.client.force_login(self.maarten)
         antwoord = self.client.post(reverse("klus_nieuw"), self.geldig(startdatum=""))
         self.assertEqual(antwoord.status_code, 200)
-        self.assertContains(antwoord, "startdatum van de eenmalige klus")
+        self.assertContains(antwoord, "startdatum van de klus")
         self.assertFalse(Klus.objects.exists())
 
     def test_klus_zonder_opdrachtgever_wordt_geweigerd(self):

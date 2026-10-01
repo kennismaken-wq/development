@@ -27,6 +27,11 @@ class Klus(models.Model):
         # altijd "aanleg" gebleven.
         AANLEG = "aanleg", "Aanleg"
         ONDERHOUD = "onderhoud", "Onderhoud"
+        # Eén vaste opdrachtgever waarvoor het hele jaar door losse klussen op
+        # steeds andere adressen gedaan worden; Maarten wil die als eigen tab
+        # naast aanleg en onderhoud (gesprek 01-10-2026). Gedraagt zich verder
+        # als aanleg: elke klus een eigen uitvoeradres en een startdatum.
+        VAN_EE = "van_ee", "Van Ee"
 
     naam = models.CharField(max_length=120)
     soort = models.CharField(max_length=20, choices=Soort.choices, default=Soort.AANLEG)

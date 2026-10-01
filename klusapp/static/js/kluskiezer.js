@@ -8,7 +8,7 @@
    want per scherm is een andere as van de klussenlijst de verwarrende:
 
      Galerij (fotozoeken.js)                  soort + status, zonder "Alle"-pil
-     uren schrijven (_uurblokformulier.html)  soort  Alle/Aanleg/Onderhoud
+     uren schrijven (_uurblokformulier.html)  soort  Alle/Aanleg/Onderhoud/Van Ee
      foto posten (_uploadveld.html)           allebei, twee rijen onder elkaar
 
    Welke assen het worden zegt `opts.assen` (of `opts.scopes` voor één rij).
@@ -67,6 +67,7 @@
         { waarde: "altijd", tekst: "Alle" },
         { waarde: "aanleg", tekst: "Aanleg" },
         { waarde: "onderhoud", tekst: "Onderhoud" },
+        { waarde: "van_ee", tekst: "Van Ee" },
       ],
     },
     // Zelfde as als `status`, maar met het woord van de klussenlijst

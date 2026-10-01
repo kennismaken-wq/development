@@ -10,7 +10,7 @@ from .models import Klus
 class KlusSelect(forms.Select):
     """Keuzelijst van klussen met soort en staat per optie erbij, zodat
     static/js/kluskiezer.js er een zoekbare lijst met pillen van kan maken —
-    Alle/Aanleg/Onderhoud, Alle/Actief/Afgerond, of allebei. Welke rijen een
+    Alle/Aanleg/Onderhoud/Van Ee, Alle/Actief/Afgerond, of allebei. Welke rijen een
     scherm toont staat in `data-pillen` op de wrapper in de template; deze
     widget levert alleen de gegevens waar dat script op filtert.
 
@@ -141,7 +141,7 @@ class KlusForm(forms.ModelForm):
         if gegevens.get("soort") == Klus.Soort.ONDERHOUD:
             gegevens["startdatum"] = None
         elif not gegevens.get("startdatum"):
-            self.add_error("startdatum", "Vul de startdatum van de eenmalige klus in.")
+            self.add_error("startdatum", "Vul de startdatum van de klus in.")
         return gegevens
 
 

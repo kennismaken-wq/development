@@ -126,3 +126,29 @@ class ZoekenOpPlaatsTest(TestCase):
         self.assertIn('data-zoek="Onderhoud Van E Kerkstraat 4, Leiden"', html)
         self.assertIn('data-waar="Kerkstraat 4, Leiden"', html)
         self.assertIn(f'value="{klus.pk}"', html)
+
+
+class VanEeTest(TestCase):
+    """Derde tab naast Aanleg en Onderhoud (gesprek Maarten, 01-10-2026)."""
+
+    def setUp(self):
+        self.client.force_login(
+            Medewerker.objects.create_user("maarten", password="x", rol=Medewerker.Rol.EIGENAAR)
+        )
+
+    def test_keuze_bij_nieuwe_klus(self):
+        html = str(KlusForm()["soort"])
+        for label in ("Aanleg", "Onderhoud", "Van Ee"):
+            self.assertIn(label, html)
+
+    def test_eigen_tab_op_het_klussenoverzicht(self):
+        Klus.objects.create(naam="Werkbon Kerkstraat", soort=Klus.Soort.VAN_EE, opdrachtgever="Van Ee")
+        Klus.objects.create(naam="Tuin Vermeer", soort=Klus.Soort.AANLEG)
+        antwoord = self.client.get(reverse("klussen"), {"soort": "van_ee"})
+        self.assertContains(antwoord, "Werkbon Kerkstraat")
+        self.assertNotContains(antwoord, "Tuin Vermeer")
+
+    def test_van_ee_vraagt_een_startdatum_zoals_aanleg(self):
+        formulier = KlusForm({"naam": "Werkbon", "soort": "van_ee", "opdrachtgever": "Van Ee", "actief": "True"})
+        self.assertFalse(formulier.is_valid())
+        self.assertIn("startdatum", formulier.errors)

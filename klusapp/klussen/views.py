@@ -328,7 +328,7 @@ def _lege_melding(soort, scope):
 def klus_lijst(request):
     """Overzicht van klussen, met één filterrij van twee gelijkwaardige groepen:
 
-        [ Aanleg | Onderhoud ]   [ Actief | Afgerond ]
+        [ Aanleg | Onderhoud | Van Ee ]   [ Actief | Afgerond ]
              soort = ritme             scope = staat
 
     Geen "Alles" in een van beide groepen: eenmalige klussen en

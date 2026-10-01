@@ -199,7 +199,8 @@ fase 1 goed en gaf per app akkoord voor fase 2. Wat er uit het gesprek veranderd
 1. **Tijdkiezer:** Van begint op 05:00 (`uren.forms.WERKDAG_BEGIN`), Tot begint na
    de gekozen begintijd (`static/js/tijdkiezer.js`). Een bestaand blok van vóór
    05:00 houdt zijn tijd.
-2. **Aanleg / Onderhoud** in plaats van Eenmalig / Onderhoud (VRAGEN-MAARTEN 8).
+2. **Aanleg / Onderhoud / Van Ee** in plaats van Eenmalig / Onderhoud
+   (VRAGEN-MAARTEN 8). Van Ee is één vaste opdrachtgever met een eigen tab.
 3. **Klus-kiezer zoekt ook op opdrachtgever, adres en plaats**, en toont adres en
    plaats onder de naam: "Leiden" vindt de klus in Leiden.
 4. **Actief / Afgerond** als keuzepillen op het klusformulier in plaats van een vinkje.

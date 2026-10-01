@@ -97,6 +97,7 @@
       { kenmerk: "soort", pillen: [
         { waarde: "aanleg", tekst: "Aanleg" },
         { waarde: "onderhoud", tekst: "Onderhoud" },
+        { waarde: "van_ee", tekst: "Van Ee" },
       ] },
       { kenmerk: "scope", pillen: [
         { waarde: "actief", tekst: "Actief" },
