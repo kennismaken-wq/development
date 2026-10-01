@@ -74,7 +74,8 @@
     redenBlok.hidden = !stand || stand.value !== "nee";
     // wie afwezig is, gaat nergens heen: de server haalt zijn klussen weg
     klussenBlok.hidden = !!stand && stand.value === "nee";
-    // "Volgens rooster" haalt de afwijking weg, opmerking en al.
+    // "Vaste werkdagen" zet de dag terug naar de vaste werkdagen van de
+    // medewerker, opmerking en al.
     opmerking.closest("[data-opmerking-blok]").hidden = !!stand && stand.value === "standaard";
   }
 

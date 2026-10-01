@@ -73,12 +73,12 @@
                  title="{{ rij.medewerker.naam }} is op {{ cel.datum|date:'j F' }} niet in dienst"></div>
           {% else %}
             <button type="button"
-                    class="bord-cel wp-cel {{ cel.stand }}{% if not cel.standaard %} gezet{% endif %}{% if cel.datum == vandaag %} vandaag{% endif %}{% if cel.datum.weekday == 0 and not forloop.first %} weekstart{% endif %}"
+                    class="bord-cel wp-cel {{ cel.stand }}{% if cel.datum == vandaag %} vandaag{% endif %}{% if cel.datum.weekday == 0 and not forloop.first %} weekstart{% endif %}"
                     data-r="{{ r }}" data-k="{{ forloop.counter0 }}"
                     data-cel="{{ rij.medewerker.pk }}:{{ cel.datum|date:'Y-m-d' }}"
                     data-stand="{% if cel.standaard %}standaard{% elif cel.stand == 'aanwezig' %}ja{% else %}nee{% endif %}"
                     data-reden="{{ cel.reden }}" data-opmerking="{{ cel.opmerking }}" data-klussen="{{ cel.klus_ids }}"
-                    title="{{ rij.medewerker.naam }} · {{ cel.datum|date:'D j M' }} · {% if cel.stand == 'aanwezig' %}aanwezig{% elif cel.stand == 'afwezig' %}afwezig{% else %}geen werkdag{% endif %}{% if cel.reden_tekst %} · {{ cel.reden_tekst }}{% endif %}{% if cel.opmerking %} · {{ cel.opmerking }}{% endif %}{% if cel.standaard %} (rooster){% endif %}{% for klus in cel.klussen %}{% if forloop.first %}&#10;{% else %}, {% endif %}{{ klus.naam }}{% endfor %}">
+                    title="{{ rij.medewerker.naam }} · {{ cel.datum|date:'D j M' }} · {% if cel.stand == 'aanwezig' %}aanwezig{% elif cel.stand == 'afwezig' %}afwezig{% else %}geen werkdag{% endif %}{% if cel.reden_tekst %} · {{ cel.reden_tekst }}{% endif %}{% if cel.opmerking %} · {{ cel.opmerking }}{% endif %}{% for klus in cel.klussen %}{% if forloop.first %}&#10;{% else %}, {% endif %}{{ klus.naam }}{% endfor %}">
               {% comment %} De achtergrond van de cel gaat alleen over er zijn of
                  niet (groen/rood). Een klus is daarom een rondje in zijn eigen
                  kleur met de naam erachter, één regel per klus. Bij vier weken
@@ -99,7 +99,6 @@
     <span><i class="wp-stip aanwezig"></i>Aanwezig</span>
     <span><i class="wp-stip afwezig"></i>Afwezig</span>
     <span><i class="wp-stip vrij"></i>Geen werkdag</span>
-    <span><i class="wp-stip gezet"></i>Afwijking van het rooster</span>
     <span><i class="wp-stip klus"></i>Ingepland op een klus</span>
     <span class="wp-hint">Klik of sleep over de cellen om ze te zetten · shift-klik voor een blok</span>
   </div>
@@ -124,7 +123,7 @@
       <div class="keuzes wp-standen">
         <label class="keuzepil ja"><input type="radio" name="stand" value="ja" required><span class="vlak">Aanwezig</span></label>
         <label class="keuzepil nee"><input type="radio" name="stand" value="nee"><span class="vlak">Afwezig</span></label>
-        <label class="keuzepil onbekend"><input type="radio" name="stand" value="standaard"><span class="vlak">Volgens rooster</span></label>
+        <label class="keuzepil onbekend"><input type="radio" name="stand" value="standaard"><span class="vlak">Vaste werkdagen</span></label>
       </div>
 
       <div data-reden-blok hidden>

@@ -2301,13 +2301,6 @@ label:has(> input[type=checkbox]), input[type=checkbox] + label{ cursor:pointer;
   background:repeating-linear-gradient(135deg, rgba(255,255,255,0.04) 0 4px, transparent 4px 8px);
 }
 @media (hover:hover){ button.wp-cel:hover{ filter:brightness(1.25); } }
-/* Zelf gezet, niet uit het rooster: een stip rechtsboven. Dan zie je
-   welke dagen iemand bewust heeft ingevuld. */
-.wp-cel.gezet{ position:relative; }
-.wp-cel.gezet::after{
-  content:""; position:absolute; top:4px; right:4px;
-  width:5px; height:5px; border-radius:999px; background:rgba(255,255,255,0.75);
-}
 .wp-cel.gekozen{ outline:2px solid #fff; outline-offset:-2px; filter:brightness(1.2); }
 .wp-cel .tekst, .wp-notitie .tekst{
   display:block; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
@@ -2327,7 +2320,6 @@ label:has(> input[type=checkbox]), input[type=checkbox] + label{ cursor:pointer;
 .wp-stip.aanwezig{ background:rgba(var(--accent-rgb),0.55); }
 .wp-stip.afwezig{ background:rgba(224,123,95,0.6); }
 .wp-stip.vrij{ background:rgba(255,255,255,0.05); }
-.wp-stip.gezet{ width:6px; height:6px; border-radius:999px; background:rgba(255,255,255,0.75); border:0; }
 .wp-legenda .wp-hint{ margin-left:auto; color:rgba(255,255,255,0.45); }
 
 .wp-dialoogtitel{
