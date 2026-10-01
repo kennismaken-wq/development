@@ -608,6 +608,62 @@ def aanwezigheid(request):
     )
 
 
+@login_required
+def mijn_aanwezigheid(request):
+    """Je eigen aanwezigheid, als maandkalender: wanneer sta je op groen,
+    wanneer op rood, en waarom.
+
+    De werkplanning hierboven blijft van de eigenaar. Een medewerker ziet
+    hier alleen zijn eigen rij uit hetzelfde rooster (uren/bezetting.py),
+    zonder de anderen en zonder de klussen waar hij op staat (Thijmen,
+    01-10-2026). Alleen kijken: zetten doet de eigenaar.
+    """
+    dag = periode.gekozen_dag(request)
+    vandaag = periode.vandaag()
+    eerste_van_maand = dag.replace(day=1)
+    weken = kalender.maandraster(eerste_van_maand.year, eerste_van_maand.month)
+    dagen = [datum for week in weken for datum in week]
+    cellen = bezetting.rooster([request.user], dagen)
+    feest = bezetting.nederlandse_feestdagen_tussen(dagen[0], dagen[-1])
+
+    def hoort_bij_maand(datum):
+        return (datum.year, datum.month) == (eerste_van_maand.year, eerste_van_maand.month)
+
+    def dagcel(datum):
+        cel = cellen[(request.user.pk, datum)]
+        return {
+            "datum": datum,
+            "in_maand": hoort_bij_maand(datum),
+            "is_vandaag": datum == vandaag,
+            "stand": cel.stand,
+            "toelichting": cel.opmerking or cel.reden_tekst or feest.get(datum, ("", False))[0],
+        }
+
+    raster = [[dagcel(datum) for datum in week] for week in weken]
+    in_maand = [cel for week in raster for cel in week if cel["in_maand"]]
+    return render(
+        request,
+        "uren/mijn_aanwezigheid.html",
+        {
+            "dag": dag,
+            "vandaag": vandaag,
+            "maandraster": raster,
+            "vorige": _maand_erbij(eerste_van_maand, -1),
+            "volgende": _maand_erbij(eerste_van_maand, 1),
+            "is_huidige_periode": (eerste_van_maand.year, eerste_van_maand.month) == (vandaag.year, vandaag.month),
+            "aantal_aanwezig": sum(1 for cel in in_maand if cel["stand"] == bezetting.AANWEZIG),
+            # Rood, of groen met een opmerking erbij: wat afwijkt van een
+            # gewone werkdag staat onder de kalender nog eens voluit, want in
+            # een vakje op een telefoon past geen "tandarts, tot 14.15".
+            "bijzonder": [
+                cel
+                for cel in in_maand
+                if cel["stand"] == bezetting.AFWEZIG or (cel["stand"] == bezetting.AANWEZIG and cel["toelichting"])
+            ],
+        },
+    )
+
+
 SOORT_VOLGORDE = {"onderhoud": 0, "van_ee": 1, "aanleg": 2}
 
 

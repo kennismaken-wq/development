@@ -1,0 +1,52 @@
+{% extends "basis.html" %}
+{% block titel %}Aanwezigheid{% endblock %}
+{% block kop %}Mijn aanwezigheid{% endblock %}
+{% block inhoud %}
+  {% comment %} Alleen je eigen dagen, alleen kijken. De eigenaar zet ze op
+     de werkplanning (aanwezigheid.html); klussen staan hier bewust niet bij.
+     Een maandkalender en geen jaarbord: dit kijk je op je telefoon. {% endcomment %}
+  <div class="urentop">
+    <div class="urentop-nav">
+      <a class="urenpijl" href="?dag={{ vorige|date:'Y-m-d' }}" aria-label="Vorige maand">‹</a>
+      <span class="periodetitel">{{ dag|date:"F Y"|capfirst }}</span>
+      <a class="urenpijl" href="?dag={{ volgende|date:'Y-m-d' }}" aria-label="Volgende maand">›</a>
+    </div>
+    {% if not is_huidige_periode %}<a class="knop-stil" href="{% url 'mijn_aanwezigheid' %}">Vandaag</a>{% endif %}
+  </div>
+
+  <p class="aw-samenvatting"><strong>{{ aantal_aanwezig }}</strong> dag{{ aantal_aanwezig|pluralize:"en" }} aanwezig deze maand</p>
+
+  <div class="maandkoppen">
+    <span>Ma</span><span>Di</span><span>Wo</span><span>Do</span><span>Vr</span><span>Za</span><span>Zo</span>
+  </div>
+  <div class="maandraster aw-raster">
+    {% for week in maandraster %}
+      {% for dagcel in week %}
+        <div class="maanddag aw-dag {{ dagcel.stand }}{% if not dagcel.in_maand %} buiten-maand{% endif %}{% if dagcel.is_vandaag %} vandaag{% endif %}"
+             {% if dagcel.toelichting %}title="{{ dagcel.toelichting }}"{% endif %}>
+          <span class="nr">{{ dagcel.datum|date:"j" }}</span>
+          {% if dagcel.toelichting %}<span class="aw-stip" aria-hidden="true"></span>{% endif %}
+        </div>
+      {% endfor %}
+    {% endfor %}
+  </div>
+
+  <div class="legenda wp-legenda">
+    <span><i class="wp-stip aanwezig"></i>Aanwezig</span>
+    <span><i class="wp-stip afwezig"></i>Afwezig</span>
+    <span><i class="wp-stip vrij"></i>Geen werkdag</span>
+  </div>
+
+  {% if bijzonder %}
+    <ul class="aw-lijst">
+      {% for dagcel in bijzonder %}
+        <li class="aw-regel">
+          <i class="wp-stip {{ dagcel.stand }}"></i>
+          <span class="wanneer">{{ dagcel.datum|date:"D j M" }}</span>
+          <span class="wat">{% if dagcel.toelichting %}{{ dagcel.toelichting }}{% else %}Afwezig{% endif %}</span>
+        </li>
+      {% endfor %}
+    </ul>
+  {% endif %}
+  <p class="aw-uitleg">Klopt er iets niet? Vraag het aan Maarten.</p>
+{% endblock %}

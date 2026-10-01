@@ -10,6 +10,7 @@ urlpatterns = [
     path("uren/<int:pk>/bewerken/", views.uurblok_bewerken, name="uurblok_bewerken"),
     path("uren/<int:pk>/verwijderen/", views.uurblok_verwijderen, name="uurblok_verwijderen"),
     path("aanwezigheid/", views.aanwezigheid, name="aanwezigheid"),
+    path("mijn-aanwezigheid/", views.mijn_aanwezigheid, name="mijn_aanwezigheid"),
     path("planbord/", views.planbord, name="planbord"),
     path("export/", views.urenexport, name="urenexport"),
 ]

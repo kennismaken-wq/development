@@ -37,6 +37,9 @@ TEGELS = [
     {"titel": "Klussen", "icoon": "klussen", "url_naam": "klussen", "rollen": ["medewerker", "eigenaar"]},
     {"titel": "Galerij", "icoon": "fotos", "url_naam": "fotos", "rollen": ["medewerker", "eigenaar"]},
     {"titel": "Aanwezigheid", "icoon": "aanwezigheid", "url_naam": "aanwezigheid", "rollen": ["eigenaar"]},
+    # Sinds 01-10-2026 ook voor de medewerker, maar dan alleen zijn eigen
+    # dagen en zonder klussen (uren.views.mijn_aanwezigheid).
+    {"titel": "Aanwezigheid", "icoon": "aanwezigheid", "url_naam": "mijn_aanwezigheid", "rollen": ["medewerker"]},
     {"titel": "Loonstrook", "icoon": "loonstrook", "url_naam": "loonstrook", "rollen": ["medewerker", "eigenaar"]},
     {"titel": "Mijn profiel", "icoon": "profiel", "url_naam": "mijn_profiel", "rollen": ["medewerker", "eigenaar"]},
 ]

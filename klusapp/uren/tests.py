@@ -971,6 +971,59 @@ class WerkplanningTest(TestCase):
         self.assertEqual(self.sam.vaste_werkdagen, [0, 1, 3])
 
 
+class MijnAanwezigheidTest(TestCase):
+    """Een medewerker ziet zijn eigen aanwezigheid, en alleen die (01-10-2026)."""
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.sam = Medewerker.objects.create_user("sam", password="x", first_name="Sam")
+        cls.piet = Medewerker.objects.create_user("piet", password="x", first_name="Piet")
+        cls.klus = Klus.objects.create(naam="Tuin Jansen")
+        # Sam is woensdag 9 september ziek, Piet de dag erna op vakantie
+        Aanwezigheid.objects.create(
+            medewerker=cls.sam, datum=date(2026, 9, 9), aanwezig=False, reden="ziek", opmerking="griep"
+        )
+        Aanwezigheid.objects.create(medewerker=cls.piet, datum=date(2026, 9, 10), aanwezig=False, reden="vakantie")
+        Inzet.objects.create(medewerker=cls.sam, klus=cls.klus, datum=date(2026, 9, 8))
+
+    def setUp(self):
+        self.client.force_login(self.sam)
+
+    def dagcellen(self, antwoord):
+        return {cel["datum"]: cel for week in antwoord.context["maandraster"] for cel in week}
+
+    def test_eigen_dagen_in_de_maand(self):
+        antwoord = self.client.get("/mijn-aanwezigheid/?dag=2026-09-15")
+        self.assertEqual(antwoord.status_code, 200)
+        cellen = self.dagcellen(antwoord)
+        self.assertEqual(cellen[date(2026, 9, 8)]["stand"], bezetting.AANWEZIG)
+        self.assertEqual(cellen[date(2026, 9, 9)]["stand"], bezetting.AFWEZIG)
+        self.assertEqual(cellen[date(2026, 9, 9)]["toelichting"], "griep")
+        # Piets vakantie is niet Sams zaak
+        self.assertEqual(cellen[date(2026, 9, 10)]["stand"], bezetting.AANWEZIG)
+        self.assertEqual(cellen[date(2026, 9, 12)]["stand"], bezetting.VRIJ)
+        self.assertEqual([c["datum"] for c in antwoord.context["bijzonder"]], [date(2026, 9, 9)])
+
+    def test_geen_klussen_en_geen_collegas(self):
+        html = self.client.get("/mijn-aanwezigheid/?dag=2026-09-15").content.decode()
+        self.assertNotIn("Tuin Jansen", html)
+        self.assertNotIn("Piet", html)
+        self.assertNotIn("vakantie", html.lower())
+
+    def test_alleen_kijken(self):
+        antwoord = self.client.post(
+            "/mijn-aanwezigheid/", {"actie": "cellen", "cel": f"{self.sam.pk}:2026-09-08", "stand": "nee"}
+        )
+        self.assertEqual(antwoord.status_code, 200)
+        self.assertFalse(Aanwezigheid.objects.filter(medewerker=self.sam, datum=date(2026, 9, 8)).exists())
+        # de werkplanning zelf blijft dicht
+        self.assertEqual(self.client.get("/aanwezigheid/").status_code, 404)
+
+    def test_niet_ingelogd(self):
+        self.client.logout()
+        self.assertEqual(self.client.get("/mijn-aanwezigheid/").status_code, 302)
+
+
 class UurblokDetailTest(TestCase):
     @classmethod
     def setUpTestData(cls):

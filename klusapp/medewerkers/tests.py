@@ -47,8 +47,16 @@ class StartschermTest(TestCase):
         self.assertIn("Uren schrijven", titels)
         self.assertIn("Mijn profiel", titels)
         self.assertIn("Loonstrook", titels)
-        for verboden in ("Weekoverzicht", "Aanwezigheid", "Beheer", "Urenexport"):
+        for verboden in ("Weekoverzicht", "Beheer", "Urenexport"):
             self.assertNotIn(verboden, titels)
+
+    def test_medewerker_aanwezigheid_wijst_naar_zijn_eigen_dagen(self):
+        # Sinds 01-10-2026 ziet een medewerker zijn eigen aanwezigheid, niet
+        # de werkplanning van iedereen.
+        self.client.force_login(self.medewerker)
+        html = self.client.get(reverse("start")).content.decode()
+        self.assertIn(f'href="{reverse("mijn_aanwezigheid")}"', html)
+        self.assertNotIn(f'href="{reverse("aanwezigheid")}"', html)
 
     def test_loonstrook_op_android_direct_naar_loondossier(self):
         self.client.force_login(self.medewerker)
@@ -358,8 +366,10 @@ class StarttegelsTest(TestCase):
         html = self.client.get(reverse("start")).content.decode()
         self.assertIn("Uren schrijven", html)
         self.assertIn("Klussen", html)
-        for alleen_voor_de_baas in ("Aanwezigheid", "Urenexport", "Medewerkers"):
+        for alleen_voor_de_baas in ("Urenexport", "Medewerkers"):
             self.assertNotIn(alleen_voor_de_baas, html)
+        # Aanwezigheid wel, maar alleen die van hemzelf (01-10-2026)
+        self.assertNotIn(f'href="{reverse("aanwezigheid")}"', html)
 
     def test_eigenaar_ziet_ook_zijn_eigen_schermen(self):
         # Sinds 22-09 staan de tegels als compacte app-iconen zonder cijfer
