@@ -14,13 +14,19 @@ if (sessionStorage.getItem("klus-terug-navigatie")) {
 }
 
 /* Pagina terug uit de back-forward-cache (browser-terug, of history.back()
-   hieronder): dan draait er niets opnieuw, dus de kaart zou nog
-   uitgeschoven staan en een vlag van een vorige klik zou blijven hangen. */
+   hieronder): dan draait het script hierboven niet opnieuw. De kaart zou nog
+   uitgeschoven staan, en het inschuiven moet hier alsnog gestart worden. */
 window.addEventListener("pageshow", function (gebeurtenis) {
   if (!gebeurtenis.persisted) return;
   var kaart = document.querySelector(".kaart");
   if (kaart) kaart.classList.remove("klus-uit-animatie");
-  sessionStorage.removeItem("klus-terug-navigatie");
+  var html = document.documentElement;
+  html.classList.remove("klus-terug-navigatie");
+  if (sessionStorage.getItem("klus-terug-navigatie")) {
+    sessionStorage.removeItem("klus-terug-navigatie");
+    void html.offsetWidth; // opnieuw starten, ook als de klasse er al stond
+    html.classList.add("klus-terug-navigatie");
+  }
 });
 
 /* Is het doel van het pijltje precies de pagina waar je net vandaan kwam?
@@ -50,13 +56,16 @@ document.addEventListener("click", function (gebeurtenis) {
 
   gebeurtenis.preventDefault();
   // Uitschuiven en laden tegelijk, niet na elkaar: eerst de animatie
-  // afwachten en dan pas de volgende pagina opvragen voelde traag. De
-  // browser laat deze pagina (en de animatie) staan tot de volgende klaar is.
-  if (animeren) kaart.classList.add("klus-uit-animatie");
+  // afwachten en dan pas de volgende pagina opvragen voelde traag. Het
+  // uitschuiven wordt daardoor vaak afgebroken; het eigenlijke "terug"-gevoel
+  // komt van de pagina waar je aankomt, die van links inschuift (de vlag).
+  if (animeren) {
+    kaart.classList.add("klus-uit-animatie");
+    sessionStorage.setItem("klus-terug-navigatie", "1");
+  }
   if (terugInGeschiedenis) {
     history.back();
   } else {
-    if (animeren) sessionStorage.setItem("klus-terug-navigatie", "1");
     window.location.href = doel;
   }
 });
