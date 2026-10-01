@@ -23,7 +23,6 @@
   const cellen = Array.from(bord.querySelectorAll("button.wp-cel"));
   const kluscellen = Array.from(bord.querySelectorAll("button.wp-kc"));
   const klusVenster = document.getElementById("wp-klusdagen");
-  const toevoegVenster = document.getElementById("wp-klustoevoegen");
   const formulier = venster.querySelector("form");
   const celvelden = venster.querySelector("[data-cellen]");
   const titel = venster.querySelector(".wp-dialoogtitel");
@@ -238,12 +237,9 @@
       openKlusVenster(kluscellen.filter(function (c) { return c.dataset.q === klusnaam.dataset.q; }));
       return;
     }
-    if (e.target.closest("[data-klus-toevoegen]") && toevoegVenster) {
-      const zoek = toevoegVenster.querySelector(".wp-kluszoek");
-      zoek.value = "";
-      filterLijst(toevoegVenster, "");
-      window.openSheet(toevoegVenster);
-      zoek.focus();
+    const inklap = e.target.closest("[data-klussen-inklappen]");
+    if (inklap) {
+      zetKlussenDicht(!bord.classList.contains("klussen-dicht"));
       return;
     }
 
@@ -269,7 +265,7 @@
     }
   });
 
-  [venster, notitieVenster, klusVenster, toevoegVenster].forEach(function (dialoog) {
+  [venster, notitieVenster, klusVenster].forEach(function (dialoog) {
     if (!dialoog) return;
     dialoog.querySelector("[data-sluit]").addEventListener("click", function () {
       window.closeSheet(dialoog);
@@ -343,19 +339,23 @@
     });
   }
 
-  // Zoeken in "Klus toevoegen": dezelfde regel als in het venster hierboven.
-  function filterLijst(dialoog, tekst) {
-    const woorden = tekst.toLowerCase().split(/\s+/).filter(Boolean);
-    dialoog.querySelectorAll(".wp-klus").forEach(function (regel) {
-      const zoek = regel.dataset.zoek;
-      regel.hidden = !woorden.every(function (w) { return zoek.indexOf(w) !== -1; });
-    });
+  // Het klussenblok in- en uitklappen met het minteken. Onthouden per
+  // browser: wie hem dicht heeft, wil hem morgen ook dicht.
+  const inklapSleutel = "werkplanning-klussen-dicht";
+  function zetKlussenDicht(dicht) {
+    bord.classList.toggle("klussen-dicht", dicht);
+    const knop = bord.querySelector("[data-klussen-inklappen]");
+    if (knop) {
+      knop.textContent = dicht ? "+" : "−";
+      knop.setAttribute("aria-expanded", dicht ? "false" : "true");
+      knop.title = dicht ? "Klussen uitklappen" : "Klussen inklappen";
+      knop.setAttribute("aria-label", knop.title);
+    }
+    try { localStorage.setItem(inklapSleutel, dicht ? "1" : ""); } catch (fout) { /* dan maar niet onthouden */ }
   }
-  if (toevoegVenster) {
-    toevoegVenster.querySelector(".wp-kluszoek").addEventListener("input", function (e) {
-      filterLijst(toevoegVenster, e.target.value);
-    });
-  }
+  try {
+    if (localStorage.getItem(inklapSleutel) === "1") zetKlussenDicht(true);
+  } catch (fout) { /* open laten */ }
 
   function naarKolom(k, vloeiend) {
     const kop = bord.querySelector('.wp-kop[data-k="' + Math.max(k, 0) + '"]');

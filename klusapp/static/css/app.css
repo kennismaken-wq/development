@@ -2388,6 +2388,28 @@ a.wp-klus{ text-decoration:none; }
 }
 .wp-blokkop .wie{ font-family:'Fraunces',serif; font-style:italic; font-weight:600; font-size:1rem; }
 .wp-toevoegknop{ padding:.3rem .8rem; font-size:12px; }
+.wp-inklap{
+  width:26px; height:26px; border-radius:8px; padding:0; cursor:pointer;
+  display:inline-flex; align-items:center; justify-content:center;
+  font-family:'Inter',sans-serif; font-size:16px; font-weight:600; line-height:1; color:#fff;
+  background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.2);
+}
+@media (hover:hover){ .wp-inklap:hover{ background:rgba(255,255,255,0.16); } }
+.wp-blokkop-aantal{ font-size:11px; color:rgba(255,255,255,0.5); }
+/* ingeklapt: alleen de kopregel blijft staan */
+.klussen-dicht .wp-klusnaam, .klussen-dicht .wp-kc, .klussen-dicht .wp-klusleeg{ display:none; }
+
+/* fotowaaier bij de klusnaam: de stapel van de klussenlijst, kleiner */
+.wp-klusnaam{ gap:.65rem; }
+.wp-waaier{ width:38px; height:38px; margin:.25rem .2rem .25rem .3rem; flex-shrink:0; }
+.wp-waaier .voorbeeldlaag{ border-radius:8px; box-shadow:0 5px 12px rgba(0,0,0,0.28); }
+.wp-waaier .laag-voor-2{ transform:rotate(8deg) translate(5px, 2px) scale(0.95); }
+.wp-waaier .laag-voor-3{ transform:rotate(-10deg) translate(-5px, 4px) scale(0.9); }
+/* lege blaadjes: dezelfde waaier, alleen zonder inhoud */
+.wp-waaier-leeg .voorbeeldlaag{ background:rgba(255,255,255,0.06); border-style:dashed; border-color:rgba(255,255,255,0.22); }
+.wp-waaier-leeg .laag-voor-1{ background:rgba(255,255,255,0.09); }
+.wp-klusnaam .wie{ display:flex; align-items:center; gap:.35rem; }
+.wp-klusnaam .wp-klusbol{ width:8px; height:8px; margin:0; }
 .wp-klusleeg{ grid-column:1 / -1; margin:.3rem 0 0; padding-left:.55rem; font-size:12.5px; }
 
 .wp-klusnaam{ border-right:0; border-bottom:0; border-left:0; width:100%; align-items:center; }

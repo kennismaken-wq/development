@@ -101,38 +101,50 @@
         <p class="leeg" style="grid-column:1 / -1">Er is niemand in dienst.</p>
       {% endfor %}
 
-      {% comment %} Het klussenblok, zoals onder de mensen in de Excel. Een
-         gekleurde cel is een dag dat de klus gepland staat, met de notitie
-         erin (bij Van Ee de locatie). "2 man" is hoeveel mensen er die dag
-         op staan, uit de cellen hierboven. Alleen klussen die in deze
-         periode iets hebben, plus wat je toevoegt (uren/views.py,
-         _klusrijen). {% endcomment %}
+      {% comment %} Het klussenblok, zoals onder de mensen in de Excel: elke
+         lopende klus, met zijn fotowaaier bij de naam (lege blaadjes als er
+         nog niets in zit). Een gekleurde cel is een dag dat de klus gepland
+         staat, met de notitie erin (bij Van Ee de locatie); "2 man" komt uit
+         de cellen hierboven. De cellen bouwt de view zelf op
+         (uren/views.py, _kluscellen_html): met honderd klussen maal 365
+         dagen is de templatelus te traag. Het minteken klapt het blok in;
+         werkplanning.js onthoudt dat. {% endcomment %}
       <div class="wp-blokkop">
         <span class="wp-blokkop-inhoud">
+          <button type="button" class="wp-inklap" data-klussen-inklappen aria-expanded="true" aria-label="Klussen inklappen" title="Klussen inklappen">−</button>
           <span class="wie">Klussen</span>
-          <button type="button" class="knop-stil wp-toevoegknop" data-klus-toevoegen>+ Klus toevoegen</button>
+          <span class="wp-blokkop-aantal">{{ klusrijen|length }}</span>
+          <a class="knop-stil wp-toevoegknop" href="{% url 'klus_nieuw' %}">+ Nieuwe klus</a>
         </span>
       </div>
       {% for rij in klusrijen %}
-        {% with q=forloop.counter0 %}
-        <button type="button" class="bord-naam wp-klusnaam" data-q="{{ q }}" data-klus="{{ rij.klus.pk }}" title="Alle dagen van {{ rij.klus.naam }} kiezen">
-          <i class="wp-klusbol" style="background:{{ rij.klus.kleur }}"></i>
-          <span class="bord-naam-tekst">
-            <span class="wie">{{ rij.klus.naam }}</span>
-            {% if rij.klus.plaats or rij.klus.opdrachtgever %}<span class="functie">{{ rij.klus.opdrachtgever|default:rij.klus.plaats }}</span>{% endif %}
-          </span>
+        <button type="button" class="bord-naam wp-klusnaam" data-q="{{ forloop.counter0 }}" data-klus="{{ rij.klus.pk }}" title="Alle dagen van {{ rij.klus.naam }} kiezen">
+          {% with klus=rij.klus %}
+            {% if klus.voorbeeld_items %}
+              <span class="voorbeeldstapel wp-waaier">
+                {% for item in klus.voorbeeld_items %}
+                  <span class="voorbeeldlaag laag-voor-{{ forloop.revcounter }} {% if item.soort == 'foto' %}voorbeeldlaag-foto{% elif item.soort == 'document' %}voorbeeldlaag-document{% else %}voorbeeldlaag-notitie{% endif %}">
+                    {% if item.soort == 'foto' or item.thumbnail %}<img src="{% url 'media_bestand' item.thumbnail.name|default:item.bestand.name %}" alt="" loading="lazy">{% endif %}
+                  </span>
+                {% endfor %}
+              </span>
+            {% else %}
+              {# geen foto's of documenten: drie lege blaadjes #}
+              <span class="voorbeeldstapel wp-waaier wp-waaier-leeg" aria-hidden="true">
+                <span class="voorbeeldlaag laag-voor-3"></span>
+                <span class="voorbeeldlaag laag-voor-2"></span>
+                <span class="voorbeeldlaag laag-voor-1"></span>
+              </span>
+            {% endif %}
+            <span class="bord-naam-tekst">
+              <span class="wie"><i class="wp-klusbol" style="background:{{ klus.kleur }}"></i>{{ klus.naam }}</span>
+              {% if klus.opdrachtgever or klus.plaats %}<span class="functie">{{ klus.opdrachtgever|default:klus.plaats }}</span>{% endif %}
+            </span>
+          {% endwith %}
         </button>
-        {% spaceless %}
-        {% for cel in rij.cellen %}
-          <button type="button" class="bord-cel wp-kc{% if cel.gepland %} gepland{% endif %}{% if cel.datum == vandaag %} vandaag{% endif %}{% if cel.datum.weekday == 0 and not forloop.first %} weekstart{% endif %}" data-q="{{ q }}" data-k="{{ forloop.counter0 }}"{% if cel.gepland %} data-gepland="1" style="--klus:{{ rij.klus.kleur }}"{% endif %}{% if cel.notitie %} data-notitie="{{ cel.notitie }}"{% endif %}>
-            {% if cel.notitie %}<span class="tekst">{{ cel.notitie }}</span>{% endif %}
-            {% if cel.mensen %}<span class="wp-mensen">{{ cel.mensen }} man</span>{% endif %}
-          </button>
-        {% endfor %}
-        {% endspaceless %}
-        {% endwith %}
+        {{ rij.cellen_html }}
       {% empty %}
-        <p class="leeg wp-klusleeg">Nog geen klussen in deze periode. Voeg er een toe, of zet hierboven iemand op een klus.</p>
+        <p class="leeg wp-klusleeg">Er zijn nog geen lopende klussen.</p>
       {% endfor %}
     </div>
   </div>
@@ -254,31 +266,6 @@
     </form>
   </dialog>
 
-  <dialog class="uren-invoegen wp-dialoog" id="wp-klustoevoegen" aria-labelledby="wp-klustoevoegen-titel">
-    <div class="uurblokformulier glas">
-      <div class="sheet-hendel" aria-hidden="true"></div>
-      <div class="sheet-kop">
-        <button type="button" class="dialog-sluiten" data-sluit aria-label="Sluiten">×</button>
-      </div>
-      <h2 class="wp-dialoogtitel" id="wp-klustoevoegen-titel">Klus toevoegen</h2>
-      <p class="wp-dialoogsub">De klus komt als regel in het klussenblok; daarna sleep je over de dagen waarop hij gepland staat.</p>
-      <input type="text" enterkeyhint="search" class="wp-kluszoek" placeholder="Zoek op klus, opdrachtgever of plaats" autocomplete="off">
-      <div class="wp-kluslijst">
-        {% for klus in klussen %}
-          <a class="wp-klus" href="?dag={{ dag|date:'Y-m-d' }}&weergave={{ weergave }}&extra={% if extra %}{{ extra }},{% endif %}{{ klus.pk }}"
-             data-zoek="{{ klus.naam|lower }} {{ klus.opdrachtgever|lower }} {{ klus.plaats|lower }} {{ klus.adres|lower }}">
-            <span class="vlak">
-              <i style="background:{{ klus.kleur }}"></i>
-              <span class="naam">{{ klus.naam }}</span>
-              {% if klus.plaats %}<span class="plaats">{{ klus.plaats }}</span>{% endif %}
-            </span>
-          </a>
-        {% empty %}
-          <p class="leeg">Er zijn geen lopende klussen.</p>
-        {% endfor %}
-      </div>
-    </div>
-  </dialog>
 
   <script src="{% static 'js/bottomsheet.js' %}"></script>
   <script src="{% static 'js/werkplanning.js' %}"></script>

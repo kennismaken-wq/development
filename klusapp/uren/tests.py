@@ -865,36 +865,47 @@ class WerkplanningTest(TestCase):
         self.assertEqual(
             list(Klusdag.objects.order_by("datum").values_list("notitie", flat=True)), ["Kristal", "Pinasplein"]
         )
-        context = self.client.get("/aanwezigheid/?dag=2026-09-07&weergave=week").context
-        rij = context["klusrijen"][0]
+        antwoord = self.client.get("/aanwezigheid/?dag=2026-09-07&weergave=week")
+        rij = antwoord.context["klusrijen"][0]
         self.assertEqual(rij["klus"], vanee)
-        self.assertEqual([c["notitie"] for c in rij["cellen"][:3]], ["Kristal", "Pinasplein", ""])
-        self.assertEqual([k["klussen"] for k in context["kopdagen"][:3]], [1, 1, 0])
+        self.assertEqual(rij["gepland_per_dag"][:3], [True, True, False])
+        self.assertIn('data-notitie="Kristal"', rij["cellen_html"])
+        self.assertIn('<span class="tekst">Pinasplein</span>', antwoord.content.decode())
+        self.assertEqual([k["klussen"] for k in antwoord.context["kopdagen"][:3]], [1, 1, 0])
         # niet gepland haalt de dag weg
         self.zet_klusdagen(dagen[:1], "nee")
         self.assertEqual(Klusdag.objects.count(), 1)
 
-    def test_klussenblok_toont_alleen_klussen_met_iets_erin(self):
+    def test_klussenblok_toont_alle_lopende_klussen(self):
         tuin = Klus.objects.create(naam="Tuin Vermeer", soort=Klus.Soort.AANLEG)
         leeg = Klus.objects.create(naam="Niets gepland", soort=Klus.Soort.AANLEG)
         onderhoud = Klus.objects.create(naam="Zz onderhoud", soort=Klus.Soort.ONDERHOUD)
-        Klusdag.objects.create(klus=onderhoud, datum=self.maandag)
-        # iemand op een klus zetten laat die klus ook in het blok verschijnen
+        afgerond = Klus.objects.create(naam="Oude tuin", soort=Klus.Soort.AANLEG, actief=False)
+        nog_ouder = Klus.objects.create(naam="Nog ouder", soort=Klus.Soort.AANLEG, actief=False)
+        Klusdag.objects.create(klus=afgerond, datum=self.maandag, notitie="<b>x</b>")
         Inzet.objects.create(medewerker=self.sam, datum=self.maandag, klus=tuin)
         Inzet.objects.create(medewerker=self.maarten, datum=self.maandag, klus=tuin)
-        rijen = self.client.get("/aanwezigheid/?dag=2026-09-07&weergave=week").context["klusrijen"]
-        # onderhoud bovenaan, zoals in de Excel
-        self.assertEqual([r["klus"] for r in rijen], [onderhoud, tuin])
-        self.assertEqual(rijen[1]["cellen"][0]["mensen"], 2)
-        # "Klus toevoegen" zet hem erbij, ook zonder planning
-        rijen = self.client.get(f"/aanwezigheid/?dag=2026-09-07&weergave=week&extra={leeg.pk},x").context["klusrijen"]
-        self.assertIn(leeg, [r["klus"] for r in rijen])
-        # en na opslaan blijft hij staan
-        antwoord = self.client.post(
-            f"/aanwezigheid/?weergave=week&extra={leeg.pk}",
-            {"actie": "notitie", "terug": "2026-09-07", "datum": "2026-09-07", "tekst": "x"},
-        )
-        self.assertTrue(antwoord.headers["Location"].endswith(f"&extra={leeg.pk}"))
+        antwoord = self.client.get("/aanwezigheid/?dag=2026-09-07&weergave=week")
+        rijen = antwoord.context["klusrijen"]
+        # alle lopende, onderhoud bovenaan; een afgeronde alleen als hij in
+        # deze periode nog iets heeft
+        self.assertEqual([r["klus"] for r in rijen], [onderhoud, leeg, afgerond, tuin])
+        self.assertNotIn(nog_ouder, [r["klus"] for r in rijen])
+        self.assertIn('<span class="wp-mensen">2 man</span>', rijen[3]["cellen_html"])
+        # de notitie wordt ge-escaped
+        self.assertIn("&lt;b&gt;x&lt;/b&gt;", rijen[2]["cellen_html"])
+        # lege blaadjes voor een klus zonder foto's
+        self.assertIn("wp-waaier-leeg", antwoord.content.decode())
+        # en een afgeronde klus kan er met ?extra= bij
+        rijen = self.client.get(f"/aanwezigheid/?weergave=week&extra={nog_ouder.pk},x").context["klusrijen"]
+        self.assertIn(nog_ouder, [r["klus"] for r in rijen])
+
+    def test_klussenblok_in_een_jaar_blijft_snel(self):
+        # vijftig klussen maal 365 dagen: niet per cel door de templatelus
+        for n in range(50):
+            Klus.objects.create(naam=f"Klus {n}", soort=Klus.Soort.AANLEG)
+        with self.assertNumQueries(13):
+            self.client.get("/aanwezigheid/?dag=2026-09-07")
 
     def test_klusdagen_onzin_wordt_overgeslagen(self):
         tuin = Klus.objects.create(naam="Tuin Vermeer", soort=Klus.Soort.AANLEG)

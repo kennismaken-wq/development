@@ -3,17 +3,19 @@ from datetime import date, time, timedelta
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
-from django.db.models import Q
+from django.db.models import Prefetch, Q
 from django.db.models.functions import Lower
 from django.http import Http404, HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
+from django.utils.html import escape
+from django.utils.safestring import mark_safe
 
-from klussen import afbeeldingen
+from klussen import afbeeldingen, voorbeeld
 from klussen.forms import BijlageForm, KlusFotoForm
 from klussen.fotoposts import groepeer_in_posts
-from klussen.models import Klus
+from klussen.models import Bijlage, Klus
 from klussen.views import batch_van_upload, bewaar_bijlage
 from medewerkers.models import Medewerker
 from medewerkers.rechten import alleen_eigenaar
@@ -591,9 +593,9 @@ def aanwezigheid(request):
     rijen = [
         {"medewerker": m, "cellen": [cellen[(m.pk, datum)] for datum in dagen]} for m in medewerkers
     ]
-    klusrijen = _klusrijen(request, dagen, cellen.values())
+    klusrijen = _klusrijen(request, dagen, cellen.values(), vandaag)
     for kopdag in kopdagen:
-        kopdag["klussen"] = sum(1 for rij in klusrijen if rij["cellen"][kopdag["index"]]["gepland"])
+        kopdag["klussen"] = sum(1 for rij in klusrijen if rij["gepland_per_dag"][kopdag["index"]])
 
     breedte = PLANNING_WEERGAVEN[weergave]
     return render(
@@ -629,14 +631,15 @@ def aanwezigheid(request):
 SOORT_VOLGORDE = {"onderhoud": 0, "van_ee": 1, "aanleg": 2}
 
 
-def _klusrijen(request, dagen, cellen):
-    """De klussenregels onder de mensen, zoals in de Excel.
+def _klusrijen(request, dagen, cellen, vandaag):
+    """De klussenregels onder de mensen, zoals in de Excel: elke lopende
+    klus, plus een afgeronde die in deze periode nog iets heeft (en wat er
+    met ?extra= bij gezet is). Onderhoud en Van Ee bovenaan: die lopen het
+    hele jaar door.
 
-    Niet elke lopende klus: met honderd klussen maal 365 dagen wordt de
-    pagina onwerkbaar. Wel elke klus die in deze periode gepland staat of
-    waar iemand op staat, plus wat je zelf toevoegt met "Klus toevoegen"
-    (?extra=, komma-gescheiden). Onderhoud en Van Ee bovenaan: die lopen het
-    hele jaar door, net als in de Excel.
+    Met honderd klussen maal 365 dagen zijn dat tienduizenden cellen. Die
+    door de templatelus halen kost seconden; daarom bouwt _kluscellen_html
+    ze hier als één string per regel.
     """
     van, tot = dagen[0], dagen[-1]
     gepland = {}
@@ -649,29 +652,61 @@ def _klusrijen(request, dagen, cellen):
 
     extra = {int(pk) for pk in request.GET.get("extra", "").split(",") if pk.isdigit()}
     met_data = {pk for pk, _ in gepland} | {pk for pk, _ in mensen}
+    # De fotowaaier bij de naam, zelfde voorproefje als op de klussenlijst;
+    # de prefetch houdt het op één query voor alle klussen samen.
     klussen = sorted(
-        Klus.objects.filter(pk__in=met_data | extra),
+        Klus.objects.filter(Q(actief=True) | Q(pk__in=met_data | extra)).prefetch_related(
+            Prefetch(
+                "bijlagen",
+                queryset=Bijlage.objects.zichtbaar_voor(request.user).order_by("-datum", "-toegevoegd_op"),
+                to_attr="voorbeeld_bijlagen",
+            )
+        ),
         key=lambda k: (SOORT_VOLGORDE.get(k.soort, 9), k.naam.lower()),
     )
     rijen = []
-    for klus in klussen:
+    for q, klus in enumerate(klussen):
         klus.kleur = kalender.kleur_van(klus)
+        klus.voorbeeld_items, klus.voorbeeld_meer = voorbeeld.items_voor_stapel(klus)
+        aantal = sum(1 for d in dagen if (klus.pk, d) in gepland)
         rijen.append(
             {
                 "klus": klus,
-                "extra": klus.pk not in met_data,
-                "cellen": [
-                    {
-                        "datum": datum,
-                        "gepland": (klus.pk, datum) in gepland,
-                        "notitie": gepland.get((klus.pk, datum), ""),
-                        "mensen": mensen.get((klus.pk, datum), 0),
-                    }
-                    for datum in dagen
-                ],
+                "extra": klus.pk in extra and klus.pk not in met_data and not klus.actief,
+                "gepland_per_dag": [(klus.pk, d) in gepland for d in dagen],
+                "aantal_dagen": aantal,
+                "cellen_html": _kluscellen_html(q, klus, dagen, gepland, mensen, vandaag),
             }
         )
     return rijen
+
+
+def _kluscellen_html(q, klus, dagen, gepland, mensen, vandaag):
+    """Alle cellen van één klusregel als html. Zelfde opmaak als de cellen
+    van de mensen (templates/uren/aanwezigheid.html); wat de gebruiker
+    intypt (de notitie) gaat door escape()."""
+    kleur = escape(klus.kleur)
+    delen = []
+    for k, datum in enumerate(dagen):
+        sleutel = (klus.pk, datum)
+        klassen = "bord-cel wp-kc"
+        attrs = f' data-q="{q}" data-k="{k}"'
+        inhoud = ""
+        if sleutel in gepland:
+            klassen += " gepland"
+            attrs += f' data-gepland="1" style="--klus:{kleur}"'
+            notitie = gepland[sleutel]
+            if notitie:
+                attrs += f' data-notitie="{escape(notitie)}"'
+                inhoud += f'<span class="tekst">{escape(notitie)}</span>'
+        if datum == vandaag:
+            klassen += " vandaag"
+        if datum.weekday() == 0 and k:
+            klassen += " weekstart"
+        if sleutel in mensen:
+            inhoud += f'<span class="wp-mensen">{mensen[sleutel]} man</span>'
+        delen.append(f'<button type="button" class="{klassen}"{attrs}>{inhoud}</button>')
+    return mark_safe("".join(delen))
 
 
 def _planbare_klussen(cellen):
