@@ -1,52 +1,66 @@
 {% extends "basis.html" %}
+{% load static %}
 {% block titel %}Aanwezigheid{% endblock %}
 {% block kop %}Mijn aanwezigheid{% endblock %}
 {% block inhoud %}
-  {% comment %} Alleen je eigen dagen, alleen kijken. De eigenaar zet ze op
-     de werkplanning (aanwezigheid.html); klussen staan hier bewust niet bij.
-     Een maandkalender en geen jaarbord: dit kijk je op je telefoon. {% endcomment %}
-  <div class="urentop">
-    <div class="urentop-nav">
-      <a class="urenpijl" href="?dag={{ vorige|date:'Y-m-d' }}" aria-label="Vorige maand">‹</a>
-      <span class="periodetitel">{{ dag|date:"F Y"|capfirst }}</span>
-      <a class="urenpijl" href="?dag={{ volgende|date:'Y-m-d' }}" aria-label="Volgende maand">›</a>
+  <div class="navbalk">
+    <div class="navlinks">
+      <a class="knop-stil" href="?dag={{ vorige|date:'Y-m-d' }}" aria-label="Vorig jaar">‹</a>
+      <a class="knop-stil" href="?dag={{ volgende|date:'Y-m-d' }}" aria-label="Volgend jaar">›</a>
+      <a class="knop-stil" href="{% url 'mijn_aanwezigheid' %}" data-naar-vandaag>Vandaag</a>
+      <span class="periodetitel">{{ eerste|date:"Y" }}</span>
     </div>
-    {% if not is_huidige_periode %}<a class="knop-stil" href="{% url 'mijn_aanwezigheid' %}">Vandaag</a>{% endif %}
+    <div class="wp-weken" role="group" aria-label="Zoom">
+      <button type="button" class="pil" data-zoom="dag">Dag</button>
+      <button type="button" class="pil actief" data-zoom="week">Week</button>
+      <button type="button" class="pil" data-zoom="maand">Maand</button>
+    </div>
   </div>
 
-  <p class="aw-samenvatting"><strong>{{ aantal_aanwezig }}</strong> dag{{ aantal_aanwezig|pluralize:"en" }} aanwezig deze maand</p>
-
-  <div class="maandkoppen">
-    <span>Ma</span><span>Di</span><span>Wo</span><span>Do</span><span>Vr</span><span>Za</span><span>Zo</span>
-  </div>
-  <div class="maandraster aw-raster">
-    {% for week in maandraster %}
-      {% for dagcel in week %}
-        <div class="maanddag aw-dag {{ dagcel.stand }}{% if not dagcel.in_maand %} buiten-maand{% endif %}{% if dagcel.is_vandaag %} vandaag{% endif %}"
-             {% if dagcel.toelichting %}title="{{ dagcel.toelichting }}"{% endif %}>
-          <span class="nr">{{ dagcel.datum|date:"j" }}</span>
-          {% if dagcel.toelichting %}<span class="aw-stip" aria-hidden="true"></span>{% endif %}
+  {% comment %} Dezelfde lijn als op de werkplanning van de eigenaar
+     (aanwezigheid.html), maar alleen je eigen rij en zonder klussen. Alleen
+     kijken, dus geen knoppen: de cellen zijn gewone vakken. Omdat het één
+     rij is, mag hij hoger en breder (.aw-bord in app.css). {% endcomment %}
+  <div class="bord-scroll wp-scroll">
+    <div class="bord wp-bord aw-bord wp-zoom-week" id="aw-bord" data-startkolom="{{ startkolom }}"
+         style="grid-template-columns:{{ bordkolommen }}">
+      <div class="bord-hoek wp-hoek"></div>
+      {% for kopdag in kopdagen %}
+        <div class="bord-kop wp-kop{% if kopdag.is_vandaag %} vandaag{% endif %}{% if kopdag.is_weekstart %} weekstart{% endif %}{% if kopdag.is_maandstart %} maandstart{% endif %}{% if kopdag.feestdag_vrij %} feestdag{% endif %}"
+             data-k="{{ kopdag.index }}">
+          {% if kopdag.is_vandaag %}<span class="vandaag-label">Vandaag</span>{% endif %}
+          <span class="dag">{{ kopdag.datum|date:"D" }}</span>
+          <span class="datum">{{ kopdag.datum|date:"j M" }}</span>
+          {% if kopdag.datum.day == 1 %}<span class="maand">{{ kopdag.datum|date:"M" }}</span>{% endif %}
+          <span class="nr">{{ kopdag.datum|date:"j" }}</span>
+          {% if kopdag.feestdag %}<span class="feest" title="{{ kopdag.feestdag }}{% if not kopdag.feestdag_vrij %} (geen vrije dag){% endif %}">{{ kopdag.feestdag }}</span>{% endif %}
         </div>
       {% endfor %}
-    {% endfor %}
+
+      <div class="bord-naam wp-naam">
+        {% include "_medewerkerbol.html" with persoon=request.user klasse="bol" %}
+        <span class="bord-naam-tekst">
+          <span class="wie">{{ request.user.naam }}</span>
+          <span class="functie">{{ aantal_aanwezig }} dag{{ aantal_aanwezig|pluralize:"en" }} aanwezig</span>
+        </span>
+      </div>
+      {% spaceless %}
+      {% for cel in cellen %}
+        <div class="bord-cel wp-cel {{ cel.stand }}{% if cel.datum == vandaag %} vandaag{% endif %}{% if cel.datum.weekday == 0 and not forloop.first %} weekstart{% endif %}"
+             title="{{ cel.datum|date:'l j F'|capfirst }}{% if cel.tekst %} · {{ cel.tekst }}{% endif %}">
+          {% if cel.tekst %}<span class="tekst">{{ cel.tekst }}</span>{% endif %}
+        </div>
+      {% endfor %}
+      {% endspaceless %}
+    </div>
   </div>
 
   <div class="legenda wp-legenda">
     <span><i class="wp-stip aanwezig"></i>Aanwezig</span>
     <span><i class="wp-stip afwezig"></i>Afwezig</span>
     <span><i class="wp-stip vrij"></i>Geen werkdag</span>
+    <span class="wp-hint">Klopt er iets niet? Vraag het aan Maarten.</span>
   </div>
 
-  {% if bijzonder %}
-    <ul class="aw-lijst">
-      {% for dagcel in bijzonder %}
-        <li class="aw-regel">
-          <i class="wp-stip {{ dagcel.stand }}"></i>
-          <span class="wanneer">{{ dagcel.datum|date:"D j M" }}</span>
-          <span class="wat">{% if dagcel.toelichting %}{{ dagcel.toelichting }}{% else %}Afwezig{% endif %}</span>
-        </li>
-      {% endfor %}
-    </ul>
-  {% endif %}
-  <p class="aw-uitleg">Klopt er iets niet? Vraag het aan Maarten.</p>
+  <script src="{% static 'js/mijn-aanwezigheid.js' %}"></script>
 {% endblock %}

@@ -611,56 +611,57 @@ def aanwezigheid(request):
 
 @login_required
 def mijn_aanwezigheid(request):
-    """Je eigen aanwezigheid, als maandkalender: wanneer sta je op groen,
-    wanneer op rood, en waarom.
+    """Je eigen aanwezigheid, in dezelfde vorm als de werkplanning: het hele
+    jaar als één doorlopende lijn, groen en rood, opzij te scrollen.
 
-    De werkplanning hierboven blijft van de eigenaar. Een medewerker ziet
-    hier alleen zijn eigen rij uit hetzelfde rooster (uren/bezetting.py),
-    zonder de anderen en zonder de klussen waar hij op staat (Thijmen,
-    01-10-2026). Alleen kijken: zetten doet de eigenaar.
+    De werkplanning zelf blijft van de eigenaar. Een medewerker ziet hier
+    alleen zijn eigen rij uit hetzelfde rooster (uren/bezetting.py), zonder
+    de anderen en zonder de klussen waar hij op staat (Thijmen, 01-10-2026).
+    Omdat het maar één rij is, zijn de cellen hoger en breder dan op het
+    bord van de eigenaar. Alleen kijken: zetten doet de eigenaar.
     """
     dag = periode.gekozen_dag(request)
     vandaag = periode.vandaag()
-    eerste_van_maand = dag.replace(day=1)
-    weken = kalender.maandraster(eerste_van_maand.year, eerste_van_maand.month)
-    dagen = [datum for week in weken for datum in week]
+    eerste, laatste = date(dag.year, 1, 1), date(dag.year, 12, 31)
+    dagen = [eerste + timedelta(days=n) for n in range((laatste - eerste).days + 1)]
     cellen = bezetting.rooster([request.user], dagen)
-    feest = bezetting.nederlandse_feestdagen_tussen(dagen[0], dagen[-1])
+    feest = bezetting.nederlandse_feestdagen_tussen(eerste, laatste)
 
-    def hoort_bij_maand(datum):
-        return (datum.year, datum.month) == (eerste_van_maand.year, eerste_van_maand.month)
-
-    def dagcel(datum):
+    kopdagen = []
+    rij = []
+    for k, datum in enumerate(dagen):
+        naam, vrij = feest.get(datum, ("", False))
+        kopdagen.append(
+            {
+                "datum": datum,
+                "index": k,
+                "is_vandaag": datum == vandaag,
+                "is_weekstart": datum.weekday() == 0 and k > 0,
+                "is_maandstart": datum.day == 1 and k > 0,
+                "feestdag": naam,
+                "feestdag_vrij": vrij,
+            }
+        )
         cel = cellen[(request.user.pk, datum)]
-        return {
-            "datum": datum,
-            "in_maand": hoort_bij_maand(datum),
-            "is_vandaag": datum == vandaag,
-            "stand": cel.stand,
-            "toelichting": cel.opmerking or cel.reden_tekst or feest.get(datum, ("", False))[0],
-        }
+        # Geen cel.klussen: die blijven op de werkplanning van de eigenaar.
+        rij.append({"datum": datum, "stand": cel.stand, "tekst": cel.opmerking or cel.reden_tekst})
 
-    raster = [[dagcel(datum) for datum in week] for week in weken]
-    in_maand = [cel for week in raster for cel in week if cel["in_maand"]]
     return render(
         request,
         "uren/mijn_aanwezigheid.html",
         {
             "dag": dag,
             "vandaag": vandaag,
-            "maandraster": raster,
-            "vorige": _maand_erbij(eerste_van_maand, -1),
-            "volgende": _maand_erbij(eerste_van_maand, 1),
-            "is_huidige_periode": (eerste_van_maand.year, eerste_van_maand.month) == (vandaag.year, vandaag.month),
-            "aantal_aanwezig": sum(1 for cel in in_maand if cel["stand"] == bezetting.AANWEZIG),
-            # Rood, of groen met een opmerking erbij: wat afwijkt van een
-            # gewone werkdag staat onder de kalender nog eens voluit, want in
-            # een vakje op een telefoon past geen "tandarts, tot 14.15".
-            "bijzonder": [
-                cel
-                for cel in in_maand
-                if cel["stand"] == bezetting.AFWEZIG or (cel["stand"] == bezetting.AANWEZIG and cel["toelichting"])
-            ],
+            "eerste": eerste,
+            "vorige": _zelfde_dag_in(dag, dag.year - 1),
+            "volgende": _zelfde_dag_in(dag, dag.year + 1),
+            "startkolom": ((vandaag if eerste <= vandaag <= laatste else dag) - eerste).days,
+            "kopdagen": kopdagen,
+            "cellen": rij,
+            # --dag zet mijn-aanwezigheid.js (Dag/Week/Maand), --naam de CSS
+            # op een smal scherm
+            "bordkolommen": f"var(--naam, {BORD_NAAM}px) repeat({len(dagen)}, var(--dag, 150px))",
+            "aantal_aanwezig": sum(1 for c in rij if c["stand"] == bezetting.AANWEZIG),
         },
     )
 

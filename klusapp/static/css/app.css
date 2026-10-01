@@ -663,31 +663,6 @@ input[type=time]::-webkit-calendar-picker-indicator{ filter:invert(1); opacity:.
 .maanddag .nr{ font-size:13px; font-weight:600; }
 .maanddag .uren{ font-size:12px; font-weight:600; line-height:1; color:var(--hi); font-variant-numeric:tabular-nums; }
 
-/* ══════════ MIJN AANWEZIGHEID ══════════
-   De maandkalender van hierboven, maar gekleurd als de werkplanning:
-   groen, rood of leeg. Alleen kijken, dus geen hover en geen tik. */
-.aw-samenvatting{ margin:.2rem 0 .9rem; font-size:13px; color:rgba(255,255,255,0.75); }
-.aw-samenvatting strong{ color:#fff; font-size:15px; }
-.aw-dag{ position:relative; cursor:default; }
-@media (hover:hover){ .aw-dag:hover{ background:rgba(255,255,255,0.06); } }
-.aw-dag.aanwezig, .aw-dag.aanwezig:hover{ background:rgba(var(--accent-rgb),0.30); border-color:rgba(var(--accent-rgb),0.35); }
-.aw-dag.afwezig, .aw-dag.afwezig:hover{ background:rgba(224,123,95,0.38); border-color:rgba(224,123,95,0.45); }
-.aw-dag.vrij, .aw-dag.vrij:hover{ background:rgba(255,255,255,0.025); }
-.aw-dag.buiten{ background:repeating-linear-gradient(135deg, rgba(255,255,255,0.04) 0 4px, transparent 4px 8px); }
-/* vandaag: een witte rand, zodat de kleur van de dag zelf blijft staan */
-.aw-dag.vandaag{ border:2px solid #fff; }
-/* er staat een opmerking of reden bij; die staat voluit in de lijst eronder */
-.aw-stip{ width:5px; height:5px; border-radius:999px; background:#fff; opacity:.85; }
-.aw-lijst{ list-style:none; margin:1.1rem 0 0; padding:0; display:grid; gap:.4rem; }
-.aw-regel{
-  display:flex; align-items:center; gap:.6rem; padding:.55rem .75rem;
-  border-radius:12px; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.12);
-  font-size:13px;
-}
-.aw-regel .wanneer{ flex-shrink:0; width:5.2rem; font-weight:600; font-variant-numeric:tabular-nums; }
-.aw-regel .wat{ min-width:0; color:rgba(255,255,255,0.8); overflow-wrap:anywhere; }
-.aw-uitleg{ margin:1rem 0 0; font-size:12px; color:rgba(255,255,255,0.5); }
-
 /* ══════════ MELDINGEN ══════════
    Zweven als tijdelijke toasts onderaan het scherm i.p.v. vast bovenaan de
    kaart te blijven staan — anders blijft bv. "1 bestand toegevoegd" de hele
@@ -2468,6 +2443,25 @@ a.wp-klus{ text-decoration:none; }
 .namen-smal .bord-naam{ justify-content:center; padding-left:0; padding-right:0; }
 .namen-smal .bord-naam-tekst, .namen-smal .wp-rijkop .wie{ display:none; }
 .namen-smal .wp-waaier{ margin-left:0; margin-right:0; }
+
+/* ══════════ MIJN AANWEZIGHEID ══════════
+   templates/uren/mijn_aanwezigheid.html: dezelfde lijn als de werkplanning
+   hierboven, maar één rij en alleen om te kijken. Daarom hoger, en zonder
+   hover of aanwijzer op de vakken. De dagbreedte zet mijn-aanwezigheid.js. */
+.aw-bord .wp-cel{ min-height:120px; padding:.5rem .55rem; font-size:12.5px; line-height:1.3; }
+.aw-bord .wp-cel .tekst{ white-space:normal; overflow-wrap:anywhere; }
+.aw-bord.wp-zoom-maand .wp-cel{ padding:.5rem 2px; }
+.aw-bord .wp-naam{ align-items:center; }
+.aw-bord .wp-kop{ padding-top:.3rem; padding-bottom:.6rem; font-size:12px; }
+.aw-bord .wp-kop .datum{ font-size:11px; }
+@media (hover:hover){ .aw-bord .wp-kop:hover{ background:none; } }
+/* Op een telefoon is een naamkolom van 176px de halve breedte: daar blijft
+   alleen je bolletje staan, zoals bij de ingeklapte namen van de eigenaar. */
+@media (max-width:700px){
+  .aw-bord{ --naam:56px; }
+  .aw-bord .bord-naam{ justify-content:center; padding-left:0; padding-right:0; }
+  .aw-bord .bord-naam-tekst{ display:none; }
+}
 
 /* fotowaaier bij de klusnaam: de stapel van de klussenlijst, kleiner */
 .wp-klusnaam{ gap:.65rem; }

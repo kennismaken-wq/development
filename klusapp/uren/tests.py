@@ -990,19 +990,24 @@ class MijnAanwezigheidTest(TestCase):
         self.client.force_login(self.sam)
 
     def dagcellen(self, antwoord):
-        return {cel["datum"]: cel for week in antwoord.context["maandraster"] for cel in week}
+        return {cel["datum"]: cel for cel in antwoord.context["cellen"]}
 
-    def test_eigen_dagen_in_de_maand(self):
+    def test_eigen_dagen_over_het_hele_jaar(self):
         antwoord = self.client.get("/mijn-aanwezigheid/?dag=2026-09-15")
         self.assertEqual(antwoord.status_code, 200)
         cellen = self.dagcellen(antwoord)
+        # één doorlopende lijn, 1 januari tot en met 31 december
+        self.assertEqual(len(cellen), 365)
+        self.assertEqual(len(antwoord.context["kopdagen"]), 365)
         self.assertEqual(cellen[date(2026, 9, 8)]["stand"], bezetting.AANWEZIG)
         self.assertEqual(cellen[date(2026, 9, 9)]["stand"], bezetting.AFWEZIG)
-        self.assertEqual(cellen[date(2026, 9, 9)]["toelichting"], "griep")
+        self.assertEqual(cellen[date(2026, 9, 9)]["tekst"], "griep")
         # Piets vakantie is niet Sams zaak
         self.assertEqual(cellen[date(2026, 9, 10)]["stand"], bezetting.AANWEZIG)
         self.assertEqual(cellen[date(2026, 9, 12)]["stand"], bezetting.VRIJ)
-        self.assertEqual([c["datum"] for c in antwoord.context["bijzonder"]], [date(2026, 9, 9)])
+        # een vrije feestdag staat rood, met de naam erin
+        self.assertEqual(cellen[date(2026, 12, 25)]["stand"], bezetting.AFWEZIG)
+        self.assertEqual(cellen[date(2026, 12, 25)]["tekst"], "1e Kerstdag")
 
     def test_geen_klussen_en_geen_collegas(self):
         html = self.client.get("/mijn-aanwezigheid/?dag=2026-09-15").content.decode()
