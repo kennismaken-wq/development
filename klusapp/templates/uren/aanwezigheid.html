@@ -111,7 +111,8 @@
          staat, met de notitie erin (bij Van Ee de locatie); "2 man" komt uit
          de cellen hierboven. De cellen bouwt de view zelf op
          (uren/views.py, _kluscellen_html): met honderd klussen maal 365
-         dagen is de templatelus te traag. Het minteken klapt het blok in;
+         dagen is de templatelus te traag. De naam opent de klus zelf; het
+         minteken klapt het blok in;
          werkplanning.js onthoudt dat. {% endcomment %}
       <div class="wp-blokkop">
         <span class="wp-blokkop-inhoud">
@@ -122,7 +123,7 @@
         </span>
       </div>
       {% for rij in klusrijen %}
-        <button type="button" class="bord-naam wp-klusnaam" data-q="{{ forloop.counter0 }}" data-klus="{{ rij.klus.pk }}" title="Alle dagen van {{ rij.klus.naam }} kiezen">
+        <a class="bord-naam wp-klusnaam" href="{% url 'klus_detail' rij.klus.pk %}?terug={{ request.get_full_path|urlencode }}" data-q="{{ forloop.counter0 }}" data-klus="{{ rij.klus.pk }}" title="{{ rij.klus.naam }} openen">
           {% with klus=rij.klus %}
             {% if klus.voorbeeld_items %}
               <span class="voorbeeldstapel wp-waaier">
@@ -146,7 +147,7 @@
               {% if klus.adres or klus.plaats %}<span class="functie wp-klusadres">{{ klus.adres }}{% if klus.adres and klus.plaats %}, {% endif %}{{ klus.plaats }}</span>{% endif %}
             </span>
           {% endwith %}
-        </button>
+        </a>
         {{ rij.cellen_html }}
       {% empty %}
         <p class="leeg wp-klusleeg">Er zijn nog geen lopende klussen.</p>
