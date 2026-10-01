@@ -72,17 +72,43 @@ class UurblokForm(forms.ModelForm):
             "eindtijd": {"required": "Vul een eindtijd in."},
         }
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, medewerker=None, **kwargs):
         super().__init__(*args, **kwargs)
+        # Van wie de uren zijn, voor de overlapcontrole hieronder. Bij
+        # bewerken staat dat al op het blok; bij een nieuw blok geeft de view
+        # het mee (de medewerker zit niet in het formulier zelf).
+        self.medewerker = medewerker or (self.instance.medewerker if self.instance.pk else None)
         self.fields["klus"].queryset = Klus.objects.filter(actief=True)
         self.fields["klus"].empty_label = "Kies een klus"
         self.fields["toelichting"].required = False
 
     def clean(self):
         gegevens = super().clean()
+        datum = gegevens.get("datum")
         begin, eind = gegevens.get("begintijd"), gegevens.get("eindtijd")
         if begin and eind and eind <= begin:
             self.add_error("eindtijd", "De eindtijd moet na de begintijd liggen.")
+        elif datum and begin and eind and self.medewerker:
+            # Twee blokken die elkaar overlappen tellen allebei mee in het
+            # weektotaal, het planbord en de export voor de boekhouder: 08–12
+            # en 10–14 werd 8 uur terwijl er 6 gewerkt zijn. Aansluiten
+            # (12:00 tot, 12:00 van) mag wel.
+            botsing = (
+                Uurblok.objects.filter(
+                    medewerker=self.medewerker, datum=datum, begintijd__lt=eind, eindtijd__gt=begin
+                )
+                .exclude(pk=self.instance.pk)
+                .select_related("klus")
+                .order_by("begintijd")
+                .first()
+            )
+            if botsing:
+                self.add_error(
+                    "begintijd",
+                    f"Je hebt op deze dag al uren van {botsing.begintijd:%H:%M} tot "
+                    f"{botsing.eindtijd:%H:%M} ({botsing.klus}). Kies een tijd die "
+                    "daar niet overheen valt.",
+                )
         return gegevens
 
 

@@ -286,6 +286,35 @@ class MedewerkersBeherenTest(TestCase):
         self.assertIsNone(self.eigenaar.uit_dienst_sinds)
         self.assertTrue(self.eigenaar.is_active)
 
+    def test_jezelf_je_rol_afpakken_kan_niet(self):
+        # Anders sluit de enige eigenaar zichzelf buiten: daarna komt niemand
+        # meer bij dit scherm om het terug te zetten.
+        antwoord = self.client.post(
+            reverse("medewerker_bewerken", args=[self.eigenaar.pk]),
+            {"first_name": "Maarten", "username": "maarten", "rol": Medewerker.Rol.MEDEWERKER,
+             "kleur": "#5B8FA8"},
+        )
+        self.assertEqual(antwoord.status_code, 302)  # de rest wordt wél opgeslagen
+        self.eigenaar.refresh_from_db()
+        self.assertEqual(self.eigenaar.rol, Medewerker.Rol.EIGENAAR)
+        self.assertTrue(self.eigenaar.is_staff)
+
+        antwoord = self.client.get(reverse("medewerker_bewerken", args=[self.eigenaar.pk]))
+        self.assertContains(antwoord, "Je eigen rol kun je niet wijzigen.")
+        # ook na "Gegevens wijzigen" blijft het veld dicht (_gegevens.html)
+        self.assertIn("data-blijft-op-slot", antwoord.context["formulier"].fields["rol"].widget.attrs)
+
+    def test_rol_van_een_ander_wijzigen_kan_wel(self):
+        antwoord = self.client.post(
+            reverse("medewerker_bewerken", args=[self.sam.pk]),
+            {"first_name": "Sam", "username": "sam", "rol": Medewerker.Rol.EIGENAAR, "kleur": "#5B8FA8"},
+        )
+        self.assertEqual(antwoord.status_code, 302)
+        self.sam.refresh_from_db()
+        self.assertEqual(self.sam.rol, Medewerker.Rol.EIGENAAR)
+        formulier = self.client.get(reverse("medewerker_bewerken", args=[self.sam.pk])).context["formulier"]
+        self.assertFalse(formulier.fields["rol"].disabled)
+
     def test_de_wachtwoordeisen_staan_bij_het_veld(self):
         # Een eis die je pas leest nadat je hem overtreedt is geen hulp.
         html = self.client.get(reverse("medewerker_nieuw")).content.decode()

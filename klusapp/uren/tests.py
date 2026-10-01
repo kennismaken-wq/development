@@ -101,6 +101,67 @@ class UrenSchrijvenTest(TestCase):
         self.assertContains(antwoord, "eindtijd moet na de begintijd")
         self.assertFalse(Uurblok.objects.exists())
 
+    def test_overlappende_uren_worden_geweigerd(self):
+        # 08–12 en 10–14 telde als 8 uur in planbord en export, terwijl er
+        # 6 gewerkt zijn.
+        Uurblok.objects.create(
+            medewerker=self.sam, klus=self.klus, datum=self.dag, begintijd=time(8, 0), eindtijd=time(12, 0)
+        )
+        antwoord = self.client.post(
+            "/uren/nieuw/",
+            {"klus": self.klus.pk, "datum": "2026-09-07", "begintijd": "10:00", "eindtijd": "14:00"},
+        )
+        self.assertEqual(antwoord.status_code, 200)
+        self.assertContains(antwoord, "al uren van 08:00 tot 12:00")
+        self.assertEqual(Uurblok.objects.count(), 1)
+
+    def test_aansluitende_uren_en_uren_van_een_ander_mogen_wel(self):
+        Uurblok.objects.create(
+            medewerker=self.sam, klus=self.klus, datum=self.dag, begintijd=time(8, 0), eindtijd=time(12, 0)
+        )
+        Uurblok.objects.create(
+            medewerker=self.joep, klus=self.klus, datum=self.dag, begintijd=time(12, 0), eindtijd=time(16, 0)
+        )
+        antwoord = self.client.post(
+            "/uren/nieuw/",
+            {"klus": self.klus.pk, "datum": "2026-09-07", "begintijd": "12:00", "eindtijd": "16:00"},
+        )
+        self.assertEqual(antwoord.status_code, 302)
+        self.assertEqual(Uurblok.objects.filter(medewerker=self.sam).count(), 2)
+
+    def test_bewerken_botst_niet_met_zichzelf_wel_met_een_ander_blok(self):
+        eerste = Uurblok.objects.create(
+            medewerker=self.sam, klus=self.klus, datum=self.dag, begintijd=time(8, 0), eindtijd=time(12, 0)
+        )
+        Uurblok.objects.create(
+            medewerker=self.sam, klus=self.klus, datum=self.dag, begintijd=time(13, 0), eindtijd=time(16, 0)
+        )
+        gegevens = {"klus": self.klus.pk, "datum": "2026-09-07", "begintijd": "08:00", "eindtijd": "12:30"}
+        self.assertEqual(self.client.post(f"/uren/{eerste.pk}/bewerken/", gegevens).status_code, 302)
+        gegevens["eindtijd"] = "14:00"
+        antwoord = self.client.post(f"/uren/{eerste.pk}/bewerken/", gegevens)
+        self.assertContains(antwoord, "al uren van 13:00 tot 16:00")
+        eerste.refresh_from_db()
+        self.assertEqual(eerste.eindtijd, time(12, 30))
+
+    def test_onmogelijke_datum_in_de_link_geeft_vandaag(self):
+        # Een geknoeide link hoort geen 500 te geven: 9999-12-31 liet de
+        # weeknavigatie overlopen, 0001-01-01 de maandweergave.
+        for dag in ("9999-12-31", "0001-01-01"):
+            for weergave in ("dag", "week", "maand"):
+                antwoord = self.client.get(f"/uren/?dag={dag}&weergave={weergave}")
+                self.assertEqual(antwoord.status_code, 200, f"{dag} {weergave}")
+            self.assertEqual(self.client.get(f"/aanwezigheid/?dag={dag}").status_code, 200, dag)
+
+    @override_settings(MEDIA_ROOT=TIJDELIJKE_MEDIA)
+    def test_geen_foto_bij_het_uurblok_van_een_ander(self):
+        blok = Uurblok.objects.create(
+            medewerker=self.joep, klus=self.klus, datum=self.dag, begintijd=time(8, 0), eindtijd=time(12, 0)
+        )
+        antwoord = self.client.post(reverse("bijlage_toevoegen"), {"uurblok": blok.pk, "bestanden": upload()})
+        self.assertEqual(antwoord.status_code, 404)
+        self.assertFalse(Bijlage.objects.exists())
+
     def test_alleen_eigen_uren_in_beeld(self):
         Uurblok.objects.create(
             medewerker=self.joep, klus=self.klus, datum=self.dag,
@@ -725,6 +786,17 @@ class UrenexportTest(TestCase):
         antwoord = self.client.get("/export/?maand=2026-08")
         totalen = {rij["medewerker"].username: rij["totaal"] for rij in antwoord.context["totalen"]}
         self.assertEqual(totalen, {"sam": "12,5", "joep": "8"})
+
+    def test_geknoeide_link_geeft_geen_500(self):
+        self.client.force_login(self.maarten)
+        for adres in (
+            "/export/?medewerker=bla",
+            "/export/?van=0001-01-01&tot=9999-12-31",
+            "/export/?maand=9999-12",
+            "/planbord/?dag=9999-12-31",
+            "/planbord/?dag=0001-01-01",
+        ):
+            self.assertEqual(self.client.get(adres).status_code, 200, adres)
 
     def test_download_levert_een_excelbestand(self):
         self.client.force_login(self.maarten)

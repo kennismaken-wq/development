@@ -15,6 +15,17 @@ from datetime import date, timedelta
 
 from django.utils import timezone
 
+# Daarbuiten is een datum uit een link geen werkdag maar geknoei met de url.
+# Zonder grens laat 9999-12-31 de weeknavigatie overlopen (OverflowError) en
+# 0001-01-01 de maandweergave (ValueError): een 500 in plaats van vandaag.
+EERSTE_DAG = date(2000, 1, 1)
+LAATSTE_DAG = date(2099, 12, 31)
+
+
+def binnen_bereik(dag):
+    """De dag zelf, of None als hij buiten EERSTE_DAG..LAATSTE_DAG valt."""
+    return dag if dag and EERSTE_DAG <= dag <= LAATSTE_DAG else None
+
 
 def vandaag():
     return timezone.localdate()
@@ -23,13 +34,13 @@ def vandaag():
 def gekozen_dag(request):
     """De dag uit ?dag=JJJJ-MM-DD, of vandaag.
 
-    Een onleesbare datum is geen fout maar gewoon vandaag: dit komt uit een
-    link, niet uit een formulier, en een foutpagina helpt niemand.
+    Een onleesbare of onmogelijke datum is geen fout maar gewoon vandaag: dit
+    komt uit een link, niet uit een formulier, en een foutpagina helpt niemand.
     """
     gevraagd = request.GET.get("dag")
     if gevraagd:
         try:
-            return date.fromisoformat(gevraagd)
+            return binnen_bereik(date.fromisoformat(gevraagd)) or vandaag()
         except ValueError:
             pass
     return vandaag()

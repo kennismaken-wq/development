@@ -298,6 +298,19 @@ def medewerker_nieuw(request):
     )
 
 
+def _eigen_rol_op_slot(formulier, medewerker, gebruiker):
+    """Je eigen rol kun je niet veranderen. Zet een eigenaar zichzelf op
+    "medewerker", dan komt hij hier nooit meer terug — en is hij de enige
+    eigenaar, dan kan niemand in de app het nog terugdraaien. Zelfde reden
+    als waarom je jezelf niet uit dienst kunt zetten (medewerker_dienst).
+    Een uitgeschakeld veld negeert wat er gepost wordt en houdt de huidige
+    waarde, dus dit geldt ook voor een geknutselde POST."""
+    if medewerker.pk == gebruiker.pk:
+        formulier.fields["rol"].disabled = True
+        formulier.fields["rol"].widget.attrs["data-blijft-op-slot"] = ""
+        formulier.fields["rol"].help_text = "Je eigen rol kun je niet wijzigen."
+
+
 @alleen_eigenaar
 def medewerker_bewerken(request, pk):
     """Werkt als Mijn profiel: eerst lezen, "Gegevens wijzigen" zet de velden
@@ -306,6 +319,7 @@ def medewerker_bewerken(request, pk):
     bewerken = request.GET.get("bewerken") == "1"
     if request.method == "POST":
         formulier = MedewerkerForm(request.POST, request.FILES, instance=medewerker)
+        _eigen_rol_op_slot(formulier, medewerker, request.user)
         if formulier.is_valid():
             formulier.save()
             messages.success(request, f"{medewerker.naam} is bijgewerkt.")
@@ -315,6 +329,7 @@ def medewerker_bewerken(request, pk):
         bewerken = True
     else:
         formulier = MedewerkerForm(instance=medewerker)
+        _eigen_rol_op_slot(formulier, medewerker, request.user)
     if not bewerken:
         _op_slot(formulier)
     return render(

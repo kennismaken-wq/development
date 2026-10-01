@@ -186,7 +186,7 @@ def _maand_weergave(request, dag, vandaag):
 def uurblok_nieuw(request):
     dag = periode.gekozen_dag(request)
     if request.method == "POST":
-        formulier = UurblokForm(request.POST)
+        formulier = UurblokForm(request.POST, medewerker=request.user)
         # Bestanden kiezen is optioneel (zie UurblokFotosForm), dus die mogen
         # het opslaan van de uren zelf nooit blokkeren.
         bijlagenformulier = UurblokFotosForm(request.POST, request.FILES)
@@ -576,7 +576,7 @@ def _aanwezigheid_opslaan(request, dag, medewerkers):
 
 def _datum_uit(waarde):
     try:
-        return date.fromisoformat(waarde)
+        return periode.binnen_bereik(date.fromisoformat(waarde))
     except (TypeError, ValueError):
         return None
 
@@ -594,7 +594,9 @@ def _gekozen_periode(request, vandaag):
 
     try:
         jaar, maand = (int(deel) for deel in request.GET.get("maand", "").split("-", 1))
-        eerste = date(jaar, maand, 1)
+        eerste = periode.binnen_bereik(date(jaar, maand, 1))
+        if eerste is None:
+            raise ValueError
     except (TypeError, ValueError):
         eerste = vandaag.replace(day=1)
     return eerste, eerste.replace(day=calendar.monthrange(eerste.year, eerste.month)[1])
@@ -627,7 +629,11 @@ def urenexport(request):
     van, tot = _gekozen_periode(request, vandaag)
     hele_maand = _is_hele_maand(van, tot)
 
+    # Alleen cijfers: ?medewerker=bla liet het filter hieronder een 500
+    # geven. Een onbekend getal levert gewoon een lege lijst op.
     medewerker_pk = request.GET.get("medewerker", "")
+    if not medewerker_pk.isdigit():
+        medewerker_pk = ""
     blokken = (
         Uurblok.objects.filter(datum__range=(van, tot))
         .select_related("medewerker", "klus")

@@ -117,8 +117,10 @@
 
     function openBewerken() {
       formulier.querySelectorAll('[disabled]').forEach(function (veld) {
-        // een vaste regel zonder naam (de eigen gebruikersnaam) blijft op slot
-        if (veld.name) { veld.disabled = false; }
+        // een vaste regel zonder naam (de eigen gebruikersnaam) blijft op
+        // slot, net als je eigen rol (data-blijft-op-slot, zie
+        // medewerkers.views._eigen_rol_op_slot)
+        if (veld.name && !veld.hasAttribute('data-blijft-op-slot')) { veld.disabled = false; }
       });
       // een leeg datumveld stond als tekstvak met een streepje (zie
       // medewerkers.views._op_slot); nu weer een datumveld met kalender

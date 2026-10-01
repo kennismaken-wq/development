@@ -51,6 +51,11 @@ def _doel_van(request):
         klus = get_object_or_404(Klus, pk=klus_pk)
     if blok_pk := request.POST.get("uurblok") or request.GET.get("uurblok"):
         uurblok = get_object_or_404(Uurblok, pk=blok_pk)
+        # Alleen bij je eigen uren; de eigenaar mag elk blok bekijken en dus
+        # ook iets aanvullen. Een blok van een collega bestaat voor een
+        # medewerker niet (zie uren.views._uurblok_detail_context).
+        if uurblok.medewerker_id != request.user.pk and not request.user.is_eigenaar:
+            raise Http404
         # Hangt de bijlage aan een uurblok, dan hoort hij ook in het dossier
         # van de klus waarop dat blok geschreven is.
         klus = klus or uurblok.klus
