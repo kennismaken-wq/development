@@ -38,17 +38,21 @@
     </div>
     {% for fout in formulier.soort.errors %}<p class="fout">{{ fout }}</p>{% endfor %}
 
-    {# ── 2. Wie ── #}
-    <label for="{{ formulier.opdrachtgever.id_for_label }}">{{ formulier.opdrachtgever.label }}</label>
-    {{ formulier.opdrachtgever }}
-    {% for fout in formulier.opdrachtgever.errors %}<p class="fout">{{ fout }}</p>{% endfor %}
+    {% comment %} ── 2. Wie. Bij Van Ee verbergt klusformulier.js dit blok: de
+          opdrachtgever staat dan vast (forms.KlusForm.clean) en het adres
+          eronder heet "Uitvoeradres". ── {% endcomment %}
+    <div id="veld-opdrachtgever">
+      <label for="{{ formulier.opdrachtgever.id_for_label }}">{{ formulier.opdrachtgever.label }}</label>
+      {{ formulier.opdrachtgever }}
+      {% for fout in formulier.opdrachtgever.errors %}<p class="fout">{{ fout }}</p>{% endfor %}
+    </div>
 
     {% comment %} ── 3. Waar. De adressen die deze opdrachtgever al heeft komen hierboven
           te staan als pillen; het adres zelf blijft een veld, want het hoort
           bij de klus en niet bij de klant. ── {% endcomment %}
     <div id="bekende-adressen" hidden></div>
 
-    <label for="{{ formulier.adres.id_for_label }}">{{ formulier.adres.label }}</label>
+    <label for="{{ formulier.adres.id_for_label }}" id="adres-label">{{ formulier.adres.label }}</label>
     {{ formulier.adres }}
     {% for fout in formulier.adres.errors %}<p class="fout">{{ fout }}</p>{% endfor %}
 

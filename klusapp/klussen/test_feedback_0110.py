@@ -152,3 +152,26 @@ class VanEeTest(TestCase):
         formulier = KlusForm({"naam": "Werkbon", "soort": "van_ee", "opdrachtgever": "Van Ee", "actief": "True"})
         self.assertFalse(formulier.is_valid())
         self.assertIn("startdatum", formulier.errors)
+
+    def test_van_ee_zet_de_opdrachtgever_zelf(self):
+        formulier = KlusForm({
+            "naam": "Werkbon", "soort": "van_ee", "opdrachtgever": "", "adres": "Kerkstraat 4",
+            "startdatum": "2026-10-05", "actief": "True",
+        })
+        self.assertTrue(formulier.is_valid(), formulier.errors)
+        self.assertEqual(formulier.cleaned_data["opdrachtgever"], "Van Ee")
+
+    def test_van_ee_vraagt_een_uitvoeradres(self):
+        formulier = KlusForm({
+            "naam": "Werkbon", "soort": "van_ee", "startdatum": "2026-10-05", "actief": "True",
+        })
+        self.assertFalse(formulier.is_valid())
+        self.assertEqual(formulier.errors["adres"], ["Vul het uitvoeradres in."])
+        self.assertNotIn("opdrachtgever", formulier.errors)
+
+    def test_aanleg_vraagt_nog_steeds_een_opdrachtgever(self):
+        formulier = KlusForm({
+            "naam": "Tuin", "soort": "aanleg", "startdatum": "2026-10-05", "actief": "True",
+        })
+        self.assertFalse(formulier.is_valid())
+        self.assertIn("opdrachtgever", formulier.errors)

@@ -122,7 +122,9 @@ class KlusForm(forms.ModelForm):
         # /beheer/ mag 'm leeg laten. Zonder opdrachtgever valt een klus buiten
         # elke suggestie en elke waarschuwing hieronder — dan is "Onderhoud
         # vaste klanten" weer de bak waarin alles verdwijnt.
-        self.fields["opdrachtgever"].required = True
+        # Niet via required=True maar in clean(): bij Van Ee staat het veld niet
+        # in beeld en vult de server de opdrachtgever zelf in.
+        self.fields["opdrachtgever"].required = False
         if not self.instance.pk:
             # Nieuwe klus: de kleur wordt automatisch toegewezen (zie
             # klussen.views.klus_nieuw / klussen.kleuren.volgende_kleur), dus
@@ -136,6 +138,15 @@ class KlusForm(forms.ModelForm):
 
     def clean(self):
         gegevens = super().clean()
+        if gegevens.get("soort") == Klus.Soort.VAN_EE:
+            # Bij Van Ee is de opdrachtgever altijd dezelfde; wat telt is waar
+            # het werk is. Het formulier vraagt daarom alleen het uitvoeradres
+            # (verzoek Thijmen, 01-10-2026) en de opdrachtgever staat vast.
+            gegevens["opdrachtgever"] = Klus.Soort.VAN_EE.label
+            if not (gegevens.get("adres") or "").strip():
+                self.add_error("adres", "Vul het uitvoeradres in.")
+        elif not (gegevens.get("opdrachtgever") or "").strip():
+            self.add_error("opdrachtgever", "Vul de opdrachtgever in.")
         # Een onderhoudsklant is een terugkerende afspraak zonder einddatum en
         # zonder begin (SPEC §1); een startdatum zou daar niets betekenen.
         if gegevens.get("soort") == Klus.Soort.ONDERHOUD:

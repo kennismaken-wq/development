@@ -15,6 +15,8 @@
         dossier maken waar de uren zich over verdelen niet. Dus een melding met
         een link erheen, geen blokkade.
      4. Een naam voorstellen en de startdatum verbergen bij onderhoud.
+     5. Bij Van Ee de opdrachtgever wegzetten (die staat vast) en het adres
+        "Uitvoeradres" noemen: daar gaat het bij die klussen om.
 
    De gegevens komen uit het json_script in klus_form.html (gevuld door
    klussen.opdrachtgevers) — één blok in de pagina, dus geen extra verzoek.
@@ -28,6 +30,8 @@
   const plaatsVeld = document.getElementById("id_plaats");
   const naamVeld = document.getElementById("id_naam");
   const startdatumBlok = document.getElementById("veld-startdatum");
+  const opdrachtgeverBlok = document.getElementById("veld-opdrachtgever");
+  const adresLabel = document.getElementById("adres-label");
   const adressenBlok = document.getElementById("bekende-adressen");
   const botsingBlok = document.getElementById("klusbotsing");
   if (!gegevensblok || !opdrachtgeverVeld) return;
@@ -150,6 +154,13 @@
   function tekenAdressen() {
     if (!adressenBlok) return;
     adressenBlok.innerHTML = "";
+    // Van Ee heeft tientallen adressen en elke klus een nieuwe: dan is een
+    // rij pillen ruis en is voorinvullen fout. De waarschuwing hieronder
+    // (zelfde adres, al een klus) blijft wel werken.
+    if (gekozenSoort() === "van_ee") {
+      adressenBlok.hidden = true;
+      return;
+    }
     const groep = huidigeOpdrachtgever();
 
     // Van opdrachtgever gewisseld terwijl het adres nog van de vorige is: dan
@@ -331,8 +342,32 @@
     startdatumBlok.hidden = gekozenSoort() === "onderhoud";
   }
 
+  /* ── 5. Van Ee: geen opdrachtgever, wel een uitvoeradres ─────────────────
+     De server zet de opdrachtgever hoe dan ook op "Van Ee" (forms.KlusForm.
+     clean); hier vullen we 'm alvast in zodat de suggesties en de
+     waarschuwing van hierboven met de goede naam rekenen. Wat er stond
+     onthouden we, zodat terugklikken naar Aanleg je getypte klant teruggeeft. */
+  const VAN_EE = "Van Ee";
+  const adresLabelTekst = adresLabel ? adresLabel.textContent : "";
+  let opdrachtgeverVoorVanEe = null;
+
+  function regelVanEe() {
+    const vanEe = gekozenSoort() === "van_ee";
+    if (opdrachtgeverBlok) opdrachtgeverBlok.hidden = vanEe;
+    if (adresLabel) adresLabel.textContent = vanEe ? "Uitvoeradres" : adresLabelTekst;
+    if (vanEe && opdrachtgeverVeld.value !== VAN_EE) {
+      opdrachtgeverVoorVanEe = opdrachtgeverVeld.value;
+      opdrachtgeverVeld.value = VAN_EE;
+      verbergLijst();
+    } else if (!vanEe && opdrachtgeverVoorVanEe !== null) {
+      if (opdrachtgeverVeld.value === VAN_EE) opdrachtgeverVeld.value = opdrachtgeverVoorVanEe;
+      opdrachtgeverVoorVanEe = null;
+    }
+  }
+
   /* ── Alles bij elkaar ─────────────────────────────────────────────────── */
   function bijwerken() {
+    regelVanEe();
     tekenAdressen();
     const erIsAlEenKlus = tekenBotsing();
     stelNaamVoor(erIsAlEenKlus);
