@@ -2500,18 +2500,22 @@ a.wp-klus{ text-decoration:none; }
    vlak vóór het navigeren een sessionStorage-vlag; de volgende pagina leest
    die (nog vóór <body> geparst is, dus zonder flits) en schuift dan
    omgekeerd in, van links i.p.v. rechts. */
+/* Licht gehouden: een klein stukje schuiven met een fade, niet de hele
+   kaart over het scherm. De kaart is glas (backdrop-filter), en elke frame
+   dat die beweegt moet de vervaging opnieuw berekend worden — over de volle
+   breedte haperde dat op telefoons. */
 .kaart:has(.terug-pijl){
-  animation:klus-in-van-rechts .32s cubic-bezier(.32,.72,0,1) both;
+  animation:klus-in-van-rechts .22s cubic-bezier(.2,.8,.2,1) both;
 }
 html.klus-terug-navigatie .kaart:has(.terug-pijl){
-  animation:klus-in-van-links .32s cubic-bezier(.32,.72,0,1) both;
+  animation:klus-in-van-links .22s cubic-bezier(.2,.8,.2,1) both;
 }
 .kaart.klus-uit-animatie{
-  animation:klus-uit-naar-rechts .26s cubic-bezier(.32,.72,0,1) both;
+  animation:klus-uit-naar-rechts .16s ease-in both;
 }
-@keyframes klus-in-van-rechts{ from{ transform:translateX(100%); } to{ transform:translateX(0); } }
-@keyframes klus-in-van-links{ from{ transform:translateX(-100%); } to{ transform:translateX(0); } }
-@keyframes klus-uit-naar-rechts{ from{ transform:translateX(0); } to{ transform:translateX(100%); } }
+@keyframes klus-in-van-rechts{ from{ opacity:0; transform:translateX(28px); } to{ opacity:1; transform:none; } }
+@keyframes klus-in-van-links{ from{ opacity:0; transform:translateX(-28px); } to{ opacity:1; transform:none; } }
+@keyframes klus-uit-naar-rechts{ from{ opacity:1; transform:none; } to{ opacity:0; transform:translateX(28px); } }
 @media (prefers-reduced-motion: reduce){
   .kaart:has(.terug-pijl), html.klus-terug-navigatie .kaart:has(.terug-pijl),
   .kaart.klus-uit-animatie{ animation:none; }
