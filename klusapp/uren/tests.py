@@ -416,7 +416,7 @@ class PlanbordTest(TestCase):
         self.assertTrue(self.rij_van(antwoord, self.joep)["dagen"][6]["smal"])
         self.assertEqual(
             antwoord.context["bordkolommen"],
-            "176px " + "minmax(142px,1fr) " * 6 + "52px 72px",
+            "176px " + "minmax(124px,1fr) " * 6 + "52px 72px",
         )
         self.assertContains(antwoord, "grid-template-columns:176px ")
 

@@ -490,7 +490,10 @@ AANWEZIG_KEUZES = {"ja", "nee"}
 # naam als "Youssef el Amrani" op één regel past: een naam over twee regels
 # maakte de hele rij hoger dan zijn uurblokken nodig hadden.
 BORD_NAAM = 176
-BORD_DAG = 142
+# Zo breed dat een werkweek met lege zaterdag en zondag precies in de vaste
+# kaartbreedte past (.kaart in app.css): breder, en het bord gaat op een
+# laptop weer horizontaal scrollen.
+BORD_DAG = 124
 BORD_SMAL = 52
 # Het weektotaal per persoon, rechts: spiegelt de regel "Per dag" onderaan.
 # Stond eerst als derde regel in de naamcel en maakte die hoger dan nodig.

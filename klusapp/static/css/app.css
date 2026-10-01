@@ -38,6 +38,11 @@ body{
   padding-top:calc(1.6rem + env(safe-area-inset-top));
   display:flex; flex-direction:column; align-items:center;
   -webkit-text-size-adjust:100%;
+  /* body is hier de scrollcontainer (zie overflow-x hierboven). Reserveer
+     de ruimte voor de scrollbalk altijd, anders schuift de gecentreerde
+     kaart op een laptop een halve balkbreedte op tussen korte en lange
+     schermen. Op een telefoon zweeft de balk en kost dit niets. */
+  scrollbar-gutter:stable;
 }
 /* ruimte voor de zwevende navigatie: een kolom links op een breed scherm,
    een balk onderaan op een telefoon — zie .sidebar hieronder. Alleen
@@ -52,12 +57,16 @@ body.met-navigatie{ padding-left:6.6rem; }
   box-shadow:0 24px 70px rgba(0,0,0,0.30), inset 0 1px 0 rgba(255,255,255,0.15);
 }
 
+/* Eén breedte voor elk scherm. Eerder was de kaart 640px en sprongen Uren en
+   het weekoverzicht naar 1180px: op een laptop verspringt de app dan bij
+   elke klik in de navigatie. 1040px is afgestemd op het planbord: een
+   werkweek met lege zaterdag en zondag (uren/views.py, BORD_*) past er
+   precies in zonder te scrollen, en formulieren rekken nog niet uit. Wie
+   die kolommen breder maakt, moet hier mee. */
 .kaart{
   border-radius:28px; padding:1.8rem 2rem 2.2rem;
-  width:100%; max-width:640px;
+  width:100%; max-width:1040px;
 }
-/* de weekkalender is 700px breed; die krijgt een ruimere kaart */
-.kaart.breed{ max-width:1180px; }
 
 /* ══════════ TELEFOON: DE APP *IS* HET SCHERM ══════════
    Op een breed scherm is de app één zwevende glaskaart op de gradient — dat
@@ -2059,7 +2068,7 @@ label:has(> input[type=checkbox]), input[type=checkbox] + label{ cursor:pointer;
    heeft ruimte nodig om herkenbaar te zijn in plaats van afgekapt. De
    kolommen zelf staan in de view (uren/views.py, BORD_*): een lege
    zaterdag of zondag wordt daar smal. Dit is alleen de terugval. */
-.bord{ display:grid; grid-template-columns:176px repeat(7, minmax(142px,1fr)); min-width:1170px; }
+.bord{ display:grid; grid-template-columns:176px repeat(7, minmax(124px,1fr)); min-width:1044px; }
 .bord-kop.smal{ padding-left:0; padding-right:0; }
 .bord-cel.smal{ padding-left:0; padding-right:0; }
 
