@@ -501,17 +501,22 @@ BORD_WEEK = 72
 
 # Twee weergaven. "Deze week": zeven dagen die precies in de vaste
 # kaartbreedte passen (.kaart in app.css, 1040px), met ruimte voor
-# "tandarts 12.30" in de cel. "Doorlopend": veertien weken naast elkaar
-# waar je opzij doorheen scrolt, zoals in de Excel; hij begint twee weken
-# terug en springt bij openen naar de gekozen dag. De breedte is per dag,
-# in px.
+# "tandarts 12.30" in de cel. "Doorlopend": het hele jaar, 1 januari tot en
+# met 31 december, waar je opzij doorheen scrolt zoals in de Excel; hij
+# opent op vandaag. De breedte is per dag, in px.
 PLANNING_WEERGAVEN = {"week": 112, "doorlopend": 76}
 PLANNING_STANDAARD_WEERGAVE = "doorlopend"
-DOORLOPEND_TERUG = 2
-DOORLOPEND_WEKEN = 14
-# Een hele rij in de doorlopende weergave is 98 cellen; twintig man op
-# één dag twintig. Een veel grotere post is geknoei, geen selectie.
-PLANNING_MAX_CELLEN = 3000
+# Een heel jaar voor twintig man is ruim 7000 cellen; een grotere post is
+# geknoei, geen selectie.
+PLANNING_MAX_CELLEN = 8000
+
+
+def _zelfde_dag_in(dag, jaar):
+    """Dezelfde datum een jaar eerder of later; 29 februari wordt de 28e."""
+    try:
+        return dag.replace(year=jaar)
+    except ValueError:
+        return dag.replace(year=jaar, day=28)
 
 
 def _planning_weergave(request):
@@ -549,17 +554,17 @@ def aanwezigheid(request):
     vandaag = periode.vandaag()
     maandag, _ = periode.week_van(dag)
     if weergave == "doorlopend":
-        eerste = maandag - timedelta(weeks=DOORLOPEND_TERUG)
-        aantal, stap = 7 * DOORLOPEND_WEKEN, timedelta(weeks=DOORLOPEND_WEKEN - DOORLOPEND_TERUG)
+        eerste, laatste = date(dag.year, 1, 1), date(dag.year, 12, 31)
+        vorige, volgende = _zelfde_dag_in(dag, dag.year - 1), _zelfde_dag_in(dag, dag.year + 1)
     else:
-        eerste, aantal, stap = maandag, 7, timedelta(weeks=1)
-    # periode.binnen_bereik bewaakt alleen de gekozen dag; twee weken terug
-    # vanaf 3 januari 2000 mag de rest niet laten omvallen.
-    eerste = max(eerste, periode.EERSTE_DAG)
-    dagen = [eerste + timedelta(days=n) for n in range(aantal)]
+        # max(): de week van 1 januari 2000 begint in 1999, buiten het
+        # bereik van periode.binnen_bereik.
+        eerste, laatste = max(maandag, periode.EERSTE_DAG), maandag + timedelta(days=6)
+        vorige, volgende = maandag - timedelta(weeks=1), maandag + timedelta(weeks=1)
+    dagen = [eerste + timedelta(days=n) for n in range((laatste - eerste).days + 1)]
     medewerkers = bezetting.medewerkers_tussen(dagen[0], dagen[-1])
     cellen = bezetting.rooster(medewerkers, dagen)
-    vrij = bezetting.feestdagen_tussen(dagen[0], dagen[-1])
+    feest = bezetting.nederlandse_feestdagen_tussen(dagen[0], dagen[-1])
     notities = {n.datum: n.tekst for n in Dagnotitie.objects.filter(datum__range=(dagen[0], dagen[-1]))}
 
     kopdagen = []
@@ -572,7 +577,8 @@ def aanwezigheid(request):
                 "is_vandaag": datum == vandaag,
                 "is_weekstart": datum.weekday() == 0 and k > 0,
                 "is_zaterdag": datum.weekday() == 5,
-                "feestdag": vrij.get(datum, ""),
+                "feestdag": feest.get(datum, ("", False))[0],
+                "feestdag_vrij": feest.get(datum, ("", False))[1],
                 "notitie": notities.get(datum, ""),
                 "aanwezig": sum(1 for c in kolom if c.stand == bezetting.AANWEZIG),
                 "in_dienst": sum(1 for c in kolom if c.stand != bezetting.BUITEN),
@@ -593,11 +599,12 @@ def aanwezigheid(request):
             "eerste": dagen[0],
             "laatste": dagen[-1],
             "weergave": weergave,
-            "vorige": maandag - stap,
-            "volgende": maandag + stap,
-            "is_huidige_periode": maandag <= vandaag < maandag + timedelta(weeks=1),
-            # de kolom waar de doorlopende weergave bij openen heen scrolt
-            "startkolom": max((maandag - dagen[0]).days, 0),
+            "vorige": vorige,
+            "volgende": volgende,
+            "is_huidige_periode": dagen[0] <= vandaag <= dagen[-1],
+            # de kolom waar de doorlopende weergave bij openen heen scrolt:
+            # vandaag als dat in dit jaar valt, anders de gekozen dag
+            "startkolom": ((vandaag if dagen[0] <= vandaag <= dagen[-1] else dag) - dagen[0]).days,
             "kopdagen": kopdagen,
             "rijen": rijen,
             "bordkolommen": f"{BORD_NAAM}px repeat({len(dagen)}, minmax({breedte}px, 1fr))",

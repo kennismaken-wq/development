@@ -166,7 +166,7 @@ schrijft zijn opties nog steeds zelf in de template en blijft op `data-scope`.
 | 4 | Beheerdersoverzicht / planbord | 🟢 100% | — `/planbord/`, vaste eerste kolom op mobiel (F3) |
 | 5 | Fotodropbox | 🟢 100% | — raster, zoeken, filter per klus |
 | 6 | Urenexport voor de boekhouder | 🟢 100% | — Excel per kalendermaand, getest (antwoord Maarten 15-09) |
-| 7 | Aanwezigheidsregistratie | 🟢 100% | — `/aanwezigheid/`: sinds 01-10-2026 een werkplanning-rooster in plaats van een dagscherm, naar de Excel van Maarten. Vaste werkdagen per medewerker, afwijkingen met reden, feestdagen vanzelf vrij, telling per dag, dagnotitie. Alle zeven dagen; per persoon per dag in te plannen op één of meer klussen (`Inzet`). Alleen eigenaar, gemaakt voor de laptop |
+| 7 | Aanwezigheidsregistratie | 🟢 100% | — `/aanwezigheid/`: sinds 01-10-2026 een werkplanning-rooster in plaats van een dagscherm, naar de Excel van Maarten. Vaste werkdagen per medewerker, afwijkingen met reden, alle Nederlandse feestdagen in de kop (de vrije vanzelf rood), telling per dag, dagnotitie. Alle zeven dagen; per persoon per dag in te plannen op één of meer klussen (`Inzet`). Alleen eigenaar, gemaakt voor de laptop |
 | 8 | Inlogbeheer rolgebaseerd | 🟢 100% | — `/medewerkers/`: toevoegen, bewerken, wachtwoord zetten, uit dienst. Vraag 5 aan Maarten is daarmee ingehaald |
 | 9 | Loonstrook-snelkoppeling | 🟢 100% | Klaar, iOS/Android afgehandeld, getest |
 
@@ -428,7 +428,8 @@ klik door naar het blokdetail uit F1. Zwaarste taak, en het scherm waar Maarten 
 in kijkt.
 
 **F4 · Aanwezigheid.** Was een dagscherm (groen/rood per persoon). Sinds 01-10-2026
-een rooster over 1, 2 of 4 weken, als vervanger van Maartens Excel "Werkplanning":
+een rooster als vervanger van Maartens Excel "Werkplanning": "Doorlopend" (standaard) is het hele jaar,
+1 jan t/m 31 dec, opent op vandaag (groene lijn); "Deze week" is zeven dagen.
 mensen als rijen, ma–zo als kolommen, bovenaan per dag hoeveel man er is.
 Rekenwerk in `uren/bezetting.py`: geen `Aanwezigheid`-rij betekent "volgens rooster"
 (`Medewerker.vaste_werkdagen`, feestdagen vrij); een rij is een afwijking met

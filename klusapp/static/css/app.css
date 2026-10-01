@@ -2258,9 +2258,28 @@ label:has(> input[type=checkbox]), input[type=checkbox] + label{ cursor:pointer;
 .wp-weken{ display:flex; gap:.4rem; flex-wrap:wrap; }
 .wp-weken .pil{ padding:.4rem .85rem; }
 
+/* Vandaag: een groene verticale lijn door de hele kolom, van de kop tot de
+   onderste medewerker, met "Vandaag" boven de dag. Na .weekstart in de
+   cascade, zodat de lijn wint als vandaag een maandag is. */
+.wp-bord .vandaag{ border-left:2px solid var(--accent) !important; }
+.wp-kop.vandaag{ border-radius:0; }
+.wp-kop .vandaag-label{
+  display:block; margin-bottom:.15rem; padding:.05rem .4rem; border-radius:999px;
+  font-size:9.5px; font-weight:700; letter-spacing:.02em;
+  background:var(--accent); color:var(--ink);
+}
+
 .wp-kop{ background:none; border:0; border-radius:8px; display:grid; justify-items:center; }
 @media (hover:hover){ .wp-kop:hover{ background:rgba(255,255,255,0.08); } }
 .wp-kop.feestdag .dag, .wp-kop.feestdag .datum{ color:#F6C7B6; }
+/* De naam van een feestdag onder de datum. Rood als De Groene M dan dicht
+   is, grijs bij een feestdag waarop gewoon gewerkt wordt (5 mei). */
+.wp-kop .feest{
+  display:block; max-width:100%; margin-top:.15rem; padding:.05rem .35rem; border-radius:999px;
+  font-size:9.5px; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+  background:rgba(255,255,255,0.08); color:rgba(255,255,255,0.6);
+}
+.wp-kop.feestdag .feest{ background:rgba(224,123,95,0.28); color:#F6C7B6; }
 /* een nieuwe week begint met een duidelijker lijn: in veertien weken naast
    elkaar raak je anders de tel kwijt */
 .wp-bord .weekstart{ border-left-color:rgba(255,255,255,0.32); }
@@ -2280,7 +2299,6 @@ label:has(> input[type=checkbox]), input[type=checkbox] + label{ cursor:pointer;
   min-height:28px; border-right:0; border-bottom:0;
   font-size:10.5px; color:var(--hi); overflow:hidden;
 }
-.wp-notitie.is-feestdag{ color:#F6C7B6; }
 @media (hover:hover){ .wp-notitie:hover{ background:rgba(255,255,255,0.10); } }
 
 /* namen zijn knoppen: klikken kiest al zijn dagen */

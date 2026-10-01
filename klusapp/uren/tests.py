@@ -640,15 +640,29 @@ class WerkplanningTest(TestCase):
     def test_deze_week_en_doorlopend(self):
         week = self.client.get("/aanwezigheid/?dag=2026-09-09&weergave=week").context
         self.assertEqual(len(week["kopdagen"]), 7)
-        # doorlopend is de standaard: veertien weken, twee terug, en hij
-        # opent op de gekozen week
-        door = self.client.get("/aanwezigheid/?dag=2026-09-09").context
+        # doorlopend is de standaard: het hele jaar van de gekozen dag
+        with patch("uren.periode.vandaag", return_value=date(2026, 10, 1)):
+            door = self.client.get("/aanwezigheid/?dag=2026-09-09").context
         self.assertEqual(door["weergave"], "doorlopend")
-        self.assertEqual(len(door["kopdagen"]), 98)
-        self.assertEqual(door["kopdagen"][0]["datum"], date(2026, 8, 24))
-        self.assertEqual(door["kopdagen"][door["startkolom"]]["datum"], self.maandag)
+        self.assertEqual(len(door["kopdagen"]), 365)
+        self.assertEqual((door["kopdagen"][0]["datum"], door["kopdagen"][-1]["datum"]),
+                         (date(2026, 1, 1), date(2026, 12, 31)))
+        # opent op vandaag als dat in dit jaar valt ...
+        self.assertEqual(door["kopdagen"][door["startkolom"]]["datum"], date(2026, 10, 1))
+        self.assertTrue(door["kopdagen"][door["startkolom"]]["is_vandaag"])
+        # ... en anders op de gekozen dag
+        with patch("uren.periode.vandaag", return_value=date(2027, 3, 1)):
+            door = self.client.get("/aanwezigheid/?dag=2026-09-09").context
+        self.assertEqual(door["kopdagen"][door["startkolom"]]["datum"], date(2026, 9, 9))
+        # de pijlen springen een jaar
+        self.assertEqual((door["vorige"], door["volgende"]), (date(2025, 9, 9), date(2027, 9, 9)))
         # een onbekende weergave valt terug op de standaard
         self.assertEqual(self.client.get("/aanwezigheid/?weergave=maand").context["weergave"], "doorlopend")
+
+    def test_schrikkeldag_een_jaar_verder(self):
+        context = self.client.get("/aanwezigheid/?dag=2028-02-29").context
+        self.assertEqual(len(context["kopdagen"]), 366)
+        self.assertEqual(context["volgende"], date(2029, 2, 28))
 
     def test_geknoeide_datum_geeft_vandaag(self):
         for dag in ("9999-12-31", "0001-01-01", "morgen"):
@@ -716,6 +730,9 @@ class WerkplanningTest(TestCase):
         hemelvaart = date(2026, 5, 14)
         cel = bezetting.cel(self.sam, hemelvaart, feestdag="Hemelvaartsdag")
         self.assertEqual((cel.stand, cel.reden_tekst), (bezetting.AFWEZIG, "Hemelvaartsdag"))
+        # zonder vaste werkdag is een feestdag gewoon een vrije dag
+        cel = bezetting.cel(self.joep, hemelvaart, feestdag="Hemelvaartsdag")
+        self.assertEqual(cel.stand, bezetting.VRIJ)
         self.zet([self.cel(self.sam, hemelvaart)], "ja")
         cellen = bezetting.rooster([self.sam], [hemelvaart])
         self.assertEqual(cellen[(self.sam.pk, hemelvaart)].stand, bezetting.AANWEZIG)
@@ -730,6 +747,19 @@ class WerkplanningTest(TestCase):
         self.assertEqual(bezetting.pasen(2027), date(2027, 3, 28))
         # 27 april 2025 was een zondag: Koningsdag op de 26e
         self.assertIn(date(2025, 4, 26), bezetting.feestdagen(2025))
+
+    def test_alle_nederlandse_feestdagen_in_de_kop(self):
+        alle = bezetting.nederlandse_feestdagen(2026)
+        self.assertEqual(alle[date(2026, 4, 3)], ("Goede Vrijdag", False))
+        self.assertEqual(alle[date(2026, 5, 5)], ("Bevrijdingsdag", False))
+        self.assertEqual(alle[date(2026, 5, 14)], ("Hemelvaartsdag", True))
+        kop = self.client.get("/aanwezigheid/?dag=2026-05-04&weergave=week").context["kopdagen"]
+        # 5 mei: naam in de kop, maar een gewone werkdag
+        self.assertEqual((kop[1]["feestdag"], kop[1]["feestdag_vrij"]), ("Bevrijdingsdag", False))
+        self.assertEqual(kop[1]["aanwezig"], 2)
+        html = self.client.get("/aanwezigheid/?dag=2026-05-14&weergave=week").content.decode()
+        self.assertIn('class="feest"', html)
+        self.assertIn("Hemelvaartsdag", html)
 
     def test_startscherm_telt_volgens_rooster(self):
         self.assertEqual(bezetting.aantal_aanwezig(self.maandag), (2, 3))

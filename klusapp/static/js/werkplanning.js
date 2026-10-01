@@ -58,10 +58,38 @@
 
   // Eén waarde als alle gekozen cellen hem delen, anders null: dan staat er
   // in het venster niets voorgekozen en zet je bewust iets nieuws.
-  function gedeeld(lijst, sleutel) {
-    const eerste = lijst[0].dataset[sleutel];
-    return lijst.every(function (cel) { return cel.dataset[sleutel] === eerste; }) ? eerste : null;
+  // Lege velden staan niet in de html (een jaar telt duizenden cellen), dus
+  // een ontbrekend data-attribuut is een lege waarde.
+  function waarde(cel, sleutel) {
+    return cel.dataset[sleutel] || "";
   }
+
+  function gedeeld(lijst, sleutel) {
+    const eerste = waarde(lijst[0], sleutel);
+    return lijst.every(function (cel) { return waarde(cel, sleutel) === eerste; }) ? eerste : null;
+  }
+
+  function naamVan(cel) {
+    const naam = bord.querySelector('.wp-naam[data-r="' + cel.dataset.r + '"] .wie');
+    return naam ? naam.textContent.trim() : "";
+  }
+
+  function datumVan(cel) {
+    const kop = bord.querySelector('.wp-kop[data-k="' + cel.dataset.k + '"]');
+    return kop ? kop.dataset.datum : "";
+  }
+
+  // De tooltip pas maken als je een cel aanwijst, niet voor alle cellen
+  // van het jaar vooraf in de html.
+  bord.addEventListener("mouseover", function (e) {
+    const cel = e.target.closest("button.wp-cel");
+    if (!cel || cel.title) return;
+    const delen = [naamVan(cel), datumVan(cel)];
+    cel.querySelectorAll(".wp-kluslijn .naam, .tekst").forEach(function (t) {
+      delen.push(t.textContent.trim());
+    });
+    cel.title = delen.filter(Boolean).join(" · ");
+  });
 
   function zetRadio(naam, waarde) {
     formulier.querySelectorAll("[name=" + naam + "]").forEach(function (keuze) {
@@ -97,7 +125,7 @@
     const mensen = new Set(lijst.map(function (cel) { return cel.dataset.r; })).size;
     const dagen = new Set(lijst.map(function (cel) { return cel.dataset.k; })).size;
     if (lijst.length === 1) {
-      titel.textContent = lijst[0].title.split(" · ").slice(0, 2).join(" · ");
+      titel.textContent = naamVan(lijst[0]) + " · " + datumVan(lijst[0]);
     } else {
       titel.textContent = (mensen === 1 ? "1 persoon" : mensen + " mensen") + " · " +
         (dagen === 1 ? "1 dag" : dagen + " dagen");
@@ -219,6 +247,27 @@
     dialoog.addEventListener("close", function () { markeer([]); });
   });
 
+  function naarKolom(k, vloeiend) {
+    const kop = bord.querySelector('.wp-kop[data-k="' + Math.max(k, 0) + '"]');
+    const namen = bord.querySelector(".bord-hoek");
+    if (!kop || !namen) return;
+    const verschil = kop.getBoundingClientRect().left
+      - scroller.getBoundingClientRect().left - namen.offsetWidth;
+    scroller.scrollTo({ left: scroller.scrollLeft + verschil, behavior: vloeiend ? "smooth" : "auto" });
+  }
+
+  // "Vandaag": staat vandaag op het bord, dan erheen scrollen in plaats van
+  // de pagina opnieuw te laden.
+  const naarVandaag = document.querySelector("[data-naar-vandaag]");
+  if (naarVandaag) {
+    naarVandaag.addEventListener("click", function (e) {
+      const kop = bord.querySelector(".wp-kop.vandaag");
+      if (!kop) return;
+      e.preventDefault();
+      naarKolom(Number(kop.dataset.k) - 2, true);
+    });
+  }
+
   // Na opslaan laadt de pagina opnieuw. Onthoud waar je stond, anders
   // springt het bord na elke wijziging terug naar boven en naar links.
   const scroller = bord.closest(".wp-scroll");
@@ -242,12 +291,7 @@
     }
   } catch (fout) { /* niets te herstellen */ }
 
-  // Doorlopend begint twee weken terug; open op de gekozen week, met die
-  // maandag direct naast de vaste namenkolom.
-  const start = bord.querySelector('.wp-kop[data-k="' + bord.dataset.startkolom + '"]');
-  const namen = bord.querySelector(".bord-hoek");
-  if (start && namen && bord.dataset.startkolom !== "0") {
-    scroller.scrollLeft += start.getBoundingClientRect().left
-      - scroller.getBoundingClientRect().left - namen.offsetWidth;
-  }
+  // Doorlopend is het hele jaar; open op vandaag (of de gekozen dag), met
+  // twee dagen ervoor nog in beeld zodat je ziet waar je vandaan komt.
+  naarKolom(Number(bord.dataset.startkolom) - 2);
 })();

@@ -44,35 +44,52 @@ def pasen(jaar):
     return date(jaar, maand, dag + 1)
 
 
-def feestdagen(jaar):
-    """De vrije feestdagen bij De Groene M, als {datum: naam}.
+def nederlandse_feestdagen(jaar):
+    """Alle Nederlandse feestdagen van een jaar, als {datum: (naam, vrij)}.
 
-    Afgelezen uit de werkplanning van 2026: op deze dagen staat iedereen
-    rood. Bevrijdingsdag en Goede Vrijdag niet — op 5 mei 2026 werd er gewoon
-    gewerkt. Koningsdag schuift naar de 26e als de 27e op zondag valt.
+    `vrij` zegt of De Groene M dan dicht is. Afgelezen uit de werkplanning
+    van 2026: op die dagen staat iedereen rood. Goede Vrijdag en
+    Bevrijdingsdag staan er wel bij, maar als werkdag — op 5 mei 2026 werd er
+    gewoon gewerkt. Koningsdag schuift naar de 26e als de 27e op zondag valt.
     """
     paasdag = pasen(jaar)
     koningsdag = date(jaar, 4, 27)
     if koningsdag.weekday() == 6:
         koningsdag = date(jaar, 4, 26)
     return {
-        date(jaar, 1, 1): "Nieuwjaarsdag",
-        paasdag: "1e Paasdag",
-        paasdag + timedelta(days=1): "2e Paasdag",
-        koningsdag: "Koningsdag",
-        paasdag + timedelta(days=39): "Hemelvaartsdag",
-        paasdag + timedelta(days=49): "1e Pinksterdag",
-        paasdag + timedelta(days=50): "2e Pinksterdag",
-        date(jaar, 12, 25): "1e Kerstdag",
-        date(jaar, 12, 26): "2e Kerstdag",
+        date(jaar, 1, 1): ("Nieuwjaarsdag", True),
+        paasdag - timedelta(days=2): ("Goede Vrijdag", False),
+        paasdag: ("1e Paasdag", True),
+        paasdag + timedelta(days=1): ("2e Paasdag", True),
+        koningsdag: ("Koningsdag", True),
+        date(jaar, 5, 5): ("Bevrijdingsdag", False),
+        paasdag + timedelta(days=39): ("Hemelvaartsdag", True),
+        paasdag + timedelta(days=49): ("1e Pinksterdag", True),
+        paasdag + timedelta(days=50): ("2e Pinksterdag", True),
+        date(jaar, 12, 25): ("1e Kerstdag", True),
+        date(jaar, 12, 26): ("2e Kerstdag", True),
     }
 
 
-def feestdagen_tussen(van, tot):
+def feestdagen(jaar):
+    """Alleen de vrije feestdagen, als {datum: naam}: daarop staat iedereen
+    volgens zijn vaste werkdagen op afwezig."""
+    return {dag: naam for dag, (naam, vrij) in nederlandse_feestdagen(jaar).items() if vrij}
+
+
+def _tussen(van, tot, per_jaar):
     gevonden = {}
     for jaar in range(van.year, tot.year + 1):
-        gevonden.update(feestdagen(jaar))
-    return {dag: naam for dag, naam in gevonden.items() if van <= dag <= tot}
+        gevonden.update(per_jaar(jaar))
+    return {dag: waarde for dag, waarde in gevonden.items() if van <= dag <= tot}
+
+
+def feestdagen_tussen(van, tot):
+    return _tussen(van, tot, feestdagen)
+
+
+def nederlandse_feestdagen_tussen(van, tot):
+    return _tussen(van, tot, nederlandse_feestdagen)
 
 
 def in_dienst_op(medewerker, dag):
@@ -127,11 +144,13 @@ def cel(medewerker, dag, registratie=None, feestdag=""):
             opmerking=registratie.opmerking,
             feestdag=feestdag,
         )
+    if dag.weekday() not in (medewerker.vaste_werkdagen or []):
+        # Geen werkdag voor hem, feestdag of niet: een oproepkracht op
+        # Kerst is gewoon vrij, niet afwezig.
+        return Cel(medewerker, dag, VRIJ, True)
     if feestdag:
         return Cel(medewerker, dag, AFWEZIG, True, feestdag=feestdag)
-    if dag.weekday() in (medewerker.vaste_werkdagen or []):
-        return Cel(medewerker, dag, AANWEZIG, True)
-    return Cel(medewerker, dag, VRIJ, True)
+    return Cel(medewerker, dag, AANWEZIG, True)
 
 
 def rooster(medewerkers, dagen):

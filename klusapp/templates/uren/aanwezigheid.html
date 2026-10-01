@@ -7,10 +7,13 @@
     <div class="navlinks">
       <a class="knop-stil" href="?dag={{ vorige|date:'Y-m-d' }}&weergave={{ weergave }}" aria-label="Eerder">‹</a>
       <a class="knop-stil" href="?dag={{ volgende|date:'Y-m-d' }}&weergave={{ weergave }}" aria-label="Later">›</a>
-      {% if not is_huidige_periode %}
-        <a class="knop-stil" href="?weergave={{ weergave }}">Vandaag</a>
+      {% comment %} Doorlopend: altijd zichtbaar, want je scrolt in hetzelfde
+         jaar ook weg van vandaag. Staat vandaag op het bord, dan scrolt
+         werkplanning.js ernaartoe in plaats van de pagina te herladen. {% endcomment %}
+      {% if weergave == "doorlopend" or not is_huidige_periode %}
+        <a class="knop-stil" href="?weergave={{ weergave }}" data-naar-vandaag>Vandaag</a>
       {% endif %}
-      <span class="periodetitel">{{ eerste|date:"j M" }} – {{ laatste|date:"j M Y" }}</span>
+      <span class="periodetitel">{% if weergave == "doorlopend" %}{{ eerste|date:"Y" }}{% else %}{{ eerste|date:"j M" }} – {{ laatste|date:"j M Y" }}{% endif %}</span>
     </div>
     <div class="wp-weken" role="group" aria-label="Weergave">
       <a class="pil{% if weergave == 'week' %} actief{% endif %}" href="?dag={{ maandag|date:'Y-m-d' }}&weergave=week">Deze week</a>
@@ -32,10 +35,12 @@
          style="grid-template-columns:{{ bordkolommen }}; min-width:{{ bordbreedte }}px">
       <div class="bord-hoek"></div>
       {% for kopdag in kopdagen %}
-        <button type="button" class="bord-kop wp-kop{% if kopdag.is_vandaag %} vandaag{% endif %}{% if kopdag.is_weekstart %} weekstart{% endif %}{% if kopdag.feestdag %} feestdag{% endif %}"
-                data-k="{{ kopdag.index }}" title="Iedereen op {{ kopdag.datum|date:'l j F' }} kiezen">
+        <button type="button" class="bord-kop wp-kop{% if kopdag.is_vandaag %} vandaag{% endif %}{% if kopdag.is_weekstart %} weekstart{% endif %}{% if kopdag.feestdag_vrij %} feestdag{% endif %}"
+                data-k="{{ kopdag.index }}" data-datum="{{ kopdag.datum|date:'D j M' }}" title="Iedereen op {{ kopdag.datum|date:'l j F' }} kiezen">
+          {% if kopdag.is_vandaag %}<span class="vandaag-label">Vandaag</span>{% endif %}
           <span class="dag">{{ kopdag.datum|date:"D" }}</span>
           <span class="datum">{{ kopdag.datum|date:"j M" }}</span>
+          {% if kopdag.feestdag %}<span class="feest" title="{{ kopdag.feestdag }}{% if not kopdag.feestdag_vrij %} (geen vrije dag){% endif %}">{{ kopdag.feestdag }}</span>{% endif %}
         </button>
       {% endfor %}
 
@@ -49,11 +54,11 @@
 
       <div class="bord-naam wp-rijkop"><span class="wie">Notitie</span></div>
       {% for kopdag in kopdagen %}
-        <button type="button" class="bord-cel wp-notitie{% if kopdag.is_vandaag %} vandaag{% endif %}{% if kopdag.is_weekstart %} weekstart{% endif %}{% if kopdag.feestdag and not kopdag.notitie %} is-feestdag{% endif %}"
+        <button type="button" class="bord-cel wp-notitie{% if kopdag.is_vandaag %} vandaag{% endif %}{% if kopdag.is_weekstart %} weekstart{% endif %}"
                 data-datum="{{ kopdag.datum|date:'Y-m-d' }}" data-titel="{{ kopdag.datum|date:'l j F'|capfirst }}"
                 data-tekst="{{ kopdag.notitie }}"
-                title="{% if kopdag.notitie %}{{ kopdag.notitie }}{% elif kopdag.feestdag %}{{ kopdag.feestdag }}{% else %}Notitie bij {{ kopdag.datum|date:'j F' }}{% endif %}">
-          {% if kopdag.notitie %}<span class="tekst">{{ kopdag.notitie }}</span>{% elif kopdag.feestdag %}<span class="tekst">{{ kopdag.feestdag }}</span>{% endif %}
+                title="{% if kopdag.notitie %}{{ kopdag.notitie }}{% else %}Notitie bij {{ kopdag.datum|date:'j F' }}{% endif %}">
+          {% if kopdag.notitie %}<span class="tekst">{{ kopdag.notitie }}</span>{% endif %}
         </button>
       {% endfor %}
 
@@ -66,26 +71,23 @@
             {% if not rij.medewerker.vaste_werkdagen %}<span class="functie">geen vaste dagen</span>{% elif rij.medewerker.functie %}<span class="functie">{{ rij.medewerker.functie }}</span>{% endif %}
           </span>
         </button>
+        {% comment %} Het jaar telt 365 cellen per persoon, dus zo kaal mogelijk:
+           geen tooltip in de html (werkplanning.js maakt hem bij aanwijzen)
+           en spaceless tussen de tags. De achtergrond gaat alleen over er
+           zijn of niet; een klus is een rondje in zijn kleur met de naam
+           erachter, één regel per klus. {% endcomment %}
+        {% spaceless %}
         {% for cel in rij.cellen %}
           {% if cel.stand == "buiten" %}
-            <div class="bord-cel wp-cel buiten{% if cel.datum.weekday == 0 and not forloop.first %} weekstart{% endif %}"
-                 title="{{ rij.medewerker.naam }} is op {{ cel.datum|date:'j F' }} niet in dienst"></div>
+            <div class="bord-cel wp-cel buiten{% if cel.datum == vandaag %} vandaag{% endif %}{% if cel.datum.weekday == 0 and not forloop.first %} weekstart{% endif %}"></div>
           {% else %}
-            <button type="button"
-                    class="bord-cel wp-cel {{ cel.stand }}{% if cel.datum == vandaag %} vandaag{% endif %}{% if cel.datum.weekday == 0 and not forloop.first %} weekstart{% endif %}"
-                    data-r="{{ r }}" data-k="{{ forloop.counter0 }}"
-                    data-cel="{{ rij.medewerker.pk }}:{{ cel.datum|date:'Y-m-d' }}"
-                    data-stand="{% if cel.standaard %}standaard{% elif cel.stand == 'aanwezig' %}ja{% else %}nee{% endif %}"
-                    data-reden="{{ cel.reden }}" data-opmerking="{{ cel.opmerking }}" data-klussen="{{ cel.klus_ids }}"
-                    title="{{ rij.medewerker.naam }} · {{ cel.datum|date:'D j M' }} · {% if cel.stand == 'aanwezig' %}aanwezig{% elif cel.stand == 'afwezig' %}afwezig{% else %}geen werkdag{% endif %}{% if cel.reden_tekst %} · {{ cel.reden_tekst }}{% endif %}{% if cel.opmerking %} · {{ cel.opmerking }}{% endif %}{% for klus in cel.klussen %}{% if forloop.first %}&#10;{% else %}, {% endif %}{{ klus.naam }}{% endfor %}">
-              {% comment %} De achtergrond van de cel gaat alleen over er zijn of
-                 niet (groen/rood). Een klus is daarom een rondje in zijn eigen
-                 kleur met de naam erachter, één regel per klus. {% endcomment %}
+            <button type="button" class="bord-cel wp-cel {{ cel.stand }}{% if cel.datum == vandaag %} vandaag{% endif %}{% if cel.datum.weekday == 0 and not forloop.first %} weekstart{% endif %}" data-r="{{ r }}" data-k="{{ forloop.counter0 }}" data-cel="{{ rij.medewerker.pk }}:{{ cel.datum|date:'Y-m-d' }}" data-stand="{% if cel.standaard %}standaard{% elif cel.stand == 'aanwezig' %}ja{% else %}nee{% endif %}"{% if cel.reden %} data-reden="{{ cel.reden }}"{% endif %}{% if cel.opmerking %} data-opmerking="{{ cel.opmerking }}"{% endif %}{% if cel.klussen %} data-klussen="{{ cel.klus_ids }}"{% endif %}>
               {% for klus in cel.klussen %}<span class="wp-kluslijn"><i style="background:{{ klus.kleur }}"></i><span class="naam">{{ klus.naam }}</span></span>{% endfor %}
               {% if cel.opmerking %}<span class="tekst{% if cel.klussen %} sub{% endif %}">{{ cel.opmerking }}</span>{% elif cel.reden_tekst %}<span class="tekst">{{ cel.reden_tekst }}</span>{% endif %}
             </button>
           {% endif %}
         {% endfor %}
+        {% endspaceless %}
         {% endwith %}
       {% empty %}
         <p class="leeg" style="grid-column:1 / -1">Er is niemand in dienst.</p>
