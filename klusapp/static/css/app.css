@@ -2244,7 +2244,8 @@ label:has(> input[type=checkbox]), input[type=checkbox] + label{ cursor:pointer;
    vervangt. Leent het raamwerk van het planbord (.bord, .bord-naam,
    .bord-kop) en kleurt de cellen zoals hij gewend is: groen aanwezig, rood
    afwezig. Gemaakt voor een laptop; de kolombreedtes staan in de view
-   (PLANNING_WEKEN in uren/views.py) zodat het bord in de kaart past.
+   (PLANNING_WEERGAVEN in uren/views.py). "Deze week" past in de kaart,
+   "Doorlopend" scrolt opzij met de namen vast links.
 
    Kop, namen en cellen zijn knoppen (klikken kiest, zie
    static/js/werkplanning.js). Daarom eerst de knopopmaak eraf. */
@@ -2260,7 +2261,7 @@ label:has(> input[type=checkbox]), input[type=checkbox] + label{ cursor:pointer;
 .wp-kop{ background:none; border:0; border-radius:8px; display:grid; justify-items:center; }
 @media (hover:hover){ .wp-kop:hover{ background:rgba(255,255,255,0.08); } }
 .wp-kop.feestdag .dag, .wp-kop.feestdag .datum{ color:#F6C7B6; }
-/* een nieuwe week begint met een duidelijker lijn: in vier weken naast
+/* een nieuwe week begint met een duidelijker lijn: in veertien weken naast
    elkaar raak je anders de tel kwijt */
 .wp-bord .weekstart{ border-left-color:rgba(255,255,255,0.32); }
 
@@ -2306,13 +2307,6 @@ label:has(> input[type=checkbox]), input[type=checkbox] + label{ cursor:pointer;
   display:block; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
 }
 .wp-cel .tekst{ color:#fff; padding-right:.35rem; }
-/* bij vier weken is een cel 32px: daar past alleen de kleur in, de tekst
-   staat in de tooltip */
-.wp-w4 .wp-cel .tekst, .wp-w4 .wp-notitie .tekst{ display:none; }
-.wp-w4 .wp-notitie:has(.tekst)::before{
-  content:""; display:block; width:6px; height:6px; margin:auto;
-  border-radius:999px; background:currentColor;
-}
 
 .wp-legenda{ display:flex; flex-wrap:wrap; gap:.5rem 1.1rem; margin-top:1rem; font-size:11.5px; color:rgba(255,255,255,0.7); }
 .wp-legenda span{ display:inline-flex; align-items:center; gap:.4rem; }
@@ -2332,7 +2326,7 @@ label:has(> input[type=checkbox]), input[type=checkbox] + label{ cursor:pointer;
 
 /* Ingepland op een klus: een rondje in de kleur van de klus met de naam
    erachter, één regel per klus. De celkleur zelf blijft voor aanwezig/
-   afwezig. Bij vier weken alleen de rondjes, naast elkaar. */
+   afwezig. */
 .wp-kluslijn{ display:flex; align-items:center; gap:.3rem; min-width:0; }
 .wp-kluslijn i{
   width:8px; height:8px; border-radius:999px; flex-shrink:0;
@@ -2340,8 +2334,6 @@ label:has(> input[type=checkbox]), input[type=checkbox] + label{ cursor:pointer;
 }
 .wp-kluslijn .naam{ font-weight:600; color:#fff; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .wp-cel .tekst.sub{ color:rgba(255,255,255,0.65); font-size:10px; }
-.wp-w4 .wp-cel:has(.wp-kluslijn){ display:flex; flex-wrap:wrap; align-content:flex-start; gap:3px; padding:.3rem .25rem; }
-.wp-w4 .wp-kluslijn .naam{ display:none; }
 .wp-stip.klus{ width:8px; height:8px; border-radius:999px; background:#E8B04B; border:0; }
 
 /* kluskiezer in het venster: doorzoekbaar, aangevinkt bovenaan */

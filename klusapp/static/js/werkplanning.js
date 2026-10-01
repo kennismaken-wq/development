@@ -238,6 +238,16 @@
     if (plekOud) {
       scroller.scrollLeft = plekOud.x;
       window.scrollTo(0, plekOud.y);
+      return;
     }
   } catch (fout) { /* niets te herstellen */ }
+
+  // Doorlopend begint twee weken terug; open op de gekozen week, met die
+  // maandag direct naast de vaste namenkolom.
+  const start = bord.querySelector('.wp-kop[data-k="' + bord.dataset.startkolom + '"]');
+  const namen = bord.querySelector(".bord-hoek");
+  if (start && namen && bord.dataset.startkolom !== "0") {
+    scroller.scrollLeft += start.getBoundingClientRect().left
+      - scroller.getBoundingClientRect().left - namen.offsetWidth;
+  }
 })();

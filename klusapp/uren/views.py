@@ -499,24 +499,24 @@ BORD_SMAL = 52
 BORD_WEEK = 72
 
 
-# Hoeveel weken de werkplanning tegelijk laat zien, en hoe breed een dag dan
-# is. De breedtes zijn zo gekozen dat het hele bord in de vaste kaartbreedte
-# past (.kaart in app.css, 1040px) zonder horizontaal te scrollen: één week
-# met ruimte voor "tandarts 12.30" in de cel, vier weken als het Excel-
-# overzicht waar alleen nog de kleur in past.
-PLANNING_WEKEN = {1: 112, 2: 56, 4: 28}
-PLANNING_STANDAARD_WEKEN = 2
-# Meer cellen dan vier weken lang twintig man passen niet op het bord; een
-# grotere post is geknoei, geen selectie.
-PLANNING_MAX_CELLEN = 1000
+# Twee weergaven. "Deze week": zeven dagen die precies in de vaste
+# kaartbreedte passen (.kaart in app.css, 1040px), met ruimte voor
+# "tandarts 12.30" in de cel. "Doorlopend": veertien weken naast elkaar
+# waar je opzij doorheen scrolt, zoals in de Excel; hij begint twee weken
+# terug en springt bij openen naar de gekozen dag. De breedte is per dag,
+# in px.
+PLANNING_WEERGAVEN = {"week": 112, "doorlopend": 76}
+PLANNING_STANDAARD_WEERGAVE = "doorlopend"
+DOORLOPEND_TERUG = 2
+DOORLOPEND_WEKEN = 14
+# Een hele rij in de doorlopende weergave is 98 cellen; twintig man op
+# één dag twintig. Een veel grotere post is geknoei, geen selectie.
+PLANNING_MAX_CELLEN = 3000
 
 
-def _gekozen_weken(request):
-    try:
-        weken = int(request.GET.get("weken", ""))
-    except ValueError:
-        return PLANNING_STANDAARD_WEKEN
-    return weken if weken in PLANNING_WEKEN else PLANNING_STANDAARD_WEKEN
+def _planning_weergave(request):
+    weergave = request.GET.get("weergave")
+    return weergave if weergave in PLANNING_WEERGAVEN else PLANNING_STANDAARD_WEERGAVE
 
 
 @alleen_eigenaar
@@ -536,19 +536,27 @@ def aanwezigheid(request):
     zondag gepland, maar Thijmen wil hem erbij (01-10-2026). Zonder vaste
     werkdag is hij gewoon leeg.
     """
-    weken = _gekozen_weken(request)
+    weergave = _planning_weergave(request)
 
     if request.method == "POST":
         _planning_opslaan(request)
         # Terug naar dezelfde weken, als GET: verversen mag de post niet
         # nog een keer versturen.
         dag = _datum_uit(request.POST.get("terug")) or periode.vandaag()
-        return redirect(f"{reverse('aanwezigheid')}?dag={dag.isoformat()}&weken={weken}")
+        return redirect(f"{reverse('aanwezigheid')}?dag={dag.isoformat()}&weergave={weergave}")
 
     dag = periode.gekozen_dag(request)
     vandaag = periode.vandaag()
     maandag, _ = periode.week_van(dag)
-    dagen = [maandag + timedelta(days=n) for n in range(7 * weken)]
+    if weergave == "doorlopend":
+        eerste = maandag - timedelta(weeks=DOORLOPEND_TERUG)
+        aantal, stap = 7 * DOORLOPEND_WEKEN, timedelta(weeks=DOORLOPEND_WEKEN - DOORLOPEND_TERUG)
+    else:
+        eerste, aantal, stap = maandag, 7, timedelta(weeks=1)
+    # periode.binnen_bereik bewaakt alleen de gekozen dag; twee weken terug
+    # vanaf 3 januari 2000 mag de rest niet laten omvallen.
+    eerste = max(eerste, periode.EERSTE_DAG)
+    dagen = [eerste + timedelta(days=n) for n in range(aantal)]
     medewerkers = bezetting.medewerkers_tussen(dagen[0], dagen[-1])
     cellen = bezetting.rooster(medewerkers, dagen)
     vrij = bezetting.feestdagen_tussen(dagen[0], dagen[-1])
@@ -574,7 +582,7 @@ def aanwezigheid(request):
         {"medewerker": m, "cellen": [cellen[(m.pk, datum)] for datum in dagen]} for m in medewerkers
     ]
 
-    breedte = PLANNING_WEKEN[weken]
+    breedte = PLANNING_WEERGAVEN[weergave]
     return render(
         request,
         "uren/aanwezigheid.html",
@@ -582,15 +590,16 @@ def aanwezigheid(request):
             "dag": dag,
             "vandaag": vandaag,
             "maandag": maandag,
+            "eerste": dagen[0],
             "laatste": dagen[-1],
-            "weken": weken,
-            "weekkeuzes": list(PLANNING_WEKEN),
-            "vorige": maandag - timedelta(days=7 * weken),
-            "volgende": maandag + timedelta(days=7 * weken),
-            "is_huidige_periode": maandag <= vandaag <= dagen[-1],
+            "weergave": weergave,
+            "vorige": maandag - stap,
+            "volgende": maandag + stap,
+            "is_huidige_periode": maandag <= vandaag < maandag + timedelta(weeks=1),
+            # de kolom waar de doorlopende weergave bij openen heen scrolt
+            "startkolom": max((maandag - dagen[0]).days, 0),
             "kopdagen": kopdagen,
             "rijen": rijen,
-            "smal": weken > 1,
             "bordkolommen": f"{BORD_NAAM}px repeat({len(dagen)}, minmax({breedte}px, 1fr))",
             "bordbreedte": BORD_NAAM + breedte * len(dagen),
             "redenen": Aanwezigheid.Reden.choices,

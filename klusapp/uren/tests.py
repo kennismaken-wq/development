@@ -611,7 +611,7 @@ class WerkplanningTest(TestCase):
 
     def zet(self, cellen, stand, **velden):
         return self.client.post(
-            "/aanwezigheid/?weken=1",
+            "/aanwezigheid/?weergave=week",
             {"actie": "cellen", "terug": "2026-09-07", "cel": cellen, "stand": stand, **velden},
         )
 
@@ -624,7 +624,7 @@ class WerkplanningTest(TestCase):
         self.assertFalse(Aanwezigheid.objects.exists())
 
     def test_rooster_van_maandag_tot_zondag_met_telling(self):
-        antwoord = self.client.get("/aanwezigheid/?dag=2026-09-09&weken=1")
+        antwoord = self.client.get("/aanwezigheid/?dag=2026-09-09&weergave=week")
         kop = antwoord.context["kopdagen"]
         self.assertEqual([k["datum"] for k in kop], [self.maandag + timedelta(days=n) for n in range(7)])
         # maandag: Maarten en Sam volgens rooster; Joep heeft geen vaste
@@ -637,11 +637,18 @@ class WerkplanningTest(TestCase):
         self.assertNotIn(self.vertrokken, namen)
         self.assertIn(self.nieuw, namen)
 
-    def test_twee_en_vier_weken(self):
-        self.assertEqual(len(self.client.get("/aanwezigheid/?dag=2026-09-07").context["kopdagen"]), 14)
-        self.assertEqual(len(self.client.get("/aanwezigheid/?weken=4").context["kopdagen"]), 28)
-        # een onbekend aantal weken valt terug op de standaard
-        self.assertEqual(self.client.get("/aanwezigheid/?weken=99").context["weken"], 2)
+    def test_deze_week_en_doorlopend(self):
+        week = self.client.get("/aanwezigheid/?dag=2026-09-09&weergave=week").context
+        self.assertEqual(len(week["kopdagen"]), 7)
+        # doorlopend is de standaard: veertien weken, twee terug, en hij
+        # opent op de gekozen week
+        door = self.client.get("/aanwezigheid/?dag=2026-09-09").context
+        self.assertEqual(door["weergave"], "doorlopend")
+        self.assertEqual(len(door["kopdagen"]), 98)
+        self.assertEqual(door["kopdagen"][0]["datum"], date(2026, 8, 24))
+        self.assertEqual(door["kopdagen"][door["startkolom"]]["datum"], self.maandag)
+        # een onbekende weergave valt terug op de standaard
+        self.assertEqual(self.client.get("/aanwezigheid/?weergave=maand").context["weergave"], "doorlopend")
 
     def test_geknoeide_datum_geeft_vandaag(self):
         for dag in ("9999-12-31", "0001-01-01", "morgen"):
@@ -650,11 +657,11 @@ class WerkplanningTest(TestCase):
     def test_vakantie_over_meerdere_dagen_in_een_keer(self):
         dagen = [self.maandag + timedelta(days=n) for n in range(3)]
         antwoord = self.zet([self.cel(self.sam, d) for d in dagen], "nee", reden="vakantie", opmerking="Texel")
-        self.assertEqual(antwoord.headers["Location"], "/aanwezigheid/?dag=2026-09-07&weken=1")
+        self.assertEqual(antwoord.headers["Location"], "/aanwezigheid/?dag=2026-09-07&weergave=week")
         rijen = Aanwezigheid.objects.filter(medewerker=self.sam)
         self.assertEqual(rijen.count(), 3)
         self.assertTrue(all(not r.aanwezig and r.reden == "vakantie" and r.opmerking == "Texel" for r in rijen))
-        kop = self.client.get("/aanwezigheid/?dag=2026-09-07&weken=1").context["kopdagen"]
+        kop = self.client.get("/aanwezigheid/?dag=2026-09-07&weergave=week").context["kopdagen"]
         self.assertEqual(kop[0]["aanwezig"], 1)
 
     def test_volgens_rooster_haalt_de_afwijking_weg(self):
@@ -673,7 +680,7 @@ class WerkplanningTest(TestCase):
     def test_oproepkracht_op_een_losse_dag(self):
         zaterdag = self.maandag + timedelta(days=5)
         self.zet([self.cel(self.joep, zaterdag)], "ja")
-        kop = self.client.get("/aanwezigheid/?dag=2026-09-07&weken=1").context["kopdagen"]
+        kop = self.client.get("/aanwezigheid/?dag=2026-09-07&weergave=week").context["kopdagen"]
         self.assertEqual(kop[5]["aanwezig"], 1)
 
     def test_onzin_en_buiten_dienst_worden_overgeslagen(self):
@@ -700,7 +707,7 @@ class WerkplanningTest(TestCase):
         bericht = {"actie": "notitie", "terug": "2026-09-07", "datum": "2026-09-08", "tekst": " Zeevissen "}
         self.client.post("/aanwezigheid/", bericht)
         self.assertEqual(Dagnotitie.objects.get().tekst, "Zeevissen")
-        kop = self.client.get("/aanwezigheid/?dag=2026-09-07").context["kopdagen"]
+        kop = self.client.get("/aanwezigheid/?dag=2026-09-07&weergave=week").context["kopdagen"]
         self.assertEqual(kop[1]["notitie"], "Zeevissen")
         self.client.post("/aanwezigheid/", {**bericht, "tekst": ""})
         self.assertFalse(Dagnotitie.objects.exists())
@@ -737,7 +744,7 @@ class WerkplanningTest(TestCase):
         self.assertEqual(Inzet.objects.filter(datum=self.maandag).count(), 4)
         # volgens rooster een werkdag: geen afwijking, geen stip
         self.assertFalse(Aanwezigheid.objects.exists())
-        rij = self.client.get("/aanwezigheid/?dag=2026-09-07&weken=1").context["rijen"]
+        rij = self.client.get("/aanwezigheid/?dag=2026-09-07&weergave=week").context["rijen"]
         sam = next(r for r in rij if r["medewerker"] == self.sam)
         self.assertEqual([k.naam for k in sam["cellen"][0].klussen], ["Tuin Vermeer", "Van Ee Kristal"])
 
@@ -798,7 +805,7 @@ class WerkplanningTest(TestCase):
         zondag = self.maandag + timedelta(days=6)
         self.zet([self.cel(self.joep, zondag)], "standaard", klussen_wijzigen="1", klus=[str(tuin.pk)])
         self.assertTrue(Aanwezigheid.objects.get(medewerker=self.joep, datum=zondag).aanwezig)
-        kop = self.client.get("/aanwezigheid/?dag=2026-09-07&weken=1").context["kopdagen"]
+        kop = self.client.get("/aanwezigheid/?dag=2026-09-07&weergave=week").context["kopdagen"]
         self.assertEqual(kop[6]["aanwezig"], 1)
 
     def test_afgeronde_klus_die_nog_gepland_staat_blijft_kiesbaar(self):
