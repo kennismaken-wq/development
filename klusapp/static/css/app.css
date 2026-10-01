@@ -2485,9 +2485,9 @@ a.wp-klus{ text-decoration:none; }
      kop (.terug-pijl bestaat alleen op een scherm dat je "in" een klus
      toont), dus dit hoeft niet los aangezet te worden per pagina.
    - Teruggaan: static/js/klus-overgang.js onderschept de klik op dat
-     pijltje, speelt de uitschuifanimatie af en navigeert pas daarna —
-     zelfde "animeer, wacht op transitionend, dan pas de echte actie"-opzet
-     als static/js/bottomsheet.js.
+     pijltje en start de uitschuifanimatie terwijl de volgende pagina al
+     laadt (eerst afwachten en dan pas laden voelde traag); is het doel de
+     vorige pagina in de geschiedenis, dan via browser-terug.
    Was eerder een cross-document View Transition (native browser-API); die
    bleek in de praktijk niet overal te animeren, dit werkt zonder
    afhankigheid van die (nog jonge) API.
