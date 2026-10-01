@@ -1,4 +1,5 @@
 import uuid
+from urllib.parse import urlencode
 from pathlib import Path
 
 from django.conf import settings
@@ -37,6 +38,27 @@ def _terug_naar(request, standaard):
     ):
         return redirect(gevraagd)
     return redirect(standaard)
+
+
+def _terugpijl(request):
+    """Waar het terugpijltje heen moet: het scherm waar je vandaan kwam.
+
+    Wie een klus opent of aanmaakt vanaf bijvoorbeeld het startscherm of de
+    werkplanning, krijgt dat adres mee als ?terug=. Alleen een pad op deze
+    site: zonder die controle stuurt een link van buitenaf je via het pijltje
+    naar een andere site. Leeg als er niets (bruikbaars) is meegegeven.
+    """
+    terug = request.GET.get("terug", "")
+    if terug.startswith("/") and url_has_allowed_host_and_scheme(
+        terug, allowed_hosts={request.get_host()}, require_https=request.is_secure()
+    ):
+        return terug
+    return ""
+
+
+def _met_terug(adres, terugpijl):
+    """`adres` met de weg terug erachter, zodat die een scherm verder meegaat."""
+    return f"{adres}?{urlencode({'terug': terugpijl})}" if terugpijl else adres
 
 
 def _doel_van(request):
@@ -453,15 +475,10 @@ def klus_detail(request, pk):
     alleen_eigen_uren = not request.user.is_eigenaar
     if alleen_eigen_uren:
         gewerkt = [rij for rij in gewerkt if rij["medewerker"] == request.user]
-    # Kom je hier vanuit het weekoverzicht (?terug=/planbord/...), dan brengt
-    # het terugpijltje je daar weer; anders naar de klussenlijst. Alleen een
-    # pad op deze site: zonder die controle stuurt een link van buitenaf je
-    # via het pijltje naar een andere site.
-    terugpijl = request.GET.get("terug", "")
-    if not (terugpijl.startswith("/") and url_has_allowed_host_and_scheme(
-        terugpijl, allowed_hosts={request.get_host()}, require_https=request.is_secure()
-    )):
-        terugpijl = ""
+    # Kom je hier vanuit het startscherm, de werkplanning of het weekoverzicht
+    # (?terug=...), dan brengt het terugpijltje je daar weer; anders naar de
+    # klussenlijst.
+    terugpijl = _terugpijl(request)
     return render(
         request,
         "klussen/klus_detail.html",
@@ -497,7 +514,7 @@ def notitie_toevoegen(request, pk):
         messages.error(request, f"Een notitie mag hooguit {max_lengte} tekens zijn.")
     else:
         Notitie.objects.create(klus=klus, tekst=tekst, geschreven_door=request.user)
-    return redirect(f"{klus.get_absolute_url()}#notities")
+    return redirect(f"{_met_terug(klus.get_absolute_url(), _terugpijl(request))}#notities")
 
 
 @login_required
@@ -508,7 +525,7 @@ def notitie_verwijderen(request, pk):
     if not notitie.mag_verwijderen(request.user):
         raise Http404
     notitie.delete()
-    return redirect(f"{notitie.klus.get_absolute_url()}#notities")
+    return redirect(f"{_met_terug(notitie.klus.get_absolute_url(), _terugpijl(request))}#notities")
 
 
 @alleen_eigenaar
@@ -544,6 +561,7 @@ def klus_uren_export(request, pk):
 
 @alleen_eigenaar
 def klus_nieuw(request):
+    terugpijl = _terugpijl(request)
     formulier = KlusForm(request.POST or None)
     # Eén formulier op de pagina, twee Django-formulieren erachter: bestanden
     # kiezen is optioneel (zie NieuweKlusBijlagenForm), dus die mogen de klus
@@ -593,7 +611,9 @@ def klus_nieuw(request):
                     messages.error(request, f"{bestand.name}: {probleem}")
 
         messages.success(request, f"Klus '{klus.naam}' aangemaakt.")
-        return redirect(klus)
+        # Begonnen vanaf de werkplanning? Dan brengt het pijltje op de nieuwe
+        # klus je daar ook weer terug.
+        return redirect(_met_terug(klus.get_absolute_url(), terugpijl))
     return render(
         request,
         "klussen/klus_form.html",
@@ -601,6 +621,7 @@ def klus_nieuw(request):
             "formulier": formulier,
             "bijlagenformulier": bijlagenformulier,
             "nieuw": True,
+            "terugpijl": terugpijl or reverse("klussen"),
             "opdrachtgevers": opdrachtgevers.bekende_opdrachtgevers(),
         },
     )
@@ -609,11 +630,13 @@ def klus_nieuw(request):
 @alleen_eigenaar
 def klus_bewerken(request, pk):
     klus = get_object_or_404(Klus, pk=pk)
+    # Terug naar de klus, en die weet dan nog waar je vóór de klus was.
+    terug_naar_klus = _met_terug(klus.get_absolute_url(), _terugpijl(request))
     formulier = KlusForm(request.POST or None, instance=klus)
     if request.method == "POST" and formulier.is_valid():
         formulier.save()
         messages.success(request, "Opgeslagen.")
-        return redirect(klus)
+        return redirect(terug_naar_klus)
     return render(
         request,
         "klussen/klus_form.html",
@@ -621,6 +644,7 @@ def klus_bewerken(request, pk):
             "formulier": formulier,
             "klus": klus,
             "nieuw": False,
+            "terugpijl": terug_naar_klus,
             # Zonder deze klus zelf: anders waarschuwt het formulier bij het
             # bewerken dat er op dit adres al een klus staat — namelijk deze.
             "opdrachtgevers": opdrachtgevers.bekende_opdrachtgevers(uitgezonderd=klus),

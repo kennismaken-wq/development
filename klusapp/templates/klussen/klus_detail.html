@@ -34,7 +34,7 @@
      Weghalen mag met dezelfde regel als een bijlage (mag_weg). {% endcomment %}
   <section class="notities" id="notities">
     <span class="lbl">Notities</span>
-    <form method="post" action="{% url 'notitie_toevoegen' klus.pk %}" class="notitie-nieuw">
+    <form method="post" action="{% url 'notitie_toevoegen' klus.pk %}{% if terugpijl %}?terug={{ terugpijl|urlencode }}{% endif %}" class="notitie-nieuw">
       {% csrf_token %}
       <textarea name="tekst" rows="2" maxlength="2000" required data-dicteer
                 placeholder="Schrijf een notitie…" aria-label="Nieuwe notitie"></textarea>
@@ -57,7 +57,7 @@
               <p>{{ notitie.tekst|linebreaksbr }}</p>
             </div>
             {% if notitie|mag_weg:user %}
-              <form method="post" action="{% url 'notitie_verwijderen' notitie.pk %}" class="nt-weg"
+              <form method="post" action="{% url 'notitie_verwijderen' notitie.pk %}{% if terugpijl %}?terug={{ terugpijl|urlencode }}{% endif %}" class="nt-weg"
                     onsubmit="return confirm('Deze notitie verwijderen?');">
                 {% csrf_token %}
                 <button type="submit" title="Verwijderen" aria-label="Notitie verwijderen">{% include "uren/_prullenbak.html" %}</button>

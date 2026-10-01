@@ -1640,6 +1640,23 @@ class KlusTerugpijlTest(TestCase):
             adres = self.klus.get_absolute_url() + "?terug=" + stiekem
             self.assertEqual(self.pijl(adres), reverse("klussen"), stiekem)
 
+    def test_nieuwe_klus_vanuit_de_werkplanning_daar_weer_naartoe(self):
+        self.assertEqual(self.pijl(reverse("klus_nieuw")), reverse("klussen"))
+        adres = reverse("klus_nieuw") + "?terug=/aanwezigheid/%3Fdag%3D2026-10-01"
+        self.assertEqual(self.pijl(adres), "/aanwezigheid/?dag=2026-10-01")
+
+    def test_bewerken_onthoudt_waar_je_voor_de_klus_was(self):
+        terug = "?terug=/"
+        detail = self.klus.get_absolute_url() + terug
+        self.client.force_login(self.maarten)
+        html = self.client.get(detail).content.decode()
+        self.assertIn(reverse("klus_bewerken", args=[self.klus.pk]) + terug, html)
+        self.assertEqual(
+            self.pijl(reverse("klus_bewerken", args=[self.klus.pk]) + terug),
+            self.klus.get_absolute_url() + "?terug=%2F",
+        )
+
+
 
 
 @override_settings(MEDIA_ROOT=TIJDELIJKE_MEDIA)

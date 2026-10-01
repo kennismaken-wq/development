@@ -184,7 +184,12 @@
       }
 
       if (huidigeKlusUrl) {
-        klusKnop.href = huidigeKlusUrl;
+        // Met de weg terug erachter, zodat het pijltje op de klus je weer
+        // hier brengt (startscherm, foto's) in plaats van naar de klussenlijst.
+        var hier = window.location.pathname + window.location.search;
+        klusKnop.href = huidigeKlusUrl === window.location.pathname
+          ? huidigeKlusUrl
+          : huidigeKlusUrl + "?terug=" + encodeURIComponent(hier);
         klusNaamEl.textContent = huidigeKlusNaam;
         klusRegel.hidden = false;
       } else {

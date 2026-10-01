@@ -116,7 +116,7 @@
           <button type="button" class="wp-inklap" data-klussen-inklappen aria-expanded="true" aria-label="Klussen inklappen" title="Klussen inklappen">−</button>
           <span class="wie">Klussen</span>
           <span class="wp-blokkop-aantal">{{ klusrijen|length }}</span>
-          <a class="knop-stil wp-toevoegknop" href="{% url 'klus_nieuw' %}">+ Nieuwe klus</a>
+          <a class="knop-stil wp-toevoegknop" href="{% url 'klus_nieuw' %}?terug={{ request.get_full_path|urlencode }}">+ Nieuwe klus</a>
         </span>
       </div>
       {% for rij in klusrijen %}

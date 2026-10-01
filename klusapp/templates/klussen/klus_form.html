@@ -7,7 +7,7 @@
      openen al had (zie .kaart:has(.terug-pijl) in app.css) — puur door hem
      hier neer te zetten, zonder dat klus-overgang.js iets hoeft te weten van
      "bewerken" specifiek. {% endcomment %}
-  <a class="terug-pijl" href="{% if nieuw %}{% url 'klussen' %}{% else %}{{ klus.get_absolute_url }}{% endif %}" aria-label="Terug">
+  <a class="terug-pijl" href="{{ terugpijl }}" aria-label="Terug">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
   </a>
 {% endblock %}
