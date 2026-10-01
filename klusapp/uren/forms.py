@@ -52,7 +52,8 @@ class UurblokForm(forms.ModelForm):
             "datum": forms.DateInput(attrs={"type": "date"}, format="%Y-%m-%d"),
             "begintijd": KwartierSelect(choices=_tijdkeuzes()),
             "eindtijd": KwartierSelect(choices=_tijdkeuzes()),
-            "toelichting": forms.Textarea(attrs={"rows": 3}),
+            # data-dicteer: microfoonknop erin, zie static/js/dicteren.js.
+            "toelichting": forms.Textarea(attrs={"rows": 3, "data-dicteer": ""}),
         }
         labels = {
             "klus": "Klus",

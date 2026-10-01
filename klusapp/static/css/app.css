@@ -1861,6 +1861,37 @@ dialog.foutpopup::backdrop{ background:rgba(10,10,8,0.75); backdrop-filter:blur(
   color:rgba(255,255,255,0.78);
 }
 
+/* Microfoonknop in een tekstvak (static/js/dicteren.js). Rechtsonder in het
+   vak, met ruimte ervoor vrijgehouden zodat de tekst er niet onder loopt.
+   Rood en pulserend zolang hij luistert: je moet zien dat de microfoon aan
+   staat. */
+.dicteer-veld{ position:relative; display:block; }
+.dicteer-veld textarea{ padding-right:3rem; }
+.dicteer-knop{
+  position:absolute; right:.45rem; bottom:.45rem;
+  width:34px; height:34px; border-radius:50%; padding:0; cursor:pointer;
+  display:flex; align-items:center; justify-content:center;
+  background:rgba(255,255,255,0.10); color:rgba(255,255,255,0.8);
+  border:1px solid rgba(255,255,255,0.22);
+  -webkit-tap-highlight-color:transparent; touch-action:manipulation;
+}
+.dicteer-knop::after{ content:''; position:absolute; inset:-5px; border-radius:50%; }
+.dicteer-knop svg{ width:17px; height:17px; }
+.dicteer-knop:active{ background:rgba(255,255,255,0.24); }
+@media (hover:hover){ .dicteer-knop:hover{ background:rgba(255,255,255,0.18); } }
+.dicteer-knop.luistert{
+  background:var(--rood); border-color:var(--rood); color:#fff;
+  animation:dicteer-puls 1.4s ease-out infinite;
+}
+@keyframes dicteer-puls{
+  0%{ box-shadow:0 0 0 0 rgba(224,123,95,0.55); }
+  100%{ box-shadow:0 0 0 12px rgba(224,123,95,0); }
+}
+@media (prefers-reduced-motion:reduce){ .dicteer-knop.luistert{ animation:none; } }
+/* Een uitgeschakeld vak (uurblok in de leesstand) krijgt geen knop. */
+.dicteer-veld textarea:disabled + .dicteer-knop{ display:none; }
+.notitie-nieuw .dicteer-veld{ flex:1; min-width:0; }
+
 /* Notities in het klusdossier: tekstvak + logboek eronder. De lijst krijgt
    een maximale hoogte en scrolt zelf, anders groeit het dossier bij een
    lange klus eindeloos door voordat je bij de tabbladen bent. */

@@ -36,7 +36,7 @@
     <span class="lbl">Notities</span>
     <form method="post" action="{% url 'notitie_toevoegen' klus.pk %}" class="notitie-nieuw">
       {% csrf_token %}
-      <textarea name="tekst" rows="2" maxlength="2000" required
+      <textarea name="tekst" rows="2" maxlength="2000" required data-dicteer
                 placeholder="Schrijf een notitie…" aria-label="Nieuwe notitie"></textarea>
       <button type="submit" class="knop-stil">Plaatsen</button>
     </form>
