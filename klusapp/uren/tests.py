@@ -21,7 +21,7 @@ from klussen.tests import TIJDELIJKE_MEDIA, upload
 from medewerkers.models import Medewerker
 
 from . import bezetting, export, totalen
-from .models import Aanwezigheid, Dagnotitie, Inzet, Uurblok
+from .models import Aanwezigheid, Dagnotitie, Inzet, Klusdag, Uurblok
 
 
 class UurblokTest(TestCase):
@@ -845,6 +845,69 @@ class WerkplanningTest(TestCase):
         namen = [k.naam for k in self.client.get("/aanwezigheid/?dag=2026-09-07").context["klussen"]]
         self.assertIn("Oude tuin", namen)
         self.assertNotIn("Nog ouder", namen)
+
+    def zet_klusdagen(self, klusdagen, gepland, **velden):
+        return self.client.post(
+            "/aanwezigheid/?weergave=week",
+            {"actie": "klusdagen", "terug": "2026-09-07", "klusdag": klusdagen, "gepland": gepland, **velden},
+        )
+
+    def test_klussenblok_met_locatie_per_dag(self):
+        vanee = Klus.objects.create(naam="Van Ee", soort=Klus.Soort.VAN_EE)
+        dagen = [f"{vanee.pk}:2026-09-07", f"{vanee.pk}:2026-09-08"]
+        antwoord = self.zet_klusdagen(dagen, "ja", notitie="Kristal", notitie_wijzigen="1")
+        self.assertEqual(antwoord.headers["Location"], "/aanwezigheid/?dag=2026-09-07&weergave=week")
+        self.assertEqual(list(Klusdag.objects.values_list("notitie", flat=True)), ["Kristal", "Kristal"])
+        # een andere locatie op één dag
+        self.zet_klusdagen(dagen[1:], "ja", notitie="Pinasplein", notitie_wijzigen="1")
+        # beide dagen opnieuw op gepland zonder de notitie aan te raken
+        self.zet_klusdagen(dagen, "ja", notitie="", notitie_wijzigen="0")
+        self.assertEqual(
+            list(Klusdag.objects.order_by("datum").values_list("notitie", flat=True)), ["Kristal", "Pinasplein"]
+        )
+        context = self.client.get("/aanwezigheid/?dag=2026-09-07&weergave=week").context
+        rij = context["klusrijen"][0]
+        self.assertEqual(rij["klus"], vanee)
+        self.assertEqual([c["notitie"] for c in rij["cellen"][:3]], ["Kristal", "Pinasplein", ""])
+        self.assertEqual([k["klussen"] for k in context["kopdagen"][:3]], [1, 1, 0])
+        # niet gepland haalt de dag weg
+        self.zet_klusdagen(dagen[:1], "nee")
+        self.assertEqual(Klusdag.objects.count(), 1)
+
+    def test_klussenblok_toont_alleen_klussen_met_iets_erin(self):
+        tuin = Klus.objects.create(naam="Tuin Vermeer", soort=Klus.Soort.AANLEG)
+        leeg = Klus.objects.create(naam="Niets gepland", soort=Klus.Soort.AANLEG)
+        onderhoud = Klus.objects.create(naam="Zz onderhoud", soort=Klus.Soort.ONDERHOUD)
+        Klusdag.objects.create(klus=onderhoud, datum=self.maandag)
+        # iemand op een klus zetten laat die klus ook in het blok verschijnen
+        Inzet.objects.create(medewerker=self.sam, datum=self.maandag, klus=tuin)
+        Inzet.objects.create(medewerker=self.maarten, datum=self.maandag, klus=tuin)
+        rijen = self.client.get("/aanwezigheid/?dag=2026-09-07&weergave=week").context["klusrijen"]
+        # onderhoud bovenaan, zoals in de Excel
+        self.assertEqual([r["klus"] for r in rijen], [onderhoud, tuin])
+        self.assertEqual(rijen[1]["cellen"][0]["mensen"], 2)
+        # "Klus toevoegen" zet hem erbij, ook zonder planning
+        rijen = self.client.get(f"/aanwezigheid/?dag=2026-09-07&weergave=week&extra={leeg.pk},x").context["klusrijen"]
+        self.assertIn(leeg, [r["klus"] for r in rijen])
+        # en na opslaan blijft hij staan
+        antwoord = self.client.post(
+            f"/aanwezigheid/?weergave=week&extra={leeg.pk}",
+            {"actie": "notitie", "terug": "2026-09-07", "datum": "2026-09-07", "tekst": "x"},
+        )
+        self.assertTrue(antwoord.headers["Location"].endswith(f"&extra={leeg.pk}"))
+
+    def test_klusdagen_onzin_wordt_overgeslagen(self):
+        tuin = Klus.objects.create(naam="Tuin Vermeer", soort=Klus.Soort.AANLEG)
+        self.zet_klusdagen(["999:2026-09-07", "abc:2026-09-07", f"{tuin.pk}:nooit", f"{tuin.pk}:2026-09-07"], "ja")
+        self.assertEqual(Klusdag.objects.get().klus, tuin)
+        self.zet_klusdagen([f"{tuin.pk}:2026-09-07"], "misschien")
+        self.assertEqual(Klusdag.objects.count(), 1)
+
+    def test_medewerker_kan_geen_klusdagen_zetten(self):
+        tuin = Klus.objects.create(naam="Tuin Vermeer", soort=Klus.Soort.AANLEG)
+        self.client.force_login(self.sam)
+        self.assertEqual(self.zet_klusdagen([f"{tuin.pk}:2026-09-07"], "ja").status_code, 404)
+        self.assertFalse(Klusdag.objects.exists())
 
     def test_vaste_werkdagen_op_het_medewerkersscherm(self):
         html = self.client.get(reverse("medewerker_bewerken", args=[self.sam.pk])).content.decode()

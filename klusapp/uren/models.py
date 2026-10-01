@@ -175,3 +175,24 @@ class Inzet(models.Model):
         if Aanwezigheid.objects.filter(medewerker_id=self.medewerker_id, datum=self.datum, aanwezig=False).exists():
             raise ValidationError("Op een dag dat iemand afwezig is, kan hij niet op een klus staan.")
         super().save(*args, **kwargs)
+
+
+class Klusdag(models.Model):
+    """Een dag waarop een klus gepland staat, los van wie er heen gaat: de
+    klussenregels onder de mensen in de werkplanning, zoals in Maartens
+    Excel. De notitie is wat daar in de cel stond: bij Van Ee de locatie
+    ("Kristal", "Pinasplein"), elders "met kraan" of "0,5 dag"."""
+
+    klus = models.ForeignKey("klussen.Klus", on_delete=models.CASCADE, related_name="klusdagen")
+    datum = models.DateField()
+    notitie = models.CharField(max_length=120, blank=True)
+    gewijzigd_op = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "klusdag"
+        verbose_name_plural = "klusdagen"
+        ordering = ["datum"]
+        constraints = [models.UniqueConstraint(fields=["klus", "datum"], name="een_klusdag_per_dag")]
+
+    def __str__(self):
+        return f"{self.klus} · {self.datum:%d-%m-%Y}"

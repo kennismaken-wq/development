@@ -2374,6 +2374,46 @@ label:has(> input[type=checkbox]), input[type=checkbox] + label{ cursor:pointer;
 .wp-klus i{ width:10px; height:10px; border-radius:999px; flex-shrink:0; }
 .wp-klus .naam{ font-weight:600; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .wp-klus .plaats{ margin-left:auto; font-size:11.5px; color:rgba(255,255,255,0.55); white-space:nowrap; }
+a.wp-klus{ text-decoration:none; }
+
+/* ── Klussenblok onder de mensen ──
+   Een kopregel over de volle breedte; de tekst erin blijft links staan als
+   je opzij scrolt, net als de namen. */
+.wp-blokkop{
+  grid-column:1 / -1; margin-top:.9rem; padding:.45rem 0 .35rem;
+  border-top:1px solid rgba(255,255,255,0.22);
+}
+.wp-blokkop-inhoud{
+  position:sticky; left:0; display:inline-flex; align-items:center; gap:.7rem; padding-left:.55rem;
+}
+.wp-blokkop .wie{ font-family:'Fraunces',serif; font-style:italic; font-weight:600; font-size:1rem; }
+.wp-toevoegknop{ padding:.3rem .8rem; font-size:12px; }
+.wp-klusleeg{ grid-column:1 / -1; margin:.3rem 0 0; padding-left:.55rem; font-size:12.5px; }
+
+.wp-klusnaam{ border-right:0; border-bottom:0; border-left:0; width:100%; align-items:center; }
+@media (hover:hover){ .wp-klusnaam:hover .wie{ color:var(--hi); } }
+.wp-klusbol{
+  width:12px; height:12px; border-radius:999px; flex-shrink:0; margin:0 .3rem 0 .2rem;
+  box-shadow:0 0 0 1px rgba(0,0,0,0.25);
+}
+
+/* Een klusdag: de cel in de kleur van de klus, met de notitie (bij Van Ee
+   de locatie). Dit blok gaat over klussen, niet over mensen, dus hier mag
+   de kluskleur wel het vlak vullen; groen/rood staat alleen hierboven. */
+.wp-kc{
+  min-height:30px; padding:.25rem .35rem; border-right:0; border-bottom:0;
+  display:block; overflow:hidden; position:relative;
+  font-size:10.5px; line-height:1.25; background:rgba(255,255,255,0.02);
+  transition:filter .1s;
+}
+.wp-kc.gepland{ background:color-mix(in srgb, var(--klus) 55%, transparent); }
+@media (hover:hover){ button.wp-kc:hover{ filter:brightness(1.25); background-color:rgba(255,255,255,0.06); } }
+.wp-kc.gepland:hover{ background:color-mix(in srgb, var(--klus) 55%, transparent); }
+.wp-kc.gekozen{ outline:2px solid #fff; outline-offset:-2px; filter:brightness(1.2); }
+.wp-kc .tekst{ display:block; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; color:#fff; font-weight:600; }
+/* hoeveel mensen er die dag op deze klus staan (uit het blok hierboven) */
+.wp-mensen{ display:block; font-size:9.5px; color:rgba(255,255,255,0.7); white-space:nowrap; }
+.wp-stip.kluscel{ background:#5B8FA8; }
 
 /* ══════════ PAGINA-OVERGANG: KLUS OPENEN/SLUITEN ══════════
    Dit is een gewone server-gerenderde navigatie (geen SPA), dus er bestaat

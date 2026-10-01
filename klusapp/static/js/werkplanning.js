@@ -6,6 +6,9 @@
    - shift-klik: een blok van de vorige cel tot deze
    - klik op een naam: al zijn dagen; klik op een dag: iedereen op die dag
    Daarna gaat het venster open en zet één formulier de hele selectie.
+   Dat werkt in twee blokken die los van elkaar staan: de mensen (groen/rood,
+   klussen per persoon) en daaronder de klussen (gepland of niet, met een
+   notitie). Een selectie blijft binnen het blok waar je begon.
    Cellen van iemand die op die dag niet in dienst is, doen niet mee.
 
    Op een aanraakscherm schuift slepen het bord opzij in plaats van te
@@ -18,6 +21,9 @@
   if (!bord || !venster) return;
 
   const cellen = Array.from(bord.querySelectorAll("button.wp-cel"));
+  const kluscellen = Array.from(bord.querySelectorAll("button.wp-kc"));
+  const klusVenster = document.getElementById("wp-klusdagen");
+  const toevoegVenster = document.getElementById("wp-klustoevoegen");
   const formulier = venster.querySelector("form");
   const celvelden = venster.querySelector("[data-cellen]");
   const titel = venster.querySelector(".wp-dialoogtitel");
@@ -33,27 +39,40 @@
   let anker = null;   // de cel waar het slepen of shift-klikken van uitgaat
   let sleept = false;
 
+  function isKlus(cel) {
+    return cel.classList.contains("wp-kc");
+  }
+
+  function groep(cel) {
+    return isKlus(cel) ? kluscellen : cellen;
+  }
+
   function plek(cel) {
-    return { r: Number(cel.dataset.r), k: Number(cel.dataset.k) };
+    return { r: Number(isKlus(cel) ? cel.dataset.q : cel.dataset.r), k: Number(cel.dataset.k) };
   }
 
   function blok(van, tot) {
     const a = plek(van), b = plek(tot);
     const r1 = Math.min(a.r, b.r), r2 = Math.max(a.r, b.r);
     const k1 = Math.min(a.k, b.k), k2 = Math.max(a.k, b.k);
-    return cellen.filter(function (cel) {
+    return groep(van).filter(function (cel) {
       const p = plek(cel);
       return p.r >= r1 && p.r <= r2 && p.k >= k1 && p.k <= k2;
     });
   }
 
   function markeer(gekozen) {
-    cellen.forEach(function (cel) { cel.classList.remove("gekozen"); });
+    cellen.concat(kluscellen).forEach(function (cel) { cel.classList.remove("gekozen"); });
     gekozen.forEach(function (cel) { cel.classList.add("gekozen"); });
   }
 
   function gekozen() {
-    return cellen.filter(function (cel) { return cel.classList.contains("gekozen"); });
+    return cellen.concat(kluscellen).filter(function (cel) { return cel.classList.contains("gekozen"); });
+  }
+
+  function openSelectie(lijst) {
+    if (lijst.length && isKlus(lijst[0])) openKlusVenster(lijst);
+    else openVenster(lijst);
   }
 
   // Eén waarde als alle gekozen cellen hem delen, anders null: dan staat er
@@ -180,10 +199,10 @@
   // Muis: indrukken begint een selectie, eroverheen bewegen rekt hem op,
   // loslaten opent het venster.
   bord.addEventListener("mousedown", function (e) {
-    const cel = e.target.closest("button.wp-cel");
+    const cel = e.target.closest("button.wp-cel, button.wp-kc");
     if (!cel || e.button !== 0) return;
     e.preventDefault();   // geen tekst selecteren tijdens het slepen
-    if (e.shiftKey && anker) {
+    if (e.shiftKey && anker && isKlus(anker) === isKlus(cel)) {
       markeer(blok(anker, cel));
     } else {
       anker = cel;
@@ -194,22 +213,37 @@
 
   bord.addEventListener("mouseover", function (e) {
     if (!sleept) return;
-    const cel = e.target.closest("button.wp-cel");
-    if (cel) markeer(blok(anker, cel));
+    const cel = e.target.closest("button.wp-cel, button.wp-kc");
+    // binnen het blok blijven waar je begon
+    if (cel && isKlus(cel) === isKlus(anker)) markeer(blok(anker, cel));
   });
 
   document.addEventListener("mouseup", function () {
     if (!sleept) return;
     sleept = false;
-    openVenster(gekozen());
+    openSelectie(gekozen());
   });
 
   // Toetsenbord en aanraken: een "click" zonder voorafgaande mousedown.
   bord.addEventListener("click", function (e) {
-    const cel = e.target.closest("button.wp-cel");
+    const cel = e.target.closest("button.wp-cel, button.wp-kc");
     if (cel && e.detail === 0) {
       anker = cel;
-      openVenster([cel]);
+      openSelectie([cel]);
+      return;
+    }
+
+    const klusnaam = e.target.closest(".wp-klusnaam");
+    if (klusnaam) {
+      openKlusVenster(kluscellen.filter(function (c) { return c.dataset.q === klusnaam.dataset.q; }));
+      return;
+    }
+    if (e.target.closest("[data-klus-toevoegen]") && toevoegVenster) {
+      const zoek = toevoegVenster.querySelector(".wp-kluszoek");
+      zoek.value = "";
+      filterLijst(toevoegVenster, "");
+      window.openSheet(toevoegVenster);
+      zoek.focus();
       return;
     }
 
@@ -235,7 +269,7 @@
     }
   });
 
-  [venster, notitieVenster].forEach(function (dialoog) {
+  [venster, notitieVenster, klusVenster, toevoegVenster].forEach(function (dialoog) {
     if (!dialoog) return;
     dialoog.querySelector("[data-sluit]").addEventListener("click", function () {
       window.closeSheet(dialoog);
@@ -246,6 +280,82 @@
     });
     dialoog.addEventListener("close", function () { markeer([]); });
   });
+
+  // ── Klussenblok ────────────────────────────────────────────────────────
+  function klusVan(cel) {
+    return bord.querySelector('.wp-klusnaam[data-q="' + cel.dataset.q + '"]');
+  }
+
+  function isoVan(cel) {
+    const kop = bord.querySelector('.wp-kop[data-k="' + cel.dataset.k + '"]');
+    return kop ? kop.dataset.iso : "";
+  }
+
+  function openKlusVenster(lijst) {
+    if (!klusVenster || !lijst.length || klusVenster.open) return;
+    markeer(lijst);
+    const kf = klusVenster.querySelector("form");
+    const velden = klusVenster.querySelector("[data-klusdagen]");
+    velden.textContent = "";
+    lijst.forEach(function (cel) {
+      const veld = document.createElement("input");
+      veld.type = "hidden";
+      veld.name = "klusdag";
+      veld.value = klusVan(cel).dataset.klus + ":" + isoVan(cel);
+      velden.appendChild(veld);
+    });
+
+    const klussen = new Set(lijst.map(function (c) { return c.dataset.q; })).size;
+    const dagen = new Set(lijst.map(function (c) { return c.dataset.k; })).size;
+    const naam = klusVan(lijst[0]).querySelector(".wie").textContent.trim();
+    klusVenster.querySelector(".wp-dialoogtitel").textContent =
+      (klussen === 1 ? naam : klussen + " klussen") + " · " +
+      (dagen === 1 ? datumVan(lijst[0]) : dagen + " dagen");
+    klusVenster.querySelector("[data-sub]").textContent = "";
+
+    const gepland = gedeeld(lijst, "gepland");
+    kf.querySelectorAll("[name=gepland]").forEach(function (keuze) {
+      keuze.checked = gepland !== null && keuze.value === (gepland ? "ja" : "nee");
+    });
+    // Eén klik op een lege dag is bijna altijd "die wil ik plannen".
+    if (gepland === "") kf.querySelector("[name=gepland][value=ja]").checked = true;
+
+    const notitie = gedeeld(lijst, "notitie");
+    kf.elements.notitie.value = notitie === null ? "" : notitie;
+    kf.elements.notitie_wijzigen.value = notitie === null ? "0" : "1";
+    klusVenster.querySelector("[data-notitie-gemengd]").hidden = notitie !== null;
+    toonKlusNotitie();
+    window.openSheet(klusVenster);
+  }
+
+  function toonKlusNotitie() {
+    const kf = klusVenster.querySelector("form");
+    const keuze = kf.querySelector("[name=gepland]:checked");
+    klusVenster.querySelector("[data-klusnotitie-blok]").hidden = !!keuze && keuze.value === "nee";
+  }
+
+  if (klusVenster) {
+    const kf = klusVenster.querySelector("form");
+    kf.addEventListener("change", toonKlusNotitie);
+    kf.elements.notitie.addEventListener("input", function () {
+      kf.elements.notitie_wijzigen.value = "1";
+      klusVenster.querySelector("[data-notitie-gemengd]").hidden = true;
+    });
+  }
+
+  // Zoeken in "Klus toevoegen": dezelfde regel als in het venster hierboven.
+  function filterLijst(dialoog, tekst) {
+    const woorden = tekst.toLowerCase().split(/\s+/).filter(Boolean);
+    dialoog.querySelectorAll(".wp-klus").forEach(function (regel) {
+      const zoek = regel.dataset.zoek;
+      regel.hidden = !woorden.every(function (w) { return zoek.indexOf(w) !== -1; });
+    });
+  }
+  if (toevoegVenster) {
+    toevoegVenster.querySelector(".wp-kluszoek").addEventListener("input", function (e) {
+      filterLijst(toevoegVenster, e.target.value);
+    });
+  }
 
   function naarKolom(k, vloeiend) {
     const kop = bord.querySelector('.wp-kop[data-k="' + Math.max(k, 0) + '"]');
@@ -293,5 +403,7 @@
 
   // Doorlopend is het hele jaar; open op vandaag (of de gekozen dag), met
   // twee dagen ervoor nog in beeld zodat je ziet waar je vandaan komt.
-  naarKolom(Number(bord.dataset.startkolom) - 2);
+  if (bord.classList.contains("wp-doorlopend")) {
+    naarKolom(Number(bord.dataset.startkolom) - 2);
+  }
 })();

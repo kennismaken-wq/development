@@ -439,7 +439,10 @@ Selecteren als in Excel (klik, slepen, shift-klik, naam, dag) in
 `static/js/werkplanning.js`. Per cel kies je ook de klus(sen) waar iemand die
 dag heen gaat (`uren.models.Inzet`, los van Aanwezigheid): de cel krijgt de
 kleur en naam van de klus. Afwezig zetten haalt de klussen weg; een klus op een
-vrije dag maakt iemand aanwezig.
+vrije dag maakt iemand aanwezig. Onder de mensen staat, zoals in de Excel, een
+klussenblok (`uren.models.Klusdag`): per klus en dag gepland of niet, met een
+notitie (bij Van Ee de locatie), en "2 man" uit het blok erboven. Alleen klussen
+die in de periode iets hebben, plus "Klus toevoegen" (?extra=).
 
 ## 7. Spoor Thijmen — foto's, export en productie (≈ 15 uur)
 

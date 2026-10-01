@@ -20,7 +20,7 @@ from medewerkers.rechten import alleen_eigenaar
 
 from . import bezetting, export, kalender, periode, totalen
 from .forms import UurblokForm, UurblokFotosForm
-from .models import Aanwezigheid, Dagnotitie, Inzet, Uurblok
+from .models import Aanwezigheid, Dagnotitie, Inzet, Klusdag, Uurblok
 
 
 def _tijd_uit(waarde):
@@ -548,7 +548,11 @@ def aanwezigheid(request):
         # Terug naar dezelfde weken, als GET: verversen mag de post niet
         # nog een keer versturen.
         dag = _datum_uit(request.POST.get("terug")) or periode.vandaag()
-        return redirect(f"{reverse('aanwezigheid')}?dag={dag.isoformat()}&weergave={weergave}")
+        extra = ",".join(pk for pk in request.GET.get("extra", "").split(",") if pk.isdigit())
+        return redirect(
+            f"{reverse('aanwezigheid')}?dag={dag.isoformat()}&weergave={weergave}"
+            + (f"&extra={extra}" if extra else "")
+        )
 
     dag = periode.gekozen_dag(request)
     vandaag = periode.vandaag()
@@ -587,6 +591,9 @@ def aanwezigheid(request):
     rijen = [
         {"medewerker": m, "cellen": [cellen[(m.pk, datum)] for datum in dagen]} for m in medewerkers
     ]
+    klusrijen = _klusrijen(request, dagen, cellen.values())
+    for kopdag in kopdagen:
+        kopdag["klussen"] = sum(1 for rij in klusrijen if rij["cellen"][kopdag["index"]]["gepland"])
 
     breedte = PLANNING_WEERGAVEN[weergave]
     return render(
@@ -611,8 +618,60 @@ def aanwezigheid(request):
             "bordbreedte": BORD_NAAM + breedte * len(dagen),
             "redenen": Aanwezigheid.Reden.choices,
             "klussen": _planbare_klussen(cellen.values()),
+            "klusrijen": klusrijen,
+            # klussen die er op verzoek bij staan zonder planning (?extra=),
+            # zodat de links ze vasthouden
+            "extra": ",".join(str(r["klus"].pk) for r in klusrijen if r["extra"]),
         },
     )
+
+
+SOORT_VOLGORDE = {"onderhoud": 0, "van_ee": 1, "aanleg": 2}
+
+
+def _klusrijen(request, dagen, cellen):
+    """De klussenregels onder de mensen, zoals in de Excel.
+
+    Niet elke lopende klus: met honderd klussen maal 365 dagen wordt de
+    pagina onwerkbaar. Wel elke klus die in deze periode gepland staat of
+    waar iemand op staat, plus wat je zelf toevoegt met "Klus toevoegen"
+    (?extra=, komma-gescheiden). Onderhoud en Van Ee bovenaan: die lopen het
+    hele jaar door, net als in de Excel.
+    """
+    van, tot = dagen[0], dagen[-1]
+    gepland = {}
+    for klusdag in Klusdag.objects.filter(datum__range=(van, tot)):
+        gepland[(klusdag.klus_id, klusdag.datum)] = klusdag.notitie
+    mensen = {}
+    for cel in cellen:
+        for klus in cel.klussen:
+            mensen[(klus.pk, cel.datum)] = mensen.get((klus.pk, cel.datum), 0) + 1
+
+    extra = {int(pk) for pk in request.GET.get("extra", "").split(",") if pk.isdigit()}
+    met_data = {pk for pk, _ in gepland} | {pk for pk, _ in mensen}
+    klussen = sorted(
+        Klus.objects.filter(pk__in=met_data | extra),
+        key=lambda k: (SOORT_VOLGORDE.get(k.soort, 9), k.naam.lower()),
+    )
+    rijen = []
+    for klus in klussen:
+        klus.kleur = kalender.kleur_van(klus)
+        rijen.append(
+            {
+                "klus": klus,
+                "extra": klus.pk not in met_data,
+                "cellen": [
+                    {
+                        "datum": datum,
+                        "gepland": (klus.pk, datum) in gepland,
+                        "notitie": gepland.get((klus.pk, datum), ""),
+                        "mensen": mensen.get((klus.pk, datum), 0),
+                    }
+                    for datum in dagen
+                ],
+            }
+        )
+    return rijen
 
 
 def _planbare_klussen(cellen):
@@ -636,6 +695,10 @@ def _planning_opslaan(request):
     slaan we over in plaats van de hele post te laten mislukken: de rest van
     de selectie is wél goed bedoeld.
     """
+    if request.POST.get("actie") == "klusdagen":
+        _klusdagen_opslaan(request)
+        return
+
     if request.POST.get("actie") == "notitie":
         datum = _datum_uit(request.POST.get("datum"))
         if not datum:
@@ -706,6 +769,40 @@ def _planning_opslaan(request):
                 Aanwezigheid.objects.update_or_create(
                     medewerker=medewerker, datum=datum, defaults={"aanwezig": True, "reden": "", "opmerking": ""}
                 )
+
+
+def _klusdagen_opslaan(request):
+    """Een selectie cellen uit de klussenregels: gepland of niet, met een
+    notitie. Een cel komt binnen als "klus-id:JJJJ-MM-DD".
+
+    De notitie alleen overschrijven als het venster dat zegt: kies je vijf
+    dagen Van Ee met elk een andere locatie en zet je ze alleen op gepland,
+    dan blijven die locaties staan."""
+    gepland = request.POST.get("gepland")
+    if gepland not in {"ja", "nee"}:
+        return
+    notitie_wijzigen = request.POST.get("notitie_wijzigen") == "1"
+    notitie = request.POST.get("notitie", "").strip()[:120]
+
+    gevraagd = set()
+    for waarde in request.POST.getlist("klusdag")[:PLANNING_MAX_CELLEN]:
+        pk, _, datum = waarde.partition(":")
+        datum = _datum_uit(datum)
+        if pk.isdigit() and datum:
+            gevraagd.add((int(pk), datum))
+    klussen = Klus.objects.in_bulk({pk for pk, _ in gevraagd})
+
+    for pk, datum in gevraagd:
+        klus = klussen.get(pk)
+        if klus is None:
+            continue
+        if gepland == "nee":
+            Klusdag.objects.filter(klus=klus, datum=datum).delete()
+            continue
+        klusdag, _ = Klusdag.objects.get_or_create(klus=klus, datum=datum)
+        if notitie_wijzigen and klusdag.notitie != notitie:
+            klusdag.notitie = notitie
+            klusdag.save(update_fields=["notitie", "gewijzigd_op"])
 
 
 def _datum_uit(waarde):
