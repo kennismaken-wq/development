@@ -140,7 +140,8 @@
             {% endif %}
             <span class="bord-naam-tekst">
               <span class="wie"><i class="wp-klusbol" style="background:{{ klus.kleur }}"></i>{{ klus.naam }}</span>
-              {% if klus.opdrachtgever or klus.plaats %}<span class="functie">{{ klus.opdrachtgever|default:klus.plaats }}</span>{% endif %}
+              {% if klus.opdrachtgever %}<span class="functie">{{ klus.opdrachtgever }}</span>{% endif %}
+              {% if klus.adres or klus.plaats %}<span class="functie wp-klusadres">{{ klus.adres }}{% if klus.adres and klus.plaats %}, {% endif %}{{ klus.plaats }}</span>{% endif %}
             </span>
           {% endwith %}
         </button>
@@ -156,7 +157,7 @@
     <span><i class="wp-stip afwezig"></i>Afwezig</span>
     <span><i class="wp-stip vrij"></i>Geen werkdag</span>
     <span><i class="wp-stip klus"></i>Ingepland op een klus</span>
-    <span><i class="wp-stip kluscel"></i>Klus gepland</span>
+    <span><i class="wp-stip kluscel"></i>Klus op de planning</span>
     <span class="wp-hint">Klik of sleep over de cellen om ze te zetten · shift-klik voor een blok</span>
   </div>
 
@@ -256,8 +257,8 @@
       <h2 class="wp-dialoogtitel" id="wp-klusdagen-titel"></h2>
       <p class="wp-dialoogsub" data-sub></p>
       <div class="keuzes wp-standen">
-        <label class="keuzepil ja"><input type="radio" name="gepland" value="ja" required><span class="vlak">Gepland</span></label>
-        <label class="keuzepil nee"><input type="radio" name="gepland" value="nee"><span class="vlak">Niet gepland</span></label>
+        <label class="keuzepil ja"><input type="radio" name="gepland" value="ja" required><span class="vlak">Op de planning zetten</span></label>
+        <label class="keuzepil nee"><input type="radio" name="gepland" value="nee"><span class="vlak">Van de planning halen</span></label>
       </div>
       <div data-klusnotitie-blok>
         <label for="wp-klusnotitie">Notitie</label>
