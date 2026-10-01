@@ -2290,6 +2290,26 @@ label:has(> input[type=checkbox]), input[type=checkbox] + label{ cursor:pointer;
 .wp-zoom-maand .wp-notitie:has(.tekst)::before{
   content:""; display:block; width:5px; height:5px; margin:auto; border-radius:999px; background:currentColor;
 }
+/* Notities in de maandzoom. Een dag is daar 26px, te smal voor tekst; maar
+   dezelfde notitie op een paar dagen achter elkaar ("Vakantie" van ma t/m
+   vr) staat nu één keer over dat hele blok. De view zet "reeks" en --reeks
+   (het aantal dagen) op de eerste cel, de rest houdt zijn tekst verborgen; een
+   losse dag met een notitie heet "los" en krijgt een hoekje, zoals een
+   opmerking in Excel. Aanwijzen toont de notitie (werkplanning.js). */
+.wp-zoom-maand .bord-cel.reeks{ position:relative; z-index:1; overflow:visible; }
+.wp-zoom-maand .bord-cel.reeks > .tekst{
+  display:block; position:absolute; left:4px; bottom:3px;
+  width:calc(var(--reeks) * var(--dag) - 8px); padding:0;
+  font-size:10px; font-weight:600; color:#fff; pointer-events:none;
+  text-shadow:0 1px 2px rgba(0,0,0,0.45);
+}
+.wp-zoom-maand .wp-kc.reeks > .tekst{ bottom:auto; top:50%; transform:translateY(-50%); }
+.wp-zoom-maand .bord-cel.los{ position:relative; }
+.wp-zoom-maand .bord-cel.los::after{
+  content:""; position:absolute; top:0; right:0;
+  border-style:solid; border-width:0 7px 7px 0;
+  border-color:transparent rgba(255,255,255,0.85) transparent transparent;
+}
 /* Zoom "Dag": breed genoeg om een hele opmerking of locatie te lezen */
 .wp-zoom-dag .wp-cel .tekst, .wp-zoom-dag .wp-kc .tekst{ white-space:normal; }
 

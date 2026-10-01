@@ -688,6 +688,31 @@ class WerkplanningTest(TestCase):
         kop = self.kopweek("2026-09-07")
         self.assertEqual(kop[0]["aanwezig"], 1)
 
+    def test_reeksen_van_dezelfde_notitie(self):
+        from .views import _reeksen
+
+        self.assertEqual(_reeksen(["", "a", "a", "a", "b", "", "c"]), [0, 3, 0, 0, 1, 0, 1])
+        self.assertEqual(_reeksen([]), [])
+
+    def test_notitie_staat_in_de_maandzoom_over_het_blok(self):
+        # Maand: een dag is 26px. "Vakantie" ma t/m wo staat één keer over
+        # de drie dagen; een losse "ziek" krijgt een hoekje.
+        for n in range(3):
+            Aanwezigheid.objects.create(
+                medewerker=self.sam, datum=self.maandag + timedelta(days=n), aanwezig=False, reden="vakantie"
+            )
+        Aanwezigheid.objects.create(
+            medewerker=self.sam, datum=self.maandag + timedelta(days=4), aanwezig=False, reden="ziek"
+        )
+        klus = Klus.objects.create(naam="Tuin Vermeer")
+        for n in range(2):
+            Klusdag.objects.create(klus=klus, datum=self.maandag + timedelta(days=n), notitie="Delft")
+        html = self.client.get("/aanwezigheid/?dag=2026-09-07").content.decode()
+        k = self.index(self.maandag)
+        self.assertRegex(html, rf'reeks" style="--reeks:3" data-r="\d+" data-k="{k}" data-cel="{self.sam.pk}:')
+        self.assertRegex(html, rf'los" data-r="\d+" data-k="{k + 4}" data-cel="{self.sam.pk}:')
+        self.assertIn(";--reeks:2", html)
+
     def test_volgens_rooster_haalt_de_afwijking_weg(self):
         Aanwezigheid.objects.create(medewerker=self.sam, datum=self.maandag, aanwezig=False, reden="ziek")
         self.zet([self.cel(self.sam, self.maandag)], "standaard")

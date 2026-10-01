@@ -101,9 +101,9 @@
   // De tooltip pas maken als je een cel aanwijst, niet voor alle cellen
   // van het jaar vooraf in de html.
   bord.addEventListener("mouseover", function (e) {
-    const cel = e.target.closest("button.wp-cel");
+    const cel = e.target.closest("button.wp-cel, button.wp-kc");
     if (!cel || cel.title) return;
-    const delen = [naamVan(cel), datumVan(cel)];
+    const delen = [cel.dataset.q ? klusVan(cel).querySelector(".wie").textContent.trim() : naamVan(cel), datumVan(cel)];
     cel.querySelectorAll(".wp-kluslijn .naam, .tekst").forEach(function (t) {
       delen.push(t.textContent.trim());
     });

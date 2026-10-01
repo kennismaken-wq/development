@@ -576,6 +576,11 @@ def aanwezigheid(request):
     rijen = [
         {"medewerker": m, "cellen": [cellen[(m.pk, datum)] for datum in dagen]} for m in medewerkers
     ]
+    for rij in rijen:
+        # een feestdag staat al in de kop; daar geen hoekje voor in elke rij
+        teksten = [cel.opmerking or (cel.reden_tekst if cel.reden else "") for cel in rij["cellen"]]
+        for cel, lengte in zip(rij["cellen"], _reeksen(teksten)):
+            cel.reeks, cel.reeksklasse = lengte, _reeksklasse(lengte)
     klusrijen = _klusrijen(request, dagen, cellen.values(), vandaag)
     for kopdag in kopdagen:
         kopdag["klussen"] = sum(1 for rij in klusrijen if rij["gepland_per_dag"][kopdag["index"]])
@@ -719,11 +724,34 @@ def _klusrijen(request, dagen, cellen, vandaag):
     return rijen
 
 
+def _reeksen(teksten):
+    """Per dag hoe lang de reeks is die daar begint: aaneengesloten dagen met
+    dezelfde notitie. 0 = geen tekst of midden in een reeks. In de maandzoom
+    (26px per dag) staat de tekst zo één keer over het hele blok, in plaats
+    van nergens; een losse dag krijgt een hoekje (app.css, .wp-zoom-maand)."""
+    uit = [0] * len(teksten)
+    begin = None
+    for k, tekst in enumerate(teksten + [""]):
+        if begin is not None and tekst != teksten[begin]:
+            uit[begin] = k - begin
+            begin = None
+        if tekst and begin is None:
+            begin = k
+    return uit
+
+
+def _reeksklasse(lengte):
+    """De klasse bij een lengte uit _reeksen; bij "reeks" hoort ook --reeks."""
+    return " reeks" if lengte > 1 else " los" if lengte == 1 else ""
+
+
 def _kluscellen_html(q, klus, dagen, gepland, mensen, vandaag):
     """Alle cellen van één klusregel als html. Zelfde opmaak als de cellen
     van de mensen (templates/uren/aanwezigheid.html); wat de gebruiker
     intypt (de notitie) gaat door escape()."""
     kleur = escape(klus.kleur)
+    notities = [gepland.get((klus.pk, datum), "") for datum in dagen]
+    reeksen = _reeksen(notities)
     delen = []
     for k, datum in enumerate(dagen):
         sleutel = (klus.pk, datum)
@@ -732,8 +760,10 @@ def _kluscellen_html(q, klus, dagen, gepland, mensen, vandaag):
         inhoud = ""
         if sleutel in gepland:
             klassen += " gepland"
-            attrs += f' data-gepland="1" style="--klus:{kleur}"'
             notitie = gepland[sleutel]
+            klassen += _reeksklasse(reeksen[k])
+            stijl = f"--klus:{kleur}" + (f";--reeks:{reeksen[k]}" if reeksen[k] > 1 else "")
+            attrs += f' data-gepland="1" style="{stijl}"'
             if notitie:
                 attrs += f' data-notitie="{escape(notitie)}"'
                 inhoud += f'<span class="tekst">{escape(notitie)}</span>'
