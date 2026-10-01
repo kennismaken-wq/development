@@ -724,8 +724,12 @@ def _planning_opslaan(request):
             Dagnotitie.objects.filter(datum=datum).delete()
         return
 
-    stand = request.POST.get("stand")
-    if stand not in {"standaard", "ja", "nee"}:
+    # "ja"/"nee" zet aanwezig of afwezig. Leeg laat de aanwezigheid zoals
+    # hij is: een selectie van gemengde dagen waarvan je alleen de klussen
+    # wilt zetten. "standaard" (terug naar de vaste werkdagen) staat niet
+    # meer in het venster, maar een oude link mag er niet op stuklopen.
+    stand = request.POST.get("stand", "")
+    if stand not in {"standaard", "ja", "nee", ""}:
         return
     reden = request.POST.get("reden", "")
     if stand != "nee" or reden not in Aanwezigheid.Reden.values:
@@ -756,7 +760,7 @@ def _planning_opslaan(request):
             continue
         if stand == "standaard":
             Aanwezigheid.objects.filter(medewerker=medewerker, datum=datum).delete()
-        else:
+        elif stand:
             # update_or_create: op (medewerker, datum) ligt een unieke
             # sleutel, en een dubbel verstuurd formulier mag daar niet op
             # stuklopen.
@@ -767,7 +771,8 @@ def _planning_opslaan(request):
             )
 
         inzet = Inzet.objects.filter(medewerker=medewerker, datum=datum)
-        if stand == "nee":
+        registratie = Aanwezigheid.objects.filter(medewerker=medewerker, datum=datum).first()
+        if registratie is not None and not registratie.aanwezig:
             # wie afwezig is, gaat nergens heen
             inzet.delete()
             continue
@@ -778,7 +783,7 @@ def _planning_opslaan(request):
             Inzet.objects.get_or_create(medewerker=medewerker, datum=datum, klus=klus)
         # Op een klus gezet op een dag dat hij volgens rooster vrij is (een
         # zaterdag, een oproepkracht): dan is hij er dus wél.
-        if klussen and stand == "standaard":
+        if klussen and registratie is None:
             if bezetting.cel(medewerker, datum, feestdag=vrij.get(datum, "")).stand != bezetting.AANWEZIG:
                 Aanwezigheid.objects.update_or_create(
                     medewerker=medewerker, datum=datum, defaults={"aanwezig": True, "reden": "", "opmerking": ""}

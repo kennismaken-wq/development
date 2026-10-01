@@ -91,7 +91,7 @@
           {% if cel.stand == "buiten" %}
             <div class="bord-cel wp-cel buiten{% if cel.datum == vandaag %} vandaag{% endif %}{% if cel.datum.weekday == 0 and not forloop.first %} weekstart{% endif %}"></div>
           {% else %}
-            <button type="button" class="bord-cel wp-cel {{ cel.stand }}{% if cel.datum == vandaag %} vandaag{% endif %}{% if cel.datum.weekday == 0 and not forloop.first %} weekstart{% endif %}" data-r="{{ r }}" data-k="{{ forloop.counter0 }}" data-cel="{{ rij.medewerker.pk }}:{{ cel.datum|date:'Y-m-d' }}" data-stand="{% if cel.standaard %}standaard{% elif cel.stand == 'aanwezig' %}ja{% else %}nee{% endif %}"{% if cel.reden %} data-reden="{{ cel.reden }}"{% endif %}{% if cel.opmerking %} data-opmerking="{{ cel.opmerking }}"{% endif %}{% if cel.klussen %} data-klussen="{{ cel.klus_ids }}"{% endif %}>
+            <button type="button" class="bord-cel wp-cel {{ cel.stand }}{% if cel.datum == vandaag %} vandaag{% endif %}{% if cel.datum.weekday == 0 and not forloop.first %} weekstart{% endif %}" data-r="{{ r }}" data-k="{{ forloop.counter0 }}" data-cel="{{ rij.medewerker.pk }}:{{ cel.datum|date:'Y-m-d' }}" data-stand="{% if cel.stand == 'aanwezig' %}ja{% elif cel.stand == 'afwezig' %}nee{% endif %}"{% if cel.reden %} data-reden="{{ cel.reden }}"{% endif %}{% if cel.opmerking %} data-opmerking="{{ cel.opmerking }}"{% endif %}{% if cel.klussen %} data-klussen="{{ cel.klus_ids }}"{% endif %}>
               {% for klus in cel.klussen %}<span class="wp-kluslijn"><i style="background:{{ klus.kleur }}"></i><span class="naam">{{ klus.naam }}</span></span>{% endfor %}
               {% if cel.opmerking %}<span class="tekst{% if cel.klussen %} sub{% endif %}">{{ cel.opmerking }}</span>{% elif cel.reden_tekst %}<span class="tekst">{{ cel.reden_tekst }}</span>{% endif %}
             </button>
@@ -178,9 +178,8 @@
       <p class="wp-dialoogsub" data-sub></p>
 
       <div class="keuzes wp-standen">
-        <label class="keuzepil ja"><input type="radio" name="stand" value="ja" required><span class="vlak">Aanwezig</span></label>
+        <label class="keuzepil ja"><input type="radio" name="stand" value="ja"><span class="vlak">Aanwezig</span></label>
         <label class="keuzepil nee"><input type="radio" name="stand" value="nee"><span class="vlak">Afwezig</span></label>
-        <label class="keuzepil onbekend"><input type="radio" name="stand" value="standaard"><span class="vlak">Vaste werkdagen</span></label>
       </div>
 
       <div data-reden-blok hidden>

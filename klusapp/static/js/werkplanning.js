@@ -121,9 +121,9 @@
     redenBlok.hidden = !stand || stand.value !== "nee";
     // wie afwezig is, gaat nergens heen: de server haalt zijn klussen weg
     klussenBlok.hidden = !!stand && stand.value === "nee";
-    // "Vaste werkdagen" zet de dag terug naar de vaste werkdagen van de
-    // medewerker, opmerking en al.
-    opmerking.closest("[data-opmerking-blok]").hidden = !!stand && stand.value === "standaard";
+    // Geen stand gekozen (gemengde selectie): de aanwezigheid blijft zoals
+    // hij is, en een opmerking hoort bij die aanwezigheid, dus die ook.
+    opmerking.closest("[data-opmerking-blok]").hidden = !stand;
   }
 
   function openVenster(lijst) {

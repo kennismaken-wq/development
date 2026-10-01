@@ -839,6 +839,33 @@ class WerkplanningTest(TestCase):
         importlib.import_module("uren.migrations.0005_afwezig_zonder_klus").opruimen(apps, None)
         self.assertEqual(list(Inzet.objects.values_list("medewerker", flat=True)), [self.joep.pk])
 
+    def test_zonder_stand_alleen_de_klussen(self):
+        # Gemengde selectie, geen aanwezig/afwezig gekozen: de aanwezigheid
+        # blijft, alleen de klussen veranderen. Een afwezige dag krijgt geen
+        # klus; een vrije dag wordt aanwezig.
+        tuin = Klus.objects.create(naam="Tuin Vermeer", soort=Klus.Soort.AANLEG)
+        Aanwezigheid.objects.create(medewerker=self.sam, datum=self.maandag, aanwezig=False, reden="ziek")
+        dinsdag, zaterdag = self.maandag + timedelta(days=1), self.maandag + timedelta(days=5)
+        self.zet(
+            [self.cel(self.sam, self.maandag), self.cel(self.sam, dinsdag), self.cel(self.sam, zaterdag)],
+            "",
+            klussen_wijzigen="1",
+            klus=[str(tuin.pk)],
+            opmerking="genegeerd",
+        )
+        self.assertEqual(
+            sorted(Inzet.objects.values_list("datum", flat=True)), [dinsdag, zaterdag]
+        )
+        self.assertFalse(Aanwezigheid.objects.get(medewerker=self.sam, datum=self.maandag).aanwezig)
+        self.assertFalse(Aanwezigheid.objects.filter(datum=dinsdag).exists())
+        zat = Aanwezigheid.objects.get(datum=zaterdag)
+        self.assertEqual((zat.aanwezig, zat.opmerking), (True, ""))
+
+    def test_venster_heeft_geen_vaste_werkdagen_meer(self):
+        html = self.client.get("/aanwezigheid/").content.decode()
+        self.assertNotIn('value="standaard"', html)
+        self.assertNotIn(">Vaste werkdagen<", html)
+
     def test_klus_op_een_vrije_dag_maakt_hem_aanwezig(self):
         tuin = Klus.objects.create(naam="Tuin Vermeer", soort=Klus.Soort.AANLEG)
         zondag = self.maandag + timedelta(days=6)
