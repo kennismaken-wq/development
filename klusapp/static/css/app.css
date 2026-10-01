@@ -2260,6 +2260,16 @@ label:has(> input[type=checkbox]), input[type=checkbox] + label{ cursor:pointer;
 /* het bord rekt niet op tot de kaart: elke dag is precies --dag breed */
 .wp-bord{ min-width:0; width:max-content; }
 .wp-kop .nr{ display:none; }
+/* Maandnaam boven de 1e van de maand. Alleen in de maandzoom: bij Dag en
+   Week staat de maand al in de datum ("1 okt"). Hij mag over de buurdagen
+   heen lopen, de kop is daar maar 26px breed. */
+.wp-kop .maand{ display:none; }
+.wp-zoom-maand .wp-kop .maand{
+  display:block; font-size:10px; font-weight:700; color:var(--hi);
+  text-transform:capitalize; white-space:nowrap; justify-self:start; margin-left:2px;
+}
+.wp-zoom-maand .wp-kop{ align-content:end; }
+.wp-zoom-maand .wp-kop.maandstart{ box-shadow:inset 2px 0 0 rgba(var(--accent-rgb),0.7); }
 /* De hoek boven de namen dekt de kopregel af als je opzij scrolt; anders
    schuiven de dagen er zichtbaar onderdoor. Zelfde ondergrond als .bord-naam. */
 .wp-bord .bord-hoek{

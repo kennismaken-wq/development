@@ -564,6 +564,7 @@ def aanwezigheid(request):
                 "index": k,
                 "is_vandaag": datum == vandaag,
                 "is_weekstart": datum.weekday() == 0 and k > 0,
+                "is_maandstart": datum.day == 1 and k > 0,
                 "is_zaterdag": datum.weekday() == 5,
                 "feestdag": feest.get(datum, ("", False))[0],
                 "feestdag_vrij": feest.get(datum, ("", False))[1],

@@ -36,11 +36,13 @@
          style="grid-template-columns:{{ bordkolommen }}">
       <div class="bord-hoek"></div>
       {% for kopdag in kopdagen %}
-        <button type="button" class="bord-kop wp-kop{% if kopdag.is_vandaag %} vandaag{% endif %}{% if kopdag.is_weekstart %} weekstart{% endif %}{% if kopdag.feestdag_vrij %} feestdag{% endif %}"
+        <button type="button" class="bord-kop wp-kop{% if kopdag.is_vandaag %} vandaag{% endif %}{% if kopdag.is_weekstart %} weekstart{% endif %}{% if kopdag.is_maandstart %} maandstart{% endif %}{% if kopdag.feestdag_vrij %} feestdag{% endif %}"
                 data-k="{{ kopdag.index }}" data-datum="{{ kopdag.datum|date:'D j M' }}" data-iso="{{ kopdag.datum|date:'Y-m-d' }}" title="Iedereen op {{ kopdag.datum|date:'l j F' }} kiezen">
           {% if kopdag.is_vandaag %}<span class="vandaag-label">Vandaag</span>{% endif %}
           <span class="dag">{{ kopdag.datum|date:"D" }}</span>
           <span class="datum">{{ kopdag.datum|date:"j M" }}</span>
+          {# de maandnaam boven de 1e; in de maandzoom staat verder alleen het dagnummer #}
+          {% if kopdag.datum.day == 1 %}<span class="maand">{{ kopdag.datum|date:"M" }}</span>{% endif %}
           <span class="nr">{{ kopdag.datum|date:"j" }}</span>
           {% if kopdag.feestdag %}<span class="feest" title="{{ kopdag.feestdag }}{% if not kopdag.feestdag_vrij %} (geen vrije dag){% endif %}">{{ kopdag.feestdag }}</span>{% endif %}
         </button>
