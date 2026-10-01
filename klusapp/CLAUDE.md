@@ -31,7 +31,10 @@ Wat nog open staat, is geen contractpunt maar komt wel uit de contractreview
 (SPEC §8) en uit dat gesprek:
 
 - De productiepunten in [docs/DEPLOY.md](docs/DEPLOY.md) — een échte off-site
-  back-up voorop. De klusfoto's bestaan nergens anders.
+  back-up voorop. De klusfoto's bestaan nergens anders. Uren en aanwezigheid
+  gaan sinds 01-10-2026 wekelijks per mail de deur uit, vanaf
+  kennismaken@handigerai.nl naar het adres dat de eigenaar op Mijn profiel zet
+  (`uren/backup.py`).
 - Data-export bij beëindiging en een periode op slot kunnen zetten.
 - Vijf vragen in [docs/VRAGEN-MAARTEN.md](docs/VRAGEN-MAARTEN.md) hebben nog
   geen antwoord (2, 3, 6, 7 en 9). Vraag 4, 8 en 10 zijn op 01-10-2026

@@ -1441,28 +1441,135 @@ class UrenNotatieTest(TestCase):
 
 
 class UrenbackupMailTest(TestCase):
+    """De wekelijkse back-up: uren én aanwezigheid, naar het adres dat een
+    eigenaar op Mijn profiel zet (uren/backup.py)."""
+
     @classmethod
     def setUpTestData(cls):
-        sam = Medewerker.objects.create_user("sam", password="x", first_name="Sam")
+        cls.maarten = Medewerker.objects.create_user(
+            "maarten", password="x", first_name="Maarten", rol=Medewerker.Rol.EIGENAAR,
+            backup_email="administratie@voorbeeld.nl", vaste_werkdagen=[],
+        )
+        cls.sam = Medewerker.objects.create_user("sam", password="x", first_name="Sam")
         klus = Klus.objects.create(naam="Tuin Vermeer", soort=Klus.Soort.AANLEG)
         # Eén blok van ver terug: de back-up bevat álles, niet alleen deze week.
         Uurblok.objects.create(
-            medewerker=sam, klus=klus, datum=date(2025, 1, 6), begintijd=time(8, 0), eindtijd=time(12, 0)
+            medewerker=cls.sam, klus=klus, datum=date(2025, 1, 6), begintijd=time(8, 0), eindtijd=time(12, 0)
+        )
+        Aanwezigheid.objects.create(
+            medewerker=cls.sam, datum=date(2025, 1, 8), aanwezig=False,
+            reden=Aanwezigheid.Reden.ZIEK, opmerking="griep",
         )
 
-    @override_settings(URENBACKUP_ADRES="maarten@voorbeeld.nl")
-    def test_mailt_alle_uren_als_excel(self):
+    def versturen(self):
         call_command("mail_urenbackup", stdout=open(os.devnull, "w"))
-
         self.assertEqual(len(mail.outbox), 1)
-        bericht = mail.outbox[0]
-        self.assertEqual(bericht.to, ["maarten@voorbeeld.nl"])
-        naam, inhoud, _ = bericht.attachments[0]
+        return mail.outbox[0]
+
+    def bijlage(self, bericht, begin):
+        naam, inhoud, _ = next(b for b in bericht.attachments if b[0].startswith(begin))
         self.assertTrue(naam.endswith(".xlsx"))
-        rijen = list(load_workbook(BytesIO(inhoud)).active.values)
+        return load_workbook(BytesIO(inhoud))
+
+    @override_settings(DEFAULT_FROM_EMAIL="kennismaken@handigerai.nl")
+    def test_mailt_vanaf_de_afzender_naar_het_adres_van_de_eigenaar(self):
+        bericht = self.versturen()
+        self.assertEqual(bericht.from_email, "kennismaken@handigerai.nl")
+        self.assertEqual(bericht.to, ["administratie@voorbeeld.nl"])
+        self.assertEqual(len(bericht.attachments), 2)
+
+    def test_uren_bevatten_alles_sinds_het_begin(self):
+        rijen = list(self.bijlage(self.versturen(), "uren").active.values)
         self.assertIn("Tuin Vermeer", rijen[1])
 
-    @override_settings(URENBACKUP_ADRES="")
+    def test_aanwezigheid_als_rooster_per_jaar(self):
+        boek = self.bijlage(self.versturen(), "aanwezigheid")
+        self.assertIn("2025", boek.sheetnames)
+        rijen = list(boek["2025"].values)
+        kop = rijen[0]
+        sam = kop.index("Sam")
+        per_dag = {r[0].date(): r for r in rijen[1:]}
+        # Gezet: ziek, met de opmerking erbij.
+        self.assertEqual(per_dag[date(2025, 1, 8)][sam], "Ziek · griep")
+        # Niet gezet maar een vaste werkdag: aanwezig volgens rooster.
+        self.assertEqual(per_dag[date(2025, 1, 7)][sam], "Aanwezig")
+        # Nieuwjaarsdag: rood met de naam van de feestdag.
+        self.assertEqual(per_dag[date(2025, 1, 1)][sam], "Nieuwjaarsdag")
+        # Zaterdag: geen werkdag, dus leeg.
+        self.assertEqual(per_dag[date(2025, 1, 4)][sam] or "", "")
+
+    def test_meerdere_eigenaren_krijgen_hem_allebei_zonder_dubbelen(self):
+        Medewerker.objects.create_user(
+            "els", password="x", rol=Medewerker.Rol.EIGENAAR, backup_email="els@voorbeeld.nl"
+        )
+        Medewerker.objects.create_user(
+            "jan", password="x", rol=Medewerker.Rol.EIGENAAR, backup_email="Administratie@voorbeeld.nl"
+        )
+        # Een medewerker kan dit veld niet zetten, maar staat het er toch:
+        # die krijgt niets.
+        self.sam.backup_email = "sam@voorbeeld.nl"
+        self.sam.save()
+        self.assertEqual(self.versturen().to, ["administratie@voorbeeld.nl", "els@voorbeeld.nl"])
+
     def test_zonder_adres_faalt_hard(self):
+        Medewerker.objects.update(backup_email="")
         with self.assertRaises(CommandError):
             call_command("mail_urenbackup")
+        self.assertEqual(len(mail.outbox), 0)
+
+
+class BackupInstellingTest(TestCase):
+    """Het blok "Back-up per mail" op Mijn profiel."""
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.maarten = Medewerker.objects.create_user(
+            "maarten", password="x", first_name="Maarten", rol=Medewerker.Rol.EIGENAAR
+        )
+        cls.sam = Medewerker.objects.create_user("sam", password="x", first_name="Sam")
+
+    def test_eigenaar_stelt_het_adres_in(self):
+        self.client.force_login(self.maarten)
+        self.assertContains(self.client.get(reverse("mijn_profiel")), "Back-up per mail")
+        self.client.post(reverse("mijn_profiel"), {"actie": "backup", "backup_email": "adm@voorbeeld.nl"})
+        self.maarten.refresh_from_db()
+        self.assertEqual(self.maarten.backup_email, "adm@voorbeeld.nl")
+        self.assertEqual(len(mail.outbox), 0)
+
+    def test_ongeldig_adres_wordt_niet_opgeslagen(self):
+        self.client.force_login(self.maarten)
+        antwoord = self.client.post(reverse("mijn_profiel"), {"actie": "backup", "backup_email": "geen-adres"})
+        self.assertEqual(antwoord.status_code, 200)
+        self.assertTrue(antwoord.context["open_backup"])
+        self.maarten.refresh_from_db()
+        self.assertEqual(self.maarten.backup_email, "")
+
+    def test_medewerker_ziet_het_niet_en_kan_het_niet_zetten(self):
+        self.client.force_login(self.sam)
+        self.assertNotContains(self.client.get(reverse("mijn_profiel")), "Back-up per mail")
+        antwoord = self.client.post(
+            reverse("mijn_profiel"), {"actie": "backup", "backup_email": "sam@voorbeeld.nl"}
+        )
+        self.assertEqual(antwoord.status_code, 404)
+        self.sam.refresh_from_db()
+        self.assertEqual(self.sam.backup_email, "")
+
+    @override_settings(DEBUG=True)
+    def test_testmail_gaat_alleen_naar_het_eigen_adres(self):
+        Medewerker.objects.create_user(
+            "els", password="x", rol=Medewerker.Rol.EIGENAAR, backup_email="els@voorbeeld.nl"
+        )
+        self.client.force_login(self.maarten)
+        self.client.post(reverse("mijn_profiel"), {"actie": "backuptest", "backup_email": "adm@voorbeeld.nl"})
+        self.assertEqual(len(mail.outbox), 1)
+        self.assertEqual(mail.outbox[0].to, ["adm@voorbeeld.nl"])
+        self.assertTrue(mail.outbox[0].subject.startswith("Test: "))
+
+    @override_settings(DEBUG=False, EMAIL_HOST="")
+    def test_testmail_zegt_eerlijk_dat_mail_niet_is_ingesteld(self):
+        self.client.force_login(self.maarten)
+        antwoord = self.client.post(
+            reverse("mijn_profiel"), {"actie": "backuptest", "backup_email": "adm@voorbeeld.nl"}, follow=True
+        )
+        self.assertContains(antwoord, "nog niet ingesteld")
+        self.assertEqual(len(mail.outbox), 0)

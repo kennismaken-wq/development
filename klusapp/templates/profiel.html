@@ -20,6 +20,25 @@
     </form>
   </details>
 
+  {% if backupformulier %}
+  <details class="vouw" {% if open_backup %}open{% endif %}>
+    <summary>Back-up per mail</summary>
+    <form method="post">
+      {% csrf_token %}
+      <p class="eisen-blok">Elke maandag om 06:00 krijg je alle uren en de aanwezigheid als Excel, verstuurd vanaf kennismaken@handigerai.nl. Bewaar die mails: de nieuwste bevat steeds alles.</p>
+      {% with veld=backupformulier.backup_email %}
+        <label for="{{ veld.id_for_label }}">{{ veld.label }}</label>
+        {{ veld }}
+        {% for fout in veld.errors %}<p class="fout">{{ fout }}</p>{% endfor %}
+      {% endwith %}
+      <p style="margin-top:1.6rem;display:flex;gap:.8rem;flex-wrap:wrap">
+        <button type="submit" name="actie" value="backup" class="knop">Opslaan</button>
+        <button type="submit" name="actie" value="backuptest" class="knop-stil">Stuur nu een testmail</button>
+      </p>
+    </form>
+  </details>
+  {% endif %}
+
   <form method="post" action="{% url 'uitloggen' %}" style="margin-top:1.6rem">
     {% csrf_token %}
     <button type="submit" class="knop-stil">Uitloggen</button>

@@ -149,10 +149,11 @@ FILE_UPLOAD_MAX_MEMORY_SIZE = 5 * 1024 * 1024
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
-# Wekelijkse urenback-up per mail (uren/management/commands/mail_urenbackup.py).
-# Verstuurd vanuit Maartens eigen mailbox naar zichzelf, zodat de uren buiten
-# de server bewaard blijven zonder extra dienst. Zonder EMAIL_HOST gaat er niets
-# de deur uit: lokaal schrijft Django mail dan naar de console.
+# Mail: de wekelijkse back-up van uren en aanwezigheid (uren/backup.py) en
+# "wachtwoord vergeten". Afzender is het SMTP-account zelf, op de server
+# kennismaken@handigerai.nl; waar de back-up heen gaat, zet de eigenaar op
+# Mijn profiel. Zonder EMAIL_HOST gaat er niets de deur uit: lokaal schrijft
+# Django mail dan naar de console.
 EMAIL_HOST = os.environ.get("EMAIL_HOST", "")
 EMAIL_PORT = int(os.environ.get("EMAIL_PORT", "587"))
 EMAIL_HOST_USER = os.environ.get("EMAIL_HOST_USER", "")
@@ -166,7 +167,6 @@ EMAIL_BACKEND = (
     else "django.core.mail.backends.console.EmailBackend"
 )
 DEFAULT_FROM_EMAIL = EMAIL_HOST_USER or "klusapp@localhost"
-URENBACKUP_ADRES = os.environ.get("URENBACKUP_ADRES", EMAIL_HOST_USER)
 
 # De link in een "wachtwoord vergeten"-mail werkt een dag, niet de standaard
 # drie: lang genoeg om hem 's avonds pas te openen, kort genoeg dat een oude

@@ -260,6 +260,21 @@ class EigenGegevensForm(RijbewijzenMixin, ProfielfotoMixin, forms.ModelForm):
         beginkleur(self)
 
 
+class BackupMailForm(forms.ModelForm):
+    """Waar de wekelijkse back-up heen gaat. Alleen voor een eigenaar; de
+    view laat een medewerker hier niet bij (uren/backup.py)."""
+
+    class Meta:
+        model = Medewerker
+        fields = ["backup_email"]
+        labels = {"backup_email": "Back-up sturen naar"}
+        widgets = {
+            "backup_email": forms.EmailInput(
+                attrs={"inputmode": "email", "autocomplete": "email", "placeholder": "naam@voorbeeld.nl"}
+            ),
+        }
+
+
 class EigenWachtwoordForm(forms.Form):
     """Je eigen wachtwoord wijzigen. Het oude erbij, want wie even bij een
     ingelogd toestel staat mag het niet zomaar kunnen overnemen."""

@@ -1,20 +1,23 @@
 from datetime import date, timedelta
 
+from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth import login, update_session_auth_hash
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.http import require_POST
 from django.db.models import Case, IntegerField, Max, Prefetch, Q, Value, When
 from django.db.models.functions import Lower
+from django.http import Http404
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 
 from klussen import voorbeeld
 from klussen.models import Bijlage, Klus
 from uren.models import Uurblok
-from uren import bezetting, totalen
+from uren import backup, bezetting, totalen
 
 from .forms import (
+    BackupMailForm,
     EigenGegevensForm,
     EigenWachtwoordForm,
     MedewerkerForm,
@@ -191,9 +194,25 @@ def mijn_profiel(request):
     bewerken = request.GET.get("bewerken") == "1"
     gegevens = EigenGegevensForm(instance=request.user)
     wachtwoord = EigenWachtwoordForm(request.user)
+    eigenaar = request.user.is_eigenaar
+    backupformulier = BackupMailForm(instance=request.user) if eigenaar else None
 
     if request.method == "POST":
-        if request.POST.get("actie") == "wachtwoord":
+        actie = request.POST.get("actie")
+        if actie in ("backup", "backuptest"):
+            # Alleen een eigenaar; een medewerker ziet het blok niet, en een
+            # zelfgemaakte POST bestaat voor hem net zo min (zie rechten.py).
+            if not eigenaar:
+                raise Http404
+            backupformulier = BackupMailForm(request.POST, instance=request.user)
+            if backupformulier.is_valid():
+                backupformulier.save()
+                if actie == "backup":
+                    messages.success(request, "Het back-upadres is opgeslagen.")
+                else:
+                    _testmail_sturen(request)
+                return redirect("mijn_profiel")
+        elif actie == "wachtwoord":
             wachtwoord = EigenWachtwoordForm(request.user, request.POST)
             if wachtwoord.is_valid():
                 wachtwoord.opslaan()
@@ -222,8 +241,28 @@ def mijn_profiel(request):
             "bewerken": bewerken,
             "wachtwoordformulier": wachtwoord,
             "open_wachtwoord": wachtwoord.errors,
+            "backupformulier": backupformulier,
+            "open_backup": backupformulier is not None and backupformulier.errors,
         },
     )
+
+
+def _testmail_sturen(request):
+    """De echte back-up, nu meteen en alleen naar het eigen adres: zo zie je
+    of hij aankomt zonder op maandag te wachten."""
+    adres = request.user.backup_email
+    if not adres:
+        messages.error(request, "Vul eerst een adres in om een testmail naartoe te sturen.")
+        return
+    if not settings.EMAIL_HOST and not settings.DEBUG:
+        messages.error(request, "Mail versturen is op deze server nog niet ingesteld.")
+        return
+    try:
+        backup.backup_mail([adres], test=True).send()
+    except Exception:
+        messages.error(request, "Versturen lukte niet. Probeer het later nog eens of laat het HandigerAI weten.")
+        return
+    messages.success(request, f"Testmail verstuurd naar {adres}.")
 
 
 @login_required

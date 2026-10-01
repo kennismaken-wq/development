@@ -66,6 +66,12 @@ class Medewerker(AbstractUser):
     )
     noodcontact_telefoon = models.CharField(max_length=20, blank=True)
 
+    # Waar de wekelijkse back-up van uren en aanwezigheid heen gaat
+    # (uren/backup.py). Alleen een eigenaar ziet en zet dit, op Mijn profiel.
+    # Los van `email`: dat is het adres voor "wachtwoord vergeten", en de
+    # back-up wil Maarten misschien juist in een gedeelde administratiebox.
+    backup_email = models.EmailField("back-up naar", blank=True)
+
     # ── rijbewijs ─────────────────────────────────────────────────────────
     # Bepaalt wie met de bus, de kipper of de aanhanger met de minigraver weg
     # mag. Een lijst categorieën uit RIJBEWIJS_GROEPEN, zoals ["B", "BE", "C"];

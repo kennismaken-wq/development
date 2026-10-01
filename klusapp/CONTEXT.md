@@ -488,6 +488,9 @@ beschermen machine is geen back-up. Klusfoto's en klusdossiers bestaan nergens a
 de boekhouder heeft alleen de uren. Hetzner Storage Box, dagelijkse dump van Postgres +
 media, en de **restore één keer echt testen**; een ongeteste restore is geen back-up.
 Plus de export bij beëindiging: uren als CSV, foto's als zip.
+*Stand 01-10-2026:* uren én aanwezigheid gaan elke maandag als Excel per mail
+off-site (`uren/backup.py`, van kennismaken@handigerai.nl naar het adres op Mijn
+profiel van de eigenaar). Foto's, klusdossiers en de database nog niet.
 
 ---
 

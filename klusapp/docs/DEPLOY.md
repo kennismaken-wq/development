@@ -20,7 +20,7 @@ recept om het mee te herstellen. Dit document is dat recept.
 | Database | **PostgreSQL 18**, database en user `klusapp`, via `DATABASE_URL` |
 | Media | `klusapp/media/` |
 | Back-up | `klusapp-backup.timer` → `/usr/local/bin/klusapp-backup.sh`, elke nacht 03:20 naar `/srv/backups/klusapp` |
-| Uren off-site | `klusapp-urenbackup.timer` → `manage.py mail_urenbackup`, maandag 06:00, Excel naar Maarten |
+| Uren off-site | `klusapp-urenbackup.timer` → `manage.py mail_urenbackup`, maandag 06:00, uren + aanwezigheid als Excel naar het adres op Mijn profiel van de eigenaar |
 
 De naam `develop-tool` is historisch: die service draaide eerst de Flask-huisstijl-
 tool. Hij draait nu de klusapp.
@@ -66,17 +66,18 @@ DJANGO_SECRET_KEY=<geheim>
 DJANGO_ALLOWED_HOSTS=develop.handigerai.nl,127.0.0.1,localhost
 DJANGO_CSRF_TRUSTED_ORIGINS=https://develop.handigerai.nl
 DATABASE_URL=postgres://klusapp:<geheim>@127.0.0.1:5432/klusapp
-EMAIL_HOST=<smtp-server van Maartens mail>
+EMAIL_HOST=<smtp-server van handigerai.nl>
 EMAIL_PORT=587
-EMAIL_HOST_USER=<Maartens mailadres>
+EMAIL_HOST_USER=kennismaken@handigerai.nl
 EMAIL_HOST_PASSWORD=<app-wachtwoord>
 ```
 
 Dezelfde `EMAIL_*`-regels versturen ook de "wachtwoord vergeten"-mails. Zonder
 `EMAIL_HOST` gaat er niets de deur uit, en zeggen de reset-schermen dat eerlijk
 ("mail versturen is op deze server nog niet ingesteld"). Afzender is
-`EMAIL_HOST_USER`; afspraak 30-09: een eigen adres van De Groene M, bv.
-`klusapp@degroenem.nl`, niet Maartens persoonlijke mailbox.
+`EMAIL_HOST_USER`. Sinds 01-10-2026 is dat **kennismaken@handigerai.nl**
+(besluit Thijmen; daarvoor stond hier een eigen adres van De Groene M als
+afspraak van 30-09). Dat geldt dus ook voor de resetmails.
 
 Zonder `DATABASE_URL` valt `settings.py` terug op SQLite. Dat is prima lokaal,
 maar niet op de server: SQLite vergrendelt bij schrijven en zes man die 's avonds
@@ -205,14 +206,22 @@ systemctl restart develop-tool.service
 > bewuste tussenoplossing (besluit Thijmen, 16-09-2026) totdat er een Hetzner
 > Storage Box is; dan hoeft alleen het doelpad in het script te veranderen.
 
-### Uren off-site: wekelijkse mail naar Maarten
+### Uren en aanwezigheid off-site: wekelijkse mail
 
 Besluit 29-09-2026: alleen de **uren** hoeven off-site, en het moet gratis en
-simpel. Elke maandag om 06:00 mailt `manage.py mail_urenbackup` álle uren sinds
-het begin als Excel (dezelfde opmaak als de urenexport) vanuit Maartens eigen
-mailbox naar hemzelf. De nieuwste mail is dus altijd compleet; de oudere zijn
-eerdere versies. De SMTP-gegevens staan in `.env` (zie hierboven), met een
-**app-wachtwoord**, nooit zijn gewone wachtwoord.
+simpel; sinds 01-10-2026 gaat de **aanwezigheid** mee. Elke maandag om 06:00
+mailt `manage.py mail_urenbackup` twee Excels, allebei met álles sinds het
+begin: de uren (dezelfde opmaak als de urenexport) en de aanwezigheid (één
+tabblad per jaar, dagen onder elkaar, een kolom per medewerker, net als de
+werkplanning). De nieuwste mail is dus altijd compleet; de oudere zijn eerdere
+versies. Code: `uren/backup.py`.
+
+- **Van:** `kennismaken@handigerai.nl` — de SMTP-gegevens in `.env` (zie
+  hierboven), met een **app-wachtwoord**, nooit het gewone wachtwoord.
+- **Naar:** het adres dat een eigenaar invult op *Mijn profiel → Back-up per
+  mail* (veld `Medewerker.backup_email`). Meerdere eigenaren met een adres
+  krijgen hem allemaal. Daar staat ook een knop "Stuur nu een testmail".
+  Staat er nergens een adres, dan faalt de service.
 
 Foto's en klusdossiers gaan hier bewust niet mee. Die staan alleen op de VPS
 en in de lokale dump hierboven. De verwerkersovereenkomst moet daarop
@@ -221,7 +230,7 @@ aangepast worden: die belooft nog off-site back-ups van alles.
 ```ini
 # /etc/systemd/system/klusapp-urenbackup.service
 [Unit]
-Description=Wekelijkse urenback-up per mail naar Maarten
+Description=Wekelijkse back-up van uren en aanwezigheid per mail
 [Service]
 Type=oneshot
 User=develop
