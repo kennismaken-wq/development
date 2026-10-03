@@ -8,8 +8,18 @@ lokaal op de een en op de server op de ander. Om zes medewerkers met een paar
 honderd blokken per klus is het verschil niet te meten.
 """
 
+from django.db.models import Sum
+from django.db.models.functions import ExtractHour, ExtractMinute
+
 from .kalender import als_uren, maandraster
 from .models import Uurblok
+
+# Minuten van een uurblok als SQL, voor de paar plekken waar het om álle
+# blokken van iemand gaat. Uur en minuut los uit de tijd halen werkt op SQLite
+# en Postgres hetzelfde, anders dan tijden van elkaar aftrekken (zie boven).
+DUUR_IN_MINUTEN = (ExtractHour("eindtijd") * 60 + ExtractMinute("eindtijd")) - (
+    ExtractHour("begintijd") * 60 + ExtractMinute("begintijd")
+)
 
 
 def per_medewerker_op_klus(klus):
@@ -59,12 +69,17 @@ def totaal_van(rijen):
 def totaal_en_week(medewerker, week_begin, week_eind):
     """Voor het startscherm: al-time totaal en het totaal van deze week, in één
     keer door de blokken van een medewerker heen."""
-    blokken = Uurblok.objects.filter(medewerker=medewerker).only("datum", "begintijd", "eindtijd")
-    totaal_minuten = week_minuten = 0
-    for blok in blokken:
-        totaal_minuten += blok.duur_minuten
-        if week_begin <= blok.datum <= week_eind:
-            week_minuten += blok.duur_minuten
+    # Het totaal over alle jaren door de database: eerst haalde dit elk
+    # uurblok ooit op, bij elke keer startscherm (stresstest 03-10-2026, B20).
+    totaal_minuten = (
+        Uurblok.objects.filter(medewerker=medewerker).aggregate(minuten=Sum(DUUR_IN_MINUTEN))["minuten"] or 0
+    )
+    week_minuten = sum(
+        blok.duur_minuten
+        for blok in Uurblok.objects.filter(medewerker=medewerker, datum__range=(week_begin, week_eind)).only(
+            "datum", "begintijd", "eindtijd"
+        )
+    )
     return {"totaal": als_uren(totaal_minuten), "week": als_uren(week_minuten)}
 
 

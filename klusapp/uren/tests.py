@@ -1794,3 +1794,19 @@ class ExportRobuustTest(TestCase):
         # sessie, gebruiker, klus, uurblokken, ... — vast, niet per uurblok
         with self.assertNumQueries(7):
             self.client.get(reverse("klus_uren_export", args=[self.klus.pk]))
+
+
+class StartTotaalTest(TestCase):
+    """B20: het totaal over alle jaren uit de database, met dezelfde uitkomst."""
+
+    def test_totaal_klopt_en_blijft_bij_een_vast_aantal_queries(self):
+        sam = Medewerker.objects.create_user("sam", password="x")
+        klus = Klus.objects.create(naam="Tuin")
+        for dag in range(1, 29):
+            Uurblok.objects.create(medewerker=sam, klus=klus, datum=date(2025, 2, dag),
+                                   begintijd=time(7, 30), eindtijd=time(16, 15))
+        Uurblok.objects.create(medewerker=sam, klus=klus, datum=date(2026, 9, 8), begintijd=time(8), eindtijd=time(9, 30))
+        with self.assertNumQueries(2):
+            uitkomst = totalen.totaal_en_week(sam, date(2026, 9, 7), date(2026, 9, 13))
+        self.assertEqual(uitkomst["week"], "1,5")
+        self.assertEqual(uitkomst["totaal"], kalender.als_uren(28 * (8 * 60 + 45) + 90))

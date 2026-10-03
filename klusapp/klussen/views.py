@@ -374,8 +374,36 @@ def fotos(request):
             bijlagen = bijlagen.filter(klus__actief=False)
         if soort != "altijd":
             bijlagen = bijlagen.filter(klus__soort=soort)
-    context["foto_posts"] = groepeer_in_posts(b for b in bijlagen if b.is_foto)
+    context["foto_posts"], context["meer_url"] = _fotos_tot(request, bijlagen.filter(soort=Bijlage.Soort.FOTO))
     return render(request, "klussen/fotos.html", context)
+
+
+# Hoeveel foto's Foto's per keer laat zien. Eerst stonden ze er allemaal: na
+# een paar jaar ~3.000 foto's en 5 MB HTML in één keer op een telefoon
+# (stresstest 03-10-2026, B18).
+FOTOS_PER_KEER = 120
+
+
+def _fotos_tot(request, fotos):
+    """(posts, url voor "Meer laden" of None). ?tot= zegt hoeveel er al
+    getoond werden; "Meer laden" laadt dezelfde pagina met er een stapel
+    bij, en springt naar de eerste nieuwe post (#post-<pk>). Een post (een
+    upload van meerdere foto's) wordt nooit doorgeknipt."""
+    tot = request.GET.get("tot", "")
+    tot = min(int(tot), 100_000) if tot.isdigit() and len(tot) < 7 and int(tot) > 0 else FOTOS_PER_KEER
+    rijen = list(fotos[: tot + 1])
+    volgende = rijen[tot] if len(rijen) > tot else None
+    rijen = rijen[:tot]
+    if volgende and rijen and rijen[-1].batch and volgende.batch == rijen[-1].batch:
+        rest = list(fotos.filter(batch=rijen[-1].batch).exclude(pk__in=[rij.pk for rij in rijen]))
+        rijen += rest
+        tot += len(rest)
+        volgende = next(iter(fotos[tot : tot + 1]), None)
+    if not volgende:
+        return groepeer_in_posts(rijen), None
+    parameters = request.GET.copy()
+    parameters["tot"] = tot + FOTOS_PER_KEER
+    return groepeer_in_posts(rijen), f"?{parameters.urlencode()}#post-{volgende.pk}"
 
 
 def _lege_melding(soort, scope):

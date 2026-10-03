@@ -1857,3 +1857,48 @@ class StresstestKlussenTest(TestCase):
         for _ in range(2):
             self.client.post(reverse("klus_nieuw"), gegevens)
         self.assertEqual(Klus.objects.filter(naam="Dubbelklik").count(), 1)
+
+
+@override_settings(MEDIA_ROOT=TIJDELIJKE_MEDIA)
+class FotosMeerLadenTest(TestCase):
+    """B18: Foto's laadt niet meer alle foto's van alle jaren in één keer."""
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.sam = Medewerker.objects.create_user("sam", password="x")
+        klus = Klus.objects.create(naam="Tuin")
+        losse = [Bijlage(soort=Bijlage.Soort.FOTO, bestand=f"bijlagen/x{i}.jpg", klus=klus, toegevoegd_door=cls.sam,
+                         datum=date(2026, 1, 1) + timedelta(days=i)) for i in range(views.FOTOS_PER_KEER + 10)]
+        Bijlage.objects.bulk_create(losse)
+        # een post van 5 foto's precies op de grens
+        batch = uuid.uuid4()
+        Bijlage.objects.bulk_create([Bijlage(soort=Bijlage.Soort.FOTO, bestand=f"bijlagen/p{i}.jpg", klus=klus,
+                                             toegevoegd_door=cls.sam, batch=batch, datum=date(2026, 1, 11))
+                                     for i in range(5)])
+
+    def setUp(self):
+        self.client.force_login(self.sam)
+
+    def aantal_fotos(self, antwoord):
+        return sum(len(post) for post in antwoord.context["foto_posts"])
+
+    def test_eerste_stapel_en_meer_laden(self):
+        antwoord = self.client.get(reverse("fotos"))
+        getoond = self.aantal_fotos(antwoord)
+        self.assertGreaterEqual(getoond, views.FOTOS_PER_KEER)
+        self.assertLess(getoond, Bijlage.objects.count())
+        self.assertContains(antwoord, "Meer laden")
+        # de post op de grens is heel, of helemaal niet getoond
+        groottes = [len(post) for post in antwoord.context["foto_posts"] if post[0].batch]
+        self.assertIn(groottes, ([], [5]))
+        antwoord = self.client.get(reverse("fotos") + antwoord.context["meer_url"].split("#")[0])
+        self.assertEqual(self.aantal_fotos(antwoord), Bijlage.objects.count())
+        self.assertIsNone(antwoord.context["meer_url"])
+
+    def test_zoeken_en_filter_blijven_in_de_link(self):
+        antwoord = self.client.get(reverse("fotos") + "?q=&scope=actief")
+        self.assertIn("scope=actief", antwoord.context["meer_url"])
+
+    def test_rare_tot_waarde_geeft_gewoon_de_eerste_stapel(self):
+        for waarde in ("abc", "-5", "0", "99999999999"):
+            self.assertEqual(self.client.get(reverse("fotos") + f"?tot={waarde}").status_code, 200)

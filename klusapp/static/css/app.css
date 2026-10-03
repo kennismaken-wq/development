@@ -1019,6 +1019,8 @@ input[type=time]::-webkit-calendar-picker-indicator{ filter:invert(1); opacity:.
 /* ruimte tussen de "+"-tegel en de leegmelding erna, anders schuren ze tegen
    elkaar aan zodra het raster nog maar één (leeg) tegeltje breed is */
 .fotoraster + .leeg{ margin-top:.9rem; }
+/* "Meer laden" onder Foto's (klussen.views._fotos_tot) */
+.meer-laden{ text-align:center; margin:1.4rem 0 .4rem; }
 
 /* Ruime padding-top: het kruisje staat hier linksboven (zie
    .uploadveld > .dialog-sluiten hieronder) en botst dus met het begin van het
