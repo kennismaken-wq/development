@@ -148,6 +148,15 @@ class Medewerker(AbstractUser):
         self.is_staff = eigenaar_beheert or self.is_superuser
         super().save(*args, **kwargs)
 
+    def vergrendel(self):
+        """Binnen een transactie: andere aanvragen die dit ook aanroepen voor
+        dezelfde medewerker, wachten tot deze klaar is. Voor "kijk of het er
+        al staat, en zo niet: opslaan" — zonder dit zagen vijf keer tegelijk
+        verstuurde uren (dubbel tikken bij slecht bereik) elk nog niets, en
+        stonden er vijf dezelfde blokken (stresstest 03-10-2026, B16). Werkt
+        op Postgres; SQLite laat sowieso maar één schrijver tegelijk toe."""
+        Medewerker.alle.select_for_update().filter(pk=self.pk).first()
+
     @property
     def rijbewijzen_tekst(self):
         """Voor de persoonskaart: "B, BE, C", of "Geen"."""

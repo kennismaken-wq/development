@@ -626,6 +626,86 @@ class MediaTest(TestCase):
 
 
 @override_settings(MEDIA_ROOT=TIJDELIJKE_MEDIA)
+class GevaarlijkeBestandenTest(TestCase):
+    """Stresstest 03-10-2026, B12: een .html of .svg met een script mocht als
+    document mee, en werd daarna als pagina van de app uitgeleverd."""
+
+    SCRIPT = b"<html><script>fetch('/medewerkers/')</script></html>"
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.sam = Medewerker.objects.create_user("sam", password="x")
+        cls.klus = Klus.objects.create(naam="Tuin Vermeer")
+
+    @classmethod
+    def tearDownClass(cls):
+        shutil.rmtree(TIJDELIJKE_MEDIA, ignore_errors=True)
+        super().tearDownClass()
+
+    def setUp(self):
+        self.client.force_login(self.sam)
+
+    def test_html_svg_en_programmas_worden_geweigerd(self):
+        for naam in ("plan.html", "tekening.svg", "x.xhtml", "foto.jpg.exe", "film.mov", "zonder-extensie"):
+            antwoord = self.client.post(
+                reverse("bijlage_toevoegen"),
+                {"bestanden": upload(naam, self.SCRIPT, "text/html"), "klus": self.klus.pk, "forceer_document": "1"},
+                follow=True,
+            )
+            self.assertContains(antwoord, f"{naam}: dit soort bestand kan hier niet bij")
+        self.assertFalse(Bijlage.objects.exists())
+
+    def test_gewone_documenten_mogen_wel(self):
+        for naam in ("offerte.pdf", "begroting.xlsx", "brief.docx", "notitie.txt"):
+            self.client.post(
+                reverse("bijlage_toevoegen"),
+                {"bestanden": upload(naam, b"inhoud", "application/octet-stream"), "klus": self.klus.pk,
+                 "forceer_document": "1"},
+            )
+        self.assertEqual(Bijlage.objects.count(), 4)
+
+    def _oud_bestand(self, naam):
+        """Een bestand van vóór de controle, rechtstreeks in de database."""
+        bijlage = Bijlage(klus=self.klus, toegevoegd_door=self.sam, soort=Bijlage.Soort.DOCUMENT, originele_naam=naam)
+        bijlage.bestand.save(naam, ContentFile(self.SCRIPT), save=True)
+        return bijlage
+
+    def test_oude_html_gaat_als_download_met_neutraal_type(self):
+        bijlage = self._oud_bestand("plan.html")
+        antwoord = self.client.get(reverse("media_bestand", args=[bijlage.bestand.name]))
+        self.assertEqual(antwoord["Content-Type"], "application/octet-stream")
+        self.assertTrue(antwoord["Content-Disposition"].startswith("attachment"))
+        self.assertIn("sandbox", antwoord["Content-Security-Policy"])
+
+    def test_foto_blijft_in_de_browser_te_bekijken_met_strenge_csp(self):
+        self.client.post(reverse("bijlage_toevoegen"), {"bestanden": upload(), "klus": self.klus.pk})
+        bijlage = Bijlage.objects.get()
+        antwoord = self.client.get(reverse("media_bestand", args=[bijlage.bestand.name]))
+        self.assertEqual(antwoord["Content-Type"], "image/jpeg")
+        self.assertIn("sandbox", antwoord["Content-Security-Policy"])
+
+    def test_pdf_blijft_inline_zonder_sandbox(self):
+        # Met "sandbox" toont Chrome de pdf niet meer in de overlay.
+        self.client.post(
+            reverse("bijlage_toevoegen"),
+            {"bestanden": upload("Offerte.pdf", pdf(), "application/pdf"), "klus": self.klus.pk, "forceer_document": "1"},
+        )
+        bijlage = Bijlage.objects.get()
+        antwoord = self.client.get(reverse("media_bestand", args=[bijlage.bestand.name]))
+        self.assertEqual(antwoord["Content-Type"], "application/pdf")
+        self.assertIn("inline", antwoord["Content-Disposition"])
+        self.assertNotIn("Content-Security-Policy", antwoord)
+
+    @override_settings(GEBRUIK_X_ACCEL=True, MEDIA_INTERN_PAD="/intern/")
+    def test_ook_via_nginx_een_download_met_neutraal_type(self):
+        bijlage = self._oud_bestand('plan"\r\nX-Kwaad: 1.html')
+        antwoord = self.client.get(reverse("media_bestand", args=[bijlage.bestand.name]))
+        self.assertEqual(antwoord["Content-Type"], "application/octet-stream")
+        self.assertTrue(antwoord["Content-Disposition"].startswith("attachment"))
+        self.assertNotIn("X-Kwaad", antwoord)
+
+
+@override_settings(MEDIA_ROOT=TIJDELIJKE_MEDIA)
 class DocumentToevoegenKnopTest(TestCase):
     """Het +-vak onder "Bestanden" moet er staan vóórdat er ooit een bestand
     is geweest — anders is er geen zichtbare manier om de eerste pdf toe te

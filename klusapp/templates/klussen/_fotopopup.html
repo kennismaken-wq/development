@@ -120,6 +120,13 @@
     var pdfInOverlay = navigator.pdfViewerEnabled === true &&
       (window.matchMedia("(any-pointer: fine)").matches || opIphoneOfIpad);
     var kanDelen = !!(navigator.share && navigator.canShare);
+    var TYPE_VAN = {
+      doc: "application/msword",
+      docx: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      xls: "application/vnd.ms-excel",
+      xlsx: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      txt: "text/plain"
+    };
     // Het bestand voor delen wordt al opgehaald zodra het in beeld komt:
     // een telefoon laat delen alleen toe vlak na de tik, en een download
     // die dan pas begint, is te laat.
@@ -165,7 +172,12 @@
           .then(function (r) { if (!r.ok) throw new Error(); return r.blob(); })
           .then(function (blob) {
             if (huidigeItems[huidigeIndex] !== item) return;
-            klaarVoorDelen = new File([blob], item.naam || item.titel, { type: blob.type });
+            // Word, Excel en tekst komen als neutraal type binnen (download,
+            // zie klussen.bestandstypen); het delen-menu van een telefoon wil
+            // het echte type, dus dat leiden we af uit de naam.
+            var naam = item.naam || item.titel;
+            var type = blob.type === "application/octet-stream" ? (TYPE_VAN[(naam.split(".").pop() || "").toLowerCase()] || blob.type) : blob.type;
+            klaarVoorDelen = new File([blob], naam, { type: type });
           })
           .catch(function () {});
       }

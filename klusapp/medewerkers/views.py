@@ -5,6 +5,7 @@ from django.contrib import messages
 from django.contrib.auth import login, update_session_auth_hash
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.http import require_POST
+from django.db import IntegrityError, transaction
 from django.db.models import Case, IntegerField, Max, Prefetch, Q, Value, When
 from django.db.models.functions import Lower
 from django.http import Http404
@@ -326,8 +327,17 @@ def medewerker_lijst(request):
 def medewerker_nieuw(request):
     if request.method == "POST":
         formulier = NieuweMedewerkerForm(request.POST, request.FILES)
+        medewerker = None
         if formulier.is_valid():
-            medewerker = formulier.save()
+            try:
+                with transaction.atomic():
+                    medewerker = formulier.save()
+            except IntegrityError:
+                # Twee keer tegelijk verstuurd (dubbel tikken): de eerste staat
+                # er al, de tweede botst op de gebruikersnaam. Geen foutpagina
+                # maar een gewone melding (stresstest 03-10-2026, B16).
+                formulier.add_error("username", "Er bestaat al een gebruiker met deze gebruikersnaam.")
+        if medewerker:
             messages.success(
                 request,
                 f"{medewerker.naam} kan inloggen met gebruikersnaam “{medewerker.username}” "

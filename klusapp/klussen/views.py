@@ -1,4 +1,5 @@
 import uuid
+from datetime import timedelta
 from urllib.parse import urlencode
 from pathlib import Path
 
@@ -6,6 +7,7 @@ from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.files.base import ContentFile
+from django.db import transaction
 from django.db.models import Prefetch, Q
 from django.http import FileResponse, Http404, HttpResponse, HttpResponseNotAllowed
 from django.shortcuts import get_object_or_404, redirect, render
@@ -19,10 +21,15 @@ from medewerkers.rechten import alleen_eigenaar
 from uren import export as uren_export
 from uren import totalen
 
-from . import afbeeldingen, kleuren, opdrachtgevers, pdf_thumbnails, voorbeeld
+from . import afbeeldingen, bestandstypen, kleuren, opdrachtgevers, pdf_thumbnails, voorbeeld
 from .forms import AlleenFotosForm, BijlageForm, KlusForm, KlusFotoForm, NieuweKlusBijlagenForm
 from .fotoposts import groepeer_in_posts
 from .models import Bijlage, Klus, Notitie
+
+
+# Hoe lang een identieke notitie of klus als dubbele tik telt en niet als
+# nieuwe (zie notitie_toevoegen en klus_nieuw).
+DUBBEL_BINNEN = timedelta(seconds=30)
 
 
 def _terug_naar(request, standaard):
@@ -102,6 +109,10 @@ def bewaar_bijlage(bestand, datum, toelichting, klus, uurblok, gebruiker, batch=
     foto mee op (zie uren.views.uurblok_nieuw), niet alleen deze module.
     """
     naam = bestand.name
+    # Hier en niet in het formulier: alle drie de uploadroutes komen hierlangs,
+    # en ze vangen BestandNietLeesbaar al per bestand op (zie bestandstypen).
+    if not bestandstypen.toegestaan(naam):
+        raise afbeeldingen.BestandNietLeesbaar(bestandstypen.WEIGERTEKST)
     hoofd, thumbnail = (None, None) if forceer_document else afbeeldingen.versies_van(bestand, naam)
 
     bijlage = Bijlage(
@@ -254,16 +265,42 @@ def media_bestand(request, pad):
     # jpeg zijn, en laten sommige mobiele browsers het plaatje dan leeg.
     naam = hoofdbijlage.originele_naam if hoofdbijlage and not hoofdbijlage.is_foto else None
 
+    # Alleen foto's en pdf's mag de browser zelf openen; de rest gaat als
+    # download, met een neutraal type, zodat een .html of .svg nooit als
+    # pagina van deze site draait (zie bestandstypen). Tegelijk een
+    # Content-Security-Policy die script en alles van buiten verbiedt. Niet
+    # bij een pdf: met "sandbox" weigert Chrome zijn eigen pdf-viewer, en die
+    # draait toch al los van onze pagina.
+    tonen = bestandstypen.inline(pad)
     if settings.GEBRUIK_X_ACCEL:
         # nginx levert het bestand uit; Django doet alleen de rechtencontrole.
         antwoord = HttpResponse()
         antwoord["X-Accel-Redirect"] = f"{settings.MEDIA_INTERN_PAD}{pad}"
-        del antwoord["Content-Type"]
-        if naam:
-            antwoord["Content-Disposition"] = f'inline; filename="{naam}"'
-        return antwoord
+        if tonen:
+            del antwoord["Content-Type"]
+        else:
+            antwoord["Content-Type"] = "application/octet-stream"
+        if naam or not tonen:
+            soort = "inline" if tonen else "attachment"
+            antwoord["Content-Disposition"] = f'{soort}; filename="{_veilige_bestandsnaam(naam or Path(pad).name)}"'
+    elif tonen:
+        antwoord = FileResponse(volledig.open("rb"), as_attachment=False, filename=naam)
+    else:
+        antwoord = FileResponse(
+            volledig.open("rb"),
+            as_attachment=True,
+            filename=naam or Path(pad).name,
+            content_type="application/octet-stream",
+        )
+    if bestandstypen.suffix(pad) != ".pdf":
+        antwoord["Content-Security-Policy"] = "default-src 'none'; img-src 'self'; style-src 'unsafe-inline'; sandbox"
+    return antwoord
 
-    return FileResponse(volledig.open("rb"), as_attachment=False, filename=naam)
+
+def _veilige_bestandsnaam(naam):
+    """Voor de Content-Disposition met de hand (de nginx-route): geen
+    aanhalingstekens of regeleinden die de header openbreken."""
+    return "".join(teken for teken in naam if teken not in '"\\\r\n') or "bestand"
 
 
 @login_required
@@ -513,7 +550,16 @@ def notitie_toevoegen(request, pk):
     elif len(tekst) > max_lengte:
         messages.error(request, f"Een notitie mag hooguit {max_lengte} tekens zijn.")
     else:
-        Notitie.objects.create(klus=klus, tekst=tekst, geschreven_door=request.user)
+        with transaction.atomic():
+            request.user.vergrendel()
+            # Dezelfde tekst van dezelfde persoon een paar seconden geleden is
+            # een dubbele tik, geen tweede notitie (stresstest 03-10-2026, B16).
+            al_geplaatst = Notitie.objects.filter(
+                klus=klus, tekst=tekst, geschreven_door=request.user,
+                geschreven_op__gte=timezone.now() - DUBBEL_BINNEN,
+            ).exists()
+            if not al_geplaatst:
+                Notitie.objects.create(klus=klus, tekst=tekst, geschreven_door=request.user)
     return redirect(f"{_met_terug(klus.get_absolute_url(), _terugpijl(request))}#notities")
 
 
@@ -569,11 +615,21 @@ def klus_nieuw(request):
     bijlagenformulier = NieuweKlusBijlagenForm(request.POST or None, request.FILES or None)
     if request.method == "POST" and formulier.is_valid() and bijlagenformulier.is_valid():
         klus = formulier.save(commit=False)
-        # Niet via het formulier: de kleur wordt hier bepaald, niet met de
-        # hand gekozen (klussen.kleuren.volgende_kleur), en dat moet ook
-        # gelden als iemand het verborgen veld zelf zou aanpassen.
-        klus.kleur = kleuren.volgende_kleur()
-        klus.save()
+        with transaction.atomic():
+            request.user.vergrendel()
+            # Dezelfde klus een paar seconden geleden aangemaakt: een dubbele
+            # tik op Opslaan. Daarheen in plaats van een tweede (B16).
+            zojuist = Klus.objects.filter(
+                naam=klus.naam, opdrachtgever=klus.opdrachtgever, adres=klus.adres,
+                aangemaakt_op__gte=timezone.now() - DUBBEL_BINNEN,
+            ).first()
+            if zojuist:
+                return redirect(_met_terug(zojuist.get_absolute_url(), terugpijl))
+            # Niet via het formulier: de kleur wordt hier bepaald, niet met de
+            # hand gekozen (klussen.kleuren.volgende_kleur), en dat moet ook
+            # gelden als iemand het verborgen veld zelf zou aanpassen.
+            klus.kleur = kleuren.volgende_kleur()
+            klus.save()
 
         datum = bijlagenformulier.cleaned_data["datum"] or timezone.localdate()
         toelichting = bijlagenformulier.cleaned_data["toelichting"]

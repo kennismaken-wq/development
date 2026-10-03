@@ -3,6 +3,7 @@ from datetime import date, time, timedelta
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
+from django.db import transaction
 from django.db.models import Prefetch, Q
 from django.db.models.functions import Lower
 from django.http import Http404, HttpResponse
@@ -185,6 +186,20 @@ def _maand_weergave(request, dag, vandaag):
     )
 
 
+def _melding_bij_afwezig(request, blok):
+    """Uren op een dag dat iemand als afwezig staat, mogen (B1): wie
+    halverwege ziek naar huis gaat, heeft die ochtend wel gewerkt. Wel even
+    zeggen, zodat een vergeten vakantiedag of een verkeerde datum opvalt."""
+    afwezig = Aanwezigheid.objects.filter(medewerker_id=blok.medewerker_id, datum=blok.datum, aanwezig=False).first()
+    if afwezig:
+        reden = f" ({afwezig.get_reden_display().lower()})" if afwezig.reden else ""
+        messages.info(
+            request,
+            f"Let op: je staat op {blok.datum:%d-%m} als afwezig{reden}. "
+            "Klopt dat niet, pas dan je aanwezigheid aan.",
+        )
+
+
 @login_required
 def uurblok_nieuw(request):
     dag = periode.gekozen_dag(request)
@@ -193,10 +208,15 @@ def uurblok_nieuw(request):
         # Bestanden kiezen is optioneel (zie UurblokFotosForm), dus die mogen
         # het opslaan van de uren zelf nooit blokkeren.
         bijlagenformulier = UurblokFotosForm(request.POST, request.FILES)
-        if formulier.is_valid() and bijlagenformulier.is_valid():
-            blok = formulier.save(commit=False)
-            blok.medewerker = request.user
-            blok.save()
+        with transaction.atomic():
+            request.user.vergrendel()
+            geldig = formulier.is_valid() and bijlagenformulier.is_valid()
+            if geldig:
+                blok = formulier.save(commit=False)
+                blok.medewerker = request.user
+                blok.save()
+        if geldig:
+            _melding_bij_afwezig(request, blok)
 
             # Onbenoemd blijft de dag van het uurblok zelf: een foto die je
             # bij het invullen meteen toevoegt gaat vrijwel altijd over die
@@ -330,8 +350,13 @@ def uurblok_bewerken(request, pk):
         return redirect(f"{reverse('uurblok_detail', args=[pk])}?bewerken=1")
 
     formulier = UurblokForm(request.POST, instance=blok)
-    if formulier.is_valid():
-        formulier.save()
+    with transaction.atomic():
+        request.user.vergrendel()
+        geldig = formulier.is_valid()
+        if geldig:
+            formulier.save()
+    if geldig:
+        _melding_bij_afwezig(request, formulier.instance)
         return _terug_naar_dag(formulier.instance.datum)
 
     # Bij een fout terug naar hetzelfde scherm, open en met de foutmelding
@@ -751,6 +776,9 @@ def _eigen_aanwezigheid_opslaan(request):
             "opmerking": request.POST.get("opmerking", "").strip()[:200],
         },
     )
+    if stand == "nee" and Uurblok.objects.filter(medewerker=request.user, datum=datum).exists():
+        # Halverwege de dag ziek: de uren van die ochtend horen te blijven.
+        messages.info(request, f"Je had op {datum:%d-%m} al uren geschreven; die blijven gewoon staan.")
     return datum
 
 

@@ -54,12 +54,12 @@ class Uurblok(models.Model):
     def __str__(self):
         return f"{self.medewerker} · {self.datum:%d-%m-%Y} · {self.klus}"
 
-    def save(self, *args, **kwargs):
-        """Geen klus op een dag dat iemand afwezig staat. Weigeren in plaats
-        van stil overslaan: wie dit probeert, moet het merken."""
-        if Aanwezigheid.objects.filter(medewerker_id=self.medewerker_id, datum=self.datum, aanwezig=False).exists():
-            raise ValidationError("Op een dag dat iemand afwezig is, kan hij niet op een klus staan.")
-        super().save(*args, **kwargs)
+    # Geen save() die uren op een afwezige dag weigert, zoals Inzet die wel
+    # heeft: gewerkte uren zijn een feit, de planning is een voornemen. Wie
+    # halverwege de dag ziek naar huis gaat of op een vakantiedag toch even
+    # moest komen, moet die uren kunnen schrijven (stresstest 03-10-2026, B1:
+    # dit gaf een foutpagina). De schermen melden het wel; zie
+    # uren.views._melding_bij_afwezig.
 
     def clean(self):
         if self.begintijd and self.eindtijd and self.eindtijd <= self.begintijd:
@@ -173,7 +173,7 @@ class Inzet(models.Model):
         """Geen klus op een dag dat iemand afwezig staat. Weigeren in plaats
         van stil overslaan: wie dit probeert, moet het merken."""
         if Aanwezigheid.objects.filter(medewerker_id=self.medewerker_id, datum=self.datum, aanwezig=False).exists():
-            raise ValidationError("Op een dag dat iemand afwezig is, kan hij niet op een klus staan.")
+            raise ValidationError("Wie op een dag afwezig is, kan die dag niet op een klus staan.")
         super().save(*args, **kwargs)
 
 

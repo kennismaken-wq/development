@@ -136,6 +136,11 @@
       if (!formulier) return;
       formulier.addEventListener("submit", function (gebeurtenis) {
         gebeurtenis.preventDefault();
+        // Twee keer tikken op Opslaan verstuurt niet twee keer (zie
+        // static/js/eenmaal-versturen.js). Bij een fout komt er een nieuw
+        // formulier voor in de plaats, en dat begint weer leeg.
+        if (formulier.dataset.bezig) return;
+        formulier.dataset.bezig = "1";
         fetch(formulier.action, {
           method: "POST",
           body: new FormData(formulier),

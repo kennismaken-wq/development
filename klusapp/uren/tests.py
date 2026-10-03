@@ -1655,3 +1655,39 @@ class EigenAanwezigheidZettenTest(TestCase):
         antwoord = self.client.get(reverse("mijn_aanwezigheid") + "?dag=2026-10-31")
         self.assertEqual(antwoord.context["vorige_maand"], date(2026, 9, 30))
         self.assertEqual(antwoord.context["volgende_maand"], date(2026, 11, 30))
+
+
+class StresstestFixesTest(TestCase):
+    """Stresstest 03-10-2026: B1 (uren op een afwezige dag) en B16 (dubbel versturen)."""
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.sam = Medewerker.objects.create_user("sam", password="x", first_name="Sam")
+        cls.klus = Klus.objects.create(naam="Tuin Vermeer")
+
+    def setUp(self):
+        self.client.force_login(self.sam)
+
+    def test_uren_op_afwezige_dag_mogen_met_melding(self):
+        Aanwezigheid.objects.create(medewerker=self.sam, datum=date(2026, 9, 18), aanwezig=False, reden="vakantie")
+        antwoord = self.client.post(
+            reverse("uurblok_nieuw"),
+            {"klus": self.klus.pk, "datum": "2026-09-18", "begintijd": "08:00", "eindtijd": "12:00"},
+            follow=True,
+        )
+        self.assertEqual(Uurblok.objects.count(), 1)
+        self.assertContains(antwoord, "als afwezig (vakantie)")
+
+    def test_zelf_afwezig_melden_laat_uren_staan(self):
+        Uurblok.objects.create(medewerker=self.sam, klus=self.klus, datum=date(2026, 9, 18),
+                               begintijd=time(8), eindtijd=time(12))
+        antwoord = self.client.post(reverse("mijn_aanwezigheid"),
+                                    {"datum": "2026-09-18", "stand": "nee", "reden": "ziek"}, follow=True)
+        self.assertContains(antwoord, "die blijven gewoon staan")
+        self.assertEqual(Uurblok.objects.count(), 1)
+
+    def test_dubbel_verstuurde_notitie_komt_er_een_keer_in(self):
+        from klussen.models import Notitie
+        for _ in range(2):
+            self.client.post(reverse("notitie_toevoegen", args=[self.klus.pk]), {"tekst": "Sleutel bij de buren"})
+        self.assertEqual(Notitie.objects.count(), 1)
