@@ -40,6 +40,9 @@ class Command(BaseCommand):
         for pad in wezen:
             self.stdout.write(str(pad.relative_to(wortel)))
             if echt:
-                pad.unlink()
+                try:
+                    pad.unlink()
+                except OSError as fout:
+                    self.stderr.write(f"  kon niet weg: {fout}")
         actie = "verwijderd" if echt else "zou weg gaan (draai met --echt)"
         self.stdout.write(f"{len(wezen)} bestanden, {grootte / 1024 / 1024:.1f} MB {actie}.")

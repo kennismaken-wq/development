@@ -1811,7 +1811,13 @@ class StresstestKlussenTest(TestCase):
     def test_opruimcommando_vindt_wezen(self):
         from io import StringIO
         from django.core.management import call_command
-        naam = Path(TIJDELIJKE_MEDIA) / "bijlagen/2026/09/wees2.jpg"
+        eigen_map = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, eigen_map, ignore_errors=True)
+        with self.settings(MEDIA_ROOT=eigen_map):
+            self._opruimen_in(Path(eigen_map), call_command, StringIO)
+
+    def _opruimen_in(self, wortel, call_command, StringIO):
+        naam = wortel / "bijlagen/2026/09/wees2.jpg"
         naam.parent.mkdir(parents=True, exist_ok=True)
         naam.write_bytes(b"x")
         uit = StringIO()
