@@ -27,13 +27,13 @@ LEGE_REGEL = [""] * len(KOPPEN)
 
 
 def _vet(blad, rijnummer):
-    for cel in blad[rijnummer]:
-        cel.font = Font(bold=True)
+    for kolom in range(1, len(KOPPEN) + 1):
+        blad.cell(row=rijnummer, column=kolom).font = Font(bold=True)
 
 
-def _subtotaal_schrijven(blad, naam, minuten):
+def _subtotaal_schrijven(blad, naam, minuten, rijnummer):
     blad.append([f"Totaal {naam}", "", "", "", "", "", "", round(minuten / 60, 2), "", ""])
-    _vet(blad, blad.max_row)
+    _vet(blad, rijnummer)
 
 
 def _namen_per_medewerker(uurblokken):
@@ -49,12 +49,17 @@ def _namen_per_medewerker(uurblokken):
     }
 
 
-def _als_tekst(rij):
+def _als_tekst(blad, rijnummer):
     """Tekst die met "=" begint, maakt openpyxl een formule. Een medewerker die
     als werkzaamheden "=3 palen" of erger een =HYPERLINK(...) intikt, zette zo
     een werkende formule in het bestand voor de boekhouder (B8). Gewoon tekst
-    van maken."""
-    for cel in rij:
+    van maken.
+
+    Per cel via blad.cell en niet via blad[rijnummer]: dat laatste loopt elke
+    keer het hele blad door, en maakte een jaar exporteren van 3 naar 15
+    seconden (tweede stresstestronde)."""
+    for kolom in range(1, len(KOPPEN) + 1):
+        cel = blad.cell(row=rijnummer, column=kolom)
         if cel.data_type == "f":
             cel.data_type = "s"
 
@@ -81,13 +86,16 @@ def werkboek_bouwen(uurblokken, bladtitel):
     huidige_medewerker = None
     subtotaal_minuten = 0
     totaal_minuten = 0
+    # Zelf bijhouden in plaats van blad.max_row, die telkens alle regels telt.
+    rijnummer = 1
 
     for blok in uurblokken:
         # Op de medewerker zelf en niet op zijn naam: twee mensen met dezelfde
         # naam (vader en zoon) werden anders één subtotaal (B15).
         naam = namen[blok.medewerker_id]
         if huidige_medewerker is not None and blok.medewerker_id != huidige_medewerker:
-            _subtotaal_schrijven(blad, namen[huidige_medewerker], subtotaal_minuten)
+            rijnummer += 1
+            _subtotaal_schrijven(blad, namen[huidige_medewerker], subtotaal_minuten, rijnummer)
             subtotaal_minuten = 0
         huidige_medewerker = blok.medewerker_id
 
@@ -111,8 +119,9 @@ def werkboek_bouwen(uurblokken, bladtitel):
                 blok.extra_werk,
             ]
         )
-        blad.cell(row=blad.max_row, column=2).number_format = "DD-MM-YYYY"
-        _als_tekst(blad[blad.max_row])
+        rijnummer += 1
+        blad.cell(row=rijnummer, column=2).number_format = "DD-MM-YYYY"
+        _als_tekst(blad, rijnummer)
         subtotaal_minuten += blok.duur_minuten
         totaal_minuten += blok.duur_minuten
 
@@ -120,9 +129,9 @@ def werkboek_bouwen(uurblokken, bladtitel):
         blad.append(["Geen uren geschreven in deze periode."] + LEGE_REGEL[1:])
         return boek
 
-    _subtotaal_schrijven(blad, namen[huidige_medewerker], subtotaal_minuten)
+    _subtotaal_schrijven(blad, namen[huidige_medewerker], subtotaal_minuten, rijnummer + 1)
     blad.append(["Totaal alle medewerkers", "", "", "", "", "", "", round(totaal_minuten / 60, 2), "", ""])
-    _vet(blad, blad.max_row)
+    _vet(blad, rijnummer + 2)
     return boek
 
 

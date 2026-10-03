@@ -1177,6 +1177,12 @@ class UrenexportTest(TestCase):
         self.assertIn(("Totaal Joep Bakker", 8.0), regels)
         self.assertIn(("Totaal Sam de Wit", 12.5), regels)
         self.assertEqual(regels[-1], ("Totaal alle medewerkers", 20.5))
+        # Precies de kop en de totaalregels vet, en de datum als datum: het
+        # regelnummer wordt sinds de tweede stresstestronde zelf bijgehouden.
+        vet = [rij[0].value for rij in blad.iter_rows() if rij[0].font.bold]
+        self.assertEqual(vet, ["Medewerker", "Totaal Joep Bakker", "Totaal Sam de Wit", "Totaal alle medewerkers"])
+        self.assertTrue(all(rij[1].number_format == "DD-MM-YYYY" for rij in blad.iter_rows(min_row=2)
+                            if rij[1].value and not str(rij[0].value).startswith("Totaal")))
 
         eerste_urenregel = next(blad.iter_rows(min_row=2))
         self.assertEqual(eerste_urenregel[3].value, "Fam. Vermeer")
