@@ -1128,3 +1128,41 @@ class VerborgenBeheerderTest(TestCase):
         ):
             with self.assertRaises(CommandError):
                 call_command("maak_beheerder", "beheer")
+
+
+class FoutpaginasEnLoonstrookTest(TestCase):
+    """Eigen foutpagina's in plaats van Django's Engelse, en de loonstrook in
+    een nieuw tabblad (03-10-2026)."""
+
+    @override_settings(DEBUG=False)
+    def test_404_in_de_stijl_van_de_app(self):
+        sam = Medewerker.objects.create_user("sam", password="x", first_name="Sam")
+        self.client.force_login(sam)
+        antwoord = self.client.get("/bestaat-niet/")
+        self.assertEqual(antwoord.status_code, 404)
+        self.assertContains(antwoord, "Deze pagina bestaat niet (meer)", status_code=404)
+        self.assertContains(antwoord, "Naar de start", status_code=404)
+        # ook een medewerker op een scherm van de eigenaar krijgt deze pagina
+        antwoord = self.client.get(reverse("medewerkers"))
+        self.assertContains(antwoord, "Deze pagina bestaat niet (meer)", status_code=404)
+
+    def test_500_zonder_context(self):
+        from django.test import RequestFactory
+        from django.views.defaults import server_error
+        antwoord = server_error(RequestFactory().get("/"))
+        self.assertEqual(antwoord.status_code, 500)
+        self.assertIn("Er ging iets mis", antwoord.content.decode())
+
+    def test_verlopen_formulier(self):
+        from django.test import Client
+        sam = Medewerker.objects.create_user("sam", password="x", first_name="Sam")
+        streng = Client(enforce_csrf_checks=True)
+        streng.force_login(sam)
+        antwoord = streng.post(reverse("mijn_profiel"), {"first_name": "Sam"})
+        self.assertContains(antwoord, "Deze pagina stond te lang open", status_code=403)
+
+    def test_loonstrook_opent_in_een_nieuw_tabblad(self):
+        sam = Medewerker.objects.create_user("sam", password="x", first_name="Sam")
+        self.client.force_login(sam)
+        html = self.client.get(reverse("start")).content.decode()
+        self.assertRegex(html, rf'href="{reverse("loonstrook")}"\s*target="_blank" rel="noopener"')

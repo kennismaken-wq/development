@@ -1,0 +1,22 @@
+{% load static %}<!doctype html>
+{% comment %} Bij een serverfout rendert Django dit zonder context: geen
+   ingelogde gebruiker, geen navigatie. Daarom een losse pagina die alleen de
+   stylesheet gebruikt, en niet basis.html. {% endcomment %}
+<html lang="nl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Er ging iets mis · De Groene M</title>
+  <link rel="stylesheet" href="{% static 'css/app.css' %}">
+</head>
+<body>
+  <div class="kaart glas inloggen">
+    <div class="kop">
+      <img class="merk" src="{% static 'img/logo-de-groene-m-licht.png' %}" alt="" width="512" height="437">
+      <div class="koptekst"><h1>Er ging iets mis</h1></div>
+    </div>
+    <p class="uitleg">Dat is onze fout, niet de jouwe. Probeer het zo nog een keer. Blijft het gebeuren, laat het Maarten dan weten.</p>
+    <p style="margin-top:1.2rem"><a class="knop" href="/">Naar de start</a></p>
+  </div>
+</body>
+</html>

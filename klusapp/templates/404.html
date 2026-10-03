@@ -1,0 +1,13 @@
+{% extends "basis.html" %}
+{% block titel %}Niet gevonden{% endblock %}
+{% block kaartklasse %}inloggen{% endblock %}
+{% block kop %}Niet gevonden{% endblock %}
+{% block inhoud %}
+  {% comment %} Eigen foutpagina in plaats van Django's kale Engelse "Not
+     Found". Een medewerker krijgt deze pagina ook bij een scherm van de
+     eigenaar: dat geeft bewust "niet gevonden" (medewerkers/rechten.py), dus
+     de tekst zegt niet "dit mag je niet" maar "bestaat niet of niet meer".
+     Alleen zichtbaar met DEBUG uit. {% endcomment %}
+  <p class="uitleg">Deze pagina bestaat niet (meer). Misschien is de klus of het uurblok verwijderd, of klopt de link niet.</p>
+  <p style="margin-top:1.2rem"><a class="knop" href="{% url 'start' %}">Naar de start</a></p>
+{% endblock %}

@@ -40,7 +40,9 @@ TEGELS = [
     # Sinds 01-10-2026 ook voor de medewerker, maar dan alleen zijn eigen
     # dagen en zonder klussen (uren.views.mijn_aanwezigheid).
     {"titel": "Aanwezigheid", "icoon": "aanwezigheid", "url_naam": "mijn_aanwezigheid", "rollen": ["medewerker"]},
-    {"titel": "Loonstrook", "icoon": "loonstrook", "url_naam": "loonstrook", "rollen": ["medewerker", "eigenaar"]},
+    # Opent in een nieuw tabblad: het gaat door naar Loondossier, en zo blijft
+    # de klusapp open staan.
+    {"titel": "Loonstrook", "icoon": "loonstrook", "url_naam": "loonstrook", "rollen": ["medewerker", "eigenaar"], "nieuw_tabblad": True},
     {"titel": "Mijn profiel", "icoon": "profiel", "url_naam": "mijn_profiel", "rollen": ["medewerker", "eigenaar"]},
 ]
 
@@ -80,7 +82,7 @@ def _zichtbaar(lijst, user):
             tegel["url"] = None
         # het loonstrookportaal is een andere site; die opent in een eigen
         # tabblad zodat je je uren niet kwijtraakt
-        tegel["extern"] = str(tegel.get("url") or "").startswith("http")
+        tegel["extern"] = str(tegel.get("url") or "").startswith("http") or tegel.get("nieuw_tabblad", False)
         tegels.append(tegel)
     return tegels
 

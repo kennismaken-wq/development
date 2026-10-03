@@ -114,6 +114,15 @@ body.met-navigatie{ padding-left:6.6rem; }
       Daarom krijgt alles wat je kunt aantikken een :active-staat.
    4. touch-action:manipulation haalt de dubbeltik-om-in-te-zoomen weg op
       knoppen en rijen; dat scheelt de vertraging vóór een tik "aankomt". */
+/* Gewone tekstlinks ("Begin bij uren schrijven") in de lichte accentkleur in
+   plaats van browserblauw, dat op de donkere achtergrond vloekt. Alles met een
+   eigen klasse (.knop, tegels, rijen) zet zijn eigen kleur en wint hiervan:
+   :where() geeft deze regel gewicht nul. Geen aparte :visited, die zou wél
+   gewicht hebben en een bezochte .knop groene tekst op groen geven; een
+   regel van de site wint sowieso van het paars van de browser. */
+:where(a){ color:var(--hi); text-decoration-color:rgba(var(--accent-rgb),0.55); text-underline-offset:2px; }
+@media (hover:hover){ :where(a):hover{ text-decoration-color:currentColor; } }
+
 a, button, .knop, .knop-stil, .pil, .side-icon, .klusregel, .profielregel,
 .klus-slide, .klustegel, .maanddag, .maandwidget, .fotokaart-nieuw, .keuzepil .vlak,
 .dialog-sluiten, .weg button, .legenda a{

@@ -1,0 +1,10 @@
+{% extends "basis.html" %}
+{% block titel %}Verlopen{% endblock %}
+{% block kaartklasse %}inloggen{% endblock %}
+{% block kop %}Even opnieuw{% endblock %}
+{% block inhoud %}
+  {% comment %} Django's CSRF-controle: komt vooral voor als een formulier
+     lang open heeft gestaan, of als je intussen bent uitgelogd. {% endcomment %}
+  <p class="uitleg">Deze pagina stond te lang open, of je bent intussen uitgelogd. Ga terug, ververs de pagina en probeer het nog een keer.</p>
+  <p style="margin-top:1.2rem"><a class="knop" href="{% url 'start' %}">Naar de start</a></p>
+{% endblock %}
