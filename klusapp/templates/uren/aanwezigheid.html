@@ -5,8 +5,10 @@
 {% block inhoud %}
   <div class="navbalk">
     <div class="navlinks">
-      <a class="knop-stil" href="?dag={{ vorige|date:'Y-m-d' }}" aria-label="Vorig jaar">‹</a>
-      <a class="knop-stil" href="?dag={{ volgende|date:'Y-m-d' }}" aria-label="Volgend jaar">›</a>
+      {% comment %} Eén periode terug/verder volgens de zoom (dag, week,
+         maand), zie static/js/bord-bladeren.js. Zonder javascript een jaar. {% endcomment %}
+      <a class="knop-stil" href="?dag={{ vorige|date:'Y-m-d' }}" data-blader="-1" aria-label="Vorige periode">‹</a>
+      <a class="knop-stil" href="?dag={{ volgende|date:'Y-m-d' }}" data-blader="1" aria-label="Volgende periode">›</a>
       {% comment %} Altijd zichtbaar, want je scrolt in hetzelfde jaar ook
          weg van vandaag. Staat vandaag op het bord, dan scrolt
          werkplanning.js ernaartoe in plaats van de pagina te herladen. {% endcomment %}
@@ -283,4 +285,5 @@
 
   <script src="{% static 'js/bottomsheet.js' %}"></script>
   <script src="{% static 'js/werkplanning.js' %}"></script>
+  <script src="{% static 'js/bord-bladeren.js' %}"></script>
 {% endblock %}

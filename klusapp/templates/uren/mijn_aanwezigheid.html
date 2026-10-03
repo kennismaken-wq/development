@@ -46,8 +46,10 @@
   <div class="aw-alleen-breed">
   <div class="navbalk">
     <div class="navlinks">
-      <a class="knop-stil" href="?dag={{ vorige|date:'Y-m-d' }}" aria-label="Vorig jaar">‹</a>
-      <a class="knop-stil" href="?dag={{ volgende|date:'Y-m-d' }}" aria-label="Volgend jaar">›</a>
+      {% comment %} Eén periode terug/verder volgens de zoom (dag, week,
+         maand), zie static/js/bord-bladeren.js. Zonder javascript een jaar. {% endcomment %}
+      <a class="knop-stil" href="?dag={{ vorige|date:'Y-m-d' }}" data-blader="-1" aria-label="Vorige periode">‹</a>
+      <a class="knop-stil" href="?dag={{ volgende|date:'Y-m-d' }}" data-blader="1" aria-label="Volgende periode">›</a>
       <a class="knop-stil" href="{% url 'mijn_aanwezigheid' %}" data-naar-vandaag>Vandaag</a>
       <span class="periodetitel">{{ eerste|date:"Y" }}</span>
     </div>
@@ -68,7 +70,7 @@
       <div class="bord-hoek wp-hoek"></div>
       {% for kopdag in kopdagen %}
         <div class="bord-kop wp-kop{% if kopdag.is_vandaag %} vandaag{% endif %}{% if kopdag.is_weekstart %} weekstart{% endif %}{% if kopdag.is_maandstart %} maandstart{% endif %}{% if kopdag.feestdag_vrij %} feestdag{% endif %}"
-             data-k="{{ kopdag.index }}">
+             data-k="{{ kopdag.index }}" data-iso="{{ kopdag.datum|date:'Y-m-d' }}">
           {% if kopdag.is_vandaag %}<span class="vandaag-label">Vandaag</span>{% endif %}
           <span class="dag">{{ kopdag.datum|date:"D" }}</span>
           <span class="datum">{{ kopdag.datum|date:"j b" }}</span>
@@ -152,4 +154,5 @@
 
   <script src="{% static 'js/bottomsheet.js' %}"></script>
   <script src="{% static 'js/mijn-aanwezigheid.js' %}"></script>
+  <script src="{% static 'js/bord-bladeren.js' %}"></script>
 {% endblock %}
