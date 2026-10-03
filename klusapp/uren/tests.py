@@ -638,10 +638,16 @@ class WerkplanningTest(TestCase):
         antwoord = self.client.get("/aanwezigheid/?dag=2026-09-09")
         kop = self.kopweek("2026-09-09")
         self.assertEqual([k["datum"] for k in kop], [self.maandag + timedelta(days=n) for n in range(7)])
-        # maandag: Maarten en Sam volgens rooster; Joep heeft geen vaste
-        # dagen en Kees is pas vanaf woensdag in dienst
-        self.assertEqual((kop[0]["aanwezig"], kop[0]["in_dienst"]), (2, 3))
-        self.assertEqual((kop[2]["aanwezig"], kop[2]["in_dienst"]), (3, 4))
+        # maandag: Maarten en Sam werken volgens rooster, maar niemand heeft
+        # iets ingevuld, dus nog niemand aanwezig (sinds 03-10-2026 niet meer
+        # vanzelf); Joep heeft geen vaste dagen en Kees is pas vanaf woensdag
+        # in dienst
+        self.assertEqual((kop[0]["aanwezig"], kop[0]["in_dienst"]), (0, 3))
+        self.assertEqual((kop[2]["aanwezig"], kop[2]["in_dienst"]), (0, 4))
+        maarten = next(r for r in antwoord.context["rijen"] if r["medewerker"] == self.maarten)
+        self.assertEqual(maarten["cellen"][self.index(self.maandag)].stand, bezetting.ONBEKEND)
+        self.assertIn("wp-cel onbekend", antwoord.content.decode())
+        self.assertContains(antwoord, "Nog niet ingevuld")
         # zaterdag werkt niemand volgens rooster
         self.assertEqual(kop[5]["aanwezig"], 0)
         namen = [rij["medewerker"] for rij in antwoord.context["rijen"]]
@@ -686,7 +692,8 @@ class WerkplanningTest(TestCase):
         self.assertEqual(rijen.count(), 3)
         self.assertTrue(all(not r.aanwezig and r.reden == "vakantie" and r.opmerking == "Texel" for r in rijen))
         kop = self.kopweek("2026-09-07")
-        self.assertEqual(kop[0]["aanwezig"], 1)
+        # Sam afwezig, Maarten nog niet ingevuld
+        self.assertEqual(kop[0]["aanwezig"], 0)
 
     def test_reeksen_van_dezelfde_notitie(self):
         from .views import _reeksen
@@ -791,15 +798,28 @@ class WerkplanningTest(TestCase):
         kop = self.kopweek("2026-05-04")
         # 5 mei: naam in de kop, maar een gewone werkdag
         self.assertEqual((kop[1]["feestdag"], kop[1]["feestdag_vrij"]), ("Bevrijdingsdag", False))
-        self.assertEqual(kop[1]["aanwezig"], 2)
+        self.assertEqual(bezetting.cel(self.sam, date(2026, 5, 5)).stand, bezetting.ONBEKEND)
         html = self.client.get("/aanwezigheid/?dag=2026-05-14").content.decode()
         self.assertIn('class="feest"', html)
         self.assertIn("Hemelvaartsdag", html)
 
-    def test_startscherm_telt_volgens_rooster(self):
-        self.assertEqual(bezetting.aantal_aanwezig(self.maandag), (2, 3))
+    def test_startscherm_telt_alleen_wie_aanwezig_staat(self):
+        self.assertEqual(bezetting.aantal_aanwezig(self.maandag), (0, 3))
+        Aanwezigheid.objects.create(medewerker=self.maarten, datum=self.maandag, aanwezig=True)
         Aanwezigheid.objects.create(medewerker=self.sam, datum=self.maandag, aanwezig=False, reden="ziek")
         self.assertEqual(bezetting.aantal_aanwezig(self.maandag), (1, 3))
+
+    def test_ingepland_op_een_klus_telt_als_aanwezig_zolang_de_klus_er_staat(self):
+        tuin = Klus.objects.create(naam="Tuin Vermeer", soort=Klus.Soort.AANLEG)
+        cel = [self.cel(self.sam, self.maandag)]
+        self.zet(cel, "", klussen_wijzigen="1", klus=[str(tuin.pk)])
+        self.assertEqual(bezetting.aantal_aanwezig(self.maandag), (1, 3))
+        # geen vaste rij: haal je de klus weg, dan is het weer niet ingevuld
+        self.assertFalse(Aanwezigheid.objects.exists())
+        self.zet(cel, "", klussen_wijzigen="1")
+        self.assertEqual(bezetting.aantal_aanwezig(self.maandag), (0, 3))
+        self.assertEqual(bezetting.rooster([self.sam], [self.maandag])[(self.sam.pk, self.maandag)].stand,
+                         bezetting.ONBEKEND)
 
     def test_klussen_inplannen_per_persoon_per_dag(self):
         tuin = Klus.objects.create(naam="Tuin Vermeer", soort=Klus.Soort.AANLEG, plaats="Leiden")
@@ -1027,8 +1047,8 @@ class MijnAanwezigheidTest(TestCase):
         self.assertEqual(cellen[date(2026, 9, 8)]["stand"], bezetting.AANWEZIG)
         self.assertEqual(cellen[date(2026, 9, 9)]["stand"], bezetting.AFWEZIG)
         self.assertEqual(cellen[date(2026, 9, 9)]["tekst"], "griep")
-        # Piets vakantie is niet Sams zaak
-        self.assertEqual(cellen[date(2026, 9, 10)]["stand"], bezetting.AANWEZIG)
+        # Piets vakantie is niet Sams zaak; Sam zelf heeft die dag niets ingevuld
+        self.assertEqual(cellen[date(2026, 9, 10)]["stand"], bezetting.ONBEKEND)
         self.assertEqual(cellen[date(2026, 9, 12)]["stand"], bezetting.VRIJ)
         # een vrije feestdag staat rood, met de naam erin
         self.assertEqual(cellen[date(2026, 12, 25)]["stand"], bezetting.AFWEZIG)
@@ -1501,8 +1521,8 @@ class UrenbackupMailTest(TestCase):
         per_dag = {r[0].date(): r for r in rijen[1:]}
         # Gezet: ziek, met de opmerking erbij.
         self.assertEqual(per_dag[date(2025, 1, 8)][sam], "Ziek · griep")
-        # Niet gezet maar een vaste werkdag: aanwezig volgens rooster.
-        self.assertEqual(per_dag[date(2025, 1, 7)][sam], "Aanwezig")
+        # Niet gezet maar een vaste werkdag: nog niet ingevuld.
+        self.assertEqual(per_dag[date(2025, 1, 7)][sam], "?")
         # Nieuwjaarsdag: rood met de naam van de feestdag.
         self.assertEqual(per_dag[date(2025, 1, 1)][sam], "Nieuwjaarsdag")
         # Zaterdag: geen werkdag, dus leeg.
@@ -1648,7 +1668,7 @@ class EigenAanwezigheidZettenTest(TestCase):
         self.assertEqual(weken[0][0]["datum"], date(2026, 9, 28))  # maandag
         per_dag = {c["datum"]: c for week in weken for c in week}
         self.assertEqual(per_dag[date(2026, 10, 7)]["stand"], bezetting.AFWEZIG)
-        self.assertEqual(per_dag[date(2026, 10, 8)]["stand"], bezetting.AANWEZIG)
+        self.assertEqual(per_dag[date(2026, 10, 8)]["stand"], bezetting.ONBEKEND)  # niets ingevuld
         self.assertEqual(per_dag[date(2026, 10, 10)]["stand"], bezetting.VRIJ)  # zaterdag
         html = antwoord.content.decode()
         self.assertIn('class="maandraster aw-maand"', html)

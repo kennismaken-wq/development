@@ -860,7 +860,7 @@ def _werkdagen_tot(medewerker, vanaf, tot):
     dagen = []
     for n in range(1, (tot - vanaf).days + 1):
         dag = vanaf + timedelta(days=n)
-        if bezetting.cel(medewerker, dag, feestdag=feest.get(dag, "")).stand == bezetting.AANWEZIG:
+        if bezetting.werkdag(medewerker, dag, feestdag=feest.get(dag, "")):
             dagen.append(dag)
     return dagen
 
@@ -1076,9 +1076,12 @@ def _planning_opslaan(request):
         for klus in nieuwe:
             Inzet.objects.get_or_create(medewerker=medewerker, datum=datum, klus=klus)
         # Op een klus gezet op een dag dat hij volgens rooster vrij is (een
-        # zaterdag, een oproepkracht): dan is hij er dus wél.
+        # zaterdag, een oproepkracht): dan is hij er dus wél. Op een werkdag
+        # die nog niet is ingevuld hoeft dat niet: daar telt een klus al als
+        # aanwezig (bezetting.rooster), en gaat de klus eraf, dan staat de
+        # dag weer op "nog niet ingevuld".
         if klussen and registratie is None:
-            if bezetting.cel(medewerker, datum, feestdag=vrij.get(datum, "")).stand != bezetting.AANWEZIG:
+            if bezetting.cel(medewerker, datum, feestdag=vrij.get(datum, "")).stand == bezetting.VRIJ:
                 Aanwezigheid.objects.update_or_create(
                     medewerker=medewerker, datum=datum, defaults={"aanwezig": True, "reden": "", "opmerking": ""}
                 )

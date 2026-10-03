@@ -4,9 +4,12 @@ Losse module omdat twee schermen dezelfde rekensom nodig hebben: de
 werkplanning (het hele rooster) en het startscherm ("6 van 9 aanwezig").
 Staat hij in één view, dan tellen die twee vroeg of laat verschillend.
 
-Een cel heeft één van vier standen:
+Een cel heeft één van vijf standen:
 
-- aanwezig  groen; uit het rooster of zo gezet
+- aanwezig  groen; zo gezet, of ingepland op een klus
+- onbekend  nog niet ingevuld: een werkdag volgens het rooster waar niemand
+            iets heeft gezet. Telt niet als aanwezig. Tot 03-10-2026 stond
+            zo'n dag vanzelf op aanwezig; Floris wilde dat niet meer.
 - afwezig   rood; zo gezet, of een feestdag
 - vrij      geen werkdag volgens het rooster, en niets gezet: een
             oproepkracht of een parttimer op zijn vrije dag
@@ -24,6 +27,7 @@ from .kalender import kleur_van
 from .models import Aanwezigheid, Inzet, Uurblok
 
 AANWEZIG = "aanwezig"
+ONBEKEND = "onbekend"
 AFWEZIG = "afwezig"
 VRIJ = "vrij"
 BUITEN = "buiten"
@@ -150,7 +154,13 @@ def cel(medewerker, dag, registratie=None, feestdag=""):
         return Cel(medewerker, dag, VRIJ, True)
     if feestdag:
         return Cel(medewerker, dag, AFWEZIG, True, feestdag=feestdag)
-    return Cel(medewerker, dag, AANWEZIG, True)
+    return Cel(medewerker, dag, ONBEKEND, True)
+
+
+def werkdag(medewerker, dag, feestdag=""):
+    """Werkt hij deze dag volgens zijn rooster (geen weekend of vaste vrije
+    dag, geen vrije feestdag, in dienst)? Los van wat er is ingevuld."""
+    return cel(medewerker, dag, feestdag=feestdag).stand == ONBEKEND
 
 
 def rooster(medewerkers, dagen):
@@ -178,6 +188,11 @@ def rooster(medewerkers, dagen):
             # database staat (een feestdag die er later bij kwam, bv.).
             if c.stand not in (BUITEN, AFWEZIG):
                 c.klussen = ingepland.get((m.pk, dag), [])
+                # Ingepland op een klus = er die dag zijn, ook als niemand de
+                # aanwezigheid apart heeft ingevuld (planning van vóór
+                # 03-10-2026 heeft daar geen rij voor).
+                if c.klussen and c.stand == ONBEKEND:
+                    c.stand = AANWEZIG
             uitkomst[(m.pk, dag)] = c
     return uitkomst
 

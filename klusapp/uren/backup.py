@@ -77,6 +77,8 @@ def _celtekst(c):
         return "–"
     if c.stand == bezetting.VRIJ:
         return ""
+    if c.stand == bezetting.ONBEKEND:
+        return "?"
     if c.stand == bezetting.AFWEZIG:
         delen = [c.reden_tekst or c.feestdag or "Afwezig"]
     else:
@@ -93,7 +95,8 @@ def aanwezigheid_werkboek(vandaag):
     zes à negen man is dat in Excel en op een telefoon veel beter te lezen
     dan 365 kolommen. De standen komen uit uren/bezetting.py, dus het
     bestand toont precies wat de werkplanning toont — ook de dagen die
-    "volgens rooster" zijn en nergens als rij in de database staan.
+    "volgens rooster" zijn en nergens als rij in de database staan. Een
+    werkdag waar nog niets is ingevuld, krijgt een "?".
     """
     boek = Workbook()
     boek.remove(boek.active)

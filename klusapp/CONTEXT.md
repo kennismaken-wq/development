@@ -433,9 +433,10 @@ een rooster als vervanger van Maartens Excel "Werkplanning": altijd het hele jaa
 31 dec, opent op vandaag (groene lijn). Zoom Dag/Week/Maand zet alleen de dagbreedte (CSS-variabele
 --dag, in werkplanning.js), zonder herladen.
 mensen als rijen, ma–zo als kolommen, bovenaan per dag hoeveel man er is.
-Rekenwerk in `uren/bezetting.py`: geen `Aanwezigheid`-rij betekent "volgens rooster"
-(`Medewerker.vaste_werkdagen`, feestdagen vrij); een rij is een afwijking met
-`reden` en `opmerking`. `Dagnotitie` is één regel per dag voor iedereen. Alleen de
+Rekenwerk in `uren/bezetting.py`: geen `Aanwezigheid`-rij betekent op een werkdag
+volgens rooster (`Medewerker.vaste_werkdagen`, feestdagen vrij) "nog niet ingevuld" —
+sinds 03-10-2026 niet meer vanzelf aanwezig; ingepland op een klus telt wel als
+aanwezig. Een rij is wat er is gezet, met `reden` en `opmerking`. `Dagnotitie` is één regel per dag voor iedereen. Alleen de
 eigenaar — Maarten wil niet dat de medewerkers dit zien (gesprek 01-10-2026).
 Selecteren als in Excel (klik, slepen, shift-klik, naam, dag) in
 `static/js/werkplanning.js`. Per cel kies je ook de klus(sen) waar iemand die

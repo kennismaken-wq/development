@@ -2422,6 +2422,8 @@ label:has(> input[type=checkbox]), input[type=checkbox] + label{ cursor:pointer;
 .wp-cel.aanwezig{ background:rgba(var(--accent-rgb),0.30); }
 .wp-cel.afwezig{ background:rgba(224,123,95,0.38); }
 .wp-cel.vrij{ background:rgba(255,255,255,0.025); }
+/* nog niet ingevuld: een werkdag, maar niemand heeft iets gezet */
+.wp-cel.onbekend{ background:rgba(255,255,255,0.09); }
 /* niet in dienst: gearceerd en niet aan te klikken */
 .wp-cel.buiten{
   background:repeating-linear-gradient(135deg, rgba(255,255,255,0.04) 0 4px, transparent 4px 8px);
@@ -2439,6 +2441,7 @@ label:has(> input[type=checkbox]), input[type=checkbox] + label{ cursor:pointer;
 .wp-stip.aanwezig{ background:rgba(var(--accent-rgb),0.55); }
 .wp-stip.afwezig{ background:rgba(224,123,95,0.6); }
 .wp-stip.vrij{ background:rgba(255,255,255,0.05); }
+.wp-stip.onbekend{ background:rgba(255,255,255,0.12); border-style:dashed; border-color:rgba(255,255,255,0.55); }
 .wp-legenda .wp-hint{ margin-left:auto; color:rgba(255,255,255,0.45); }
 
 .wp-dialoogtitel{
@@ -2546,6 +2549,8 @@ a.wp-klus{ text-decoration:none; }
 .aw-maand .maanddag.aanwezig{ background:rgba(var(--accent-rgb),0.30); border-color:rgba(var(--accent-rgb),0.45); }
 .aw-maand .maanddag.afwezig{ background:rgba(224,123,95,0.38); border-color:rgba(224,123,95,0.55); }
 .aw-maand .maanddag.vrij{ background:rgba(255,255,255,0.03); }
+/* nog niet ingevuld: gestippeld, anders leest het als een vrije dag */
+.aw-maand .maanddag.onbekend{ background:rgba(255,255,255,0.08); border:1px dashed rgba(255,255,255,0.45); }
 .aw-maand .maanddag.buiten{
   background:repeating-linear-gradient(135deg, rgba(255,255,255,0.04) 0 4px, transparent 4px 8px);
   cursor:default;
