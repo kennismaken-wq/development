@@ -1,6 +1,7 @@
 import re
 from datetime import date, time, timedelta
 from io import StringIO
+from unittest.mock import patch
 
 from django.core import mail
 from django.core.management import call_command
@@ -1077,3 +1078,53 @@ class MaakEigenaarTest(TestCase):
             call_command("maak_eigenaar", "maarten", "maarten@voorbeeld.nl")
         with self.assertRaises(CommandError):
             call_command("maak_eigenaar", "els", "geen-adres")
+
+
+class VerborgenBeheerderTest(TestCase):
+    """Het HandigerAI-account (manage.py maak_beheerder): kan inloggen en
+    alles zien, maar staat in geen enkele lijst."""
+
+    def setUp(self):
+        self.maarten = Medewerker.objects.create_user(
+            "maarten", password="x", first_name="Maarten", rol=Medewerker.Rol.EIGENAAR,
+            backup_email="maarten@voorbeeld.nl",
+        )
+        self.sam = Medewerker.objects.create_user("sam", password="x", first_name="Sam")
+        with patch("medewerkers.management.commands.maak_beheerder.getpass", return_value="Lang-genoeg-wachtwoord-26"):
+            call_command("maak_beheerder", "admin", stdout=StringIO())
+        self.admin = Medewerker.alle.get(username="admin")
+
+    def test_is_verborgen_eigenaar_en_superuser(self):
+        self.assertTrue(self.admin.verborgen)
+        self.assertTrue(self.admin.is_eigenaar)
+        self.assertTrue(self.admin.is_superuser and self.admin.is_staff)
+        self.assertNotIn(self.admin, Medewerker.objects.all())
+
+    def test_kan_inloggen_met_zijn_wachtwoord(self):
+        self.assertTrue(
+            self.client.login(username="admin", password="Lang-genoeg-wachtwoord-26")
+        )
+        self.assertEqual(self.client.get(reverse("start")).status_code, 200)
+
+    def test_staat_niet_in_lijsten_of_tellingen(self):
+        self.client.force_login(self.maarten)
+        for adres in (reverse("medewerkers"), reverse("aanwezigheid"), reverse("planbord")):
+            html = self.client.get(adres).content.decode()
+            self.assertIn("Sam", html, adres)
+            self.assertNotIn("HandigerAI", html, adres)
+        from uren import backup, bezetting
+        self.assertNotIn(self.admin, bezetting.medewerkers_tussen(date(2026, 1, 1), date(2026, 12, 31)))
+        self.assertEqual(backup.ontvangers(), ["maarten@voorbeeld.nl"])
+
+    def test_wachtwoord_vergeten_werkt_ook_voor_hem(self):
+        self.client.post(reverse("wachtwoord_vergeten"), {"email": "kennismaken@handigerai.nl"})
+        self.assertEqual(len(mail.outbox), 1)
+
+    def test_bestaande_naam_of_ongelijke_wachtwoorden_weigert(self):
+        with self.assertRaises(CommandError):
+            call_command("maak_beheerder", "admin")
+        with patch(
+            "medewerkers.management.commands.maak_beheerder.getpass", side_effect=["Een-wachtwoord-26", "Ander-wachtwoord-26"]
+        ):
+            with self.assertRaises(CommandError):
+                call_command("maak_beheerder", "beheer")

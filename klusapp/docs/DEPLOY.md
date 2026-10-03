@@ -204,8 +204,14 @@ komen.
 
 `KLUSAPP_TESTFUNCTIES=0` zet twee hulpmiddelen uit die alleen voor het bouwen
 bedoeld zijn: als eigenaar meekijken als medewerker, en een eigenaar die vanzelf
-in `/beheer/` mag. Wie daar toch in moet, krijgt een superuser via
-`manage.py createsuperuser`.
+in `/beheer/` mag.
+
+**HandigerAI kijkt mee met een verborgen account** (`manage.py maak_beheerder
+admin`, vraagt zelf om een wachtwoord). Dat is eigenaar én superuser, dus het
+ziet alles en komt in `/beheer/`, maar het staat in geen enkele lijst, telling,
+rooster of back-upmail (`Medewerker.verborgen`; `Medewerker.objects` laat het
+weg, `Medewerker.alle` niet). Wat je ermee invoert, zoals uren, is wel echte
+data in Maartens administratie: alleen kijken.
 
 **Inrichten** (eenmalig, als root): DNS-record `degroenem` → `178.105.192.98`, dan
 

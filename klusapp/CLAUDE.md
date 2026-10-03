@@ -79,6 +79,9 @@ al af was.
   Op die laatste staan de twee tijdelijke dingen hierboven uit
   (`KLUSAPP_TESTFUNCTIES=0`), en hij updatet alleen met de hand via
   `docs/deploy-degroenem.sh`. Zie docs/DEPLOY.md.
+- **Verborgen accounts:** `Medewerker.objects` slaat accounts met `verborgen`
+  over (het HandigerAI-account `admin`); `Medewerker.alle` niet. Gebruik dus
+  `objects` voor alles wat Maarten te zien krijgt.
 
 ## Lokaal draaien
 

