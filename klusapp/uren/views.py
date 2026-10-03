@@ -11,6 +11,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
 from django.utils.html import escape
+from django.utils.http import url_has_allowed_host_and_scheme
 from django.utils.safestring import mark_safe
 
 from klussen import afbeeldingen, voorbeeld
@@ -39,6 +40,13 @@ def _terug_naar_dag(dag, request=None, blok=None):
     zodat de agenda daar naartoe scrollt (U2, Floris 03-10-2026). Geen #anker:
     het urenvenster post met fetch, en dan valt dat weg."""
     adres = f"{reverse('mijn_uren')}?dag={dag.isoformat()}"
+    # Geopend vanaf een ander scherm, zoals het weekoverzicht: daarheen terug.
+    # Eerst kwam je na verwijderen vanuit het weekoverzicht op Mijn uren uit.
+    elders = _terug_elders(request) if request is not None else None
+    if elders:
+        if request.headers.get("X-Requested-With") == "XMLHttpRequest":
+            return HttpResponse(status=204, headers={"X-Naar": elders})
+        return redirect(elders)
     weergave = request.POST.get("weergave") if request is not None else None
     if weergave in WEERGAVEN:
         adres += f"&weergave={weergave}"
@@ -51,6 +59,18 @@ def _terug_naar_dag(dag, request=None, blok=None):
         # het adres in een header; het venster navigeert er zelf heen.
         return HttpResponse(status=204, headers={"X-Naar": adres})
     return redirect(adres)
+
+
+def _terug_elders(request):
+    """Het "terug"-adres uit het formulier, als dat een ander scherm van deze
+    site is dan Mijn uren of het uurblok zelf (daarvoor bouwt
+    _terug_naar_dag zelf het adres, met weergave en blok)."""
+    terug = request.POST.get("terug", "")
+    if not terug.startswith("/") or terug.startswith(("/uren/", "//")):
+        return None
+    if not url_has_allowed_host_and_scheme(terug, allowed_hosts={request.get_host()}, require_https=request.is_secure()):
+        return None
+    return terug
 
 
 def _opgeslagen(request, blok):

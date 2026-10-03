@@ -63,17 +63,21 @@
       </form>
     {% endif %}
 
-    {% if messages %}
-      <ul class="meldingen" role="status" aria-live="polite">
-        {% for melding in messages %}
-          <li class="melding {{ melding.tags }}">{{ melding }}</li>
-        {% endfor %}
-      </ul>
-      <script src="{% static 'js/meldingen.js' %}"></script>
-    {% endif %}
-
     {% block inhoud %}{% endblock %}
   </div>
+
+  {% comment %} Buiten de kaart: .glas heeft een backdrop-filter, en daarbinnen
+     gedraagt position:fixed zich als "vast aan de kaart". Op een laptop stond
+     de melding dan onderaan de kaart en scrolde hij mee, in plaats van onderin
+     beeld te blijven staan. {% endcomment %}
+  {% if messages %}
+    <ul class="meldingen" role="status" aria-live="polite">
+      {% for melding in messages %}
+        <li class="melding {{ melding.tags }}">{{ melding }}</li>
+      {% endfor %}
+    </ul>
+    <script src="{% static 'js/meldingen.js' %}"></script>
+  {% endif %}
 
   {% if user.is_authenticated %}
     {% comment %} Eén overlay voor foto's en bestanden op de hele site, zodat

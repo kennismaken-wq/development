@@ -1974,3 +1974,40 @@ class BlokBuitenDeAgendaTest(TestCase):
         self.assertEqual(len(getekend), 2)
         self.assertEqual(getekend[time(5)]["top"], 0)
         self.assertEqual(getekend[time(21)]["top"], kalender.raster_hoogte() - kalender.RIJ_H)
+
+
+class TerugNaarHetSchermTest(TestCase):
+    """Een uurblok verwijderen of aanpassen vanuit het weekoverzicht bracht je
+    op Mijn uren uit in plaats van terug op het weekoverzicht."""
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.maarten = Medewerker.objects.create_user("maarten", password="x", rol=Medewerker.Rol.EIGENAAR)
+        cls.klus = Klus.objects.create(naam="Tuin")
+
+    def setUp(self):
+        self.client.force_login(self.maarten)
+        self.blok = Uurblok.objects.create(medewerker=self.maarten, klus=self.klus, datum=date(2026, 9, 8),
+                                           begintijd=time(8), eindtijd=time(9))
+
+    def test_verwijderen_vanuit_weekoverzicht(self):
+        antwoord = self.client.post(reverse("uurblok_verwijderen", args=[self.blok.pk]),
+                                    {"terug": "/planbord/?dag=2026-09-07"})
+        self.assertEqual(antwoord["Location"], "/planbord/?dag=2026-09-07")
+
+    def test_aanpassen_in_het_venster_vanuit_weekoverzicht(self):
+        antwoord = self.client.post(
+            reverse("uurblok_bewerken", args=[self.blok.pk]),
+            {"klus": self.klus.pk, "datum": "2026-09-08", "begintijd": "08:00", "eindtijd": "10:00",
+             "terug": "/planbord/?dag=2026-09-07"},
+            HTTP_X_REQUESTED_WITH="XMLHttpRequest",
+        )
+        self.assertEqual(antwoord.status_code, 204)
+        self.assertEqual(antwoord["X-Naar"], "/planbord/?dag=2026-09-07")
+
+    def test_vreemd_of_eigen_adres_valt_terug_op_mijn_uren(self):
+        for terug in ("https://evil.example/", "//evil.example/", f"/uren/{self.blok.pk}/"):
+            blok = Uurblok.objects.create(medewerker=self.maarten, klus=self.klus, datum=date(2026, 9, 9),
+                                          begintijd=time(8), eindtijd=time(9))
+            antwoord = self.client.post(reverse("uurblok_verwijderen", args=[blok.pk]), {"terug": terug})
+            self.assertTrue(antwoord["Location"].startswith(reverse("mijn_uren")), terug)

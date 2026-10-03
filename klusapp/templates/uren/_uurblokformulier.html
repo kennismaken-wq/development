@@ -42,6 +42,10 @@
   {% comment %} De weergave van de agenda waar je vandaan kwam, zodat je daar na
      opslaan weer terugkomt (uren.views._terug_naar_dag). {% endcomment %}
   {% if weergave %}<input type="hidden" name="weergave" value="{{ weergave }}">{% endif %}
+  {% comment %} Het scherm waar het venster openging (bottomsheet.js vult dit
+     in): na opslaan of verwijderen terug naar bijv. het weekoverzicht in
+     plaats van naar Mijn uren (uren.views._terug_naar_dag). {% endcomment %}
+  {% if terug %}<input type="hidden" name="terug" value="{{ terug }}">{% endif %}
   {% for veld in formulier %}
     <label for="{{ veld.id_for_label }}">{{ veld.label }}</label>
     {% if veld.name == "klus" %}
@@ -103,6 +107,7 @@
         onsubmit="return confirm('Dit uurblok verwijderen?');">
     {% csrf_token %}
     {% if weergave %}<input type="hidden" name="weergave" value="{{ weergave }}">{% endif %}
+    {% if terug %}<input type="hidden" name="terug" value="{{ terug }}">{% endif %}
   </form>
 {% endif %}
 
