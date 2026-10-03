@@ -67,6 +67,13 @@
   const titel = venster.querySelector(".wp-dialoogtitel");
   const redenBlok = venster.querySelector("[data-reden-blok]");
 
+  const MAX_DAGEN_TOT = 92;
+  function naDagen(iso, n) {
+    const d = iso.split("-").map(Number);
+    const uit = new Date(d[0], d[1] - 1, d[2] + n);
+    return uit.getFullYear() + "-" + String(uit.getMonth() + 1).padStart(2, "0") + "-" + String(uit.getDate()).padStart(2, "0");
+  }
+
   function toonReden() {
     const afwezig = formulier.querySelector("[name=stand][value=nee]").checked;
     redenBlok.hidden = !afwezig;
@@ -76,9 +83,11 @@
     dag.addEventListener("click", function () {
       formulier.reset();
       formulier.elements.datum.value = dag.dataset.zet;
-      // "Tot en met" begint leeg en kan niet vóór deze dag liggen.
+      // "Tot en met" begint leeg, kan niet vóór deze dag liggen en hooguit
+      // drie maanden erna (uren.views.MAX_DAGEN_TOT).
       formulier.elements.tot.value = "";
       formulier.elements.tot.min = dag.dataset.zet;
+      formulier.elements.tot.max = naDagen(dag.dataset.zet, MAX_DAGEN_TOT);
       titel.textContent = dag.dataset.titel;
       const stand = formulier.querySelector('[name=stand][value="' + (dag.dataset.stand || "ja") + '"]');
       if (stand) stand.checked = true;

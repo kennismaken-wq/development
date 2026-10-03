@@ -815,7 +815,15 @@ def _eigen_aanwezigheid_opslaan(request):
     reden = request.POST.get("reden", "")
     if stand != "nee" or reden not in Aanwezigheid.Reden.values:
         reden = ""
-    dagen = [datum] + _werkdagen_tot(request.user, datum, _datum_uit(request.POST.get("tot")))
+    tot = _datum_uit(request.POST.get("tot"))
+    if tot and (tot - datum).days > MAX_DAGEN_TOT:
+        # Eerst zette dit stilletjes alleen de eerste dag (stresstest 2,
+        # 03-10-2026). Een jaartal mis getikt hoort niet ongemerkt te gaan.
+        messages.error(
+            request, "Niets opgeslagen: 'Tot en met' kan hooguit drie maanden na de eerste dag liggen."
+        )
+        return datum
+    dagen = [datum] + _werkdagen_tot(request.user, datum, tot)
     defaults = {
         "aanwezig": stand == "ja",
         "reden": reden,

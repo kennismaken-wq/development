@@ -1927,10 +1927,20 @@ class GebruiksgemakTest(TestCase):
         self.assertEqual(dagen, [date(2026, 10, d) for d in (8, 9, 12, 13, 14)])
         self.assertTrue(all(not a.aanwezig and a.reden == "vakantie" for a in Aanwezigheid.objects.all()))
 
-    def test_u6_tot_te_ver_weg_zet_alleen_de_dag_zelf(self):
+    def test_u6_tot_te_ver_weg_zegt_dat_en_slaat_niets_op(self):
+        antwoord = self.client.post(reverse("mijn_aanwezigheid"),
+                                    {"datum": "2026-10-08", "tot": "2027-10-08", "stand": "nee", "reden": "vakantie"},
+                                    follow=True)
+        self.assertEqual(Aanwezigheid.objects.count(), 0)
+        self.assertContains(antwoord, "hooguit drie maanden")
+
+    def test_u6_precies_drie_maanden_mag(self):
+        # 92 dagen na do 8 okt = vr 8 jan 2027; Kerst en Nieuwjaar vallen weg
         self.client.post(reverse("mijn_aanwezigheid"),
-                         {"datum": "2026-10-08", "tot": "2027-10-08", "stand": "nee", "reden": "vakantie"})
-        self.assertEqual(Aanwezigheid.objects.count(), 1)
+                         {"datum": "2026-10-08", "tot": "2027-01-08", "stand": "nee", "reden": "vakantie"})
+        dagen = Aanwezigheid.objects.filter(medewerker=self.sam)
+        self.assertEqual(max(dagen.values_list("datum", flat=True)), date(2027, 1, 8))
+        self.assertFalse(dagen.filter(datum=date(2026, 12, 25)).exists())
 
     def test_u9_ingepland_maar_geen_uren(self):
         # ma: ingepland en geschreven; di: ingepland, niets geschreven;
