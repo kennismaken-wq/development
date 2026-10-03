@@ -206,6 +206,11 @@
       <div data-klussen-blok>
         <label for="wp-kluszoek">Klussen</label>
         <input type="hidden" name="klussen_wijzigen" value="0">
+        {% comment %} Welke klussen het venster bij het openen aangevinkt had:
+           de server zet alleen wat je daaraan veranderde, zodat een oude
+           pagina geen klus weghaalt die intussen ergens anders is gezet
+           (stresstest B17). Uit bij een gemengde selectie. {% endcomment %}
+        <input type="hidden" name="klussen_eerst" value="">
         <input type="text" enterkeyhint="search" id="wp-kluszoek" class="wp-kluszoek" placeholder="Zoek op klus, opdrachtgever of plaats" autocomplete="off">
         <p class="wp-dialoogsub" data-klus-gemengd hidden>Deze cellen staan op verschillende klussen. Vink iets aan om ze allemaal hetzelfde te geven; anders blijven ze zoals ze zijn.</p>
         <div class="wp-kluslijst">

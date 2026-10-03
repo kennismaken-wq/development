@@ -1810,3 +1810,56 @@ class StartTotaalTest(TestCase):
             uitkomst = totalen.totaal_en_week(sam, date(2026, 9, 7), date(2026, 9, 13))
         self.assertEqual(uitkomst["week"], "1,5")
         self.assertEqual(uitkomst["totaal"], kalender.als_uren(28 * (8 * 60 + 45) + 90))
+
+
+class OudePaginaTest(TestCase):
+    """B17: een oude, nog openstaande pagina overschrijft niet stilletjes wat
+    intussen elders is gezet."""
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.maarten = Medewerker.objects.create_user(
+            "maarten", password="x", first_name="Maarten", rol=Medewerker.Rol.EIGENAAR
+        )
+        cls.sam = Medewerker.objects.create_user("sam", password="x", first_name="Sam")
+        cls.maandag = date(2026, 9, 7)
+
+    def setUp(self):
+        self.client.force_login(self.maarten)
+
+    cel = WerkplanningTest.cel
+    zet = WerkplanningTest.zet
+
+    def test_oude_werkplanning_haalt_geen_klus_weg(self):
+        tuin = Klus.objects.create(naam="Tuin", soort=Klus.Soort.AANLEG)
+        vijver = Klus.objects.create(naam="Vijver", soort=Klus.Soort.AANLEG)
+        cel = self.cel(self.sam, self.maandag)
+        # laptop: Sam op de tuin
+        self.zet([cel], "", klussen_wijzigen="1", klus=[str(tuin.pk)], klussen_eerst="")
+        # telefoon, venster nog van vóór de laptop (cel leeg): Sam op de vijver
+        self.zet([cel], "", klussen_wijzigen="1", klus=[str(vijver.pk)], klussen_eerst="")
+        namen = set(Inzet.objects.filter(medewerker=self.sam, datum=self.maandag).values_list("klus__naam", flat=True))
+        self.assertEqual(namen, {"Tuin", "Vijver"})
+
+    def test_uitvinken_haalt_alleen_die_klus_weg(self):
+        tuin = Klus.objects.create(naam="Tuin", soort=Klus.Soort.AANLEG)
+        vijver = Klus.objects.create(naam="Vijver", soort=Klus.Soort.AANLEG)
+        for klus in (tuin, vijver):
+            Inzet.objects.create(medewerker=self.sam, datum=self.maandag, klus=klus)
+        self.zet([self.cel(self.sam, self.maandag)], "", klussen_wijzigen="1", klus=[],
+                 klussen_eerst=f"{tuin.pk}")
+        namen = set(Inzet.objects.filter(medewerker=self.sam, datum=self.maandag).values_list("klus__naam", flat=True))
+        self.assertEqual(namen, {"Vijver"})
+
+    def test_oud_bewerkformulier_overschrijft_niet(self):
+        pagina = self.client.get(reverse("medewerker_bewerken", args=[self.sam.pk]))
+        versie = pagina.context["formulier"]["versie"].value()
+        # intussen past Sam zelf zijn nummer aan
+        Medewerker.objects.filter(pk=self.sam.pk).update(telefoon="0622222222")
+        antwoord = self.client.post(reverse("medewerker_bewerken", args=[self.sam.pk]), {
+            "first_name": "Sam", "username": "sam", "rol": "medewerker", "kleur": "#336699",
+            "functie": "voorman", "telefoon": "", "versie": versie,
+        })
+        self.assertContains(antwoord, "Iemand anders heeft dit intussen aangepast")
+        self.sam.refresh_from_db()
+        self.assertEqual((self.sam.telefoon, self.sam.functie), ("0622222222", ""))

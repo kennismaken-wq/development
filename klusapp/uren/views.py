@@ -950,6 +950,8 @@ def _planning_opslaan(request):
     klussen_wijzigen = request.POST.get("klussen_wijzigen") == "1"
     klus_ids = [pk for pk in request.POST.getlist("klus") if pk.isdigit()]
     klussen = list(Klus.objects.filter(pk__in=klus_ids)) if klussen_wijzigen else []
+    eerst = request.POST.get("klussen_eerst")
+    eerst = None if eerst is None else {int(pk) for pk in eerst.split(",") if pk.isdigit()}
     if gevraagd:
         dagen = [datum for _, datum in gevraagd]
         vrij = bezetting.feestdagen_tussen(min(dagen), max(dagen))
@@ -978,8 +980,17 @@ def _planning_opslaan(request):
             continue
         if not klussen_wijzigen:
             continue
-        inzet.exclude(klus__in=klussen).delete()
-        for klus in klussen:
+        if eerst is None:
+            # Vervangen: een gemengde selectie die je allemaal hetzelfde geeft.
+            inzet.exclude(klus__in=klussen).delete()
+            nieuwe = klussen
+        else:
+            # Alleen wat je in het venster aan- of uitvinkte. Eerst verving dit
+            # alles, en haalde een oude pagina op een tweede apparaat stil een
+            # klus weg die net op het eerste was gezet (stresstest B17).
+            inzet.filter(klus_id__in=eerst - {klus.pk for klus in klussen}).delete()
+            nieuwe = [klus for klus in klussen if klus.pk not in eerst]
+        for klus in nieuwe:
             Inzet.objects.get_or_create(medewerker=medewerker, datum=datum, klus=klus)
         # Op een klus gezet op een dag dat hij volgens rooster vrij is (een
         # zaterdag, een oproepkracht): dan is hij er dus wél.

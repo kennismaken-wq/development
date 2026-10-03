@@ -32,6 +32,7 @@
   const opmerking = venster.querySelector("[name=opmerking]");
   const klussenBlok = venster.querySelector("[data-klussen-blok]");
   const klussenWijzigen = venster.querySelector("[name=klussen_wijzigen]");
+  const klussenEerst = venster.querySelector("[name=klussen_eerst]");
   const klusZoek = venster.querySelector(".wp-kluszoek");
   const klusGemengd = venster.querySelector("[data-klus-gemengd]");
   const klusVinkjes = Array.from(venster.querySelectorAll("[name=klus]"));
@@ -231,6 +232,12 @@
       vinkje.checked = gekozenKlussen.indexOf(vinkje.value) !== -1;
     });
     klussenWijzigen.value = klussen === null ? "0" : "1";
+    // Wat er al stond, zodat de server alleen jouw wijziging doorvoert. Bij
+    // een gemengde selectie niet: daar geeft aanvinken alle cellen dezelfde.
+    if (klussenEerst) {
+      klussenEerst.value = klussen || "";
+      klussenEerst.disabled = klussen === null;
+    }
     klusGemengd.hidden = klussen !== null;
     klusZoek.value = "";
     filterKlussen();

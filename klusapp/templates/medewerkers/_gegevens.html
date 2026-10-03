@@ -61,6 +61,7 @@
   {% comment %} Buiten beeld, maar wel in het formulier: het penknopje
      hierboven bedient dit veld. {% endcomment %}
   <span class="buiten-beeld">{{ formulier.profielfoto }}</span>
+  {{ formulier.versie }}
   {% for fout in formulier.profielfoto.errors %}<p class="fout">{{ fout }}</p>{% endfor %}
   {% for fout in formulier.non_field_errors %}<p class="fout">{{ fout }}</p>{% endfor %}
 

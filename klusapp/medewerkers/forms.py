@@ -5,6 +5,7 @@ from django.core.files.uploadedfile import UploadedFile
 from django.utils.safestring import mark_safe
 
 from . import profielfotos, rem
+from .versie import VersieMixin
 from .models import RIJBEWIJS_GROEPEN, RIJBEWIJS_VOLGORDE, WEEKDAGEN, Medewerker
 
 
@@ -89,7 +90,7 @@ class WerkdagenWidget(forms.CheckboxSelectMultiple):
     template_name = "medewerkers/widgets/werkdagen.html"
 
 
-class MedewerkerForm(RijbewijzenMixin, ProfielfotoMixin, forms.ModelForm):
+class MedewerkerForm(VersieMixin, RijbewijzenMixin, ProfielfotoMixin, forms.ModelForm):
     """Een medewerker aanmaken of bijwerken. Alleen de eigenaar komt hier.
 
     Bewust weinig velden: alles wat met rechten en systeembeheer te maken
@@ -157,7 +158,7 @@ class MedewerkerForm(RijbewijzenMixin, ProfielfotoMixin, forms.ModelForm):
     # Velden die de template zelf plaatst en die dus niet in de restgroep
     # moeten belanden — anders staan ze er twee keer, met dezelfde id. De
     # foto staat als penknopje in de kop (medewerkers/_gegevens.html).
-    BUITEN_GROEPEN = frozenset({"profielfoto"})
+    BUITEN_GROEPEN = frozenset({"profielfoto", "versie"})
 
     def groepen(self):
         """(kopje, velden) voor de template. Velden die dit formulier niet
@@ -244,7 +245,7 @@ class NieuweMedewerkerForm(MedewerkerForm):
         return medewerker
 
 
-class EigenGegevensForm(RijbewijzenMixin, ProfielfotoMixin, forms.ModelForm):
+class EigenGegevensForm(VersieMixin, RijbewijzenMixin, ProfielfotoMixin, forms.ModelForm):
     """Wat je van jezelf mag wijzigen op /mijn-profiel/.
 
     Niet je rol, gebruikersnaam, functie of datum in dienst: dat zijn
@@ -267,7 +268,7 @@ class EigenGegevensForm(RijbewijzenMixin, ProfielfotoMixin, forms.ModelForm):
         help_texts = {veld: "" for veld in fields}
 
     # De foto plaatst de template zelf, als penknopje in de kop.
-    BUITEN_GROEPEN = frozenset({"profielfoto"})
+    BUITEN_GROEPEN = frozenset({"profielfoto", "versie"})
 
     GROEPEN = [
         ("", ["first_name", "last_name", "kleur"]),

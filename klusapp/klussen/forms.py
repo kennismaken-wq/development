@@ -3,6 +3,7 @@ from django.db.models.functions import Lower
 from django.utils import timezone
 
 from medewerkers.models import Medewerker
+from medewerkers.versie import VersieMixin
 
 from .models import Klus
 
@@ -43,7 +44,7 @@ class KlusSelect(forms.Select):
         return optie
 
 
-class KlusForm(forms.ModelForm):
+class KlusForm(VersieMixin, forms.ModelForm):
     """Klus aanmaken en bijwerken. Alleen de eigenaar komt hier.
 
     Bewust weinig velden: SPEC §3 zet het uitgebreide klantbestand

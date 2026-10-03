@@ -27,6 +27,8 @@
      twee lege containers blijven dan leeg. {% endcomment %}
   <form method="post" enctype="multipart/form-data" id="klusformulier">
     {% csrf_token %}
+    {{ formulier.versie }}
+    {% for fout in formulier.non_field_errors %}<p class="fout">{{ fout }}</p>{% endfor %}
 
     {% comment %} ── 1. Ritme. Keuzepillen, geen select: dit is de keuze die bepaalt wat
           de rest van het formulier betekent (zie forms.KlusForm). ── {% endcomment %}
