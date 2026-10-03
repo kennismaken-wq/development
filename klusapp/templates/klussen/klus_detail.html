@@ -52,7 +52,7 @@
             <div class="nt-inhoud">
               <span class="wie">
                 {{ notitie.geschreven_door.naam|default:"onbekend" }}
-                <span class="wanneer">{{ notitie.geschreven_op|date:"j M · H:i" }}</span>
+                <span class="wanneer">{{ notitie.geschreven_op|date:"j b · H:i" }}</span>
               </span>
               <p>{{ notitie.tekst|linebreaksbr }}</p>
             </div>
@@ -120,7 +120,7 @@
               </span>
               <span class="wanneer">
                 {{ rij.aantal_dagen }} dag{{ rij.aantal_dagen|pluralize:"en" }} ·
-                {{ rij.eerste_dag|date:"j M" }}{% if rij.eerste_dag != rij.laatste_dag %} – {{ rij.laatste_dag|date:"j M" }}{% endif %}
+                {{ rij.eerste_dag|date:"j b" }}{% if rij.eerste_dag != rij.laatste_dag %} – {{ rij.laatste_dag|date:"j b" }}{% endif %}
               </span>
               <span class="uren">{{ rij.uren }} u</span>
             </li>

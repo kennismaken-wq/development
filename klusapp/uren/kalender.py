@@ -90,7 +90,13 @@ def plaats_blokken(blokken):
         zichtbaar_begin = max(begin, START_MIN)
         zichtbaar_eind = min(eind, EIND_MIN)
         if zichtbaar_eind <= zichtbaar_begin:
-            continue
+            # Helemaal na 20:00 (of vóór 06:00): onderaan (of bovenaan) een
+            # blokje van een half uur, met de echte tijd erin. Eerst werd zo'n
+            # blok helemaal niet getekend, terwijl de uren wel meetelden.
+            if begin >= EIND_MIN:
+                zichtbaar_begin, zichtbaar_eind = EIND_MIN - VAK_MIN, EIND_MIN
+            else:
+                zichtbaar_begin, zichtbaar_eind = START_MIN, START_MIN + VAK_MIN
 
         overlappend = [
             ander

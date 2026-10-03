@@ -1921,3 +1921,21 @@ class OpruimVangnetTest(TestCase):
         with self.settings(MEDIA_ROOT=eigen_map), self.assertRaises(CommandError):
             call_command("ruim_bijlagen_op", "--echt", stdout=StringIO())
         self.assertTrue(bestand.exists())
+
+
+@override_settings(MEDIA_ROOT=TIJDELIJKE_MEDIA)
+class LeegBestandTest(TestCase):
+    """U11: een leeg bestand geeft een eigen melding en houdt de rest niet tegen."""
+
+    def test_leeg_bestand_naast_een_goede_foto(self):
+        sam = Medewerker.objects.create_user("sam", password="x")
+        klus = Klus.objects.create(naam="Tuin")
+        self.client.force_login(sam)
+        antwoord = self.client.post(
+            reverse("bijlage_toevoegen"),
+            {"bestanden": [upload("leeg.jpg", b""), upload("goed.jpg")], "klus": klus.pk},
+            follow=True,
+        )
+        self.assertContains(antwoord, "leeg.jpg is leeg (0 bytes) en is niet toegevoegd.")
+        self.assertNotContains(antwoord, "Kies eerst een bestand")
+        self.assertEqual(Bijlage.objects.get().originele_naam, "goed.jpg")

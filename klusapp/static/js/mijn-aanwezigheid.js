@@ -76,6 +76,9 @@
     dag.addEventListener("click", function () {
       formulier.reset();
       formulier.elements.datum.value = dag.dataset.zet;
+      // "Tot en met" begint leeg en kan niet vóór deze dag liggen.
+      formulier.elements.tot.value = "";
+      formulier.elements.tot.min = dag.dataset.zet;
       titel.textContent = dag.dataset.titel;
       const stand = formulier.querySelector('[name=stand][value="' + (dag.dataset.stand || "ja") + '"]');
       if (stand) stand.checked = true;

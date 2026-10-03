@@ -1863,3 +1863,90 @@ class OudePaginaTest(TestCase):
         self.assertContains(antwoord, "Iemand anders heeft dit intussen aangepast")
         self.sam.refresh_from_db()
         self.assertEqual((self.sam.telefoon, self.sam.functie), ("0622222222", ""))
+
+
+class GebruiksgemakTest(TestCase):
+    """De U-punten uit de stresstest, met de keuzes van Floris (03-10-2026)."""
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.maarten = Medewerker.objects.create_user("maarten", password="x", first_name="Maarten",
+                                                     rol=Medewerker.Rol.EIGENAAR)
+        cls.sam = Medewerker.objects.create_user("sam", password="x", first_name="Sam", vaste_werkdagen=[0, 1, 2, 3, 4])
+        cls.tuin = Klus.objects.create(naam="Tuin Vermeer")
+        cls.aaa = Klus.objects.create(naam="Aaa eerste op alfabet")
+        cls.vijver = Klus.objects.create(naam="Vijver Jansen")
+
+    def setUp(self):
+        self.client.force_login(self.sam)
+
+    def test_u1_agenda_toont_de_klus_niet_de_werkzaamheden(self):
+        Uurblok.objects.create(medewerker=self.sam, klus=self.tuin, datum=date(2026, 9, 8),
+                               begintijd=time(8), eindtijd=time(9), toelichting="maaien")
+        antwoord = self.client.get(reverse("mijn_uren") + "?dag=2026-09-08")
+        self.assertContains(antwoord, '<span class="onder">Tuin Vermeer</span>', html=True)
+        self.assertNotContains(antwoord, '<span class="onder">maaien</span>', html=True)
+
+    def test_u2_na_opslaan_zelfde_weergave_melding_en_blok(self):
+        antwoord = self.client.post(
+            reverse("uurblok_nieuw") + "?dag=2026-09-08",
+            {"klus": self.tuin.pk, "datum": "2026-09-08", "begintijd": "21:30", "eindtijd": "22:00", "weergave": "week"},
+        )
+        blok = Uurblok.objects.get()
+        self.assertEqual(antwoord["Location"], reverse("mijn_uren") + f"?dag=2026-09-08&weergave=week&blok={blok.pk}")
+        pagina = self.client.get(antwoord["Location"])
+        self.assertContains(pagina, "Uren opgeslagen · 21:30–22:00 · Tuin Vermeer")
+        self.assertContains(pagina, "net-opgeslagen")
+
+    def test_u3_andere_dag_zegt_niet_vandaag(self):
+        antwoord = self.client.get(reverse("mijn_uren") + "?dag=2020-01-06")
+        self.assertContains(antwoord, "uur op deze dag")
+
+    def test_u4_kies_een_klus(self):
+        antwoord = self.client.post(reverse("uurblok_nieuw"),
+                                    {"datum": "2026-09-08", "begintijd": "08:00", "eindtijd": "09:00"})
+        self.assertContains(antwoord, "Kies een klus.")
+
+    def test_u5_ingeplande_en_recente_klus_bovenaan(self):
+        Inzet.objects.create(medewerker=self.sam, datum=date(2026, 9, 9), klus=self.vijver)
+        Uurblok.objects.create(medewerker=self.sam, klus=self.tuin, datum=date(2026, 9, 8),
+                               begintijd=time(8), eindtijd=time(9))
+        from .forms import UurblokForm
+        formulier = UurblokForm(initial={"datum": date(2026, 9, 9)}, medewerker=self.sam)
+        volgorde = [klus.naam for klus in formulier.fields["klus"].queryset]
+        self.assertEqual(volgorde[:3], ["Vijver Jansen", "Tuin Vermeer", "Aaa eerste op alfabet"])
+        html = str(formulier["klus"])
+        self.assertIn('data-hint="Ingepland"', html)
+        self.assertIn('data-hint="Laatst gebruikt"', html)
+
+    def test_u6_vakantie_in_een_keer_alleen_werkdagen(self):
+        # do 8 okt t/m wo 14 okt 2026: do, vr, ma, di, wo = 5 werkdagen
+        self.client.post(reverse("mijn_aanwezigheid"),
+                         {"datum": "2026-10-08", "tot": "2026-10-14", "stand": "nee", "reden": "vakantie"})
+        dagen = sorted(Aanwezigheid.objects.filter(medewerker=self.sam).values_list("datum", flat=True))
+        self.assertEqual(dagen, [date(2026, 10, d) for d in (8, 9, 12, 13, 14)])
+        self.assertTrue(all(not a.aanwezig and a.reden == "vakantie" for a in Aanwezigheid.objects.all()))
+
+    def test_u6_tot_te_ver_weg_zet_alleen_de_dag_zelf(self):
+        self.client.post(reverse("mijn_aanwezigheid"),
+                         {"datum": "2026-10-08", "tot": "2027-10-08", "stand": "nee", "reden": "vakantie"})
+        self.assertEqual(Aanwezigheid.objects.count(), 1)
+
+    def test_u9_wie_nog_niets_schreef(self):
+        Uurblok.objects.create(medewerker=self.sam, klus=self.tuin, datum=date(2026, 9, 7),
+                               begintijd=time(8), eindtijd=time(9))
+        self.client.force_login(self.maarten)
+        antwoord = self.client.get(reverse("urenexport") + "?van=2026-09-07&tot=2026-09-13")
+        self.assertContains(antwoord, "Nog niets geschreven")
+        regel = antwoord.context["zonder_uren"][0]
+        self.assertEqual(regel["medewerker"], self.sam)
+        self.assertEqual(regel["dagen"], [date(2026, 9, d) for d in (8, 9, 10, 11)])
+        bord = self.client.get(reverse("planbord") + "?dag=2026-09-07")
+        self.assertContains(bord, "nog niets", count=4)
+
+    def test_u13_maanden_met_kleine_letter(self):
+        Uurblok.objects.create(medewerker=self.sam, klus=self.tuin, datum=date(2026, 10, 1),
+                               begintijd=time(8), eindtijd=time(9))
+        antwoord = self.client.get(reverse("mijn_uren") + "?dag=2026-10-01&weergave=week")
+        self.assertContains(antwoord, "1 okt")
+        self.assertNotContains(antwoord, "1 Okt")

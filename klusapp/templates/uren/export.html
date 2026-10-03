@@ -56,6 +56,21 @@
     <p class="leeg">Geen uren geschreven in deze periode.</p>
   {% endif %}
 
+  {% comment %} Wie op een werkdag nog niets schreef, zodat Maarten dat ziet
+     vóór het bestand naar de boekhouder gaat (U9). Volgens vaste werkdagen
+     en aanwezigheid; alleen dagen tot en met vandaag. {% endcomment %}
+  {% if zonder_uren %}
+    <div class="nog-niets">
+      <p class="nog-niets-kop">Nog niets geschreven</p>
+      <ul>
+        {% for regel in zonder_uren %}
+          <li><span class="naam">{{ regel.medewerker.naam }}</span>
+            <span class="dagen">{% for dag in regel.dagen %}{{ dag|date:"D j b" }}{% if not forloop.last %}, {% endif %}{% endfor %}</span></li>
+        {% endfor %}
+      </ul>
+    </div>
+  {% endif %}
+
   <p style="margin-top:1.4rem">
     <a class="knop"
        href="?van={{ van|date:'Y-m-d' }}&tot={{ tot|date:'Y-m-d' }}{% if medewerker_pk %}&medewerker={{ medewerker_pk }}{% endif %}&download=1">

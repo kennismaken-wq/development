@@ -1,6 +1,7 @@
 {% extends "basis.html" %}
 {% block titel %}Weekoverzicht{% endblock %}
 {% block kop %}Weekoverzicht{% endblock %}
+{% block kaartklasse %}breed{% endblock %}
 {% block inhoud %}
   <div class="navbalk">
     <div class="navlinks">
@@ -9,7 +10,7 @@
       {% if not is_deze_week %}
         <a class="knop-stil" href="{% url 'planbord' %}{% if gekozen_klus %}?klus={{ gekozen_klus.pk }}{% endif %}">Deze week</a>
       {% endif %}
-      <span class="periodetitel">{{ maandag|date:"j M" }} – {{ zondag|date:"j M" }}</span>
+      <span class="periodetitel">{{ maandag|date:"j b" }} – {{ zondag|date:"j b" }}</span>
     </div>
     <div class="totaal-chip">
       <span class="n" id="bord-weektotaal">{{ weektotaal }}</span>
@@ -23,7 +24,7 @@
       {% for kopdag in kopdagen %}
         <div class="bord-kop{% if kopdag.is_vandaag %} vandaag{% endif %}{% if kopdag.smal %} smal{% endif %}">
           <div class="dag">{{ kopdag.datum|date:"D" }}</div>
-          <div class="datum">{{ kopdag.datum|date:"j M" }}</div>
+          <div class="datum">{{ kopdag.datum|date:"j b" }}</div>
         </div>
       {% endfor %}
       <div class="bord-kop bord-week-kop"><div class="dag">Week</div></div>
@@ -59,7 +60,13 @@
             {% endfor %}
             {% comment %} Altijd aanwezig; de CSS verbergt hem zodra er een
                zichtbaar blok in de cel staat (ook na filteren). {% endcomment %}
-            <span class="bord-leeg">–</span>
+            {% if dagcel.zonder_uren %}
+              {% comment %} Een werkdag (volgens rooster en aanwezigheid) zonder
+                 uren: vergeten te schrijven? (U9) {% endcomment %}
+              <span class="bord-leeg bord-zonder" title="Werkdag, maar nog geen uren geschreven">nog niets</span>
+            {% else %}
+              <span class="bord-leeg">–</span>
+            {% endif %}
           </div>
         {% endfor %}
         <div class="bord-cel bord-week" data-rij="{{ forloop.counter0 }}">

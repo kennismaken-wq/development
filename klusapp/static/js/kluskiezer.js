@@ -177,6 +177,13 @@
       // je niet meer weet hoe hij heet.
       knop.dataset.tekst = (optie.kenmerken.zoek || optie.tekst).toLowerCase();
       knop.textContent = optie.tekst;
+      // "Ingepland" of "Laatst gebruikt" (uren.forms.UurblokForm._op_volgorde)
+      if (optie.kenmerken.hint) {
+        const hint = document.createElement("span");
+        hint.className = "klus-kiezer-hint";
+        hint.textContent = optie.kenmerken.hint;
+        knop.appendChild(hint);
+      }
       if (optie.kenmerken.waar) {
         const waar = document.createElement("span");
         waar.className = "klus-kiezer-waar";

@@ -43,7 +43,7 @@
           {% if bijlage.toegevoegd_door %}
             {% include "_medewerkerbol.html" with persoon=bijlage.toegevoegd_door klasse="fk-bol" %}
           {% endif %}
-          {{ bijlage.toegevoegd_door.naam|default:"onbekend" }} · {{ bijlage.datum|date:"j M" }}
+          {{ bijlage.toegevoegd_door.naam|default:"onbekend" }} · {{ bijlage.datum|date:"j b" }}
         </span>
         {% include "klussen/_afgeschermd.html" %}
       </figcaption>

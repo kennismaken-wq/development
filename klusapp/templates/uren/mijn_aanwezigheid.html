@@ -71,8 +71,8 @@
              data-k="{{ kopdag.index }}">
           {% if kopdag.is_vandaag %}<span class="vandaag-label">Vandaag</span>{% endif %}
           <span class="dag">{{ kopdag.datum|date:"D" }}</span>
-          <span class="datum">{{ kopdag.datum|date:"j M" }}</span>
-          {% if kopdag.datum.day == 1 %}<span class="maand">{{ kopdag.datum|date:"M" }}</span>{% endif %}
+          <span class="datum">{{ kopdag.datum|date:"j b" }}</span>
+          {% if kopdag.datum.day == 1 %}<span class="maand">{{ kopdag.datum|date:"b" }}</span>{% endif %}
           <span class="nr">{{ kopdag.datum|date:"j" }}</span>
           {% if kopdag.feestdag %}<span class="feest" title="{{ kopdag.feestdag }}{% if not kopdag.feestdag_vrij %} (geen vrije dag){% endif %}">{{ kopdag.feestdag }}</span>{% endif %}
         </div>
@@ -139,6 +139,11 @@
           {% endfor %}
         </div>
       </div>
+
+      {% comment %} Meer dagen in één keer, voor een vakantie: alleen de
+         werkdagen ertussen (uren.views._werkdagen_tot, U6). {% endcomment %}
+      <label for="aw-tot">Tot en met</label>
+      <input type="date" id="aw-tot" name="tot">
 
       <label for="aw-opmerking">Opmerking</label>
       <input type="text" id="aw-opmerking" name="opmerking" maxlength="200" placeholder="Tandarts, tot 14.15…" autocomplete="off">

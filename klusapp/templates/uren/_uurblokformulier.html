@@ -39,6 +39,9 @@
     </div>
   {% endif %}
   {% csrf_token %}
+  {% comment %} De weergave van de agenda waar je vandaan kwam, zodat je daar na
+     opslaan weer terugkomt (uren.views._terug_naar_dag). {% endcomment %}
+  {% if weergave %}<input type="hidden" name="weergave" value="{{ weergave }}">{% endif %}
   {% for veld in formulier %}
     <label for="{{ veld.id_for_label }}">{{ veld.label }}</label>
     {% if veld.name == "klus" %}
@@ -54,7 +57,7 @@
     {% else %}
       {{ veld }}
     {% endif %}
-    {% for fout in veld.errors %}<p class="fout">{{ fout }}</p>{% endfor %}
+    {% for fout in veld.errors %}<p class="fout" data-fout-voor="{{ veld.name }}">{{ fout }}</p>{% endfor %}
   {% endfor %}
 
   {% if bijlagenformulier %}
@@ -67,6 +70,30 @@
     <p style="margin-top:1.8rem" id="uurblok-opslaanrij"{% if alleen_lezen %} hidden{% endif %}><button type="submit" class="knop">Opslaan</button></p>
   {% endif %}
 </form>
+{% if formulier.errors %}
+  <script>
+    // Een melding onder een veld verdwijnt zodra je dat veld aanpast; eerst
+    // bleef "Vul een eindtijd in." staan terwijl hij al was ingevuld (U4).
+    // Dag, van en tot horen bij elkaar (de overlapmelding staat bij "van"),
+    // dus die drie gaan samen weg.
+    (function () {
+      var formulieren = document.querySelectorAll("form.uurblokformulier");
+      var formulier = formulieren[formulieren.length - 1];
+      if (!formulier) return;
+      var TIJD = ["datum", "begintijd", "eindtijd"];
+      function wis(e) {
+        var naam = e.target.name;
+        if (!naam) return;
+        var namen = TIJD.indexOf(naam) !== -1 ? TIJD : [naam];
+        namen.forEach(function (n) {
+          formulier.querySelectorAll('.fout[data-fout-voor="' + n + '"]').forEach(function (p) { p.remove(); });
+        });
+      }
+      formulier.addEventListener("change", wis);
+      formulier.addEventListener("input", wis);
+    })();
+  </script>
+{% endif %}
 {% if verwijder_url %}
   {% comment %} Geen zichtbare knop hierin: die staat als prullenbak-icoontje
      boven in _uurblokdetail_inhoud.html, gekoppeld via het form-attribuut
@@ -75,6 +102,7 @@
   <form method="post" action="{{ verwijder_url }}" id="uurblok-verwijderrij"
         onsubmit="return confirm('Dit uurblok verwijderen?');">
     {% csrf_token %}
+    {% if weergave %}<input type="hidden" name="weergave" value="{{ weergave }}">{% endif %}
   </form>
 {% endif %}
 
@@ -147,6 +175,13 @@
           headers: { "X-Requested-With": "XMLHttpRequest" },
         })
           .then(function (respons) {
+            // Gelukt: de server geeft het adres terug in X-Naar (zie
+            // uren.views._terug_naar_dag), zodat de melding niet al door
+            // fetch wordt opgebruikt.
+            if (respons.headers.get("X-Naar")) {
+              window.location.href = respons.headers.get("X-Naar");
+              return null;
+            }
             if (respons.redirected) {
               window.location.href = respons.url;
               return null;

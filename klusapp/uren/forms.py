@@ -2,13 +2,13 @@ import datetime
 
 from django import forms
 from django.conf import settings
-from django.db.models import Q
+from django.db.models import Case, Q, When
 from django.utils import timezone
 
 from klussen.forms import AlleenFotosForm, KlusSelect
 from klussen.models import Klus
 
-from .models import Uurblok
+from .models import Inzet, Uurblok
 
 # Grenzen voor een uurblok (B6, afgesproken met Floris 03-10-2026).
 MAX_DAGEN_TERUG = 365
@@ -92,7 +92,7 @@ class UurblokForm(forms.ModelForm):
         # standaard "Dit veld is verplicht." zegt in die popup niet genoeg
         # zonder erbij te lezen welk veld het is.
         error_messages = {
-            "klus": {"required": "Deze activiteit is niet aan een klus gekoppeld."},
+            "klus": {"required": "Kies een klus."},
             "datum": {"required": "Vul een dag in."},
             "begintijd": {"required": "Vul een begintijd in."},
             "eindtijd": {"required": "Vul een eindtijd in."},
@@ -111,7 +111,7 @@ class UurblokForm(forms.ModelForm):
         lopend = Q(actief=True)
         if self.instance.pk:
             lopend |= Q(pk=self.instance.klus_id)
-        self.fields["klus"].queryset = Klus.objects.filter(lopend)
+        self.fields["klus"].queryset = self._op_volgorde(Klus.objects.filter(lopend))
         self.fields["klus"].error_messages["invalid_choice"] = (
             "Deze klus is intussen afgerond. Kies een andere klus, of vraag de eigenaar."
         )
@@ -125,6 +125,30 @@ class UurblokForm(forms.ModelForm):
         ]
         for veld in ("begintijd", "eindtijd"):
             self.fields[veld].widget.choices = _tijdkeuzes(ook=bestaand)
+
+    def _op_volgorde(self, klussen):
+        """Bovenaan de klussen waar je die dag op de werkplanning stond, dan
+        je laatst gebruikte, dan de rest op naam. Eerst stonden alle ~45
+        lopende klussen op alfabet en moest je elke avond zoeken (U5, Floris
+        03-10-2026). Niets wordt vooraf gekozen; de kiezer toont er een
+        labeltje bij (KlusSelect, data-hint)."""
+        if not self.medewerker:
+            return klussen
+        dag = self.initial.get("datum") or (self.instance.datum if self.instance.pk else None)
+        ingepland = set()
+        if dag:
+            ingepland = set(
+                Inzet.objects.filter(medewerker=self.medewerker, datum=dag).values_list("klus_id", flat=True)
+            )
+        laatst = Uurblok.objects.filter(medewerker=self.medewerker).order_by("-datum", "-eindtijd")
+        recent = [pk for pk in dict.fromkeys(laatst.values_list("klus_id", flat=True)[:40]) if pk not in ingepland][:5]
+        self.fields["klus"].widget.hints = {
+            **{pk: "Laatst gebruikt" for pk in recent},
+            **{pk: "Ingepland" for pk in ingepland},
+        }
+        return klussen.annotate(
+            volgorde=Case(When(pk__in=ingepland, then=0), When(pk__in=recent, then=1), default=2)
+        ).order_by("volgorde", "-actief", "naam")
 
     def clean(self):
         gegevens = super().clean()

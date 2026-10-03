@@ -139,6 +139,20 @@ def bewaar_bijlage(bestand, datum, toelichting, klus, uurblok, gebruiker, batch=
     return bijlage
 
 
+def zonder_lege_bestanden(request, *velden):
+    """request.FILES zonder bestanden van 0 bytes, met per leeg bestand een
+    melding. Eerst maakte één leeg bestand (een mislukte download, een kapotte
+    foto uit WhatsApp) de hele upload ongeldig, met de melding "Kies eerst een
+    bestand." terwijl je er wél een koos (U11, Floris 03-10-2026)."""
+    bestanden = request.FILES.copy()
+    for veld in velden:
+        gekozen = request.FILES.getlist(veld)
+        for leeg in (bestand for bestand in gekozen if not bestand.size):
+            messages.error(request, f"{leeg.name} is leeg (0 bytes) en is niet toegevoegd.")
+        bestanden.setlist(veld, [bestand for bestand in gekozen if bestand.size])
+    return bestanden
+
+
 def batch_van_upload(bestanden):
     """Eén gedeeld kenmerk voor alle bestanden uit dezelfde upload, zodat het
     fotoraster ze als post bij elkaar kan tonen. Bij één bestand is er niets
@@ -153,11 +167,12 @@ def bijlage_toevoegen(request):
     if request.method != "POST":
         return redirect(standaard)
 
-    formulier = BijlageForm(request.POST, request.FILES)
+    bestanden = zonder_lege_bestanden(request, "bestanden")
+    formulier = BijlageForm(request.POST, bestanden)
     if not formulier.is_valid():
         if formulier.errors.get("datum"):
             messages.error(request, "Vul een geldige datum in.")
-        else:
+        elif not request.FILES.getlist("bestanden"):
             messages.error(request, "Kies eerst een bestand.")
         return _terug_naar(request, standaard)
 
@@ -649,7 +664,10 @@ def klus_nieuw(request):
     # Eén formulier op de pagina, twee Django-formulieren erachter: bestanden
     # kiezen is optioneel (zie NieuweKlusBijlagenForm), dus die mogen de klus
     # zelf nooit blokkeren.
-    bijlagenformulier = NieuweKlusBijlagenForm(request.POST or None, request.FILES or None)
+    bijlagenformulier = NieuweKlusBijlagenForm(
+        request.POST or None,
+        zonder_lege_bestanden(request, "bestanden", "documenten") if request.method == "POST" else None,
+    )
     if request.method == "POST" and formulier.is_valid() and bijlagenformulier.is_valid():
         klus = formulier.save(commit=False)
         with transaction.atomic():

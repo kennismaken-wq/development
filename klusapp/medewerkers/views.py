@@ -424,7 +424,7 @@ def medewerker_dienst(request, pk):
     else:
         medewerker.uit_dienst_sinds = date.today()
         medewerker.is_active = False
-        bericht = f"{medewerker.naam} staat uit dienst. Zijn uren en foto's blijven bewaard."
+        bericht = f"{medewerker.naam} staat uit dienst. De uren en foto's blijven bewaard."
     medewerker.save()
     messages.success(request, bericht)
     return redirect("medewerkers")

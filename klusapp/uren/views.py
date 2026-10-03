@@ -17,7 +17,7 @@ from klussen import afbeeldingen, voorbeeld
 from klussen.forms import BijlageForm, KlusFotoForm
 from klussen.fotoposts import groepeer_in_posts
 from klussen.models import Bijlage, Klus
-from klussen.views import batch_van_upload, bewaar_bijlage
+from klussen.views import batch_van_upload, bewaar_bijlage, zonder_lege_bestanden
 from medewerkers.models import Medewerker
 from medewerkers.rechten import alleen_eigenaar
 
@@ -33,8 +33,30 @@ def _tijd_uit(waarde):
         return None
 
 
-def _terug_naar_dag(dag):
-    return redirect(f"{reverse('mijn_uren')}?dag={dag.isoformat()}")
+def _terug_naar_dag(dag, request=None, blok=None):
+    """Terug naar de agenda op die dag. In de weergave waar je was (Week
+    bleef eerst niet staan na opslaan) en met het opgeslagen blok erbij,
+    zodat de agenda daar naartoe scrollt (U2, Floris 03-10-2026). Geen #anker:
+    het urenvenster post met fetch, en dan valt dat weg."""
+    adres = f"{reverse('mijn_uren')}?dag={dag.isoformat()}"
+    weergave = request.POST.get("weergave") if request is not None else None
+    if weergave in WEERGAVEN:
+        adres += f"&weergave={weergave}"
+    if blok is not None:
+        adres += f"&blok={blok.pk}"
+    if request is not None and request.headers.get("X-Requested-With") == "XMLHttpRequest":
+        # Het urenvenster post met fetch. Een redirect volgt fetch zelf, en
+        # dat onzichtbare verzoek "las" de melding (Uren opgeslagen, Let op:
+        # afwezig) al voordat de pagina echt laadde. Dus geen redirect maar
+        # het adres in een header; het venster navigeert er zelf heen.
+        return HttpResponse(status=204, headers={"X-Naar": adres})
+    return redirect(adres)
+
+
+def _opgeslagen(request, blok):
+    messages.success(
+        request, f"Uren opgeslagen · {blok.begintijd:%H:%M}–{blok.eindtijd:%H:%M} · {blok.klus.naam}"
+    )
 
 
 WEERGAVEN = {"dag", "week", "maand"}
@@ -100,7 +122,8 @@ def mijn_uren(request):
         (blok for blok in blokken if blok.datum == dag), key=lambda blok: blok.eindtijd, default=None
     )
     formulier = UurblokForm(
-        initial={"datum": dag, "begintijd": laatste_van_dag.eindtijd if laatste_van_dag else None}
+        initial={"datum": dag, "begintijd": laatste_van_dag.eindtijd if laatste_van_dag else None},
+        medewerker=request.user,
     )
     # Zodat je in dezelfde dialoog meteen een foto bij de uren kunt hangen —
     # zie uurblok_nieuw() voor het wegschrijven ervan.
@@ -207,7 +230,7 @@ def uurblok_nieuw(request):
         formulier = UurblokForm(request.POST, medewerker=request.user)
         # Bestanden kiezen is optioneel (zie UurblokFotosForm), dus die mogen
         # het opslaan van de uren zelf nooit blokkeren.
-        bijlagenformulier = UurblokFotosForm(request.POST, request.FILES)
+        bijlagenformulier = UurblokFotosForm(request.POST, zonder_lege_bestanden(request, "bestanden"))
         with transaction.atomic():
             request.user.vergrendel()
             geldig = formulier.is_valid() and bijlagenformulier.is_valid()
@@ -237,7 +260,8 @@ def uurblok_nieuw(request):
                     # Het uurblok staat er al; alleen deze foto mislukt, niet de rest.
                     messages.error(request, f"{bestand.name}: {probleem}")
 
-            return _terug_naar_dag(blok.datum)
+            _opgeslagen(request, blok)
+            return _terug_naar_dag(blok.datum, request, blok)
 
         if request.headers.get("X-Requested-With") == "XMLHttpRequest":
             # De "uren toevoegen"-knop opent dit formulier als bottom sheet
@@ -268,7 +292,7 @@ def uurblok_nieuw(request):
                 .last()
             )
             van = laatste.eindtijd if laatste else None
-        formulier = UurblokForm(initial={"datum": dag, "begintijd": van, "eindtijd": tot})
+        formulier = UurblokForm(initial={"datum": dag, "begintijd": van, "eindtijd": tot}, medewerker=request.user)
         bijlagenformulier = UurblokFotosForm()
     return render(
         request,
@@ -320,6 +344,8 @@ def _uurblok_detail_context(request, pk, formulier_override=None, bewerken=None)
         "foto_formulier": KlusFotoForm(),
         "upload_url": reverse("bijlage_toevoegen"),
         "terug": request.get_full_path(),
+        # uit de agenda meegegeven (data-paneel-url), voor na het opslaan
+        "weergave": request.GET.get("weergave") if request.GET.get("weergave") in WEERGAVEN else "",
     }
 
 
@@ -357,7 +383,8 @@ def uurblok_bewerken(request, pk):
             formulier.save()
     if geldig:
         _melding_bij_afwezig(request, formulier.instance)
-        return _terug_naar_dag(formulier.instance.datum)
+        _opgeslagen(request, formulier.instance)
+        return _terug_naar_dag(formulier.instance.datum, request, formulier.instance)
 
     # Bij een fout terug naar hetzelfde scherm, open en met de foutmelding
     # erbij (zie _uurblokformulier.html), i.p.v. een leeg formulier opnieuw
@@ -372,7 +399,7 @@ def uurblok_verwijderen(request, pk):
     dag = blok.datum
     if request.method == "POST":
         blok.delete()
-    return _terug_naar_dag(dag)
+    return _terug_naar_dag(dag, request)
 
 
 @alleen_eigenaar
@@ -424,6 +451,13 @@ def planbord(request):
     # de kolommen bij elke filterkeuze.
     alle_dagminuten = dict.fromkeys(week["dagen"], 0)
     rijen = []
+    # Werkdagen zonder uren (tot en met vandaag): die cel zegt "nog niets" in
+    # plaats van een streepje (U9, Floris 03-10-2026).
+    zonder_uren = {
+        (persoon.pk, dag)
+        for persoon, dagen in bezetting.zonder_uren(week["maandag"], week["zondag"], week["vandaag"]).items()
+        for dag in dagen
+    }
     # Ook wie niets schreef krijgt een rij: "wie staat er níét ingepland" is
     # net zo goed de vraag waarvoor dit scherm bestaat.
     for medewerker in Medewerker.objects.filter(uit_dienst_sinds__isnull=True):
@@ -449,6 +483,7 @@ def planbord(request):
                         for blok in cel
                     ],
                     "totaal": kalender.als_uren(minuten) if minuten else "",
+                    "zonder_uren": (medewerker.pk, datum) in zonder_uren,
                 }
             )
         rijen.append(
@@ -764,22 +799,46 @@ def _eigen_aanwezigheid_opslaan(request):
     reden = request.POST.get("reden", "")
     if stand != "nee" or reden not in Aanwezigheid.Reden.values:
         reden = ""
-    # update_or_create: een dubbel verstuurd formulier mag niet stuklopen op
-    # de unieke sleutel. Afwezig haalt ook de klussen van die dag weg
-    # (Aanwezigheid.save).
-    Aanwezigheid.objects.update_or_create(
-        medewerker=request.user,
-        datum=datum,
-        defaults={
-            "aanwezig": stand == "ja",
-            "reden": reden,
-            "opmerking": request.POST.get("opmerking", "").strip()[:200],
-        },
-    )
-    if stand == "nee" and Uurblok.objects.filter(medewerker=request.user, datum=datum).exists():
+    dagen = [datum] + _werkdagen_tot(request.user, datum, _datum_uit(request.POST.get("tot")))
+    defaults = {
+        "aanwezig": stand == "ja",
+        "reden": reden,
+        "opmerking": request.POST.get("opmerking", "").strip()[:200],
+    }
+    for dag in dagen:
+        # update_or_create: een dubbel verstuurd formulier mag niet stuklopen
+        # op de unieke sleutel. Afwezig haalt ook de klussen van die dag weg
+        # (Aanwezigheid.save).
+        Aanwezigheid.objects.update_or_create(medewerker=request.user, datum=dag, defaults=defaults)
+    if len(dagen) > 1:
+        stand_tekst = "aanwezig" if stand == "ja" else f"afwezig{f' ({reden})' if reden else ''}"
+        messages.success(
+            request, f"{len(dagen)} werkdagen op {stand_tekst} gezet, {dagen[0]:%d-%m} t/m {dagen[-1]:%d-%m}."
+        )
+    met_uren = Uurblok.objects.filter(medewerker=request.user, datum__in=dagen).exists()
+    if stand == "nee" and met_uren:
         # Halverwege de dag ziek: de uren van die ochtend horen te blijven.
-        messages.info(request, f"Je had op {datum:%d-%m} al uren geschreven; die blijven gewoon staan.")
+        messages.info(request, "Op een van die dagen had je al uren geschreven; die blijven gewoon staan.")
     return datum
+
+
+# Hoe ver "t/m" in Mijn aanwezigheid mag reiken: een lange vakantie, geen jaar.
+MAX_DAGEN_TOT = 92
+
+
+def _werkdagen_tot(medewerker, vanaf, tot):
+    """De dagen ná `vanaf` tot en met `tot` waarop deze medewerker volgens
+    zijn rooster werkt: weekenden, vaste vrije dagen en feestdagen slaan we
+    over (U6: vakantie van twee weken in één keer, Floris 03-10-2026)."""
+    if not tot or tot <= vanaf or (tot - vanaf).days > MAX_DAGEN_TOT:
+        return []
+    feest = bezetting.feestdagen_tussen(vanaf, tot)
+    dagen = []
+    for n in range(1, (tot - vanaf).days + 1):
+        dag = vanaf + timedelta(days=n)
+        if bezetting.cel(medewerker, dag, feestdag=feest.get(dag, "")).stand == bezetting.AANWEZIG:
+            dagen.append(dag)
+    return dagen
 
 
 SOORT_VOLGORDE = {"onderhoud": 0, "van_ee": 1, "aanleg": 2}
@@ -1077,6 +1136,20 @@ def _is_hele_maand(van, tot):
     )
 
 
+def _zonder_uren_lijst(van, tot, vandaag, medewerker_pk=""):
+    """Voor het exportscherm: wie op een werkdag in deze periode nog niets
+    schreef (bezetting.zonder_uren). Alleen bij een periode tot een kwartaal:
+    daarna is het een export voor het archief, niet een controle."""
+    if (tot - van).days > 92:
+        return []
+    regels = [
+        {"medewerker": persoon, "dagen": dagen}
+        for persoon, dagen in bezetting.zonder_uren(van, tot, vandaag).items()
+        if not medewerker_pk or str(persoon.pk) == medewerker_pk
+    ]
+    return sorted(regels, key=lambda regel: regel["medewerker"].naam.lower())
+
+
 @login_required
 def urenexport(request):
     """Exportscherm voor de boekhouder: uren van een gekozen periode als Excel.
@@ -1172,5 +1245,6 @@ def urenexport(request):
                 Lower("first_name"), Lower("last_name"), "username"
             ),
             "totalen": totalen,
+            "zonder_uren": _zonder_uren_lijst(van, tot, vandaag, medewerker_pk),
         },
     )

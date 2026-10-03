@@ -21,7 +21,7 @@ from datetime import date, timedelta
 from medewerkers.models import Medewerker
 
 from .kalender import kleur_van
-from .models import Aanwezigheid, Inzet
+from .models import Aanwezigheid, Inzet, Uurblok
 
 AANWEZIG = "aanwezig"
 AFWEZIG = "afwezig"
@@ -188,3 +188,27 @@ def aantal_aanwezig(dag):
     cellen = rooster(medewerkers, [dag])
     aanwezig = sum(1 for c in cellen.values() if c.stand == AANWEZIG)
     return aanwezig, len(medewerkers)
+
+
+def zonder_uren(van, tot, vandaag):
+    """{medewerker: [dagen]} — werkdagen waarop iemand er volgens rooster en
+    aanwezigheid was, maar nog geen uren heeft geschreven. Alleen dagen tot en
+    met vandaag (vooruit kun je niets vergeten) en alleen medewerkers: de
+    eigenaar schrijft zijn eigen uren niet elke dag. Voor het exportscherm en
+    het weekoverzicht: wie vergat er te schrijven, vóórdat het naar de
+    boekhouder gaat (U9, Floris 03-10-2026)."""
+    tot = min(tot, vandaag)
+    if tot < van:
+        return {}
+    dagen = [van + timedelta(days=n) for n in range((tot - van).days + 1)]
+    mensen = [m for m in medewerkers_tussen(van, tot) if m.rol == Medewerker.Rol.MEDEWERKER]
+    cellen = rooster(mensen, dagen)
+    geschreven = set(
+        Uurblok.objects.filter(datum__range=(van, tot), medewerker__in=mensen).values_list("medewerker_id", "datum")
+    )
+    uitkomst = {}
+    for m in mensen:
+        missend = [d for d in dagen if cellen[(m.pk, d)].stand == AANWEZIG and (m.pk, d) not in geschreven]
+        if missend:
+            uitkomst[m] = missend
+    return uitkomst

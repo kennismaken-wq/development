@@ -41,6 +41,10 @@ class KlusSelect(forms.Select):
             optie["attrs"]["data-zoek"] = " ".join(
                 deel for deel in (klus.naam, klus.opdrachtgever, waar) if deel
             )
+            # "Ingepland" / "Laatst gebruikt" bij uren schrijven (uren.forms.UurblokForm._op_volgorde)
+            hint = getattr(self, "hints", {}).get(klus.pk)
+            if hint:
+                optie["attrs"]["data-hint"] = hint
         return optie
 
 
