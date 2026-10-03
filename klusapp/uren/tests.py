@@ -1950,3 +1950,18 @@ class GebruiksgemakTest(TestCase):
         antwoord = self.client.get(reverse("mijn_uren") + "?dag=2026-10-01&weergave=week")
         self.assertContains(antwoord, "1 okt")
         self.assertNotContains(antwoord, "1 Okt")
+
+
+class BlokBuitenDeAgendaTest(TestCase):
+    """Een blok helemaal na 20:00 of vóór 06:00 werd niet getekend, terwijl de
+    uren wel meetelden. Nu aan de rand, met de echte tijd erin."""
+
+    def test_late_en_vroege_blokken_worden_aan_de_rand_getekend(self):
+        sam = Medewerker.objects.create_user("sam", password="x")
+        klus = Klus.objects.create(naam="Tuin")
+        laat = Uurblok(medewerker=sam, klus=klus, datum=date(2026, 9, 7), begintijd=time(21), eindtijd=time(21, 30))
+        vroeg = Uurblok(medewerker=sam, klus=klus, datum=date(2026, 9, 7), begintijd=time(5), eindtijd=time(5, 30))
+        getekend = {g["blok"].begintijd: g for g in kalender.plaats_blokken([laat, vroeg])}
+        self.assertEqual(len(getekend), 2)
+        self.assertEqual(getekend[time(5)]["top"], 0)
+        self.assertEqual(getekend[time(21)]["top"], kalender.raster_hoogte() - kalender.RIJ_H)
