@@ -1,10 +1,10 @@
 from django import forms
-from django.contrib.auth.forms import PasswordResetForm, SetPasswordForm
+from django.contrib.auth.forms import AuthenticationForm, PasswordResetForm, SetPasswordForm
 from django.contrib.auth.password_validation import validate_password
 from django.core.files.uploadedfile import UploadedFile
 from django.utils.safestring import mark_safe
 
-from . import profielfotos
+from . import profielfotos, rem
 from .models import RIJBEWIJS_GROEPEN, RIJBEWIJS_VOLGORDE, WEEKDAGEN, Medewerker
 
 
@@ -183,6 +183,16 @@ class MedewerkerForm(RijbewijzenMixin, ProfielfotoMixin, forms.ModelForm):
         widget=WerkdagenWidget,
     )
 
+    def clean_username(self):
+        """Geen "SAM" naast "sam": inloggen let niet op hoofdletters
+        (medewerkers/inloggen.py), dus dat zouden twee accounts met dezelfde
+        naam zijn (B11). Ook het verborgen account telt mee."""
+        naam = self.cleaned_data["username"]
+        bezet = Medewerker.alle.filter(username__iexact=naam).exclude(pk=self.instance.pk).exists()
+        if bezet:
+            raise forms.ValidationError("Er bestaat al een gebruiker met deze gebruikersnaam.")
+        return naam
+
     def clean_vaste_werkdagen(self):
         return sorted(set(self.cleaned_data["vaste_werkdagen"]))
 
@@ -207,10 +217,24 @@ class NieuweMedewerkerForm(MedewerkerForm):
         help_text=WACHTWOORD_EISEN,
     )
 
-    def clean_wachtwoord(self):
-        wachtwoord = self.cleaned_data["wachtwoord"]
-        validate_password(wachtwoord)
-        return wachtwoord
+    def clean(self):
+        gegevens = super().clean()
+        wachtwoord = gegevens.get("wachtwoord")
+        if wachtwoord:
+            # Met de gegevens van de nieuwe medewerker erbij, zodat ook
+            # "lijkt te veel op de gebruikersnaam" meetelt (pietjepuk99 als
+            # wachtwoord voor pietjepuk99 mocht eerst, stresstest B11).
+            voorlopig = Medewerker(
+                username=gegevens.get("username", ""),
+                first_name=gegevens.get("first_name", ""),
+                last_name=gegevens.get("last_name", ""),
+                email=gegevens.get("email", ""),
+            )
+            try:
+                validate_password(wachtwoord, user=voorlopig)
+            except forms.ValidationError as fout:
+                self.add_error("wachtwoord", fout)
+        return gegevens
 
     def save(self, commit=True):
         medewerker = super().save(commit=False)
@@ -307,6 +331,24 @@ class EigenWachtwoordForm(forms.Form):
         self.gebruiker.save()
 
 
+class InlogForm(AuthenticationForm):
+    """Django's inlogformulier met een rem op raden (medewerkers/rem.py, B5)."""
+
+    def clean(self):
+        naam = (self.cleaned_data.get("username") or "").strip()
+        if naam and self.request is not None and rem.inloggen_geblokkeerd(self.request, naam):
+            raise forms.ValidationError(rem.TE_VEEL_POGINGEN, code="te_veel")
+        try:
+            gegevens = super().clean()
+        except forms.ValidationError:
+            if naam and self.request is not None:
+                rem.inloggen_mislukt(self.request, naam)
+            raise
+        if naam:
+            rem.inloggen_gelukt(naam)
+        return gegevens
+
+
 class WachtwoordVergetenForm(PasswordResetForm):
     """"Wachtwoord vergeten" op de inlogpagina: je e-mailadres, en er gaat een
     link naar het adres op je profiel. Wat er gebeurt en wat niet (geen mail
@@ -318,6 +360,13 @@ class WachtwoordVergetenForm(PasswordResetForm):
         max_length=254,
         widget=forms.EmailInput(attrs={"autocomplete": "email", "inputmode": "email", "autofocus": True}),
     )
+
+    def save(self, *args, request=None, **kwargs):
+        # Hooguit een paar mails per adres per uur (rem.py, B5). Daarboven
+        # gewoon hetzelfde scherm, zonder mail.
+        if not rem.reset_toegestaan(request, self.cleaned_data["email"]):
+            return
+        return super().save(*args, request=request, **kwargs)
 
 
 class NieuwWachtwoordForm(SetPasswordForm):

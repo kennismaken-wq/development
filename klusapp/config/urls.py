@@ -4,7 +4,7 @@ from django.contrib.auth import views as auth_views
 from django.urls import include, path, reverse_lazy
 
 from medewerkers import views as medewerkers_views
-from medewerkers.forms import NieuwWachtwoordForm, WachtwoordVergetenForm
+from medewerkers.forms import InlogForm, NieuwWachtwoordForm, WachtwoordVergetenForm
 
 # "Wachtwoord vergeten": Django's eigen reset-flow, met onze schermen en mail.
 # De mail gaat via dezelfde SMTP-instellingen als de urenback-up (.env, zie
@@ -24,7 +24,11 @@ nog_te_bouwen = []
 
 urlpatterns = [
     path("", medewerkers_views.start, name="start"),
-    path("inloggen/", auth_views.LoginView.as_view(redirect_authenticated_user=True), name="inloggen"),
+    path(
+        "inloggen/",
+        auth_views.LoginView.as_view(redirect_authenticated_user=True, authentication_form=InlogForm),
+        name="inloggen",
+    ),
     path("uitloggen/", auth_views.LogoutView.as_view(), name="uitloggen"),
     path(
         "wachtwoord-vergeten/",

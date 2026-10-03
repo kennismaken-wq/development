@@ -173,3 +173,25 @@ class Medewerker(AbstractUser):
     @property
     def is_eigenaar(self):
         return self.rol == self.Rol.EIGENAAR
+
+
+class Poging(models.Model):
+    """Een mislukte inlogpoging of een "wachtwoord vergeten"-aanvraag, voor
+    de rem in medewerkers/rem.py. In de database en niet in de cache: die is
+    per gunicorn-worker, en dan telt elke worker zijn eigen pogingen.
+    Rijen ouder dan een dag ruimt rem.py zelf op."""
+
+    class Soort(models.TextChoices):
+        INLOGGEN = "inloggen", "Mislukt inloggen"
+        RESET = "reset", "Wachtwoord vergeten"
+
+    soort = models.CharField(max_length=20, choices=Soort.choices)
+    # gebruikersnaam of e-mailadres, in kleine letters
+    sleutel = models.CharField(max_length=254)
+    ip = models.GenericIPAddressField(null=True, blank=True)
+    tijdstip = models.DateTimeField(auto_now_add=True, db_index=True)
+
+    class Meta:
+        verbose_name = "poging"
+        verbose_name_plural = "pogingen"
+        indexes = [models.Index(fields=["soort", "sleutel", "tijdstip"])]

@@ -1218,3 +1218,74 @@ class StresstestMedewerkersTest(TestCase):
             antwoord = self.client.post(reverse("medewerker_nieuw"), gegevens)
         self.assertEqual(antwoord.status_code, 200)
         self.assertContains(antwoord, "Er bestaat al een gebruiker met deze gebruikersnaam")
+
+
+class HoofdlettersInGebruikersnaamTest(TestCase):
+    """Stresstest 03-10-2026, B11."""
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.maarten = Medewerker.objects.create_user("maarten", password="x", first_name="Maarten",
+                                                     rol=Medewerker.Rol.EIGENAAR)
+        cls.kees = Medewerker.objects.create_user("kees", password="Geheim-wachtwoord-1", first_name="Kees")
+
+    def test_inloggen_met_hoofdletter(self):
+        antwoord = self.client.post(reverse("inloggen"), {"username": "Kees", "password": "Geheim-wachtwoord-1"})
+        self.assertEqual(antwoord.status_code, 302)
+        self.assertEqual(int(self.client.session["_auth_user_id"]), self.kees.pk)
+
+    def test_bij_twee_varianten_wint_de_exacte(self):
+        kees_hoofd = Medewerker.objects.create_user("KEES", password="Ander-wachtwoord-2")
+        self.client.post(reverse("inloggen"), {"username": "KEES", "password": "Ander-wachtwoord-2"})
+        self.assertEqual(int(self.client.session["_auth_user_id"]), kees_hoofd.pk)
+
+    def test_naam_die_alleen_in_hoofdletters_verschilt_mag_niet(self):
+        self.client.force_login(self.maarten)
+        antwoord = self.client.post(reverse("medewerker_nieuw"), {
+            "first_name": "Kees", "username": "KEES", "rol": "medewerker", "kleur": "#336699",
+            "wachtwoord": "Sterk-wachtwoord-77",
+        })
+        self.assertContains(antwoord, "Er bestaat al een gebruiker met deze gebruikersnaam")
+        self.assertFalse(Medewerker.alle.filter(username="KEES").exists())
+
+    def test_wachtwoord_mag_niet_op_de_gebruikersnaam_lijken(self):
+        self.client.force_login(self.maarten)
+        antwoord = self.client.post(reverse("medewerker_nieuw"), {
+            "first_name": "Piet", "username": "pietjepuk99", "rol": "medewerker", "kleur": "#336699",
+            "wachtwoord": "pietjepuk99",
+        })
+        self.assertEqual(antwoord.status_code, 200)
+        self.assertFalse(Medewerker.alle.filter(username="pietjepuk99").exists())
+
+
+class RemOpRadenTest(TestCase):
+    """Stresstest 03-10-2026, B5: geen rem op inlogpogingen en resetmails."""
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.kees = Medewerker.objects.create_user("kees", password="Geheim-wachtwoord-1", first_name="Kees",
+                                                  email="kees@example.test")
+
+    def test_na_tien_foute_pogingen_even_niet(self):
+        from . import rem
+        for i in range(rem.MAX_PER_NAAM):
+            antwoord = self.client.post(reverse("inloggen"), {"username": "kees", "password": f"fout{i}"})
+            self.assertContains(antwoord, "klopt niet")
+        # nu ook met het goede wachtwoord niet, en een duidelijke melding
+        antwoord = self.client.post(reverse("inloggen"), {"username": "Kees", "password": "Geheim-wachtwoord-1"})
+        self.assertContains(antwoord, "Te veel pogingen")
+        self.assertNotIn("_auth_user_id", self.client.session)
+
+    def test_gelukt_inloggen_wist_de_teller(self):
+        from .models import Poging
+        for i in range(3):
+            self.client.post(reverse("inloggen"), {"username": "kees", "password": f"fout{i}"})
+        self.client.post(reverse("inloggen"), {"username": "kees", "password": "Geheim-wachtwoord-1"})
+        self.assertFalse(Poging.objects.filter(sleutel="kees").exists())
+
+    def test_resetmails_per_adres_beperkt(self):
+        from . import rem
+        for _ in range(rem.MAX_RESET_PER_ADRES + 3):
+            antwoord = self.client.post(reverse("wachtwoord_vergeten"), {"email": "kees@example.test"})
+            self.assertEqual(antwoord.status_code, 302)
+        self.assertEqual(len(mail.outbox), rem.MAX_RESET_PER_ADRES)

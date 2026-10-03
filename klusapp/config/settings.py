@@ -90,6 +90,14 @@ DATABASES = {
 
 AUTH_USER_MODEL = "medewerkers.Medewerker"
 
+# "Kees" mag inloggen als het account "kees" heet (B11). ModelBackend blijft
+# er achter staan: het wisselen van account (medewerkers.views.wissel_naar)
+# logt in met die naam, en een sessie onthoudt welke backend dat deed.
+AUTHENTICATION_BACKENDS = [
+    "medewerkers.inloggen.HoofdletterongevoeligInloggen",
+    "django.contrib.auth.backends.ModelBackend",
+]
+
 # Wachtwoorden hashen is met opzet traag — dat is precies de bedoeling bij
 # inloggen, maar in de testsuite maken we honderden gebruikers aan en daar gaat
 # het merendeel van de looptijd in zitten. Tijdens `manage.py test` dus een

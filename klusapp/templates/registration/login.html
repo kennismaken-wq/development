@@ -11,7 +11,11 @@
     <label for="{{ form.password.id_for_label }}">Wachtwoord</label>
     {{ form.password }}
     {% if form.errors %}
-      <p class="fout">Gebruikersnaam of wachtwoord klopt niet.</p>
+      {% comment %} De rem op raden (medewerkers/rem.py) heeft een eigen
+         melding; verder altijd dezelfde zin, zodat niet uitlekt of een
+         gebruikersnaam bestaat. {% endcomment %}
+      {% for fout in form.non_field_errors.as_data %}{% if fout.code == "te_veel" %}<p class="fout">{{ fout.message }}</p>{% endif %}{% empty %}{% endfor %}
+      {% if not form.non_field_errors.as_data.0.code == "te_veel" %}<p class="fout">Gebruikersnaam of wachtwoord klopt niet.</p>{% endif %}
     {% endif %}
     <p style="margin-top:1.6rem"><button type="submit" class="knop">Inloggen</button></p>
   </form>
