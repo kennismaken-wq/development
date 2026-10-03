@@ -451,13 +451,9 @@ def planbord(request):
     # de kolommen bij elke filterkeuze.
     alle_dagminuten = dict.fromkeys(week["dagen"], 0)
     rijen = []
-    # Werkdagen zonder uren (tot en met vandaag): die cel zegt "nog niets" in
+    # Ingepland op een klus maar geen uren geschreven: die cel zegt dat, in
     # plaats van een streepje (U9, Floris 03-10-2026).
-    zonder_uren = {
-        (persoon.pk, dag)
-        for persoon, dagen in bezetting.zonder_uren(week["maandag"], week["zondag"], week["vandaag"]).items()
-        for dag in dagen
-    }
+    zonder_uren = bezetting.ingepland_zonder_uren(week["maandag"], week["zondag"], week["vandaag"])
     # Ook wie niets schreef krijgt een rij: "wie staat er níét ingepland" is
     # net zo goed de vraag waarvoor dit scherm bestaat.
     for medewerker in Medewerker.objects.filter(uit_dienst_sinds__isnull=True):
@@ -1136,20 +1132,6 @@ def _is_hele_maand(van, tot):
     )
 
 
-def _zonder_uren_lijst(van, tot, vandaag, medewerker_pk=""):
-    """Voor het exportscherm: wie op een werkdag in deze periode nog niets
-    schreef (bezetting.zonder_uren). Alleen bij een periode tot een kwartaal:
-    daarna is het een export voor het archief, niet een controle."""
-    if (tot - van).days > 92:
-        return []
-    regels = [
-        {"medewerker": persoon, "dagen": dagen}
-        for persoon, dagen in bezetting.zonder_uren(van, tot, vandaag).items()
-        if not medewerker_pk or str(persoon.pk) == medewerker_pk
-    ]
-    return sorted(regels, key=lambda regel: regel["medewerker"].naam.lower())
-
-
 @login_required
 def urenexport(request):
     """Exportscherm voor de boekhouder: uren van een gekozen periode als Excel.
@@ -1245,6 +1227,5 @@ def urenexport(request):
                 Lower("first_name"), Lower("last_name"), "username"
             ),
             "totalen": totalen,
-            "zonder_uren": _zonder_uren_lijst(van, tot, vandaag, medewerker_pk),
         },
     )

@@ -61,9 +61,9 @@
             {% comment %} Altijd aanwezig; de CSS verbergt hem zodra er een
                zichtbaar blok in de cel staat (ook na filteren). {% endcomment %}
             {% if dagcel.zonder_uren %}
-              {% comment %} Een werkdag (volgens rooster en aanwezigheid) zonder
-                 uren: vergeten te schrijven? (U9) {% endcomment %}
-              <span class="bord-leeg bord-zonder" title="Werkdag, maar nog geen uren geschreven">nog niets</span>
+              {% comment %} Ingepland op een klus, maar geen uren geschreven:
+                 vergeten? (U9, bezetting.ingepland_zonder_uren) {% endcomment %}
+              <span class="bord-leeg bord-zonder">ingepland, geen uren</span>
             {% else %}
               <span class="bord-leeg">–</span>
             {% endif %}

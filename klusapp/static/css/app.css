@@ -2201,7 +2201,7 @@ label:has(> input[type=checkbox]), input[type=checkbox] + label{ cursor:pointer;
 /* een lege dag krijgt een streepje: dan zie je dat er gekeken is en er niets
    was, in plaats van een gat waarvan je je afvraagt of het scherm klopt */
 .bord-leeg{ color:rgba(255,255,255,0.22); font-size:12px; text-align:center; }
-/* Werkdag zonder uren (U9): koraal, de kleur van een waarschuwing. */
+/* Ingepland maar geen uren (U9): koraal, de kleur van een waarschuwing. */
 .bord-leeg.bord-zonder{ color:#F6C7B6; font-size:11px; font-style:italic; }
 /* staat in elke cel; weg zodra er een zichtbaar blok in staat, ook na
    filteren (static/js/planbordfilter.js) */
@@ -2762,15 +2762,3 @@ dialog.foto-popup:has(.foto-popup-pdf:not([hidden])){ max-width:min(92vw, 1000px
 .foto-popup-bestand svg{ width:56px; height:56px; }
 .foto-popup-extensie{ font-size:12px; font-weight:700; letter-spacing:.08em; color:var(--hi); }
 .foto-popup-openen{ margin-right:auto; }
-
-/* Urenexport: wie op een werkdag nog niets schreef (U9). In de koraalkleur
-   van een waarschuwing, net als .klusbotsing-kaart: niets is fout, het is
-   alleen iets om na te lopen. */
-.nog-niets{
-  margin-top:1.1rem; padding:.9rem 1rem 1rem; border-radius:18px;
-  background:rgba(224,123,95,0.13); border:1px solid rgba(224,123,95,0.38);
-}
-.nog-niets-kop{ margin:0 0 .4rem; font-size:12px; font-weight:600; letter-spacing:.04em; text-transform:uppercase; color:#F6C7B6; }
-.nog-niets ul{ list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:.3rem; }
-.nog-niets .naam{ font-weight:600; color:#fff; }
-.nog-niets .dagen{ color:rgba(255,255,255,0.7); font-size:13px; }

@@ -190,25 +190,15 @@ def aantal_aanwezig(dag):
     return aanwezig, len(medewerkers)
 
 
-def zonder_uren(van, tot, vandaag):
-    """{medewerker: [dagen]} — werkdagen waarop iemand er volgens rooster en
-    aanwezigheid was, maar nog geen uren heeft geschreven. Alleen dagen tot en
-    met vandaag (vooruit kun je niets vergeten) en alleen medewerkers: de
-    eigenaar schrijft zijn eigen uren niet elke dag. Voor het exportscherm en
-    het weekoverzicht: wie vergat er te schrijven, vóórdat het naar de
-    boekhouder gaat (U9, Floris 03-10-2026)."""
-    tot = min(tot, vandaag)
+def ingepland_zonder_uren(van, tot, vandaag):
+    """{(medewerker_id, datum)} — wie op een dag op een klus ingepland stond
+    (werkplanning) maar die dag geen uren schreef. Alleen dagen vóór vandaag:
+    uren worden 's avonds geschreven, en 's ochtends zou het anders bij
+    iedereen staan. Voor het weekoverzicht (U9, Floris 03-10-2026: "ingepland
+    maar nog geen uren")."""
+    tot = min(tot, vandaag - timedelta(days=1))
     if tot < van:
-        return {}
-    dagen = [van + timedelta(days=n) for n in range((tot - van).days + 1)]
-    mensen = [m for m in medewerkers_tussen(van, tot) if m.rol == Medewerker.Rol.MEDEWERKER]
-    cellen = rooster(mensen, dagen)
-    geschreven = set(
-        Uurblok.objects.filter(datum__range=(van, tot), medewerker__in=mensen).values_list("medewerker_id", "datum")
-    )
-    uitkomst = {}
-    for m in mensen:
-        missend = [d for d in dagen if cellen[(m.pk, d)].stand == AANWEZIG and (m.pk, d) not in geschreven]
-        if missend:
-            uitkomst[m] = missend
-    return uitkomst
+        return set()
+    ingepland = set(Inzet.objects.filter(datum__range=(van, tot)).values_list("medewerker_id", "datum"))
+    geschreven = set(Uurblok.objects.filter(datum__range=(van, tot)).values_list("medewerker_id", "datum"))
+    return ingepland - geschreven

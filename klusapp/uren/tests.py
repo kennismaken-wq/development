@@ -1932,17 +1932,26 @@ class GebruiksgemakTest(TestCase):
                          {"datum": "2026-10-08", "tot": "2027-10-08", "stand": "nee", "reden": "vakantie"})
         self.assertEqual(Aanwezigheid.objects.count(), 1)
 
-    def test_u9_wie_nog_niets_schreef(self):
+    def test_u9_ingepland_maar_geen_uren(self):
+        # ma: ingepland en geschreven; di: ingepland, niets geschreven;
+        # wo: niet ingepland en niets geschreven (geen melding)
+        for dag in (7, 8):
+            Inzet.objects.create(medewerker=self.sam, datum=date(2026, 9, dag), klus=self.tuin)
         Uurblok.objects.create(medewerker=self.sam, klus=self.tuin, datum=date(2026, 9, 7),
                                begintijd=time(8), eindtijd=time(9))
         self.client.force_login(self.maarten)
-        antwoord = self.client.get(reverse("urenexport") + "?van=2026-09-07&tot=2026-09-13")
-        self.assertContains(antwoord, "Nog niets geschreven")
-        regel = antwoord.context["zonder_uren"][0]
-        self.assertEqual(regel["medewerker"], self.sam)
-        self.assertEqual(regel["dagen"], [date(2026, 9, d) for d in (8, 9, 10, 11)])
         bord = self.client.get(reverse("planbord") + "?dag=2026-09-07")
-        self.assertContains(bord, "nog niets", count=4)
+        self.assertContains(bord, "ingepland, geen uren", count=1)
+        # het exportscherm blijft zoals het was
+        self.assertNotContains(self.client.get(reverse("urenexport") + "?van=2026-09-07&tot=2026-09-13"),
+                               "Nog niets geschreven")
+
+    def test_u9_vandaag_nog_niet(self):
+        from django.utils import timezone
+        vandaag = timezone.localdate()
+        Inzet.objects.create(medewerker=self.sam, datum=vandaag, klus=self.tuin)
+        self.client.force_login(self.maarten)
+        self.assertNotContains(self.client.get(reverse("planbord")), "ingepland, geen uren")
 
     def test_u13_maanden_met_kleine_letter(self):
         Uurblok.objects.create(medewerker=self.sam, klus=self.tuin, datum=date(2026, 10, 1),
