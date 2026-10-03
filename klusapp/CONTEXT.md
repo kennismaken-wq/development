@@ -166,7 +166,7 @@ schrijft zijn opties nog steeds zelf in de template en blijft op `data-scope`.
 | 4 | Beheerdersoverzicht / planbord | 🟢 100% | — `/planbord/`, vaste eerste kolom op mobiel (F3) |
 | 5 | Fotodropbox | 🟢 100% | — raster, zoeken, filter per klus |
 | 6 | Urenexport voor de boekhouder | 🟢 100% | — Excel per kalendermaand, getest (antwoord Maarten 15-09) |
-| 7 | Aanwezigheidsregistratie | 🟢 100% | — `/aanwezigheid/`: sinds 01-10-2026 een werkplanning-rooster in plaats van een dagscherm, naar de Excel van Maarten. Vaste werkdagen per medewerker, afwijkingen met reden, alle Nederlandse feestdagen in de kop (de vrije vanzelf rood), telling per dag, dagnotitie. Alle zeven dagen; per persoon per dag in te plannen op één of meer klussen (`Inzet`). Alleen eigenaar, gemaakt voor de laptop. Sinds 01-10-2026 ziet een medewerker op `/mijn-aanwezigheid/` (eigen tegel in de balk) zijn eigen rij als dezelfde doorlopende jaarlijn, met grotere vakken: alleen kijken, zonder collega's en zonder klussen |
+| 7 | Aanwezigheidsregistratie | 🟢 100% | — `/aanwezigheid/`: sinds 01-10-2026 een werkplanning-rooster in plaats van een dagscherm, naar de Excel van Maarten. Vaste werkdagen per medewerker, afwijkingen met reden, alle Nederlandse feestdagen in de kop (de vrije vanzelf rood), telling per dag, dagnotitie. Alle zeven dagen; per persoon per dag in te plannen op één of meer klussen (`Inzet`). Alleen eigenaar, gemaakt voor de laptop. Sinds 01-10-2026 ziet een medewerker op `/mijn-aanwezigheid/` (eigen tegel in de balk) zijn eigen rij als dezelfde doorlopende jaarlijn, met grotere vakken, zonder collega's en zonder klussen. Sinds 03-10-2026 zet hij zijn eigen dagen zelf (aanwezig/afwezig met reden en opmerking, één dag per keer); op een telefoon staat er een maandraster in plaats van de lijn |
 | 8 | Inlogbeheer rolgebaseerd | 🟢 100% | — `/medewerkers/`: toevoegen, bewerken, wachtwoord zetten, uit dienst. Vraag 5 aan Maarten is daarmee ingehaald |
 | 9 | Loonstrook-snelkoppeling | 🟢 100% | Klaar, iOS/Android afgehandeld, getest |
 
@@ -253,7 +253,7 @@ zet 'm in de `urls.py` van je eigen app, en haal de vlag `in_aanbouw` uit de teg
 | `/klussen/<pk>/` | `klus_detail` | klusdossier | 0b Floris |
 | `/planbord/` | `planbord` | planbord eigenaar | F3 Floris |
 | `/aanwezigheid/` | `aanwezigheid` | werkplanning: rooster mensen × dagen | F4 Floris, rooster Thijmen |
-| `/mijn-aanwezigheid/` | `mijn_aanwezigheid` | eigen aanwezigheid als jaarlijn, één rij (medewerker) | Thijmen |
+| `/mijn-aanwezigheid/` | `mijn_aanwezigheid` | eigen aanwezigheid: jaarlijn (breed) of maandraster (telefoon), zelf te zetten (medewerker) | Thijmen |
 | `/export/` | `urenexport` | boekhouder | T3 Thijmen |
 | `/klussen/<pk>/uren-export/` | `klus_uren_export` | uren van één klus als Excel | ✅ af — alleen eigenaar |
 | `/medewerkers/` | `medewerkers` | ploeglijst, alleen eigenaar | ✅ af |

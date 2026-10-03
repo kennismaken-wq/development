@@ -3,6 +3,47 @@
 {% block titel %}Aanwezigheid{% endblock %}
 {% block kop %}Mijn aanwezigheid{% endblock %}
 {% block inhoud %}
+  {% comment %} Twee weergaven van hetzelfde: op een breed scherm de
+     doorlopende lijn (zoals de werkplanning), op een telefoon een
+     maandraster (zoals Mijn uren). Welke je ziet regelt app.css
+     (.aw-alleen-breed / .aw-alleen-smal). In allebei zet een tik op een dag
+     het venster onderaan open. {% endcomment %}
+  <div class="aw-alleen-smal">
+    <div class="urentop">
+      <div class="urentop-nav">
+        <a class="urenpijl" href="?dag={{ vorige_maand|date:'Y-m-d' }}" aria-label="Vorige maand">‹</a>
+        <span class="periodetitel">{{ maand_eerste|date:"F Y"|capfirst }}</span>
+        <a class="urenpijl" href="?dag={{ volgende_maand|date:'Y-m-d' }}" aria-label="Volgende maand">›</a>
+      </div>
+    </div>
+    {% if maand_eerste.month != vandaag.month or maand_eerste.year != vandaag.year %}
+      <div class="urensub"><a class="vandaag-chip" href="{% url 'mijn_aanwezigheid' %}">Vandaag</a></div>
+    {% endif %}
+    <div class="maandkoppen">
+      <span>Ma</span><span>Di</span><span>Wo</span><span>Do</span><span>Vr</span><span>Za</span><span>Zo</span>
+    </div>
+    <div class="maandraster aw-maand">
+      {% for week in maandraster %}
+        {% for dagcel in week %}
+          {% if dagcel.stand == "buiten" or not dagcel.in_maand %}
+            <span class="maanddag {{ dagcel.stand }}{% if not dagcel.in_maand %} buiten-maand{% endif %}">
+              <span class="nr">{{ dagcel.datum|date:"j" }}</span>
+            </span>
+          {% else %}
+            <button type="button" class="maanddag {{ dagcel.stand }}{% if dagcel.is_vandaag %} vandaag{% endif %}"
+                    data-zet="{{ dagcel.datum|date:'Y-m-d' }}" data-titel="{{ dagcel.datum|date:'l j F'|capfirst }}"
+                    data-stand="{% if dagcel.stand == 'aanwezig' %}ja{% elif dagcel.stand == 'afwezig' %}nee{% endif %}"
+                    data-reden="{{ dagcel.reden }}" data-opmerking="{{ dagcel.opmerking }}">
+              <span class="nr">{{ dagcel.datum|date:"j" }}</span>
+              {% if dagcel.tekst %}<span class="aw-reden">{{ dagcel.tekst }}</span>{% endif %}
+            </button>
+          {% endif %}
+        {% endfor %}
+      {% endfor %}
+    </div>
+  </div>
+
+  <div class="aw-alleen-breed">
   <div class="navbalk">
     <div class="navlinks">
       <a class="knop-stil" href="?dag={{ vorige|date:'Y-m-d' }}" aria-label="Vorig jaar">‹</a>
@@ -18,9 +59,9 @@
   </div>
 
   {% comment %} Dezelfde lijn als op de werkplanning van de eigenaar
-     (aanwezigheid.html), maar alleen je eigen rij en zonder klussen. Alleen
-     kijken, dus geen knoppen: de cellen zijn gewone vakken. Omdat het één
-     rij is, mag hij hoger en breder (.aw-bord in app.css). {% endcomment %}
+     (aanwezigheid.html), maar alleen je eigen rij en zonder klussen. Een
+     cel aantikken zet die dag; buiten je dienstverband kan dat niet. Omdat
+     het één rij is, mag hij hoger en breder (.aw-bord in app.css). {% endcomment %}
   <div class="bord-scroll wp-scroll">
     <div class="bord wp-bord aw-bord wp-zoom-week" id="aw-bord" data-startkolom="{{ startkolom }}"
          style="grid-template-columns:{{ bordkolommen }}">
@@ -46,21 +87,64 @@
       </div>
       {% spaceless %}
       {% for cel in cellen %}
-        <div class="bord-cel wp-cel {{ cel.stand }}{% if cel.datum == vandaag %} vandaag{% endif %}{% if cel.datum.weekday == 0 and not forloop.first %} weekstart{% endif %}"
-             title="{{ cel.datum|date:'l j F'|capfirst }}{% if cel.tekst %} · {{ cel.tekst }}{% endif %}">
-          {% if cel.tekst %}<span class="tekst">{{ cel.tekst }}</span>{% endif %}
-        </div>
+        {% if cel.stand == "buiten" %}
+          <div class="bord-cel wp-cel buiten{% if cel.datum.weekday == 0 and not forloop.first %} weekstart{% endif %}"></div>
+        {% else %}
+          <button type="button" class="bord-cel wp-cel {{ cel.stand }}{% if cel.datum == vandaag %} vandaag{% endif %}{% if cel.datum.weekday == 0 and not forloop.first %} weekstart{% endif %}"
+                  title="{{ cel.datum|date:'l j F'|capfirst }}{% if cel.tekst %} · {{ cel.tekst }}{% endif %}"
+                  data-zet="{{ cel.datum|date:'Y-m-d' }}" data-titel="{{ cel.datum|date:'l j F'|capfirst }}"
+                  data-stand="{% if cel.stand == 'aanwezig' %}ja{% elif cel.stand == 'afwezig' %}nee{% endif %}"
+                  data-reden="{{ cel.reden }}" data-opmerking="{{ cel.opmerking }}">
+            {% if cel.tekst %}<span class="tekst">{{ cel.tekst }}</span>{% endif %}
+          </button>
+        {% endif %}
       {% endfor %}
       {% endspaceless %}
     </div>
+  </div>
+
   </div>
 
   <div class="legenda wp-legenda">
     <span><i class="wp-stip aanwezig"></i>Aanwezig</span>
     <span><i class="wp-stip afwezig"></i>Afwezig</span>
     <span><i class="wp-stip vrij"></i>Geen werkdag</span>
-    <span class="wp-hint">Klopt er iets niet? Vraag het aan Maarten.</span>
+    <span class="wp-hint">Tik op een dag om hem te wijzigen.</span>
   </div>
 
+  {% comment %} Eén dag zetten. Het script vult datum, titel en de huidige
+     stand in; opslaan komt terug op dezelfde maand. Zelfde venster als op
+     de werkplanning, zonder klussen. {% endcomment %}
+  <dialog class="uren-invoegen wp-dialoog" id="aw-zetten" aria-labelledby="aw-zetten-titel">
+    <form class="uurblokformulier glas" method="post">
+      <div class="sheet-hendel" aria-hidden="true"></div>
+      <div class="sheet-kop">
+        <button type="button" class="dialog-sluiten" data-sluit aria-label="Sluiten">×</button>
+        <button type="submit" class="knop knop-klein">Opslaan</button>
+      </div>
+      {% csrf_token %}
+      <input type="hidden" name="datum">
+      <h2 class="wp-dialoogtitel" id="aw-zetten-titel"></h2>
+
+      <div class="keuzes wp-standen">
+        <label class="keuzepil ja"><input type="radio" name="stand" value="ja" required><span class="vlak">Aanwezig</span></label>
+        <label class="keuzepil nee"><input type="radio" name="stand" value="nee"><span class="vlak">Afwezig</span></label>
+      </div>
+
+      <div data-reden-blok hidden>
+        <label>Reden</label>
+        <div class="keuzes">
+          {% for waarde, tekst in redenen %}
+            <label class="keuzepil nee"><input type="radio" name="reden" value="{{ waarde }}"><span class="vlak">{{ tekst }}</span></label>
+          {% endfor %}
+        </div>
+      </div>
+
+      <label for="aw-opmerking">Opmerking</label>
+      <input type="text" id="aw-opmerking" name="opmerking" maxlength="200" placeholder="Tandarts, tot 14.15…" autocomplete="off">
+    </form>
+  </dialog>
+
+  <script src="{% static 'js/bottomsheet.js' %}"></script>
   <script src="{% static 'js/mijn-aanwezigheid.js' %}"></script>
 {% endblock %}

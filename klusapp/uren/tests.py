@@ -1038,14 +1038,18 @@ class MijnAanwezigheidTest(TestCase):
         html = self.client.get("/mijn-aanwezigheid/?dag=2026-09-15").content.decode()
         self.assertNotIn("Tuin Jansen", html)
         self.assertNotIn("Piet", html)
-        self.assertNotIn("vakantie", html.lower())
+        # "Vakantie" staat wel als keuze in het venster, maar Piets vakantie
+        # op 10 september zit in geen enkele dag van Sam.
+        self.assertNotIn('data-reden="vakantie"', html)
 
-    def test_alleen_kijken(self):
+    def test_alleen_eigen_dagen_niet_via_de_werkplanning(self):
+        # Het formulier van de werkplanning (cel = medewerker:datum) doet
+        # hier niets: zelf zetten gaat alleen via `datum`, voor jezelf.
         antwoord = self.client.post(
-            "/mijn-aanwezigheid/", {"actie": "cellen", "cel": f"{self.sam.pk}:2026-09-08", "stand": "nee"}
+            "/mijn-aanwezigheid/", {"actie": "cellen", "cel": f"{self.piet.pk}:2026-09-08", "stand": "nee"}
         )
-        self.assertEqual(antwoord.status_code, 200)
-        self.assertFalse(Aanwezigheid.objects.filter(medewerker=self.sam, datum=date(2026, 9, 8)).exists())
+        self.assertEqual(antwoord.status_code, 302)
+        self.assertFalse(Aanwezigheid.objects.filter(datum=date(2026, 9, 8)).exists())
         # de werkplanning zelf blijft dicht
         self.assertEqual(self.client.get("/aanwezigheid/").status_code, 404)
 
@@ -1573,3 +1577,81 @@ class BackupInstellingTest(TestCase):
         )
         self.assertContains(antwoord, "nog niet ingesteld")
         self.assertEqual(len(mail.outbox), 0)
+
+
+class EigenAanwezigheidZettenTest(TestCase):
+    """Mijn aanwezigheid: een medewerker zet zijn eigen dagen (03-10-2026).
+    Op een breed scherm de lijn, op een telefoon een maandraster; allebei
+    staan ze in de html en app.css kiest."""
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.sam = Medewerker.objects.create_user("sam", password="x", first_name="Sam")
+        cls.joep = Medewerker.objects.create_user("joep", password="x", first_name="Joep")
+
+    def setUp(self):
+        self.client.force_login(self.sam)
+
+    def zet(self, **velden):
+        return self.client.post(reverse("mijn_aanwezigheid"), velden)
+
+    def test_afwezig_met_reden_en_terug_naar_die_dag(self):
+        antwoord = self.zet(datum="2026-10-07", stand="nee", reden="vakantie", opmerking="Texel")
+        self.assertRedirects(antwoord, reverse("mijn_aanwezigheid") + "?dag=2026-10-07")
+        registratie = Aanwezigheid.objects.get(medewerker=self.sam, datum=date(2026, 10, 7))
+        self.assertFalse(registratie.aanwezig)
+        self.assertEqual((registratie.reden, registratie.opmerking), ("vakantie", "Texel"))
+
+    def test_weer_aanwezig_wist_de_reden(self):
+        self.zet(datum="2026-10-07", stand="nee", reden="ziek")
+        self.zet(datum="2026-10-07", stand="ja", reden="ziek")
+        registratie = Aanwezigheid.objects.get(medewerker=self.sam, datum=date(2026, 10, 7))
+        self.assertTrue(registratie.aanwezig)
+        self.assertEqual(registratie.reden, "")
+
+    def test_afwezig_haalt_zijn_klussen_van_die_dag_weg(self):
+        klus = Klus.objects.create(naam="Tuin Vermeer", soort=Klus.Soort.AANLEG)
+        Inzet.objects.create(medewerker=self.sam, datum=date(2026, 10, 7), klus=klus)
+        self.zet(datum="2026-10-07", stand="nee", reden="ziek")
+        self.assertFalse(Inzet.objects.filter(medewerker=self.sam).exists())
+
+    def test_alleen_zijn_eigen_dagen(self):
+        # Er is geen veld voor een ander: wat er ook meekomt, het is van Sam.
+        self.zet(datum="2026-10-07", stand="nee", medewerker=self.joep.pk, cel=f"{self.joep.pk}:2026-10-07")
+        self.assertFalse(Aanwezigheid.objects.filter(medewerker=self.joep).exists())
+        self.assertTrue(Aanwezigheid.objects.filter(medewerker=self.sam).exists())
+
+    def test_niet_buiten_dienstverband_en_geen_onzin(self):
+        self.sam.in_dienst_sinds = date(2026, 10, 1)
+        self.sam.save()
+        self.zet(datum="2026-09-30", stand="nee")
+        self.zet(datum="2026-10-07", stand="misschien")
+        self.zet(datum="geen-datum", stand="nee")
+        self.assertFalse(Aanwezigheid.objects.exists())
+
+    def test_eigenaar_ziet_het_op_de_werkplanning(self):
+        self.zet(datum="2026-10-07", stand="nee", reden="ziek")
+        cel = bezetting.cel(self.sam, date(2026, 10, 7), Aanwezigheid.objects.get(medewerker=self.sam))
+        self.assertEqual(cel.stand, bezetting.AFWEZIG)
+
+    def test_maandraster_met_standen_en_lijn_met_knoppen(self):
+        self.zet(datum="2026-10-07", stand="nee", reden="ziek")
+        antwoord = self.client.get(reverse("mijn_aanwezigheid") + "?dag=2026-10-15")
+        weken = antwoord.context["maandraster"]
+        self.assertTrue(all(len(week) == 7 for week in weken))
+        self.assertEqual(weken[0][0]["datum"], date(2026, 9, 28))  # maandag
+        per_dag = {c["datum"]: c for week in weken for c in week}
+        self.assertEqual(per_dag[date(2026, 10, 7)]["stand"], bezetting.AFWEZIG)
+        self.assertEqual(per_dag[date(2026, 10, 8)]["stand"], bezetting.AANWEZIG)
+        self.assertEqual(per_dag[date(2026, 10, 10)]["stand"], bezetting.VRIJ)  # zaterdag
+        html = antwoord.content.decode()
+        self.assertIn('class="maandraster aw-maand"', html)
+        self.assertIn('data-zet="2026-10-07"', html)
+        self.assertIn('id="aw-zetten"', html)
+        self.assertEqual(antwoord.context["vorige_maand"], date(2026, 9, 15))
+        self.assertEqual(antwoord.context["volgende_maand"], date(2026, 11, 15))
+
+    def test_maand_verspringt_ook_op_de_31e(self):
+        antwoord = self.client.get(reverse("mijn_aanwezigheid") + "?dag=2026-10-31")
+        self.assertEqual(antwoord.context["vorige_maand"], date(2026, 9, 30))
+        self.assertEqual(antwoord.context["volgende_maand"], date(2026, 11, 30))

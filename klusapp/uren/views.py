@@ -623,8 +623,19 @@ def mijn_aanwezigheid(request):
     alleen zijn eigen rij uit hetzelfde rooster (uren/bezetting.py), zonder
     de anderen en zonder de klussen waar hij op staat (Thijmen, 01-10-2026).
     Omdat het maar één rij is, zijn de cellen hoger en breder dan op het
-    bord van de eigenaar. Alleen kijken: zetten doet de eigenaar.
+    bord van de eigenaar.
+
+    Sinds 03-10-2026 vult een medewerker zijn aanwezigheid zelf in: een dag
+    aantikken zet hem op aanwezig of afwezig, met een reden. Alleen zijn
+    eigen dagen; de werkplanning van de eigenaar toont het meteen. Op een
+    telefoon staat er een maandraster in plaats van de lijn (zie
+    `maandraster` hieronder en .aw-alleen-* in app.css).
     """
+    if request.method == "POST":
+        datum = _eigen_aanwezigheid_opslaan(request)
+        terug = datum or periode.vandaag()
+        return redirect(f"{reverse('mijn_aanwezigheid')}?dag={terug.isoformat()}")
+
     dag = periode.gekozen_dag(request)
     vandaag = periode.vandaag()
     eerste, laatste = date(dag.year, 1, 1), date(dag.year, 12, 31)
@@ -649,7 +660,15 @@ def mijn_aanwezigheid(request):
         )
         cel = cellen[(request.user.pk, datum)]
         # Geen cel.klussen: die blijven op de werkplanning van de eigenaar.
-        rij.append({"datum": datum, "stand": cel.stand, "tekst": cel.opmerking or cel.reden_tekst})
+        rij.append(
+            {
+                "datum": datum,
+                "stand": cel.stand,
+                "reden": cel.reden,
+                "opmerking": cel.opmerking,
+                "tekst": cel.opmerking or cel.reden_tekst,
+            }
+        )
 
     return render(
         request,
@@ -667,8 +686,72 @@ def mijn_aanwezigheid(request):
             # op een smal scherm
             "bordkolommen": f"var(--naam, {BORD_NAAM}px) repeat({len(dagen)}, var(--dag, 150px))",
             "aantal_aanwezig": sum(1 for c in rij if c["stand"] == bezetting.AANWEZIG),
+            "redenen": Aanwezigheid.Reden.choices,
+            **_eigen_maandraster(request.user, dag, vandaag),
         },
     )
+
+
+def _eigen_maandraster(medewerker, dag, vandaag):
+    """De maand van `dag` als weken van maandag tot zondag, elke dag met zijn
+    stand uit het rooster. Voor het telefoonscherm van Mijn aanwezigheid."""
+    eerste = dag.replace(day=1)
+    laatste = dag.replace(day=calendar.monthrange(dag.year, dag.month)[1])
+    begin = eerste - timedelta(days=eerste.weekday())
+    eind = laatste + timedelta(days=6 - laatste.weekday())
+    dagen = [begin + timedelta(days=n) for n in range((eind - begin).days + 1)]
+    cellen = bezetting.rooster([medewerker], dagen)
+    raster = []
+    for datum in dagen:
+        cel = cellen[(medewerker.pk, datum)]
+        raster.append(
+            {
+                "datum": datum,
+                "in_maand": datum.month == dag.month,
+                "is_vandaag": datum == vandaag,
+                "stand": cel.stand,
+                "reden": cel.reden,
+                "opmerking": cel.opmerking,
+                "tekst": cel.opmerking or cel.reden_tekst,
+            }
+        )
+    vorige_maand = eerste - timedelta(days=1)
+    volgende_maand = laatste + timedelta(days=1)
+    return {
+        "maandraster": [raster[i:i + 7] for i in range(0, len(raster), 7)],
+        "maand_eerste": eerste,
+        "vorige_maand": vorige_maand.replace(day=min(dag.day, calendar.monthrange(vorige_maand.year, vorige_maand.month)[1])),
+        "volgende_maand": volgende_maand.replace(day=min(dag.day, calendar.monthrange(volgende_maand.year, volgende_maand.month)[1])),
+    }
+
+
+def _eigen_aanwezigheid_opslaan(request):
+    """Eén dag van jezelf op aanwezig of afwezig zetten. Geeft de datum terug
+    (of None als er niets klopte). Alleen je eigen dagen en alleen als je
+    dan in dienst bent; een andere medewerker zit niet in het formulier en
+    kan er dus ook niet in komen."""
+    datum = _datum_uit(request.POST.get("datum"))
+    stand = request.POST.get("stand")
+    if not datum or stand not in {"ja", "nee"} or not periode.binnen_bereik(datum):
+        return datum
+    if not bezetting.in_dienst_op(request.user, datum):
+        return datum
+    reden = request.POST.get("reden", "")
+    if stand != "nee" or reden not in Aanwezigheid.Reden.values:
+        reden = ""
+    # update_or_create: een dubbel verstuurd formulier mag niet stuklopen op
+    # de unieke sleutel. Afwezig haalt ook de klussen van die dag weg
+    # (Aanwezigheid.save).
+    Aanwezigheid.objects.update_or_create(
+        medewerker=request.user,
+        datum=datum,
+        defaults={
+            "aanwezig": stand == "ja",
+            "reden": reden,
+            "opmerking": request.POST.get("opmerking", "").strip()[:200],
+        },
+    )
+    return datum
 
 
 SOORT_VOLGORDE = {"onderhoud": 0, "van_ee": 1, "aanleg": 2}

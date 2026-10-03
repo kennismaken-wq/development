@@ -2477,8 +2477,8 @@ a.wp-klus{ text-decoration:none; }
 
 /* ══════════ MIJN AANWEZIGHEID ══════════
    templates/uren/mijn_aanwezigheid.html: dezelfde lijn als de werkplanning
-   hierboven, maar één rij en alleen om te kijken. Daarom hoger, en zonder
-   hover of aanwijzer op de vakken. De dagbreedte zet mijn-aanwezigheid.js. */
+   hierboven, maar één rij. Daarom hoger. Een vak aantikken zet die dag
+   (sinds 03-10-2026). De dagbreedte zet mijn-aanwezigheid.js. */
 .aw-bord .wp-cel{ min-height:120px; padding:.5rem .55rem; font-size:12.5px; line-height:1.3; }
 .aw-bord .wp-cel .tekst{ white-space:normal; overflow-wrap:anywhere; }
 .aw-bord.wp-zoom-maand .wp-cel{ padding:.5rem 2px; }
@@ -2493,6 +2493,27 @@ a.wp-klus{ text-decoration:none; }
   .aw-bord .bord-naam{ justify-content:center; padding-left:0; padding-right:0; }
   .aw-bord .bord-naam-tekst{ display:none; }
 }
+
+/* Op een telefoon geen lijn maar een maandraster, net als Mijn uren: zeven
+   kolommen passen zonder opzij te scrollen, en een dag is groot genoeg om
+   met een duim te raken. Groen/rood zoals de lijn. */
+@media (max-width:700px){ .aw-alleen-breed{ display:none; } }
+@media (min-width:701px){ .aw-alleen-smal{ display:none; } }
+.aw-maand .maanddag{ font:inherit; color:#fff; cursor:pointer; width:100%; overflow:hidden; }
+.aw-maand .maanddag.aanwezig{ background:rgba(var(--accent-rgb),0.30); border-color:rgba(var(--accent-rgb),0.45); }
+.aw-maand .maanddag.afwezig{ background:rgba(224,123,95,0.38); border-color:rgba(224,123,95,0.55); }
+.aw-maand .maanddag.vrij{ background:rgba(255,255,255,0.03); }
+.aw-maand .maanddag.buiten{
+  background:repeating-linear-gradient(135deg, rgba(255,255,255,0.04) 0 4px, transparent 4px 8px);
+  cursor:default;
+}
+.aw-maand .maanddag.vandaag{ border:2px solid var(--hi); }
+.aw-maand .aw-reden{
+  font-size:9.5px; line-height:1.1; max-width:100%;
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis; opacity:.9;
+}
+@media (hover:hover){ .aw-maand button.maanddag:hover{ filter:brightness(1.2); } }
+.aw-alleen-smal .urentop{ margin-bottom:.8rem; }
 
 /* fotowaaier bij de klusnaam: de stapel van de klussenlijst, kleiner */
 .wp-klusnaam{ gap:.65rem; }
