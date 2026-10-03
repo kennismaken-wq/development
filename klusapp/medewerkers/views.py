@@ -149,7 +149,7 @@ def start(request):
                 username__startswith=demo_gegevens.VOORVOEGSEL
             ).exists(),
             # TIJDELIJK: met één tik als medewerker verder, om te testen.
-            "wisselbaar": _wisselbaar() if request.user.is_eigenaar else [],
+            "wisselbaar": _wisselbaar() if request.user.is_eigenaar and settings.TESTFUNCTIES else [],
             "klussen_recent": klussen_recent,
             "uren_stats": uren_stats,
             "maandwidget": totalen.maand_heatmap(request.user, vandaag),
@@ -456,8 +456,8 @@ def testgegevens(request):
 # Zolang we bouwen, wil je snel zien wat een medewerker ziet zonder uit te
 # loggen en een wachtwoord te zoeken. Een eigenaar kan daarom met één tik als
 # medewerker verder, en via de balk bovenaan elk scherm weer terug.
-# Weghalen vóór de oplevering: dit is meekijken in iemands account zonder zijn
-# wachtwoord. Alles hangt aan wissel_naar, wissel_terug, _wisselbaar, de
+# Dit is meekijken in iemands account zonder zijn wachtwoord, dus het staat
+# uit op Maartens echte omgeving (settings.TESTFUNCTIES, docs/DEPLOY.md). Alles hangt aan wissel_naar, wissel_terug, _wisselbaar, de
 # context processor "wissel" en de twee blokken in start.html en basis.html.
 SESSIE_WISSEL = "gewisseld_van"
 BACKEND = "django.contrib.auth.backends.ModelBackend"
@@ -473,6 +473,9 @@ def _wisselbaar():
 @require_POST
 @alleen_eigenaar
 def wissel_naar(request, pk):
+    # Uit op Maartens echte omgeving (settings.TESTFUNCTIES).
+    if not settings.TESTFUNCTIES:
+        raise Http404
     doel = get_object_or_404(_wisselbaar(), pk=pk)
     eigen = request.user.pk
     # login() maakt de sessie leeg als er iemand anders inlogt, dus pas

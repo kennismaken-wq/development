@@ -22,6 +22,12 @@ def env_lijst(naam, standaard=""):
 
 DEBUG = os.environ.get("DJANGO_DEBUG", "1") == "1"
 
+# Hulpmiddelen om te testen die bij de klant niet mogen bestaan: als eigenaar
+# meekijken als medewerker (medewerkers.views.wissel_naar) en een eigenaar die
+# vanzelf in /beheer/ mag (Medewerker.save). Aan op develop, uit op
+# degroenem.handigerai.nl, Maartens echte omgeving (docs/DEPLOY.md).
+TESTFUNCTIES = os.environ.get("KLUSAPP_TESTFUNCTIES", "1") == "1"
+
 # In productie moet de sleutel uit de omgeving komen; lokaal mag een vaste
 # ontwikkelsleutel, zodat je niet elke keer opnieuw hoeft in te loggen.
 SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY", "" if not DEBUG else "ontwikkel-sleutel-niet-voor-productie")

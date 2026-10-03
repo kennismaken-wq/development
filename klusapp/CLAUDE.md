@@ -72,8 +72,13 @@ al af was.
 - **Tijdelijk (sept. 2026):** een eigenaar kan onderaan het startscherm met één
   tik als medewerker meekijken ("Bekijk als medewerker"), en via de balk
   bovenaan elk scherm terug. Handig om te testen, maar het is inloggen als
-  iemand anders zonder zijn wachtwoord: **weghalen vóór de oplevering.** Alles
-  staat bij `wissel_naar` in `medewerkers/views.py`.
+  iemand anders zonder zijn wachtwoord. Alles staat bij `wissel_naar` in
+  `medewerkers/views.py`.
+- **Twee omgevingen (okt. 2026):** develop.handigerai.nl om te testen en
+  degroenem.handigerai.nl voor Maarten, met eigen database en zonder testdata.
+  Op die laatste staan de twee tijdelijke dingen hierboven uit
+  (`KLUSAPP_TESTFUNCTIES=0`), en hij updatet alleen met de hand via
+  `docs/deploy-degroenem.sh`. Zie docs/DEPLOY.md.
 
 ## Lokaal draaien
 

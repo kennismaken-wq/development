@@ -182,6 +182,55 @@ Waarom 50M en niet 20M (de waarde die er tot 22-09-2026 stond): de grens geldt p
 50M past zo'n selectie én een A0-tekening als PDF. Het is een plafond, geen reservering:
 nginx streamt de body naar schijf.
 
+## degroenem.handigerai.nl — Maartens echte omgeving
+
+Sinds oktober 2026 draaien er twee installaties van de klusapp op deze VPS:
+
+| | develop.handigerai.nl | degroenem.handigerai.nl |
+|---|---|---|
+| Voor | testen, door Thijmen en Floris | Maarten en zijn medewerkers, echte gegevens |
+| Map | `/srv/handigerai/develop-tool` | `/srv/handigerai/degroenem` |
+| Database | `klusapp` | `degroenem` |
+| Poort · service | 5001 · `develop-tool.service` | 5002 · `degroenem.service` |
+| Updaten | vanzelf, elke push naar `main` | met de hand: `docs/deploy-degroenem.sh` |
+| Testfuncties | aan | uit (`KLUSAPP_TESTFUNCTIES=0`) |
+
+Alles is apart: map, database, `.env` (eigen secret key), media en log. Alleen
+de mailinstellingen zijn dezelfde (kennismaken@handigerai.nl). De werkwijze:
+pushen naar `main`, op develop testen, en pas als het daar goed is
+`deploy-degroenem.sh` draaien. Dat script maakt eerst een dump van de database
+(`/srv/backups/degroenem/voor-deploy-*.sql.gz`) en laat zien welke commits erbij
+komen.
+
+`KLUSAPP_TESTFUNCTIES=0` zet twee hulpmiddelen uit die alleen voor het bouwen
+bedoeld zijn: als eigenaar meekijken als medewerker, en een eigenaar die vanzelf
+in `/beheer/` mag. Wie daar toch in moet, krijgt een superuser via
+`manage.py createsuperuser`.
+
+**Inrichten** (eenmalig, als root): DNS-record `degroenem` → `178.105.192.98`, dan
+
+```bash
+git clone https://github.com/kennismaken-wq/development.git /srv/handigerai/degroenem
+chown -R develop:develop /srv/handigerai/degroenem
+bash /srv/handigerai/degroenem/klusapp/docs/degroenem-inrichten.sh <mailadres Maarten>
+certbot --nginx -d degroenem.handigerai.nl
+```
+
+Het script maakt de database, de `.env` (met nieuwe geheimen die niet in beeld
+komen), `degroenem.service` en de nginx-site aan, en één account: `maarten`, met
+rol eigenaar, een willekeurig wachtwoord dat niemand kent, en de back-upmail
+naar zijn adres (`manage.py maak_eigenaar`). Geen testdata. Maarten kiest
+zijn wachtwoord zelf via "Wachtwoord vergeten" op de inlogpagina.
+
+**Back-ups na de overstap:** de nachtelijke dump (`klusapp-backup.sh`) neemt
+`degroenem` vanzelf mee zodra die map bestaat. Zet de wekelijkse mail om naar
+Maartens omgeving, anders krijgt hij testdata:
+
+```bash
+sed -i 's#/srv/handigerai/develop-tool/#/srv/handigerai/degroenem/#g' /etc/systemd/system/klusapp-urenbackup.service
+systemctl daemon-reload
+```
+
 ## Back-ups
 
 `klusapp-backup.timer` draait elke nacht om 03:20 `/usr/local/bin/klusapp-backup.sh`:

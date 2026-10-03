@@ -1,5 +1,6 @@
 import uuid
 
+from django.conf import settings
 from django.contrib.auth.models import AbstractUser
 from django.db import models
 
@@ -122,7 +123,10 @@ class Medewerker(AbstractUser):
         # voorlopig toegang tot het Django-beheerscherm. Zodra er een eigen
         # beheeraccount is, moet dit eruit en hangt /beheer/ weer aan een
         # aparte rol; zie de gesprekken over de rol "systeembeheerder".
-        self.is_staff = self.rol == self.Rol.EIGENAAR or self.is_superuser
+        # Op degroenem.handigerai.nl staat TESTFUNCTIES uit, en dan geldt
+        # dit niet: daar komt alleen een superuser in /beheer/.
+        eigenaar_beheert = self.rol == self.Rol.EIGENAAR and settings.TESTFUNCTIES
+        self.is_staff = eigenaar_beheert or self.is_superuser
         super().save(*args, **kwargs)
 
     @property

@@ -1,7 +1,11 @@
 import re
 from datetime import date, time, timedelta
+from io import StringIO
 
-from django.test import TestCase
+from django.core import mail
+from django.core.management import call_command
+from django.core.management.base import CommandError
+from django.test import TestCase, override_settings
 from django.urls import reverse
 
 from klussen.models import Klus
@@ -1026,3 +1030,50 @@ class WachtwoordVergetenTest(TestCase):
         self.sam.save()
         self.aanvragen("sam@voorbeeld.nl")
         self.assertEqual(len(mail.outbox), 0)
+
+
+@override_settings(TESTFUNCTIES=False)
+class ZonderTestfunctiesTest(TestCase):
+    """Maartens echte omgeving (degroenem.handigerai.nl): geen meekijken als
+    medewerker en geen /beheer/ voor een eigenaar."""
+
+    def setUp(self):
+        self.maarten = Medewerker.objects.create_user(
+            "maarten", password="x", first_name="Maarten", rol=Medewerker.Rol.EIGENAAR
+        )
+        self.sam = Medewerker.objects.create_user("sam", password="x", first_name="Sam")
+
+    def test_geen_wisselknoppen_en_wisselen_kan_niet(self):
+        self.client.force_login(self.maarten)
+        html = self.client.get(reverse("start")).content.decode()
+        self.assertNotIn(reverse("wissel_naar", args=[self.sam.pk]), html)
+        antwoord = self.client.post(reverse("wissel_naar", args=[self.sam.pk]))
+        self.assertEqual(antwoord.status_code, 404)
+        self.assertEqual(self.client.get(reverse("start")).context["user"], self.maarten)
+
+    def test_eigenaar_komt_niet_in_beheer(self):
+        self.assertFalse(self.maarten.is_staff)
+        self.client.force_login(self.maarten)
+        self.assertNotEqual(self.client.get("/beheer/").status_code, 200)
+
+
+class MaakEigenaarTest(TestCase):
+    def test_maakt_eigenaar_met_onbekend_wachtwoord_dat_te_resetten_is(self):
+        call_command(
+            "maak_eigenaar", "maarten", "maarten@voorbeeld.nl", "--voornaam", "Maarten",
+            stdout=StringIO(),
+        )
+        maarten = Medewerker.objects.get(username="maarten")
+        self.assertTrue(maarten.is_eigenaar)
+        self.assertEqual(maarten.backup_email, "maarten@voorbeeld.nl")
+        # Wel een bruikbaar wachtwoord, anders stuurt Django geen resetmail.
+        self.assertTrue(maarten.has_usable_password())
+        self.client.post(reverse("wachtwoord_vergeten"), {"email": "maarten@voorbeeld.nl"})
+        self.assertEqual(len(mail.outbox), 1)
+
+    def test_bestaand_account_of_fout_adres_weigert(self):
+        Medewerker.objects.create_user("maarten", password="x")
+        with self.assertRaises(CommandError):
+            call_command("maak_eigenaar", "maarten", "maarten@voorbeeld.nl")
+        with self.assertRaises(CommandError):
+            call_command("maak_eigenaar", "els", "geen-adres")
