@@ -1691,3 +1691,106 @@ class StresstestFixesTest(TestCase):
         for _ in range(2):
             self.client.post(reverse("notitie_toevoegen", args=[self.klus.pk]), {"tekst": "Sleutel bij de buren"})
         self.assertEqual(Notitie.objects.count(), 1)
+
+    def test_afgeronde_klus_blijft_kiesbaar_bij_een_bestaand_blok(self):
+        # B10: klus afgerond terwijl de laatste uren nog gecorrigeerd worden.
+        blok = Uurblok.objects.create(medewerker=self.sam, klus=self.klus, datum=date(2026, 9, 17),
+                                      begintijd=time(8), eindtijd=time(12))
+        Klus.objects.filter(pk=self.klus.pk).update(actief=False)
+        self.client.post(reverse("uurblok_bewerken", args=[blok.pk]),
+                         {"klus": self.klus.pk, "datum": "2026-09-17", "begintijd": "08:00", "eindtijd": "13:00"})
+        blok.refresh_from_db()
+        self.assertEqual(blok.eindtijd, time(13))
+
+    def test_nieuw_blok_op_afgeronde_klus_geeft_duidelijke_melding(self):
+        Klus.objects.filter(pk=self.klus.pk).update(actief=False)
+        antwoord = self.client.post(
+            reverse("uurblok_nieuw"),
+            {"klus": self.klus.pk, "datum": "2026-09-17", "begintijd": "08:00", "eindtijd": "12:00"},
+        )
+        self.assertContains(antwoord, "Deze klus is intussen afgerond")
+        self.assertFalse(Uurblok.objects.exists())
+
+
+@override_settings(UREN_DATUMGRENS=True)
+class UrenGrenzenTest(TestCase):
+    """B6: een tikfout in het jaar of een blok van een hele dag."""
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.sam = Medewerker.objects.create_user("sam", password="x", first_name="Sam")
+        cls.klus = Klus.objects.create(naam="Tuin Vermeer")
+
+    def setUp(self):
+        self.client.force_login(self.sam)
+
+    def schrijf(self, datum, begin="08:00", eind="12:00"):
+        return self.client.post(
+            reverse("uurblok_nieuw"),
+            {"klus": self.klus.pk, "datum": datum.isoformat(), "begintijd": begin, "eindtijd": eind},
+        )
+
+    def test_grenzen(self):
+        vandaag = date.today()
+        self.assertContains(self.schrijf(date(9999, 12, 31)), "meer dan een week vooruit")
+        self.assertContains(self.schrijf(date(1900, 1, 1)), "meer dan een jaar geleden")
+        self.assertContains(self.schrijf(vandaag - timedelta(days=2), "00:00", "23:45"), "hooguit 16 uur")
+        self.assertFalse(Uurblok.objects.exists())
+        self.assertEqual(self.schrijf(vandaag - timedelta(days=360)).status_code, 302)
+        self.assertEqual(self.schrijf(vandaag + timedelta(days=7)).status_code, 302)
+
+    def test_oud_blok_blijft_aan_te_passen(self):
+        blok = Uurblok.objects.create(medewerker=self.sam, klus=self.klus, datum=date.today() - timedelta(days=500),
+                                      begintijd=time(8), eindtijd=time(12))
+        self.client.post(reverse("uurblok_bewerken", args=[blok.pk]),
+                         {"klus": self.klus.pk, "datum": blok.datum.isoformat(), "begintijd": "08:00", "eindtijd": "13:00"})
+        blok.refresh_from_db()
+        self.assertEqual(blok.eindtijd, time(13))
+
+
+class ExportRobuustTest(TestCase):
+    """Stresstest 03-10-2026: B14 (bladnaam), B8 (formules), B15 (gelijke
+    namen) en B19 (één query per regel)."""
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.maarten = Medewerker.objects.create_user("maarten", password="x", first_name="Maarten",
+                                                     rol=Medewerker.Rol.EIGENAAR)
+        cls.kees1 = Medewerker.objects.create_user("kees", password="x", first_name="Kees", last_name="de Vries")
+        cls.kees2 = Medewerker.objects.create_user("kees2", password="x", first_name="Kees", last_name="de Vries")
+        cls.klus = Klus.objects.create(naam="Dijkweg 12/14: [achter]")
+        for i, persoon in enumerate((cls.kees1, cls.kees2)):
+            Uurblok.objects.create(medewerker=persoon, klus=cls.klus, datum=date(2026, 9, 7),
+                                   begintijd=time(8), eindtijd=time(10 + 2 * i), toelichting="=1+1",
+                                   extra_werk='=HYPERLINK("https://example.com";"klik")')
+
+    def setUp(self):
+        self.client.force_login(self.maarten)
+
+    def werkboek(self, adres):
+        antwoord = self.client.get(adres)
+        self.assertEqual(antwoord.status_code, 200)
+        return load_workbook(BytesIO(antwoord.content)).active
+
+    def test_klusnaam_met_slash_en_dubbelepunt_exporteert_gewoon(self):
+        blad = self.werkboek(reverse("klus_uren_export", args=[self.klus.pk]))
+        self.assertNotRegex(blad.title, r"[\/:?*\[\]]")
+
+    def test_tekst_met_isgelijkteken_blijft_tekst(self):
+        blad = self.werkboek(reverse("klus_uren_export", args=[self.klus.pk]))
+        cellen = [c for rij in blad.iter_rows() for c in rij if isinstance(c.value, str) and c.value.startswith("=")]
+        self.assertTrue(cellen)
+        self.assertTrue(all(c.data_type == "s" for c in cellen))
+
+    def test_gelijke_namen_krijgen_elk_een_eigen_subtotaal(self):
+        blad = self.werkboek(reverse("urenexport") + "?van=2026-09-07&tot=2026-09-07&download=1")
+        totalen = {r[0]: r[7] for r in blad.iter_rows(values_only=True) if r[0] and str(r[0]).startswith("Totaal Kees")}
+        self.assertEqual(totalen, {"Totaal Kees de Vries (kees)": 2, "Totaal Kees de Vries (kees2)": 4})
+
+    def test_klus_export_doet_geen_query_per_regel(self):
+        for dag in range(8, 28):
+            Uurblok.objects.create(medewerker=self.kees1, klus=self.klus, datum=date(2026, 9, dag),
+                                   begintijd=time(8), eindtijd=time(9))
+        # sessie, gebruiker, klus, uurblokken, ... — vast, niet per uurblok
+        with self.assertNumQueries(7):
+            self.client.get(reverse("klus_uren_export", args=[self.klus.pk]))

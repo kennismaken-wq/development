@@ -12,6 +12,7 @@ een lijst uurblokken binnen (al gesorteerd op medewerker, dan datum) en geeft
 een openpyxl-werkboek terug.
 """
 
+import re
 from io import BytesIO
 
 from openpyxl import Workbook
@@ -35,6 +36,29 @@ def _subtotaal_schrijven(blad, naam, minuten):
     _vet(blad, blad.max_row)
 
 
+def _namen_per_medewerker(uurblokken):
+    """Naam per medewerker-id, met de gebruikersnaam erachter als twee
+    mensen in deze export dezelfde naam hebben: "Kees de Vries (kees2)"."""
+    mensen = {blok.medewerker_id: blok.medewerker for blok in uurblokken}
+    hoe_vaak = {}
+    for persoon in mensen.values():
+        hoe_vaak[persoon.naam] = hoe_vaak.get(persoon.naam, 0) + 1
+    return {
+        pk: f"{persoon.naam} ({persoon.username})" if hoe_vaak[persoon.naam] > 1 else persoon.naam
+        for pk, persoon in mensen.items()
+    }
+
+
+def _als_tekst(rij):
+    """Tekst die met "=" begint, maakt openpyxl een formule. Een medewerker die
+    als werkzaamheden "=3 palen" of erger een =HYPERLINK(...) intikt, zette zo
+    een werkende formule in het bestand voor de boekhouder (B8). Gewoon tekst
+    van maken."""
+    for cel in rij:
+        if cel.data_type == "f":
+            cel.data_type = "s"
+
+
 def werkboek_bouwen(uurblokken, bladtitel):
     """Eén werkblad, gegroepeerd per medewerker met een totaalregel erna.
 
@@ -43,23 +67,29 @@ def werkboek_bouwen(uurblokken, bladtitel):
     """
     boek = Workbook()
     blad = boek.active
-    blad.title = bladtitel[:31]  # Excel staat geen langere bladnamen toe.
+    # Excel staat geen langere bladnamen toe, en geen / \ : ? * [ ] erin:
+    # een klus "Dijkweg 12/14" gaf een foutpagina (stresstest 03-10-2026, B14).
+    blad.title = re.sub(r"[\\/:?*\[\]]", "-", bladtitel)[:31].strip() or "Uren"
 
     blad.append(KOPPEN)
     _vet(blad, 1)
     for kolom, breedte in zip("ABCDEFGHIJ", KOLOMBREEDTES):
         blad.column_dimensions[kolom].width = breedte
 
+    uurblokken = list(uurblokken)
+    namen = _namen_per_medewerker(uurblokken)
     huidige_medewerker = None
     subtotaal_minuten = 0
     totaal_minuten = 0
 
     for blok in uurblokken:
-        naam = blok.medewerker.naam
-        if huidige_medewerker is not None and naam != huidige_medewerker:
-            _subtotaal_schrijven(blad, huidige_medewerker, subtotaal_minuten)
+        # Op de medewerker zelf en niet op zijn naam: twee mensen met dezelfde
+        # naam (vader en zoon) werden anders één subtotaal (B15).
+        naam = namen[blok.medewerker_id]
+        if huidige_medewerker is not None and blok.medewerker_id != huidige_medewerker:
+            _subtotaal_schrijven(blad, namen[huidige_medewerker], subtotaal_minuten)
             subtotaal_minuten = 0
-        huidige_medewerker = naam
+        huidige_medewerker = blok.medewerker_id
 
         adres = blok.klus.adres
         if blok.klus.adres and blok.klus.plaats:
@@ -82,6 +112,7 @@ def werkboek_bouwen(uurblokken, bladtitel):
             ]
         )
         blad.cell(row=blad.max_row, column=2).number_format = "DD-MM-YYYY"
+        _als_tekst(blad[blad.max_row])
         subtotaal_minuten += blok.duur_minuten
         totaal_minuten += blok.duur_minuten
 
@@ -89,7 +120,7 @@ def werkboek_bouwen(uurblokken, bladtitel):
         blad.append(["Geen uren geschreven in deze periode."] + LEGE_REGEL[1:])
         return boek
 
-    _subtotaal_schrijven(blad, huidige_medewerker, subtotaal_minuten)
+    _subtotaal_schrijven(blad, namen[huidige_medewerker], subtotaal_minuten)
     blad.append(["Totaal alle medewerkers", "", "", "", "", "", "", round(totaal_minuten / 60, 2), "", ""])
     _vet(blad, blad.max_row)
     return boek

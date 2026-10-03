@@ -1,11 +1,23 @@
 import datetime
 
 from django import forms
+from django.conf import settings
+from django.db.models import Q
+from django.utils import timezone
 
 from klussen.forms import AlleenFotosForm, KlusSelect
 from klussen.models import Klus
 
 from .models import Uurblok
+
+# Grenzen voor een uurblok (B6, afgesproken met Floris 03-10-2026).
+MAX_DAGEN_TERUG = 365
+MAX_DAGEN_VOORUIT = 7
+MAX_UREN_PER_BLOK = 16
+
+
+def _minuten(tijd):
+    return tijd.hour * 60 + tijd.minute
 
 
 class KwartierSelect(forms.Select):
@@ -92,7 +104,17 @@ class UurblokForm(forms.ModelForm):
         # bewerken staat dat al op het blok; bij een nieuw blok geeft de view
         # het mee (de medewerker zit niet in het formulier zelf).
         self.medewerker = medewerker or (self.instance.medewerker if self.instance.pk else None)
-        self.fields["klus"].queryset = Klus.objects.filter(actief=True)
+        # Alleen lopende klussen om uit te kiezen, maar bij een bestaand blok
+        # ook zijn eigen klus: die wordt vaak afgerond terwijl de laatste uren
+        # nog gecorrigeerd moeten worden, en dan kon het blok niet meer
+        # worden opgeslagen (stresstest 03-10-2026, B10).
+        lopend = Q(actief=True)
+        if self.instance.pk:
+            lopend |= Q(pk=self.instance.klus_id)
+        self.fields["klus"].queryset = Klus.objects.filter(lopend)
+        self.fields["klus"].error_messages["invalid_choice"] = (
+            "Deze klus is intussen afgerond. Kies een andere klus, of vraag de eigenaar."
+        )
         self.fields["klus"].empty_label = "Kies een klus"
         self.fields["toelichting"].required = False
         # Tijden van vóór WERKDAG_BEGIN alleen als ze er al staan (bestaand
@@ -108,8 +130,20 @@ class UurblokForm(forms.ModelForm):
         gegevens = super().clean()
         datum = gegevens.get("datum")
         begin, eind = gegevens.get("begintijd"), gegevens.get("eindtijd")
+        # Een tikfout in het jaar (2062, 0202) is op een telefoon zo gemaakt,
+        # en zo'n blok verdween dan uit de agenda maar telde wel mee in de
+        # export (stresstest 03-10-2026, B6). Alleen bij een nieuwe of
+        # gewijzigde datum: een oud blok mag je gewoon nog aanpassen.
+        if datum and datum != self.instance.datum and settings.UREN_DATUMGRENS:
+            vandaag = timezone.localdate()
+            if datum < vandaag - datetime.timedelta(days=MAX_DAGEN_TERUG):
+                self.add_error("datum", f"Klopt de datum? {datum:%d-%m-%Y} is meer dan een jaar geleden.")
+            elif datum > vandaag + datetime.timedelta(days=MAX_DAGEN_VOORUIT):
+                self.add_error("datum", f"Klopt de datum? {datum:%d-%m-%Y} ligt meer dan een week vooruit.")
         if begin and eind and eind <= begin:
             self.add_error("eindtijd", "De eindtijd moet na de begintijd liggen.")
+        elif begin and eind and _minuten(eind) - _minuten(begin) > MAX_UREN_PER_BLOK * 60:
+            self.add_error("eindtijd", f"Eén blok mag hooguit {MAX_UREN_PER_BLOK} uur zijn. Klopt de eindtijd?")
         elif datum and begin and eind and self.medewerker:
             # Twee blokken die elkaar overlappen tellen allebei mee in het
             # weektotaal, het planbord en de export voor de boekhouder: 08–12

@@ -591,7 +591,9 @@ def klus_uren_export(request, pk):
     klus = get_object_or_404(Klus, pk=pk)
     blokken = list(
         Uurblok.objects.filter(klus=klus)
-        .select_related("medewerker")
+        # "klus" erbij: het werkboek leest per regel naam en adres van de
+        # klus, en dat was één databasevraag per uurblok (B19).
+        .select_related("medewerker", "klus")
         .order_by(
             "medewerker__first_name", "medewerker__last_name", "medewerker__username", "datum", "begintijd"
         )

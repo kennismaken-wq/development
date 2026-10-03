@@ -97,6 +97,12 @@ AUTH_USER_MODEL = "medewerkers.Medewerker"
 if "test" in sys.argv:
     PASSWORD_HASHERS = ["django.contrib.auth.hashers.MD5PasswordHasher"]
 
+# Uren mogen niet meer dan een jaar terug of een week vooruit (uren/forms.py,
+# B6). In de testsuite staat dat uit: daar schrijven tests uren op vaste
+# datums als 07-09-2026, die over een jaar anders vanzelf zouden falen. De
+# tests voor die grens zetten hem zelf aan met override_settings.
+UREN_DATUMGRENS = "test" not in sys.argv
+
 AUTH_PASSWORD_VALIDATORS = [
     {"NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"},
     {"NAME": "django.contrib.auth.password_validation.MinimumLengthValidator", "OPTIONS": {"min_length": 8}},
