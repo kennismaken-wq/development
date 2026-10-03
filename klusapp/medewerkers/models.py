@@ -2,6 +2,7 @@ import uuid
 
 from django.conf import settings
 from django.contrib.auth.models import AbstractUser, UserManager
+from django.core.validators import RegexValidator
 from django.db import models
 
 
@@ -15,6 +16,12 @@ RIJBEWIJS_GROEPEN = [
     ("Trekker", ["T"]),
 ]
 RIJBEWIJS_VOLGORDE = [code for _, codes in RIJBEWIJS_GROEPEN for code in codes]
+
+
+# Alleen #RRGGBB: de kleur gaat zo een style-attribuut in. Een kleurkiezer in
+# de browser levert altijd die vorm, maar de server nam alles van 7 tekens
+# aan (stresstest 03-10-2026, B9).
+hexkleur = RegexValidator(r"^#[0-9A-Fa-f]{6}$", "Kies een kleur als #RRGGBB, bijvoorbeeld #5f7d12.")
 
 
 WEEKDAGEN = ["ma", "di", "wo", "do", "vr", "za", "zo"]
@@ -92,6 +99,7 @@ class Medewerker(AbstractUser):
     kleur = models.CharField(
         max_length=7,
         blank=True,
+        validators=[hexkleur],
         help_text="Hexkleur waarmee deze medewerker in het planbord wordt getoond.",
     )
     # De dagen waarop iemand standaard werkt, als weekdagnummers (0 = maandag).

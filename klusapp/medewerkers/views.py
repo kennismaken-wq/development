@@ -146,6 +146,7 @@ def start(request):
             # TIJDELIJK: de opruimknop verschijnt alleen zolang er
             # testmedewerkers in de database staan.
             "testgegevens_aanwezig": request.user.is_eigenaar
+            and settings.TESTFUNCTIES
             and Medewerker.objects.filter(
                 username__startswith=demo_gegevens.VOORVOEGSEL
             ).exists(),
@@ -434,7 +435,11 @@ def testgegevens(request):
     """TIJDELIJK — nepmedewerkers met uren aanmaken of weghalen.
 
     Staat onderaan het rastermenu. Zie medewerkers/testgegevens.py.
+    Uit op Maartens echte omgeving, net als het wisselen hieronder
+    (settings.TESTFUNCTIES; stresstest 03-10-2026, B3).
     """
+    if not settings.TESTFUNCTIES:
+        raise Http404
     if request.method != "POST":
         return redirect("start")
 
@@ -500,7 +505,9 @@ def wissel_naar(request, pk):
 @login_required
 def wissel_terug(request):
     eigen_pk = request.session.get(SESSIE_WISSEL)
-    eigen = Medewerker.objects.filter(
+    # alle en niet objects: ook het verborgen HandigerAI-account moet terug
+    # kunnen (stresstest 03-10-2026, B4).
+    eigen = Medewerker.alle.filter(
         pk=eigen_pk, rol=Medewerker.Rol.EIGENAAR, is_active=True
     ).first()
     if eigen is None:

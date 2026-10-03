@@ -105,7 +105,9 @@ UREN_DATUMGRENS = "test" not in sys.argv
 
 AUTH_PASSWORD_VALIDATORS = [
     {"NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"},
-    {"NAME": "django.contrib.auth.password_validation.MinimumLengthValidator", "OPTIONS": {"min_length": 8}},
+    # Eigen versie van MinimumLengthValidator: Django 6.1 heeft die melding
+    # niet in het Nederlands (zie medewerkers/wachtwoord.py).
+    {"NAME": "medewerkers.wachtwoord.MinimaleLengte", "OPTIONS": {"min_length": 8}},
     {"NAME": "django.contrib.auth.password_validation.CommonPasswordValidator"},
     {"NAME": "django.contrib.auth.password_validation.NumericPasswordValidator"},
 ]

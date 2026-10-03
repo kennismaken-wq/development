@@ -254,6 +254,12 @@ def media_bestand(request, pad):
     eigenaar_bijlage = hoofdbijlage or Bijlage.objects.filter(thumbnail=pad).first()
     if eigenaar_bijlage and not eigenaar_bijlage.mag_zien(request.user):
         raise Http404
+    # Een bijlage-bestand zonder regel in de database is van een verwijderde
+    # bijlage: dat bestaat niet meer, ook al staat het nog op de schijf
+    # (van vóór 03-10-2026, B2). Profielfoto's hebben geen regel en vallen
+    # hier dus niet onder.
+    if eigenaar_bijlage is None and pad.startswith(("bijlagen/", "thumbnails/")):
+        raise Http404
     # inline, niet attachment: een pdf moet in de browser te bekijken zijn
     # zonder eerst gedownload te worden. naam blijft gezet zodat "bewaren als"
     # in de browser een leesbare naam voorstelt in plaats van de opslag-uuid.
@@ -313,7 +319,8 @@ def fotos(request):
     klus_pk = request.GET.get("klus", "").strip()
     # "algemeen" is geen klus-pk maar het aparte filter voor foto's zonder klus
     # (de fotodropbox) — elke andere onbekende waarde valt terug op "alle klussen".
-    if klus_pk not in ("", "algemeen") and not klus_pk.isdigit():
+    # len < 10: een getal dat te groot is voor de database gaf een foutpagina (B7)
+    if klus_pk not in ("", "algemeen") and not (klus_pk.isdigit() and len(klus_pk) < 10):
         klus_pk = ""
     scope = request.GET.get("scope", "altijd")
     if scope not in ("actief", "inactief", "altijd"):

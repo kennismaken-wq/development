@@ -4,6 +4,7 @@ import tempfile
 import uuid
 from datetime import date, time, timedelta
 from io import BytesIO
+from pathlib import Path
 
 import pymupdf
 from django.contrib.auth.models import AnonymousUser
@@ -1772,3 +1773,81 @@ class BestandenEnMediaTest(TestCase):
         self.assertNotIn("tekening.png", media)
         # zonder voorbeeld: een tegel met de extensie
         self.assertIn('<span class="bestandtegel-ext">XLSX</span>', bestanden)
+
+
+@override_settings(MEDIA_ROOT=TIJDELIJKE_MEDIA)
+class StresstestKlussenTest(TestCase):
+    """Stresstest 03-10-2026: B2, B7, B9, B13 en B16."""
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.sam = Medewerker.objects.create_user("sam", password="x")
+        cls.maarten = Medewerker.objects.create_user("maarten", password="x", rol=Medewerker.Rol.EIGENAAR)
+        cls.klus = Klus.objects.create(naam="Tuin Vermeer")
+
+    @classmethod
+    def tearDownClass(cls):
+        shutil.rmtree(TIJDELIJKE_MEDIA, ignore_errors=True)
+        super().tearDownClass()
+
+    def test_verwijderde_bijlage_is_ook_van_de_schijf(self):
+        self.client.force_login(self.sam)
+        with self.captureOnCommitCallbacks(execute=True):
+            self.client.post(reverse("bijlage_toevoegen"), {"bestanden": upload(), "klus": self.klus.pk})
+        bijlage = Bijlage.objects.get()
+        paden = [bijlage.bestand.path, bijlage.thumbnail.path]
+        with self.captureOnCommitCallbacks(execute=True):
+            self.client.post(reverse("bijlage_verwijderen", args=[bijlage.pk]))
+        self.assertFalse(any(Path(pad).exists() for pad in paden))
+
+    def test_bestand_zonder_bijlage_is_er_niet_meer(self):
+        # Een wees van vóór de fix: staat nog op de schijf, maar bestaat niet.
+        naam = "bijlagen/2026/09/wees.pdf"
+        (Path(TIJDELIJKE_MEDIA) / naam).parent.mkdir(parents=True, exist_ok=True)
+        (Path(TIJDELIJKE_MEDIA) / naam).write_bytes(b"%PDF-1.4 geheim")
+        self.client.force_login(self.sam)
+        self.assertEqual(self.client.get(reverse("media_bestand", args=[naam])).status_code, 404)
+
+    def test_opruimcommando_vindt_wezen(self):
+        from io import StringIO
+        from django.core.management import call_command
+        naam = Path(TIJDELIJKE_MEDIA) / "bijlagen/2026/09/wees2.jpg"
+        naam.parent.mkdir(parents=True, exist_ok=True)
+        naam.write_bytes(b"x")
+        uit = StringIO()
+        call_command("ruim_bijlagen_op", stdout=uit)
+        self.assertIn("wees2.jpg", uit.getvalue())
+        self.assertTrue(naam.exists())
+        call_command("ruim_bijlagen_op", "--echt", stdout=StringIO())
+        self.assertFalse(naam.exists())
+
+    def test_enorm_getal_in_de_fotolink_geeft_geen_foutpagina(self):
+        self.client.force_login(self.sam)
+        self.assertEqual(self.client.get(reverse("fotos") + "?klus=99999999999999999999").status_code, 200)
+
+    def test_klus_kleur_moet_een_hexkleur_zijn(self):
+        self.client.force_login(self.maarten)
+        antwoord = self.client.post(reverse("klus_bewerken", args=[self.klus.pk]),
+                                    {"soort": "onderhoud", "naam": "Tuin Vermeer", "opdrachtgever": "Vermeer",
+                                     "kleur": "red;x", "actief": "True"})
+        self.assertContains(antwoord, "Kies een kleur als #RRGGBB")
+
+    def test_gigantische_foto_geeft_melding_en_de_rest_gaat_door(self):
+        buffer = BytesIO()
+        Image.new("1", (20000, 20000)).save(buffer, format="PNG")
+        self.client.force_login(self.sam)
+        antwoord = self.client.post(
+            reverse("bijlage_toevoegen"),
+            {"bestanden": [upload("bom.png", buffer.getvalue(), "image/png"), upload("goed.jpg")], "klus": self.klus.pk},
+            follow=True,
+        )
+        self.assertContains(antwoord, "bom.png: Deze foto is te groot")
+        self.assertEqual(Bijlage.objects.get().originele_naam, "goed.jpg")
+
+    def test_dubbel_verstuurde_klus_komt_er_een_keer_in(self):
+        self.client.force_login(self.maarten)
+        gegevens = {"soort": "aanleg", "opdrachtgever": "Fam. Dubbel", "adres": "Klikweg 1", "plaats": "Maasdijk",
+                    "naam": "Dubbelklik", "startdatum": "2026-11-02", "actief": "True"}
+        for _ in range(2):
+            self.client.post(reverse("klus_nieuw"), gegevens)
+        self.assertEqual(Klus.objects.filter(naam="Dubbelklik").count(), 1)

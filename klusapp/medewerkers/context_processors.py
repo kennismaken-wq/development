@@ -18,4 +18,4 @@ def wissel(request):
     eigen_pk = request.session.get("gewisseld_van")
     if not eigen_pk:
         return {}
-    return {"gewisseld_van": Medewerker.objects.filter(pk=eigen_pk).first()}
+    return {"gewisseld_van": Medewerker.alle.filter(pk=eigen_pk).first()}  # alle: ook het verborgen account (B4)

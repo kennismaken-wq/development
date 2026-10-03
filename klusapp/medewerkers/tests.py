@@ -1166,3 +1166,55 @@ class FoutpaginasEnLoonstrookTest(TestCase):
         self.client.force_login(sam)
         html = self.client.get(reverse("start")).content.decode()
         self.assertRegex(html, rf'href="{reverse("loonstrook")}"\s*target="_blank" rel="noopener"')
+
+
+class StresstestMedewerkersTest(TestCase):
+    """Stresstest 03-10-2026: B3, B4, B9, B16 en B21."""
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.maarten = Medewerker.objects.create_user("maarten", password="x", first_name="Maarten",
+                                                     rol=Medewerker.Rol.EIGENAAR)
+        cls.admin = Medewerker.objects.create_user("admin", password="x", first_name="HandigerAI",
+                                                   rol=Medewerker.Rol.EIGENAAR)
+        Medewerker.alle.filter(pk=cls.admin.pk).update(verborgen=True)
+        cls.sam = Medewerker.objects.create_user("sam", password="x", first_name="Sam")
+
+    @override_settings(TESTFUNCTIES=False)
+    def test_testgegevens_staan_uit_op_de_echte_omgeving(self):
+        self.client.force_login(self.maarten)
+        self.assertEqual(self.client.post(reverse("testgegevens"), {"actie": "aanmaken"}).status_code, 404)
+        self.assertEqual(Medewerker.alle.count(), 3)
+
+    def test_verborgen_account_kan_terugwisselen(self):
+        self.client.force_login(Medewerker.alle.get(pk=self.admin.pk))
+        self.client.post(reverse("wissel_naar", args=[self.sam.pk]))
+        self.assertContains(self.client.get(reverse("start")), reverse("wissel_terug"))
+        antwoord = self.client.post(reverse("wissel_terug"), follow=True)
+        self.assertContains(antwoord, "Je bent weer HandigerAI")
+
+    def test_kleur_moet_een_hexkleur_zijn(self):
+        self.client.force_login(self.sam)
+        antwoord = self.client.post(reverse("mijn_profiel"), {"first_name": "Sam", "kleur": '"><b>'})
+        self.assertContains(antwoord, "Kies een kleur als #RRGGBB")
+        self.sam.refresh_from_db()
+        self.assertEqual(self.sam.kleur, "")
+
+    def test_te_kort_wachtwoord_geeft_een_nederlandse_melding(self):
+        self.client.force_login(self.sam)
+        antwoord = self.client.post(reverse("mijn_profiel"),
+                                    {"actie": "wachtwoord", "huidig": "x", "nieuw": "kort", "nieuw2": "kort"})
+        self.assertContains(antwoord, "Dit wachtwoord is te kort. Kies minstens 8 tekens.")
+        self.assertNotContains(antwoord, "too short")
+
+    def test_dubbel_verstuurde_nieuwe_medewerker_geeft_geen_foutpagina(self):
+        from django.db import IntegrityError
+        self.client.force_login(self.maarten)
+        gegevens = {"first_name": "Kees", "username": "kees", "rol": "medewerker", "kleur": "#336699",
+                    "wachtwoord": "Sterk-wachtwoord-77"}
+        # De tweede aanvraag komt binnen terwijl de eerste nog opslaat: het
+        # formulier ziet nog geen "kees", de database wel.
+        with patch("medewerkers.forms.NieuweMedewerkerForm.save", side_effect=IntegrityError):
+            antwoord = self.client.post(reverse("medewerker_nieuw"), gegevens)
+        self.assertEqual(antwoord.status_code, 200)
+        self.assertContains(antwoord, "Er bestaat al een gebruiker met deze gebruikersnaam")

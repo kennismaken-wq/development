@@ -2,9 +2,13 @@ import uuid
 from pathlib import Path
 
 from django.conf import settings
-from django.db import models
+from django.db import models, transaction
+from django.db.models.signals import post_delete
+from django.dispatch import receiver
 from django.urls import reverse
 from django.utils import timezone
+
+from medewerkers.models import hexkleur
 
 
 class Klus(models.Model):
@@ -45,6 +49,7 @@ class Klus(models.Model):
     kleur = models.CharField(
         max_length=7,
         blank=True,
+        validators=[hexkleur],
         help_text="Hexkleur van de blokken in het planbord.",
     )
     actief = models.BooleanField(default=True)
@@ -242,6 +247,27 @@ class Bijlage(models.Model):
             return True
         lijst = self.zichtbaar_voor.all()
         return not lijst or gebruiker in lijst
+
+
+@receiver(post_delete, sender=Bijlage)
+def _bestanden_van_bijlage_weg(sender, instance, **kwargs):
+    """Een verwijderde bijlage is ook van de schijf weg, foto en thumbnail.
+
+    Eerst bleven ze staan, en omdat er dan geen databaseregel meer bij hoort,
+    sloeg media_bestand de rechtencontrole over: een verwijderde afgeschermde
+    offerte was daarna voor iedereen met de link te openen (stresstest
+    03-10-2026, B2). Ook de AVG wil dat "verwijderd" verwijderd betekent.
+    Pas na de commit, zodat een teruggedraaide transactie geen bestand kwijt
+    is. Hier en niet in de view: ook een klus die met al zijn bijlagen weg
+    gaat (CASCADE) of /beheer/ komt hierlangs."""
+    namen = [veld.name for veld in (instance.bestand, instance.thumbnail) if veld and veld.name]
+    opslag = instance.bestand.storage
+
+    def weg():
+        for naam in namen:
+            opslag.delete(naam)
+
+    transaction.on_commit(weg)
 
 
 class Notitie(models.Model):

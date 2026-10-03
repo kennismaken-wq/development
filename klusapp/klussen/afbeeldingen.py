@@ -91,6 +91,11 @@ def versies_van(bestand, bestandsnaam):
             geopend.load()
             recht = _plat_en_gedraaid(geopend)
             return _als_jpeg(recht, MAX_ZIJDE), _als_jpeg(recht, THUMB_ZIJDE)
+    except Image.DecompressionBombError as oorzaak:
+        # Meer dan ~180 megapixel: Pillow weigert, terecht (zo'n plaatje kost
+        # gigabytes geheugen). Eerst gaf dat een foutpagina en ging de rest
+        # van de upload ook verloren (stresstest 03-10-2026, B13).
+        raise BestandNietLeesbaar("Deze foto is te groot (te veel pixels).") from oorzaak
     except (UnidentifiedImageError, OSError, ValueError) as oorzaak:
         raise BestandNietLeesbaar("Dit bestand is niet als afbeelding te openen.") from oorzaak
 
@@ -112,5 +117,5 @@ def thumbnail_van(bestand, bestandsnaam):
         with Image.open(bestand) as geopend:
             geopend.load()
             return _als_jpeg(_plat_en_gedraaid(geopend), THUMB_ZIJDE)
-    except (UnidentifiedImageError, OSError, ValueError):
+    except (UnidentifiedImageError, OSError, ValueError, Image.DecompressionBombError):
         return None
