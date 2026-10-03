@@ -670,13 +670,6 @@ input[type=time]::-webkit-calendar-picker-indicator{ filter:invert(1); opacity:.
   display:block; opacity:.85; margin-top:.1rem;
   overflow-wrap:break-word; word-break:break-word;
 }
-/* In de weekweergave zijn de kolommen smal (op een telefoon ~40px): daar brak
-   de klusnaam middenin een woord ("sno/eien"). Eén regel, afgekapt met "…"
-   (U7); de hele naam staat bij een tik op het blok. */
-.raster:not(.raster-dag) .blok .onder{
-  white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
-  overflow-wrap:normal; word-break:normal;
-}
 
 /* ══════════ UREN: MAANDWEERGAVE ══════════
    Puur navigeren: een dag aantikken opent de dagweergave van die datum.
