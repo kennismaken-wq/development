@@ -304,6 +304,19 @@ Handmatig testen of bekijken: `systemctl start klusapp-urenbackup.service` en
 `journalctl -u klusapp-urenbackup.service -n 20`. Een mislukte verzending laat
 de service falen (rood in `systemctl --failed`), niet stil slagen.
 
+## Bestanden van verwijderde bijlagen opruimen (eenmalig)
+
+Tot 03-10-2026 bleef een verwijderde foto of document op de schijf staan
+(stresstest B2). Sindsdien gaat het bestand vanzelf mee, en levert de app een
+bestand zonder bijlage ook niet meer uit. Wat er van daarvoor nog staat, ruim
+je per omgeving één keer op — eerst kijken, dan echt:
+
+    sudo -u develop -H .venv/bin/python klusapp/manage.py ruim_bijlagen_op
+    sudo -u develop -H .venv/bin/python klusapp/manage.py ruim_bijlagen_op --echt
+
+Op degroenem met de omgevingsvariabelen van die service (DATABASE_URL en
+MEDIA_ROOT van degroenem), anders kijkt hij naar de verkeerde database.
+
 ## Wat er nog niet staat
 
 1. **Off-site back-up van foto's en database** — de uren gaan sinds 29-09-2026

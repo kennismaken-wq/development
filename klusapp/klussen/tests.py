@@ -1817,6 +1817,10 @@ class StresstestKlussenTest(TestCase):
             self._opruimen_in(Path(eigen_map), call_command, StringIO)
 
     def _opruimen_in(self, wortel, call_command, StringIO):
+        echt = wortel / "bijlagen/2026/09/echt.jpg"
+        echt.parent.mkdir(parents=True, exist_ok=True)
+        echt.write_bytes(b"x")
+        Bijlage.objects.create(soort=Bijlage.Soort.FOTO, bestand="bijlagen/2026/09/echt.jpg", klus=self.klus)
         naam = wortel / "bijlagen/2026/09/wees2.jpg"
         naam.parent.mkdir(parents=True, exist_ok=True)
         naam.write_bytes(b"x")
@@ -1826,6 +1830,7 @@ class StresstestKlussenTest(TestCase):
         self.assertTrue(naam.exists())
         call_command("ruim_bijlagen_op", "--echt", stdout=StringIO())
         self.assertFalse(naam.exists())
+        self.assertTrue(echt.exists())
 
     def test_enorm_getal_in_de_fotolink_geeft_geen_foutpagina(self):
         self.client.force_login(self.sam)
@@ -1902,3 +1907,17 @@ class FotosMeerLadenTest(TestCase):
     def test_rare_tot_waarde_geeft_gewoon_de_eerste_stapel(self):
         for waarde in ("abc", "-5", "0", "99999999999"):
             self.assertEqual(self.client.get(reverse("fotos") + f"?tot={waarde}").status_code, 200)
+
+
+class OpruimVangnetTest(TestCase):
+    def test_lege_database_met_bestanden_weigert(self):
+        from io import StringIO
+        from django.core.management import CommandError, call_command
+        eigen_map = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, eigen_map, ignore_errors=True)
+        bestand = Path(eigen_map) / "bijlagen/2026/09/foto.jpg"
+        bestand.parent.mkdir(parents=True)
+        bestand.write_bytes(b"x")
+        with self.settings(MEDIA_ROOT=eigen_map), self.assertRaises(CommandError):
+            call_command("ruim_bijlagen_op", "--echt", stdout=StringIO())
+        self.assertTrue(bestand.exists())

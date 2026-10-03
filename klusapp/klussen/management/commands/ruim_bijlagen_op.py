@@ -13,7 +13,7 @@ meer naar wijst.
 from pathlib import Path
 
 from django.conf import settings
-from django.core.management.base import BaseCommand
+from django.core.management.base import BaseCommand, CommandError
 
 from klussen.models import Bijlage
 
@@ -35,6 +35,16 @@ class Command(BaseCommand):
             for pad in sorted((wortel / map_naam).rglob("*")):
                 if pad.is_file() and pad.relative_to(wortel).as_posix() not in in_gebruik:
                     wezen.append(pad)
+
+        database = settings.DATABASES["default"]["NAME"]
+        self.stdout.write(f"Database: {database} · media: {wortel}")
+        # Vangnet: tegen een lege of verkeerde database (vergeten DATABASE_URL)
+        # lijkt elk bestand een wees, en zou --echt alles weggooien.
+        if wezen and not in_gebruik:
+            raise CommandError(
+                "Deze database heeft geen enkele bijlage, maar er staan wel bestanden. "
+                "Draai je dit tegen de goede database (DATABASE_URL, MEDIA_ROOT)? Er is niets verwijderd."
+            )
 
         grootte = sum(pad.stat().st_size for pad in wezen)
         for pad in wezen:
