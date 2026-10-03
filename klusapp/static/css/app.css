@@ -2315,7 +2315,14 @@ label:has(> input[type=checkbox]), input[type=checkbox] + label{ cursor:pointer;
 .wp-zoom-maand .wp-kop .nr{ display:block; font-size:10px; font-weight:600; }
 .wp-zoom-maand .wp-kop .feest{ width:6px; height:6px; padding:0; margin:.2rem auto 0; font-size:0; }
 .wp-zoom-maand .wp-kop{ padding-left:0; padding-right:0; overflow:visible; }
-.wp-zoom-maand .vandaag-label{ font-size:8px; padding:0 .25rem; position:relative; z-index:5; }
+/* "Vandaag" is breder dan een dag van 26px. Als gewoon element rekte het de
+   kop op en schoof het dagnummer tegen dat van morgen aan ("34"). Los boven
+   de kolom gezet, met ruimte erboven in de hele kopregel. */
+.wp-zoom-maand .wp-kop{ position:relative; padding-top:1.15rem; }
+.wp-zoom-maand .vandaag-label{
+  font-size:8px; padding:0 .25rem; z-index:5;
+  position:absolute; top:.15rem; left:50%; transform:translateX(-50%); white-space:nowrap; margin:0;
+}
 .wp-zoom-maand .wp-telling .n{ font-size:10.5px; }
 .wp-zoom-maand .wp-cel, .wp-zoom-maand .wp-kc{ padding:.25rem 2px; }
 .wp-zoom-maand .wp-cel .tekst, .wp-zoom-maand .wp-kc .tekst, .wp-zoom-maand .wp-mensen,
@@ -2518,6 +2525,8 @@ a.wp-klus{ text-decoration:none; }
 .aw-bord.wp-zoom-maand .wp-cel{ padding:.5rem 2px; }
 .aw-bord .wp-naam{ align-items:center; }
 .aw-bord .wp-kop{ padding-top:.3rem; padding-bottom:.6rem; font-size:12px; }
+/* ook hier ruimte boven de kop voor het losse "Vandaag" in de maandzoom */
+.aw-bord.wp-zoom-maand .wp-kop{ padding-top:1.15rem; }
 .aw-bord .wp-kop .datum{ font-size:11px; }
 @media (hover:hover){ .aw-bord .wp-kop:hover{ background:none; } }
 /* Op een telefoon is een naamkolom van 176px de halve breedte: daar blijft
