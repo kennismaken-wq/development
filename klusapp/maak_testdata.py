@@ -5,6 +5,13 @@ import django
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "config.settings")
 django.setup()
 
+from django.conf import settings  # noqa: E402
+
+# Op de server heet de eigenaar ook "maarten"; dit script zou zijn wachtwoord
+# dan op test1234 zetten. Daarom alleen met DEBUG en testfuncties aan.
+if not (settings.DEBUG and settings.TESTFUNCTIES):
+    raise SystemExit("maak_testdata.py draait alleen lokaal (DJANGO_DEBUG=1 en KLUSAPP_TESTFUNCTIES=1).")
+
 from medewerkers.models import Medewerker  # noqa: E402
 
 def zorg_voor(username, voornaam, achternaam, rol, wachtwoord, staff=False):
@@ -15,7 +22,9 @@ def zorg_voor(username, voornaam, achternaam, rol, wachtwoord, staff=False):
     mw.first_name, mw.last_name, mw.rol = voornaam, achternaam, rol
     # is_staff volgt automatisch uit de rol; zie Medewerker.save()
     mw.is_superuser = staff
-    mw.set_password(wachtwoord)
+    # Een bestaand account houdt zijn eigen wachtwoord.
+    if nieuw:
+        mw.set_password(wachtwoord)
     mw.save()
     print(("aangemaakt" if nieuw else "bijgewerkt"), username, rol)
 

@@ -88,6 +88,13 @@ DATABASES = {
     )
 }
 
+# DEBUG staat standaard aan, zodat lokaal geen .env nodig is. Raakt op de server
+# de .env kwijt of mist DJANGO_DEBUG=0, dan zou de app met tracebacks in beeld en
+# een bekende SECRET_KEY draaien. Een Postgres-database betekent: dit is een
+# server. Dan liever niet opstarten.
+if DEBUG and DATABASES["default"]["ENGINE"] != "django.db.backends.sqlite3":
+    raise RuntimeError("DEBUG staat aan op een server-database. Zet DJANGO_DEBUG=0 in de .env.")
+
 AUTH_USER_MODEL = "medewerkers.Medewerker"
 
 # "Kees" mag inloggen als het account "kees" heet (B11). ModelBackend blijft
@@ -168,6 +175,12 @@ STORAGES = {
 # Foto's komen rechtstreeks van een telefooncamera; die zijn groot.
 DATA_UPLOAD_MAX_MEMORY_SIZE = 25 * 1024 * 1024
 FILE_UPLOAD_MAX_MEMORY_SIZE = 5 * 1024 * 1024
+# Django weigert standaard een post met meer dan 1000 velden of 100 bestanden
+# met een kale "400 Bad Request". De werkplanning stuurt per geselecteerde cel
+# een veld (tot uren.views.PLANNING_MAX_CELLEN), en een fotodropbox kan meer
+# dan 100 foto's bevatten.
+DATA_UPLOAD_MAX_NUMBER_FIELDS = 10_000
+DATA_UPLOAD_MAX_NUMBER_FILES = 500
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 

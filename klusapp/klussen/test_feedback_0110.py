@@ -124,6 +124,7 @@ class AanlegEnStaatTest(TestCase):
             "adres": "", "plaats": "", "beschrijving": "", "kleur": "#95bf1d", "actief": "False",
         }
         klus = Klus.objects.create(naam="Tuin", opdrachtgever="Van E")
+        gegevens["versie"] = KlusForm(instance=klus).initial["versie"]
         formulier = KlusForm(gegevens, instance=klus)
         self.assertTrue(formulier.is_valid(), formulier.errors)
         self.assertFalse(formulier.save().actief)

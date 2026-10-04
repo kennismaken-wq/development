@@ -19,6 +19,7 @@ from . import kalender
 from klussen.models import Bijlage, Klus
 from klussen.tests import TIJDELIJKE_MEDIA, upload
 from medewerkers.models import Medewerker
+from medewerkers.tests import versie_van
 
 from . import bezetting, export, totalen
 from .models import Aanwezigheid, Dagnotitie, Inzet, Klusdag, Uurblok
@@ -1010,7 +1011,8 @@ class WerkplanningTest(TestCase):
         self.client.post(
             reverse("medewerker_bewerken", args=[self.sam.pk]),
             {"first_name": "Sam", "username": "sam", "rol": "medewerker", "kleur": "#5B8FA8",
-             "vaste_werkdagen": ["3", "0", "0", "1"]},
+             "vaste_werkdagen": ["3", "0", "0", "1"],
+             "versie": versie_van(self.client, reverse("medewerker_bewerken", args=[self.sam.pk]))},
         )
         self.sam.refresh_from_db()
         self.assertEqual(self.sam.vaste_werkdagen, [0, 1, 3])
@@ -1418,8 +1420,7 @@ class MaandHeatmapTest(TestCase):
     def test_startscherm_toont_de_widget(self):
         self.blok(date(2026, 9, 10), 8)
         self.client.force_login(self.sam)
-        with patch("medewerkers.views.date") as nep:
-            nep.today.return_value = date(2026, 9, 23)
+        with patch("medewerkers.views.timezone.localdate", return_value=date(2026, 9, 23)):
             antwoord = self.client.get("/")
         self.assertEqual(antwoord.context["maandwidget"]["totaal"], "8")
         # Groot de week, klein de maand (gesprek Maarten, 01-10-2026).
@@ -2047,3 +2048,74 @@ class TerugNaarHetSchermTest(TestCase):
                                           begintijd=time(8), eindtijd=time(9))
             antwoord = self.client.post(reverse("uurblok_verwijderen", args=[blok.pk]), {"terug": terug})
             self.assertTrue(antwoord["Location"].startswith(reverse("mijn_uren")), terug)
+
+
+class StuurtekensTest(TestCase):
+    """Tweede stresstest (04-10-2026): een form feed uit een geplakte pdf liet
+    de export en de wekelijkse back-up elke keer omvallen."""
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.maarten = Medewerker.objects.create_user("maarten", password="x", first_name="Maarten",
+                                                     rol=Medewerker.Rol.EIGENAAR)
+        cls.klus = Klus.objects.create(naam="Tuin\x0bVermeer")
+        Uurblok.objects.create(medewerker=cls.maarten, klus=cls.klus, datum=date(2026, 9, 7),
+                               begintijd=time(8), eindtijd=time(10), toelichting="3 palen\x0cgezet\x1b")
+        Dagnotitie.objects.create(datum=date(2026, 9, 7), tekst="MT\x0coverleg")
+
+    def setUp(self):
+        self.client.force_login(self.maarten)
+
+    def test_urenexport(self):
+        antwoord = self.client.get(reverse("urenexport") + "?van=2026-09-07&tot=2026-09-13&download=1")
+        self.assertEqual(antwoord.status_code, 200)
+        blad = load_workbook(BytesIO(antwoord.content)).active
+        self.assertEqual(blad.cell(row=2, column=9).value, "3 palengezet")
+
+    def test_klusexport(self):
+        antwoord = self.client.get(reverse("klus_uren_export", args=[self.klus.pk]))
+        self.assertEqual(antwoord.status_code, 200)
+
+    def test_backupmail(self):
+        from . import backup
+        with patch("uren.backup.timezone.localdate", return_value=date(2026, 9, 14)):
+            backup.backup_mail(["maarten@example.com"]).send()
+        self.assertEqual(len(mail.outbox), 1)
+
+
+class VersieVerplichtTest(TestCase):
+    """B17-gat: zonder het verborgen veld werd de controle overgeslagen."""
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.maarten = Medewerker.objects.create_user("maarten", password="x", first_name="Maarten",
+                                                     rol=Medewerker.Rol.EIGENAAR)
+        cls.sam = Medewerker.objects.create_user("sam", password="x", first_name="Sam")
+
+    def test_zonder_versie_overschrijft_niet(self):
+        self.client.force_login(self.maarten)
+        Medewerker.objects.filter(pk=self.sam.pk).update(telefoon="0622222222")
+        for versie in ({}, {"versie": ""}):
+            antwoord = self.client.post(reverse("medewerker_bewerken", args=[self.sam.pk]), {
+                "first_name": "Sam", "username": "sam", "rol": "medewerker", "kleur": "#336699",
+                "functie": "voorman", "telefoon": "", **versie,
+            })
+            self.assertContains(antwoord, "Iemand anders heeft dit intussen aangepast")
+        self.sam.refresh_from_db()
+        self.assertEqual(self.sam.telefoon, "0622222222")
+
+
+class GroteSelectieTest(TestCase):
+    """Django weigerde een post met meer dan 1000 velden met een kale 400; de
+    werkplanning stuurt een veld per geselecteerde cel."""
+
+    def test_jaar_voor_vier_man_wordt_opgeslagen(self):
+        maarten = Medewerker.objects.create_user("maarten", password="x", first_name="Maarten",
+                                                 rol=Medewerker.Rol.EIGENAAR)
+        self.client.force_login(maarten)
+        mensen = [maarten] + [Medewerker.objects.create_user(f"m{i}", password="x") for i in range(3)]
+        cellen = [f"{m.pk}:{date(2026, 1, 1) + timedelta(days=i)}" for m in mensen for i in range(365)]
+        antwoord = self.client.post("/aanwezigheid/", {"actie": "cellen", "terug": "2026-09-07",
+                                                        "cel": cellen, "stand": "nee", "reden": "vakantie"})
+        self.assertEqual(antwoord.status_code, 302)
+        self.assertEqual(Aanwezigheid.objects.count(), 4 * 365)

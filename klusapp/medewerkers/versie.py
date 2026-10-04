@@ -40,6 +40,8 @@ class VersieMixin:
     def clean(self):
         gegevens = super().clean()
         gestuurd = self.data.get(self.add_prefix("versie"))
-        if self.instance.pk and gestuurd and gestuurd != self._versie_nu:
+        # Ook een ontbrekende of lege versie: anders glipt een pagina van vóór
+        # dit veld, of een post zonder het veld, alsnog langs de controle.
+        if self.instance.pk and gestuurd != self._versie_nu:
             raise forms.ValidationError(VEROUDERD, code="verouderd")
         return gegevens

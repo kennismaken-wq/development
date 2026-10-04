@@ -10,12 +10,20 @@ daarvoor nog staat: alles onder bijlagen/ en thumbnails/ waar geen bijlage
 meer naar wijst.
 """
 
+import time
 from pathlib import Path
 
 from django.conf import settings
 from django.core.management.base import BaseCommand, CommandError
 
 from klussen.models import Bijlage
+
+# Een bestand dat net is geüpload kan op de schijf staan voordat zijn bijlage
+# in de database staat; dat is geen wees.
+MINIMALE_LEEFTIJD = 60 * 60
+# Ontbreekt meer dan dit deel van de bestanden waar de database naar wijst,
+# dan horen database en MEDIA_ROOT niet bij elkaar.
+MAX_ONTBREKEND = 0.1
 
 
 class Command(BaseCommand):
@@ -31,19 +39,35 @@ class Command(BaseCommand):
             in_gebruik.update(naam for naam in (bestand, thumbnail) if naam)
 
         wezen = []
+        op_schijf = set()
+        grens = time.time() - MINIMALE_LEEFTIJD
         for map_naam in ("bijlagen", "thumbnails"):
             for pad in sorted((wortel / map_naam).rglob("*")):
-                if pad.is_file() and pad.relative_to(wortel).as_posix() not in in_gebruik:
+                if not pad.is_file():
+                    continue
+                naam = pad.relative_to(wortel).as_posix()
+                op_schijf.add(naam)
+                if naam not in in_gebruik and pad.stat().st_mtime < grens:
                     wezen.append(pad)
 
         database = settings.DATABASES["default"]["NAME"]
         self.stdout.write(f"Database: {database} · media: {wortel}")
         # Vangnet: tegen een lege of verkeerde database (vergeten DATABASE_URL)
         # lijkt elk bestand een wees, en zou --echt alles weggooien.
-        if wezen and not in_gebruik:
+        if op_schijf and not in_gebruik:
             raise CommandError(
                 "Deze database heeft geen enkele bijlage, maar er staan wel bestanden. "
                 "Draai je dit tegen de goede database (DATABASE_URL, MEDIA_ROOT)? Er is niets verwijderd."
+            )
+        # Tweede vangnet: database van de ene omgeving, MEDIA_ROOT van de andere.
+        # Dan is in_gebruik wel gevuld, maar staat bijna niets ervan op deze schijf,
+        # en zou --echt de foto's van de andere omgeving weggooien.
+        ontbrekend = in_gebruik - op_schijf
+        if in_gebruik and len(ontbrekend) > MAX_ONTBREKEND * len(in_gebruik):
+            raise CommandError(
+                f"{len(ontbrekend)} van de {len(in_gebruik)} bestanden waar deze database naar wijst, "
+                f"staan niet onder {wortel}. Horen DATABASE_URL en MEDIA_ROOT bij dezelfde omgeving? "
+                "Er is niets verwijderd."
             )
 
         grootte = sum(pad.stat().st_size for pad in wezen)

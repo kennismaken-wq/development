@@ -109,7 +109,7 @@ def aanwezigheid_werkboek(vandaag):
         notities = dict(Dagnotitie.objects.filter(datum__range=(van, tot)).values_list("datum", "tekst"))
 
         blad = boek.create_sheet(str(jaar))
-        blad.append(["Datum", "Dag"] + [m.naam for m in mensen] + ["Notitie"])
+        blad.append(export.schoon(["Datum", "Dag"] + [m.naam for m in mensen] + ["Notitie"]))
         for cel in blad[1]:
             cel.font = Font(bold=True)
         blad.column_dimensions["A"].width = 12
@@ -120,9 +120,11 @@ def aanwezigheid_werkboek(vandaag):
 
         for dag in dagen:
             blad.append(
-                [dag, WEEKDAGEN[dag.weekday()]]
-                + [_celtekst(cellen[(m.pk, dag)]) for m in mensen]
-                + [notities.get(dag, "")]
+                export.schoon(
+                    [dag, WEEKDAGEN[dag.weekday()]]
+                    + [_celtekst(cellen[(m.pk, dag)]) for m in mensen]
+                    + [notities.get(dag, "")]
+                )
             )
             rij = blad.max_row
             blad.cell(rij, 1).number_format = "DD-MM-YYYY"

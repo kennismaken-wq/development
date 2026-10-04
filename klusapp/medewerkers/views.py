@@ -11,6 +11,7 @@ from django.db.models.functions import Lower
 from django.http import Http404
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
+from django.utils import timezone
 
 from klussen import voorbeeld
 from klussen.models import Bijlage, Klus
@@ -103,7 +104,7 @@ def start(request):
     zijn tegels via de context processor, dus hoeft hier niet te worden
     meegegeven.
     """
-    vandaag = date.today()
+    vandaag = timezone.localdate()
     maandag = vandaag - timedelta(days=vandaag.weekday())
     zondag = maandag + timedelta(days=6)
 
@@ -346,7 +347,7 @@ def medewerker_nieuw(request):
             )
             return redirect("medewerkers")
     else:
-        formulier = NieuweMedewerkerForm(initial={"in_dienst_sinds": date.today()})
+        formulier = NieuweMedewerkerForm(initial={"in_dienst_sinds": timezone.localdate()})
     return render(
         request, "medewerkers/form.html", {"formulier": formulier, "nieuw": True, "bewerken": True}
     )
@@ -422,7 +423,7 @@ def medewerker_dienst(request, pk):
         medewerker.is_active = True
         bericht = f"{medewerker.naam} is weer in dienst en kan weer inloggen."
     else:
-        medewerker.uit_dienst_sinds = date.today()
+        medewerker.uit_dienst_sinds = timezone.localdate()
         medewerker.is_active = False
         bericht = f"{medewerker.naam} staat uit dienst. De uren en foto's blijven bewaard."
     medewerker.save()
@@ -450,9 +451,9 @@ def testgegevens(request):
 
     gekozen = request.POST.get("week")
     try:
-        dag = date.fromisoformat(gekozen) if gekozen else date.today()
+        dag = date.fromisoformat(gekozen) if gekozen else timezone.localdate()
     except ValueError:
-        dag = date.today()
+        dag = timezone.localdate()
 
     mensen, blokken = demo_gegevens.aanmaken(dag)
     maandag, zondag = demo_gegevens.week_van(dag)

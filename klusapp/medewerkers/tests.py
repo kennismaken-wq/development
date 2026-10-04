@@ -1,4 +1,5 @@
 import re
+import re
 from datetime import date, time, timedelta
 from io import StringIO
 from unittest.mock import patch
@@ -17,6 +18,13 @@ from .models import Medewerker
 
 def tegeltitels(html):
     return re.findall(r'class="titel">([^<]+)<', html)
+
+
+
+def versie_van(client, adres):
+    """Het verborgen versieveld (B17) zoals de browser het van de pagina meekrijgt.
+    Zonder dat veld weigert een bewerkformulier op te slaan."""
+    return re.search(r'name="versie" value="([^"]*)"', client.get(adres).content.decode()).group(1)
 
 
 class StartschermTest(TestCase):
@@ -316,7 +324,8 @@ class MedewerkersBeherenTest(TestCase):
         antwoord = self.client.post(
             reverse("medewerker_bewerken", args=[self.eigenaar.pk]),
             {"first_name": "Maarten", "username": "maarten", "rol": Medewerker.Rol.MEDEWERKER,
-             "kleur": "#5B8FA8"},
+             "kleur": "#5B8FA8",
+             "versie": versie_van(self.client, reverse("medewerker_bewerken", args=[self.eigenaar.pk]))},
         )
         self.assertEqual(antwoord.status_code, 302)  # de rest wordt wél opgeslagen
         self.eigenaar.refresh_from_db()
@@ -331,7 +340,8 @@ class MedewerkersBeherenTest(TestCase):
     def test_rol_van_een_ander_wijzigen_kan_wel(self):
         antwoord = self.client.post(
             reverse("medewerker_bewerken", args=[self.sam.pk]),
-            {"first_name": "Sam", "username": "sam", "rol": Medewerker.Rol.EIGENAAR, "kleur": "#5B8FA8"},
+            {"first_name": "Sam", "username": "sam", "rol": Medewerker.Rol.EIGENAAR, "kleur": "#5B8FA8",
+             "versie": versie_van(self.client, reverse("medewerker_bewerken", args=[self.sam.pk]))},
         )
         self.assertEqual(antwoord.status_code, 302)
         self.sam.refresh_from_db()
@@ -512,7 +522,8 @@ class MijnProfielTest(TestCase):
         antwoord = self.client.post(
             reverse("mijn_profiel"),
             {"first_name": "Sam", "last_name": "de Wit", "telefoon": "0687654321",
-             "kleur": "#5B8FA8", "rijbewijzen": ["BE", "B"]},
+             "kleur": "#5B8FA8", "rijbewijzen": ["BE", "B"],
+             "versie": versie_van(self.client, reverse("mijn_profiel"))},
         )
         self.assertEqual(antwoord.status_code, 302)
         self.assertEqual(antwoord.headers["Location"], reverse("mijn_profiel"))
@@ -589,7 +600,8 @@ class ProfielfotoTest(TestCase):
         self.client.force_login(self.sam)
 
     def _formuliervelden(self, **extra):
-        velden = {"first_name": "Sam", "last_name": "de Wit", "kleur": "#5B8FA8"}
+        velden = {"first_name": "Sam", "last_name": "de Wit", "kleur": "#5B8FA8",
+                  "versie": versie_van(self.client, reverse("mijn_profiel"))}
         velden.update(extra)
         return velden
 
@@ -823,6 +835,7 @@ class MedewerkerZoalsProfielTest(TestCase):
         gegevens = {
             "first_name": "Sam", "last_name": "de Wit", "username": "sam",
             "rol": Medewerker.Rol.MEDEWERKER, "telefoon": "06 99", "kleur": "#5B8FA8",
+            "versie": versie_van(self.client, self.adres),
         }
         antwoord = self.client.post(self.adres, gegevens)
         self.assertRedirects(antwoord, self.adres)
@@ -953,7 +966,8 @@ class OpslaanRechtsbovenTest(TestCase):
         self.assertNotIn('id="bewerkacties" hidden', html)
         self.assertIn('<button type="submit" form="gegevensformulier"', html)
         # en de knop rechtsboven slaat echt op
-        antwoord = self.client.post(reverse("mijn_profiel"), {"first_name": "Samuel", "kleur": "#5B8FA8"})
+        antwoord = self.client.post(reverse("mijn_profiel"), {"first_name": "Samuel", "kleur": "#5B8FA8",
+                                                              "versie": versie_van(self.client, reverse("mijn_profiel"))})
         self.assertRedirects(antwoord, reverse("mijn_profiel"))
 
 
@@ -1289,3 +1303,18 @@ class RemOpRadenTest(TestCase):
             antwoord = self.client.post(reverse("wachtwoord_vergeten"), {"email": "kees@example.test"})
             self.assertEqual(antwoord.status_code, 302)
         self.assertEqual(len(mail.outbox), rem.MAX_RESET_PER_ADRES)
+
+
+class StartschermTijdzoneTest(TestCase):
+    """De urenwidget op het startscherm rekende met de serverklok (UTC): zondag
+    op maandag tussen 00:00 en 02:00 stond "deze week" nog op de vorige."""
+
+    def test_maandag_half_een_is_al_de_nieuwe_week(self):
+        from datetime import datetime, timezone as dt_timezone
+        from unittest.mock import patch
+        sam = Medewerker.objects.create_user("sam", password="x")
+        self.client.force_login(sam)
+        # 22:30 UTC op zondag = 00:30 maandag 7 september in Amsterdam
+        with patch("django.utils.timezone.now", return_value=datetime(2026, 9, 6, 22, 30, tzinfo=dt_timezone.utc)):
+            antwoord = self.client.get(reverse("start"))
+        self.assertEqual(antwoord.context["vandaag"], date(2026, 9, 7))

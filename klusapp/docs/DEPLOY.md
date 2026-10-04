@@ -316,6 +316,9 @@ je per omgeving één keer op — eerst kijken, dan echt:
 
 Op degroenem met de omgevingsvariabelen van die service (DATABASE_URL en
 MEDIA_ROOT van degroenem), anders kijkt hij naar de verkeerde database.
+Horen die twee niet bij elkaar (meer dan 10% van de bestanden waar de database
+naar wijst staat niet op die schijf), dan weigert hij en verwijdert hij niets.
+Bestanden van het afgelopen uur laat hij altijd staan.
 
 ## Wat er nog niet staat
 

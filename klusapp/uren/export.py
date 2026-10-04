@@ -16,6 +16,7 @@ import re
 from io import BytesIO
 
 from openpyxl import Workbook
+from openpyxl.cell.cell import ILLEGAL_CHARACTERS_RE
 from openpyxl.styles import Font
 
 # "Extra werk" als laatste kolom en niet in de toelichting: dat is wat er
@@ -26,13 +27,22 @@ KOLOMBREEDTES = [22, 12, 26, 22, 32, 8, 8, 8, 45, 45]
 LEGE_REGEL = [""] * len(KOPPEN)
 
 
+def schoon(waarden):
+    """Stuurtekens als een form feed (komt mee als je tekst uit een pdf plakt)
+    mogen niet in een xlsx; openpyxl gooit dan een fout en de hele export, of
+    de wekelijkse back-up, valt om — elke keer weer, zolang die tekst in de
+    database staat. Hier weghalen en niet bij het opslaan, zodat ook wat er
+    al staat meegaat."""
+    return [ILLEGAL_CHARACTERS_RE.sub("", w) if isinstance(w, str) else w for w in waarden]
+
+
 def _vet(blad, rijnummer):
     for kolom in range(1, len(KOPPEN) + 1):
         blad.cell(row=rijnummer, column=kolom).font = Font(bold=True)
 
 
 def _subtotaal_schrijven(blad, naam, minuten, rijnummer):
-    blad.append([f"Totaal {naam}", "", "", "", "", "", "", round(minuten / 60, 2), "", ""])
+    blad.append(schoon([f"Totaal {naam}", "", "", "", "", "", "", round(minuten / 60, 2), "", ""]))
     _vet(blad, rijnummer)
 
 
@@ -106,18 +116,20 @@ def werkboek_bouwen(uurblokken, bladtitel):
             adres = blok.klus.plaats
 
         blad.append(
-            [
-                naam,
-                blok.datum,
-                blok.klus.naam,
-                blok.klus.opdrachtgever,
-                adres,
-                blok.begintijd.strftime("%H:%M"),
-                blok.eindtijd.strftime("%H:%M"),
-                round(blok.duur_minuten / 60, 2),
-                blok.toelichting,
-                blok.extra_werk,
-            ]
+            schoon(
+                [
+                    naam,
+                    blok.datum,
+                    blok.klus.naam,
+                    blok.klus.opdrachtgever,
+                    adres,
+                    blok.begintijd.strftime("%H:%M"),
+                    blok.eindtijd.strftime("%H:%M"),
+                    round(blok.duur_minuten / 60, 2),
+                    blok.toelichting,
+                    blok.extra_werk,
+                ]
+            )
         )
         rijnummer += 1
         blad.cell(row=rijnummer, column=2).number_format = "DD-MM-YYYY"

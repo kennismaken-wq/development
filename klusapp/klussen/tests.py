@@ -1,3 +1,4 @@
+import os
 import re
 import shutil
 import tempfile
@@ -18,6 +19,7 @@ from django.urls import reverse
 from PIL import Image
 
 from medewerkers.models import Medewerker
+from medewerkers.tests import versie_van
 from uren import totalen
 from uren.models import Uurblok
 
@@ -840,7 +842,8 @@ class KlusBeheerTest(TestCase):
     def test_eigenaar_bewerkt_een_klus(self):
         klus = Klus.objects.create(naam="Oude naam", startdatum=date(2026, 9, 14))
         self.client.force_login(self.maarten)
-        self.client.post(reverse("klus_bewerken", args=[klus.pk]), self.geldig(naam="Nieuwe naam"))
+        adres = reverse("klus_bewerken", args=[klus.pk])
+        self.client.post(adres, {**self.geldig(naam="Nieuwe naam"), "versie": versie_van(self.client, adres)})
         klus.refresh_from_db()
         self.assertEqual(klus.naam, "Nieuwe naam")
 
@@ -1824,6 +1827,7 @@ class StresstestKlussenTest(TestCase):
         naam = wortel / "bijlagen/2026/09/wees2.jpg"
         naam.parent.mkdir(parents=True, exist_ok=True)
         naam.write_bytes(b"x")
+        _maak_oud(naam)
         uit = StringIO()
         call_command("ruim_bijlagen_op", stdout=uit)
         self.assertIn("wees2.jpg", uit.getvalue())
@@ -1909,6 +1913,12 @@ class FotosMeerLadenTest(TestCase):
             self.assertEqual(self.client.get(reverse("fotos") + f"?tot={waarde}").status_code, 200)
 
 
+def _maak_oud(pad, uren=2):
+    """Het opruimcommando laat bestanden van het afgelopen uur staan."""
+    tijd = pad.stat().st_mtime - uren * 3600
+    os.utime(pad, (tijd, tijd))
+
+
 class OpruimVangnetTest(TestCase):
     def test_lege_database_met_bestanden_weigert(self):
         from io import StringIO
@@ -1921,6 +1931,42 @@ class OpruimVangnetTest(TestCase):
         with self.settings(MEDIA_ROOT=eigen_map), self.assertRaises(CommandError):
             call_command("ruim_bijlagen_op", "--echt", stdout=StringIO())
         self.assertTrue(bestand.exists())
+
+    def test_database_en_media_van_verschillende_omgevingen_weigert(self):
+        # Database van degroenem, MEDIA_ROOT van develop: de database wijst naar
+        # foto's die hier niet staan, en alles wat hier wél staat lijkt een wees.
+        from io import StringIO
+        from django.core.management import CommandError, call_command
+        klus = Klus.objects.create(naam="Tuin")
+        for i in range(5):
+            Bijlage.objects.create(soort=Bijlage.Soort.FOTO, bestand=f"bijlagen/2026/09/elders{i}.jpg", klus=klus)
+        eigen_map = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, eigen_map, ignore_errors=True)
+        bestand = Path(eigen_map) / "bijlagen/2026/09/van-develop.jpg"
+        bestand.parent.mkdir(parents=True)
+        bestand.write_bytes(b"x")
+        _maak_oud(bestand)
+        with self.settings(MEDIA_ROOT=eigen_map), self.assertRaises(CommandError):
+            call_command("ruim_bijlagen_op", "--echt", stdout=StringIO())
+        self.assertTrue(bestand.exists())
+
+    def test_net_geuploade_wees_blijft_staan(self):
+        # Tussen het wegschrijven van het bestand en het opslaan van de bijlage
+        # staat een upload even zonder databaseregel op de schijf.
+        from io import StringIO
+        from django.core.management import call_command
+        klus = Klus.objects.create(naam="Tuin")
+        eigen_map = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, eigen_map, ignore_errors=True)
+        echt = Path(eigen_map) / "bijlagen/2026/09/echt.jpg"
+        echt.parent.mkdir(parents=True)
+        echt.write_bytes(b"x")
+        Bijlage.objects.create(soort=Bijlage.Soort.FOTO, bestand="bijlagen/2026/09/echt.jpg", klus=klus)
+        vers = Path(eigen_map) / "bijlagen/2026/09/vers.jpg"
+        vers.write_bytes(b"x")
+        with self.settings(MEDIA_ROOT=eigen_map):
+            call_command("ruim_bijlagen_op", "--echt", stdout=StringIO())
+        self.assertTrue(vers.exists())
 
 
 @override_settings(MEDIA_ROOT=TIJDELIJKE_MEDIA)
