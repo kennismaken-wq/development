@@ -1475,6 +1475,11 @@ dialog.foto-invoegen .uploadveld, dialog.uren-invoegen .uurblokformulier, dialog
 }
 @media (hover:hover){ .mwregel:hover{ background:rgba(255,255,255,0.13); } }
 .mwregel.afgerond{ opacity:.55; }
+/* Uit dienst: rechts naast de regel een prullenbak om definitief te
+   verwijderen. Buiten de link, anders opent een tik op de prullenbak het
+   profiel. */
+.mwlijst li.met-weg{ display:flex; align-items:center; gap:.4rem; }
+.mwlijst li.met-weg .mwregel{ flex:1; min-width:0; }
 /* Zelfde idee als .bord-naam .bol op het planbord (initialen op de eigen
    kleur van de medewerker), maar groter: hier is het de hoofdfoto van de
    rij, niet een klein herkenningspuntje ernaast. */

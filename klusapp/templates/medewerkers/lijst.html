@@ -31,7 +31,7 @@
     <h2 class="sectiekop">Uit dienst</h2>
     <ul class="mwlijst">
       {% for mw in uit_dienst %}
-        <li>
+        <li class="met-weg">
           <a href="{% url 'medewerker_bewerken' mw.pk %}" class="mwregel afgerond">
             {% include "_medewerkerbol.html" with persoon=mw klasse="mw-bol" %}
             <span class="mwregel-tekst">
@@ -40,6 +40,13 @@
             </span>
             <span class="soort-badge stil">{{ mw.get_rol_display }}</span>
           </a>
+          {% if mw.pk != user.pk %}
+            <form method="post" action="{% url 'medewerker_verwijderen' mw.pk %}" class="nt-weg"
+                  onsubmit="return confirm('{{ mw.naam|escapejs }} definitief verwijderen? Ook alle uren en aanwezigheid gaan weg. Foto\'s en documenten blijven staan. Dit kan niet ongedaan worden.');">
+              {% csrf_token %}
+              <button type="submit" title="Definitief verwijderen" aria-label="{{ mw.naam }} definitief verwijderen">{% include "uren/_prullenbak.html" %}</button>
+            </form>
+          {% endif %}
         </li>
       {% endfor %}
     </ul>

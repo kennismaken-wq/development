@@ -1318,3 +1318,62 @@ class StartschermTijdzoneTest(TestCase):
         with patch("django.utils.timezone.now", return_value=datetime(2026, 9, 6, 22, 30, tzinfo=dt_timezone.utc)):
             antwoord = self.client.get(reverse("start"))
         self.assertEqual(antwoord.context["vandaag"], date(2026, 9, 7))
+
+
+class MedewerkerVerwijderenTest(TestCase):
+    """Definitief weghalen vanuit uit dienst (05-10-2026): uren en
+    aanwezigheid weg, foto's en documenten blijven."""
+
+    def setUp(self):
+        from klussen.models import Bijlage, Klus
+        from uren.models import Aanwezigheid, Uurblok
+        self.eigenaar = Medewerker.objects.create_user("maarten", password="x", first_name="Maarten",
+                                                       rol=Medewerker.Rol.EIGENAAR)
+        self.sam = Medewerker.objects.create_user("sam", password="x", first_name="Sam",
+                                                  uit_dienst_sinds=date(2026, 10, 1), is_active=False)
+        klus = Klus.objects.create(naam="Tuin")
+        blok = Uurblok.objects.create(medewerker=self.sam, klus=klus, datum=date(2026, 9, 7),
+                                      begintijd=time(8), eindtijd=time(10))
+        Aanwezigheid.objects.create(medewerker=self.sam, datum=date(2026, 9, 8), aanwezig=False, reden="ziek")
+        self.foto = Bijlage.objects.create(soort=Bijlage.Soort.FOTO, bestand="bijlagen/x.jpg", klus=klus,
+                                           uurblok=blok, toegevoegd_door=self.sam)
+        self.prive = Bijlage.objects.create(soort=Bijlage.Soort.DOCUMENT, bestand="bijlagen/y.pdf", klus=klus)
+        self.prive.zichtbaar_voor.add(self.sam)
+        self.client.force_login(self.eigenaar)
+
+    def test_uren_weg_fotos_blijven(self):
+        from uren.models import Aanwezigheid, Uurblok
+        antwoord = self.client.post(reverse("medewerker_verwijderen", args=[self.sam.pk]), follow=True)
+        self.assertContains(antwoord, "Sam is verwijderd, met 1 uurblok.")
+        self.assertFalse(Medewerker.alle.filter(pk=self.sam.pk).exists())
+        self.assertFalse(Uurblok.objects.exists())
+        self.assertFalse(Aanwezigheid.objects.exists())
+        self.foto.refresh_from_db()
+        self.assertEqual((self.foto.uurblok, self.foto.toegevoegd_door), (None, None))
+
+    def test_document_alleen_voor_hem_blijft_afgeschermd(self):
+        self.client.post(reverse("medewerker_verwijderen", args=[self.sam.pk]))
+        self.assertEqual(list(self.prive.zichtbaar_voor.all()), [self.eigenaar])
+
+    def test_alleen_wie_uit_dienst_is(self):
+        Medewerker.objects.filter(pk=self.sam.pk).update(uit_dienst_sinds=None, is_active=True)
+        self.client.post(reverse("medewerker_verwijderen", args=[self.sam.pk]))
+        self.assertTrue(Medewerker.objects.filter(pk=self.sam.pk).exists())
+
+    def test_jezelf_niet_en_alleen_met_post(self):
+        Medewerker.objects.filter(pk=self.eigenaar.pk).update(uit_dienst_sinds=date(2026, 10, 1))
+        self.client.post(reverse("medewerker_verwijderen", args=[self.eigenaar.pk]))
+        self.assertTrue(Medewerker.objects.filter(pk=self.eigenaar.pk).exists())
+        self.assertEqual(self.client.get(reverse("medewerker_verwijderen", args=[self.sam.pk])).status_code, 405)
+        self.assertTrue(Medewerker.objects.filter(pk=self.sam.pk).exists())
+
+    def test_medewerker_mag_niet(self):
+        kees = Medewerker.objects.create_user("kees", password="x")
+        self.client.force_login(kees)
+        self.assertEqual(self.client.post(reverse("medewerker_verwijderen", args=[self.sam.pk])).status_code, 404)
+        self.assertTrue(Medewerker.alle.filter(pk=self.sam.pk).exists())
+
+    def test_prullenbak_alleen_bij_uit_dienst(self):
+        html = self.client.get(reverse("medewerkers")).content.decode()
+        self.assertIn(reverse("medewerker_verwijderen", args=[self.sam.pk]), html)
+        self.assertNotIn(reverse("medewerker_verwijderen", args=[self.eigenaar.pk]), html)

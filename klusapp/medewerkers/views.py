@@ -6,7 +6,8 @@ from django.contrib.auth import login, update_session_auth_hash
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.http import require_POST
 from django.db import IntegrityError, transaction
-from django.db.models import Case, IntegerField, Max, Prefetch, Q, Value, When
+from django.core.files.storage import default_storage
+from django.db.models import Case, Count, IntegerField, Max, Prefetch, Q, Value, When
 from django.db.models.functions import Lower
 from django.http import Http404
 from django.shortcuts import get_object_or_404, redirect, render
@@ -406,10 +407,9 @@ def medewerker_kaart(request, pk):
 def medewerker_dienst(request, pk):
     """Uit dienst zetten of terughalen.
 
-    Verwijderen doen we nooit: aan een medewerker hangen uren, foto's en
-    aanwezigheid, en die hoort de boekhouder over zeven jaar nog terug te
-    kunnen vinden. Uit dienst betekent: kan niet meer inloggen, blijft wel
-    in de overzichten van vroeger staan.
+    Uit dienst betekent: kan niet meer inloggen, blijft wel in de overzichten
+    van vroeger staan, met uren, foto's en aanwezigheid. Definitief weghalen
+    kan daarna apart, zie medewerker_verwijderen.
     """
     medewerker = get_object_or_404(_te_beheren(request.user), pk=pk)
     if request.method != "POST":
@@ -428,6 +428,48 @@ def medewerker_dienst(request, pk):
         bericht = f"{medewerker.naam} staat uit dienst. De uren en foto's blijven bewaard."
     medewerker.save()
     messages.success(request, bericht)
+    return redirect("medewerkers")
+
+
+@alleen_eigenaar
+@require_POST
+def medewerker_verwijderen(request, pk):
+    """Iemand die uit dienst is definitief weghalen, met zijn uren en
+    aanwezigheid (op verzoek van Thijmen, 05-10-2026). Alleen vanuit uit
+    dienst, zodat het altijd twee bewuste stappen zijn.
+
+    Foto's en documenten blijven: ze horen bij de klus, niet bij de persoon.
+    Ook als ze aan een uurblok hingen (Bijlage.uurblok is SET_NULL), en
+    "toegevoegd door" wordt leeg. Een document dat alleen voor deze persoon
+    was opengezet, zou zonder hem voor iedereen zichtbaar worden (een lege
+    zichtbaar_voor betekent "iedereen"); dat zetten we op de eigenaar die
+    verwijdert, die alles toch al ziet.
+    """
+    medewerker = get_object_or_404(_te_beheren(request.user), pk=pk)
+    if medewerker.pk == request.user.pk:
+        messages.error(request, "Je kunt jezelf niet verwijderen.")
+        return redirect("medewerkers")
+    if not medewerker.uit_dienst_sinds:
+        messages.error(request, f"Zet {medewerker.naam} eerst uit dienst.")
+        return redirect("medewerkers")
+
+    with transaction.atomic():
+        alleen_voor_hem = Bijlage.objects.filter(zichtbaar_voor=medewerker).annotate(
+            aantal=Count("zichtbaar_voor")
+        ).filter(aantal=1)
+        for bijlage in alleen_voor_hem:
+            bijlage.zichtbaar_voor.add(request.user)
+        uren = Uurblok.objects.filter(medewerker=medewerker).delete()[1].get("uren.Uurblok", 0)
+        foto = medewerker.profielfoto.name
+        naam = medewerker.naam
+        medewerker.delete()
+        if foto:
+            transaction.on_commit(lambda: default_storage.delete(foto))
+
+    messages.success(
+        request,
+        f"{naam} is verwijderd, met {uren} uurblok{'' if uren == 1 else 'ken'}. Foto's en documenten blijven staan.",
+    )
     return redirect("medewerkers")
 
 

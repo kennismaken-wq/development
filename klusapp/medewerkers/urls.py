@@ -13,4 +13,5 @@ urlpatterns = [
     path("medewerkers/<int:pk>/", views.medewerker_bewerken, name="medewerker_bewerken"),
     path("medewerkers/<int:pk>/kaart/", views.medewerker_kaart, name="medewerker_kaart"),
     path("medewerkers/<int:pk>/dienst/", views.medewerker_dienst, name="medewerker_dienst"),
+    path("medewerkers/<int:pk>/verwijderen/", views.medewerker_verwijderen, name="medewerker_verwijderen"),
 ]
