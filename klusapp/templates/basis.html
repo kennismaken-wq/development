@@ -9,6 +9,10 @@
   <link rel="icon" href="{% static 'img/favicon.png' %}" sizes="32x32">
   <link rel="apple-touch-icon" href="{% static 'img/icoon-180.png' %}">
   <link rel="stylesheet" href="{% static 'css/app.css' %}">
+  {% comment %} Gedeelde veer/projectie/rubberband (static/js/beweging.js).
+     Bovenaan en zonder defer, zodat elk scherm en elk fragment dat later in
+     een <dialog> wordt gezet er al over beschikt. {% endcomment %}
+  <script src="{% static 'js/beweging.js' %}"></script>
   <script src="{% static 'js/klus-overgang.js' %}"></script>
 </head>
 <body{% if user.is_authenticated %} class="met-navigatie"{% endif %}>

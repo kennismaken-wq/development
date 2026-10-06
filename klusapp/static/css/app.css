@@ -2781,3 +2781,293 @@ dialog.foto-popup:has(.foto-popup-pdf:not([hidden])){ max-width:min(92vw, 1000px
 .foto-popup-bestand svg{ width:56px; height:56px; }
 .foto-popup-extensie{ font-size:12px; font-weight:700; letter-spacing:.08em; color:var(--hi); }
 .foto-popup-openen{ margin-right:auto; }
+
+/* ══════════════════════════════════════════════════════════════════════════
+   AFWERKING: RESPONS, GEBAREN, TOEGANKELIJKHEID, TYPOGRAFIE
+   ══════════════════════════════════════════════════════════════════════════
+   Eén blok onderaan, bewust ná al het bovenstaande en zonder bestaande
+   regels te herschrijven: dit is een afwerkingsronde, geen herontwerp. Alles
+   hier is óf nieuw gedrag (de sleepbare sheet), óf een variant van iets dat
+   er al staat voor een gebruiker met een afwijkende instelling (minder
+   beweging, minder doorzichtigheid, meer contrast), óf een klein
+   typografisch bijschaven. Staat het hier, dan is het in één blok terug te
+   draaien. */
+
+/* ── Sleepbare bottom sheet (static/js/bottomsheet.js) ────────────────────
+   Het staafje bovenaan een sheet was het universele teken "hier kun je aan
+   trekken" zónder dat er een gebaar achter zat. Nu wel: de sheet volgt de
+   vinger 1:1 en bepaalt bij het loslaten met de snelheid waar hij uitkomt.
+   Zichtbaar blijft het hetzelfde staafje; alleen het aanraakgebied eromheen
+   is ruim, zelfde truc als bij .weg button en .dialog-sluiten. */
+.sheet-hendel{
+  position:relative;
+  /* de browser mag hier niet zelf gaan scrollen: deze vinger is van de sheet */
+  touch-action:none;
+  -webkit-tap-highlight-color:transparent;
+  -webkit-user-select:none; user-select:none;
+  cursor:grab;
+}
+/* Ruimer naar boven dan naar beneden: boven het staafje zit niets, eronder
+   begint na 1rem de kopregel met het kruisje en Opslaan — en die mogen hun
+   eigen aanraakgebied houden. */
+.sheet-hendel::after{
+  content:''; position:absolute; left:-44px; right:-44px; top:-16px; bottom:-10px;
+}
+/* Tijdens het slepen en tijdens de veer stuurt JS de transform per frame;
+   een CSS-overgang eroverheen zou elke stap nog eens vertragen (en een veer
+   is niet te onderbreken als CSS 'm ook nog zit te interpoleren). */
+dialog.sheet-direct{ transition:none !important; }
+
+/* ── Respons: feedback op het indrukken, niet bij het loslaten ─────────────
+   Een tik moet meteen iets doen, ook — juist — als de volgende pagina er op
+   4G in de bus twee seconden over doet. Er stond al drukfeedback op een deel
+   van de app (brightness, een lichtere achtergrond); dit maakt het compleet
+   en consistent: alles wat je kunt aantikken krimpt een haar.
+
+   Twee maten: kleine dingen (knoppen, pillen, rondjes) .97, hele rijen en
+   tegels .98 — op een rij van 340px breed leest .97 als "schokt" in plaats
+   van "ingedrukt".
+
+   De overgang staat ín :active en niet op het element zelf. Dat is bewust:
+   zo loopt alleen het indrukken over ~100 ms en komt hij bij het loslaten
+   direct terug, én blijven de bestaande transition-regels (background,
+   border-color) van .pil, .tabblad, .klusregel en vriendjes intact — een
+   transition-shorthand hier zou die overschrijven. */
+.knop:active, .knop-stil:active, .knop-uren-toevoegen:active, .bestandsknop:active,
+.pil:active, .keuzepil .vlak:active, .tabblad:active, .legenda a:active,
+.vandaag-chip:active, .klus-kiezer-trigger:active, .klus-kiezer-item:active,
+.side-icon:active, .urenpijl:active, .terug-pijl:active, .bewerk-knop:active,
+.dialog-sluiten:active, .weg button:active, .nt-weg button:active,
+.dicteer-knop:active, .foto-popup-knop:active, .foto-popup-nav:active,
+.pk-veld:active, .pk-raster button:active, .wisselknop:active,
+.wp-toevoegknop:active, .wp-inklap:active, .wp-klus .vlak:active{
+  transform:scale(.97);
+  transition:transform .1s ease-out;
+}
+.klusregel:active, .mwregel:active, .profielregel:active, .klus-slide:active,
+.maanddag:active, .doclijst .doc-rij:active, .klusbotsing-regel:active,
+.fotokaart button:active, .fotoslide button:active, .fotokaart-nieuw:active,
+.apptegel:active .apptegel-icoon, .bord-chip:active, .klustegel:active{
+  transform:scale(.98);
+  transition:transform .1s ease-out;
+}
+/* Een uurblok in de agenda had al een transition op transform (voor het
+   oplichten met een muis), dus hier geen eigen overgang: die staat er al en
+   laat hem ook bij het loslaten terugkomen. */
+.blok:active{ transform:scale(.97); }
+/* Cellen in een rooster (planbord, aanwezigheid, de halfuurvakken van de
+   agenda) krimpen niet: die staan in een raster met doorlopende lijnen, en
+   één krimpende cel trekt daar een zichtbaar gat in. Die lichten op. */
+.wp-cel:active, .wp-kc:active, .wp-notitie:active, .wp-naam:active, .wp-kop:active{
+  filter:brightness(1.3);
+}
+.vak:active{ background:rgba(255,255,255,0.10); }
+.vouw > summary:active{ color:var(--hi); }
+.doclijst .doc-rij:active{ opacity:.85; }
+
+/* Verstuurd, wachten op de server. static/js/eenmaal-versturen.js zette al
+   aria-busy op de knop zodra een formulier echt de deur uit is, maar daar was
+   niets aan te zien: op slecht 4G tik je dan tegen een knop die er nog
+   precies zo uitziet als vóór je tikte. Nu valt hij terug — geen spinner,
+   geen tekstwissel (die zou de knop van breedte laten veranderen), alleen
+   "deze is al onderweg". */
+[aria-busy="true"]{ opacity:.65; cursor:default; }
+[aria-busy="true"]:active{ transform:none; filter:none; }
+
+/* Geen dubbeltik-om-in-te-zoomen (en dus geen wachttijd van ~300 ms vóór een
+   tik aankomt) op dingen die je aantikt. De lijst bovenin dit bestand had de
+   onderdelen van de eerste schermen; dit zijn de schermen die er daarna bij
+   kwamen. Bewust niet op body: dan verdwijnt het inzoomen op een hele
+   pagina, en dat is voor wie slecht ziet geen opsmuk maar noodzaak. */
+.apptegel, .maandwidget, .mwregel, .mwregel .mw-bol, .doclijst .doc-rij,
+.fotokaart button, .fotoslide button, .fotokaart-open, .tabblad, .vouw > summary,
+.pk-veld, .pk-raster button, .bestandsknop, .knop-uren-toevoegen, .vandaag-chip,
+.urenpijl, .terug-pijl, .bewerk-knop, .klus-kiezer-trigger, .klus-kiezer-item,
+.foto-popup-knop, .foto-popup-nav, .nt-weg button, .wisselknop, .wisselaar,
+.bord-naam-link, .klusbotsing-regel, .wp-klus .vlak,
+.wp-toevoegknop, .wp-inklap, .heatvak, .aw-maand .maanddag{
+  -webkit-tap-highlight-color:transparent;
+  touch-action:manipulation;
+}
+
+/* ── §14 Minder beweging ───────────────────────────────────────────────────
+   "Minder beweging" betekent niet "geen terugkoppeling", maar een variant
+   zonder schuiven, schalen en doorschieten: overvloeien in plaats van
+   verplaatsen. Wat hierboven al op animation:none stond, krijgt hier een
+   rustige vervanger — helemaal niets gebeuren is óók verwarrend.
+
+   static/js/bottomsheet.js en static/js/klus-overgang.js vragen dezelfde
+   voorkeur in JS op en slaan dan hun veer respectievelijk hun
+   wegschuif-animatie over; hier staat alleen wat CSS zelf doet. */
+@media (prefers-reduced-motion: reduce){
+  /* Bottom sheet: op zijn plek verschijnen i.p.v. omhoog schuiven. */
+  @media (max-width:700px){
+    dialog.uren-invoegen, dialog.uurblok-detail{
+      transform:none; opacity:0;
+      transition:opacity .18s linear;
+    }
+    dialog.uren-invoegen.open-anim, dialog.uurblok-detail.open-anim{ transform:none; opacity:1; }
+  }
+  /* Foto- en foutpopup: alleen vervloeien, niet naar voren komen. */
+  dialog.foto-popup, dialog.foutpopup{
+    transform:none; transition:opacity .18s linear;
+  }
+  dialog.foto-popup.open-anim, dialog.foutpopup.open-anim{ transform:none; }
+
+  /* Toasts en de periodekalender: vervloeien zonder te schuiven of te
+     rekken, in plaats van de animatie helemaal weg te halen. */
+  .melding{ animation:rustig-in .18s ease-out; }
+  .melding.melding-uit{ animation:rustig-uit .18s ease-in forwards; opacity:1; }
+  .periodekalender{ animation:rustig-in .18s ease-out; }
+
+  /* Geen doorschieten, geen verplaatsen: drukfeedback wordt een lichtere of
+     donkerder tint, hover-waaiers en -tegels blijven staan. */
+  .knop:active, .knop-stil:active, .knop-uren-toevoegen:active, .bestandsknop:active,
+  .pil:active, .keuzepil .vlak:active, .tabblad:active, .legenda a:active,
+  .vandaag-chip:active, .klus-kiezer-trigger:active, .klus-kiezer-item:active,
+  .side-icon:active, .urenpijl:active, .terug-pijl:active, .bewerk-knop:active,
+  .dialog-sluiten:active, .weg button:active, .nt-weg button:active,
+  .dicteer-knop:active, .foto-popup-knop:active, .foto-popup-nav:active,
+  .pk-veld:active, .pk-raster button:active, .wisselknop:active,
+  .wp-toevoegknop:active, .wp-inklap:active, .wp-klus .vlak:active,
+  .klusregel:active, .mwregel:active, .profielregel:active, .klus-slide:active,
+  .maanddag:active, .doclijst .doc-rij:active, .klusbotsing-regel:active,
+  .fotokaart button:active, .fotoslide button:active, .fotokaart-nieuw:active,
+  .apptegel:active .apptegel-icoon, .bord-chip:active, .klustegel:active,
+  .blok:active, .maandwidget:active{
+    transform:none; transition:none; filter:brightness(1.14);
+  }
+  .blok{ transition:none; }
+  .voorbeeldlaag{ transition:none; }
+  .apptegel-icoon{ transition:background .12s; }
+  @media (hover:hover){
+    .apptegel:hover .apptegel-icoon{ transform:none; }
+    .blok:hover{ transform:none; }
+    .klus-slide:hover .laag-voor-2, .klusregel:hover .laag-voor-2,
+    .klus-slide:hover .laag-voor-3, .klusregel:hover .laag-voor-3{ transform:none; }
+  }
+  /* Het knopje van de wisselaar blíjft schuiven: die verplaatsing ís de
+     stand (links = uit, rechts = aan). Alleen korter, zodat het geen
+     beweging is die je volgt maar een omslag die je ziet. */
+  .wisselaar-track::before{ transition:transform .08s linear; }
+  /* Het oplichten van een net opgeslagen blok (U2) blijft: dat is kleur, geen
+     verplaatsing, en het is de enige aanwijzing waar je blok terechtkwam. */
+}
+@keyframes rustig-in{ from{ opacity:0; } to{ opacity:1; } }
+@keyframes rustig-uit{ from{ opacity:1; } to{ opacity:0; } }
+
+/* ── §14 Minder doorzichtigheid ────────────────────────────────────────────
+   Wie `prefers-reduced-transparency` aanzet, leest slecht door een vervaagde
+   laag heen. Het glas wordt dan dicht: dezelfde donkere tinten die .bord-naam
+   en de kluskiezer-popover al nabouwen (zodat het nog steeds als dit
+   designsysteem leest), maar zonder backdrop-filter. De gradient blijft de
+   ondergrond van de pagina; alleen de panelen erboven worden ondoorzichtig. */
+@media (prefers-reduced-transparency: reduce){
+  .glas{
+    background:
+      linear-gradient(150deg, rgba(255,255,255,0.10), rgba(255,255,255,0.04)),
+      linear-gradient(160deg, #20211C, #282C21);
+    backdrop-filter:none; -webkit-backdrop-filter:none;
+  }
+  .melding{ backdrop-filter:none; -webkit-backdrop-filter:none; }
+  .melding:not(.success):not(.error){ background:#262B20; }
+  .adres-suggesties, .wp-popje{
+    background:#20231C; backdrop-filter:none; -webkit-backdrop-filter:none;
+  }
+  /* De vervaging achter een dialoog is daar om de kaart los te maken van de
+     achtergrond; dat werk doet een donkerder scrim net zo goed. */
+  dialog.foto-invoegen::backdrop, dialog.uren-invoegen::backdrop,
+  dialog.uurblok-detail::backdrop, dialog.foto-popup::backdrop,
+  dialog.foutpopup::backdrop{
+    background:rgba(8,9,7,0.88); backdrop-filter:none; -webkit-backdrop-filter:none;
+  }
+}
+
+/* ── §14 Meer contrast ─────────────────────────────────────────────────────
+   Bijna dichte vlakken, een rand die je echt ziet, en de lichtgrijze
+   bijschriften bijna wit. De accentkleur en de vormtaal blijven; dit is
+   alleen de contrastknop. */
+@media (prefers-contrast: more){
+  .glas{
+    background:#1C1E19; backdrop-filter:none; -webkit-backdrop-filter:none;
+    border-color:rgba(255,255,255,0.55);
+  }
+  .klusregel, .mwregel, .profielregel, .klus-slide, .doclijst li, .notitielijst li,
+  .urenlijst li, .fotokaart, .maanddag, .pil, .keuzepil .vlak, .tabblad, .knop-stil,
+  .bord-chip, .legenda a, .klusbotsing-regel, .wp-klus .vlak, .vouw, .vandaag-chip,
+  .totaal-chip, .totaal-chip-klein, .gegeven-link, .uploadveld, .leeg,
+  input:not([type=checkbox]):not([type=radio]):not([type=color]):not([type=file]):not([type=search]),
+  select, textarea{
+    border-color:rgba(255,255,255,0.5);
+  }
+  .adres-suggesties, .wp-popje, .klus-kiezer-popover{ background:#16180F; }
+  /* grijstinten die op glas net leesbaar waren, worden hier bijna wit */
+  .kop .sub, .klusregel .adres, .klus-slide .adres, .mwregel .meta, .uitleg, .leeg,
+  .fotokaart .wie, .doclijst .wie, .doclijst .wat, .foto-popup-meta, .gegevens dd,
+  .kolomkop, .bord-kop, .bord-kop .datum, .kolomkop .datum, .gutter-lbl,
+  .nt-inhoud p, .nt-inhoud .wanneer, .eisen, .bestandsstatus, .wisselaar-label,
+  .maandwidget-cijfers .neven, .klus-kiezer-waar, .klus-kiezer-leeg{
+    color:rgba(255,255,255,0.92);
+  }
+  label, .gegevens dt, .gegeven dt label, .klusinfo .lbl, .notities > .lbl,
+  .pk-veldlabel, .pk-raster th{ color:rgba(255,255,255,0.8); }
+  .gutter-lbl{ text-shadow:0 1px 3px #000, 0 0 6px #000; }
+  /* een gekozen pil mag niet alleen aan zijn tint te zien zijn */
+  .pil.actief, .tabblad.actief, .keuzepil input:checked + .vlak, .legenda a.actief{
+    border-width:2px;
+  }
+  .side-icon.actief{ border-width:2px; }
+}
+
+/* ── §15 Tracking en leading per grootte ──────────────────────────────────
+   Eén letterafstand voor alle maten is ergens altijd verkeerd: hoe groter de
+   letter, hoe verder de letters uit elkaar lijken te staan. Koppen krijgen
+   daarom een tikje negatieve tracking en de kleinste tekst een tikje
+   positieve. Fraunces cursief heeft dat sterker nodig dan Inter — vandaar het
+   verschil tussen de koppen en de cijfers hieronder. Geen nieuwe maten, geen
+   nieuw lettertype: alleen de afstand ertussen. */
+h1{ letter-spacing:-0.015em; }
+.kaart.inloggen h1{ letter-spacing:-0.02em; }     /* daar staat hij het grootst */
+.sectiekop, .periodetitel, .pk-titel, .wp-dialoogtitel, .persoonkaart-kop,
+.wp-blokkop .wie, .klusregel .naam, .klus-slide .naam{ letter-spacing:-0.01em; }
+.maandwidget-cijfers .n{ letter-spacing:-0.025em; }
+.totaal-chip .n, .totaal-chip-klein .n, .urenlijst .uren{ letter-spacing:-0.01em; }
+/* Onder de 12px is tekst op een vervaagde ondergrond het eerst onleesbaar:
+   iets meer lucht tussen de letters helpt daar meer dan een grotere maat
+   (die hebben we niet, de ruimte is er niet). */
+.kop .sub, .fotokaart .wie, .bord-kop, .kolomkop, .maandwidget-legenda,
+.wp-mensen, .bord-chip, .doclijst .wie, .foto-popup-meta, .bord-naam .functie{
+  letter-spacing:0.01em;
+}
+/* Leading loopt omgekeerd met de maat mee: de koppen staan al op 1.15-1.2,
+   hier alleen de twee die nog op "normal" stonden en daardoor los lazen. */
+.sectiekop{ line-height:1.2; }
+.leeg{ line-height:1.5; }
+
+/* ── §12 Tekst op glas, en vervagen in plaats van een lijntje ─────────────
+   Lichtgrijs op een vervaagde ondergrond is het eerste wat wegvalt zodra er
+   een foto of een gevulde agenda achter staat. De lichtste grijzen in
+   lópende tekst (dus niet in labels, die mogen terugvallen) gaan daarom een
+   trede omhoog. Dezelfde letters, dezelfde maat — alleen beter leesbaar in
+   de bus met tegenlicht. */
+.kop .sub{ color:rgba(255,255,255,0.68); }
+.klusregel .adres{ color:rgba(255,255,255,0.68); }
+.klus-slide .adres{ color:rgba(255,255,255,0.64); }
+.mwregel .meta{ color:rgba(255,255,255,0.64); }
+.uitleg{ color:rgba(255,255,255,0.72); }
+.leeg{ color:rgba(255,255,255,0.62); }
+.fotokaart .wie, .doclijst .wie{ color:rgba(255,255,255,0.6); }
+.foto-popup-meta{ color:rgba(255,255,255,0.65); }
+.klus-kiezer-waar{ color:rgba(255,255,255,0.65); }
+.klus-kiezer-leeg{ color:rgba(255,255,255,0.6); }
+.nt-inhoud .wanneer{ color:rgba(255,255,255,0.55); }
+.maandwidget-cijfers .neven{ color:rgba(255,255,255,0.66); }
+
+/* Een lijst die zelf scrolt, eindigt nu met een zachte vervaging in plaats
+   van een afgesneden regel — hetzelfde signaal "er komt nog meer" als de
+   navigatiebalk en de weekkalender al gebruiken, en zachter dan een lijntje
+   eronder. Smal houden (10px): breder en de onderste regel dooft zelf mee. */
+.klus-kiezer-lijst, .notitielijst, .wp-kluslijst{
+  mask-image:linear-gradient(to bottom, #000 calc(100% - 10px), transparent 100%);
+  -webkit-mask-image:linear-gradient(to bottom, #000 calc(100% - 10px), transparent 100%);
+}

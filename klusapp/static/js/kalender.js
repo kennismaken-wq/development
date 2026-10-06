@@ -62,17 +62,21 @@
     if (vorigeLink && volgendeLink) {
       const DREMPEL = 55; // px, moet overduidelijk een swipe zijn en geen trillende tik
       let startX = null, startY = null, aanHetSwipen = false;
+      const meter = window.Beweging.snelheidsmeter();
 
       kolom.addEventListener("pointerdown", function (gebeurtenis) {
         if (gebeurtenis.pointerType === "mouse") return;
         startX = gebeurtenis.clientX;
         startY = gebeurtenis.clientY;
         aanHetSwipen = false;
+        meter.leeg();
+        meter.voeg(gebeurtenis.clientX, gebeurtenis.timeStamp);
       });
       kolom.addEventListener("pointermove", function (gebeurtenis) {
         if (startX === null || gebeurtenis.pointerType === "mouse") return;
         const dx = gebeurtenis.clientX - startX;
         const dy = gebeurtenis.clientY - startY;
+        meter.voeg(gebeurtenis.clientX, gebeurtenis.timeStamp);
         if (!aanHetSwipen && Math.abs(dx) > 10 && Math.abs(dx) > Math.abs(dy)) {
           aanHetSwipen = true;
         }
@@ -81,10 +85,22 @@
         if (startX === null || gebeurtenis.pointerType === "mouse") return;
         const dx = gebeurtenis.clientX - startX;
         startX = null;
-        if (!aanHetSwipen || Math.abs(dx) < DREMPEL) return;
+        if (!aanHetSwipen) return;
+        // Niet alleen de afgelegde afstand beslist, ook waar de beweging
+        // heen gaat: een kort, snel veegje van 25px is net zo duidelijk
+        // bedoeld als een trage haal van 60px. Dezelfde projectie als bij de
+        // bottom sheet (static/js/beweging.js), zodat de twee gebaren in deze
+        // app hetzelfde aanvoelen.
+        const projectie = dx + window.Beweging.projecteer(meter.snelheid(), 0.99);
+        if (Math.abs(dx) < DREMPEL && Math.abs(projectie) < DREMPEL) return;
+        if (Math.abs(dx) >= DREMPEL && Math.sign(projectie) !== Math.sign(dx)) {
+          // Teruggetrokken vóór het loslaten: dan was het geen blader-gebaar.
+          return;
+        }
         // Swipe naar links = volgende dag (bladeren naar voren), naar rechts
         // = vorige dag — dezelfde richting als een agenda-app op een telefoon.
-        window.location.href = (dx < 0 ? volgendeLink : vorigeLink).href;
+        const richting = Math.abs(projectie) >= DREMPEL ? projectie : dx;
+        window.location.href = (richting < 0 ? volgendeLink : vorigeLink).href;
       });
       // Voorkomt dat de gewone tik-opent-formulier-handler hieronder ook nog
       // afgaat ná een swipe: die luistert naar "click", en pointerup ligt
