@@ -49,6 +49,9 @@ al af was.
 ## Werkafspraken
 
 - Nederlands in de app, in commits en in gesprek met Floris.
+- **Grondig boven snel** (Floris): liever minder fouten dan snel. Controleer elke
+  UI-wijziging ook in de browser, op telefoonbreedte (375 px) én laptop, met de
+  CSS-cache omzeild; draai de tests per stap en de hele suite vóór elke push.
 - **Korte feature-branches**, zelf mergen naar `main` zonder PR-ceremonie. `main`
   ís de develop-omgeving en moet altijd draaien, dus geen half afgemaakte
   schermen daarheen. Bestandseigendom en wie welk spoor doet: CONTEXT.md §3.
