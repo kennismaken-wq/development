@@ -26,11 +26,17 @@
    blijft. Daarom hier één keer hard gezet. */
 [hidden]{ display:none !important; }
 html,body{ height:100%; overflow-x:hidden; }
+/* Safari op iOS 26 negeert <meta name="theme-color"> en kleurt de balk
+   boven- en onderin naar de effen background-color van html/body. Het
+   verloop hieronder telt daarvoor niet mee; zonder deze kleur werd de balk
+   wit. #1D1D1B = eerste kleur van het verloop en theme-color. */
+html{ background-color:#1D1D1B; }
 body{
   margin:0;
   font-family:'Inter',system-ui,-apple-system,sans-serif;
   font-size:16px;                /* niet kleiner: iOS zoomt anders in op invoervelden */
   background:var(--achtergrond);
+  background-color:#1D1D1B;
   background-attachment:fixed;
   color:#FFFFFF;
   min-height:100vh;
