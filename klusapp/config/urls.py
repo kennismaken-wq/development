@@ -29,6 +29,8 @@ urlpatterns = [
     path("manifest.webmanifest", pwa.manifest, name="manifest"),
     path("sw.js", pwa.service_worker, name="service_worker"),
     path("offline/", pwa.offline, name="offline"),
+    path("apple-touch-icon.png", pwa.apple_touch_icon, name="apple_touch_icon"),
+    path("apple-touch-icon-precomposed.png", pwa.apple_touch_icon),
     path(
         "inloggen/",
         auth_views.LoginView.as_view(redirect_authenticated_user=True, authentication_form=InlogForm),

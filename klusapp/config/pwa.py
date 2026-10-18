@@ -1,5 +1,5 @@
 """De klusapp als installeerbare app (PWA): manifest, service worker en de
-offline-pagina. Het recept en de keuzes erachter staan in development/PWA.md.
+offline-pagina, plus het beginschermicoon in de root. Het recept en de keuzes erachter staan in development/PWA.md.
 
 Alle drie hangen ze in de root van de site en niet onder /static/: een
 service worker mag alleen de paden onder zijn eigen map aansturen, en in
@@ -8,6 +8,7 @@ vraagt om inloggen — de telefoon haalt ze op voordat iemand ingelogd is.
 """
 import hashlib
 
+from django.conf import settings
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import render
 from django.template.loader import render_to_string
@@ -80,3 +81,14 @@ def service_worker(request):
 
 def offline(request):
     return render(request, "offline.html")
+
+
+def apple_touch_icon(request):
+    # iOS zoekt het beginschermicoon niet altijd via de <link> in basis.html:
+    # soms vraagt hij blind /apple-touch-icon.png (of -precomposed.png) in de
+    # root op. Gaf dat een 404, dan maakte hij er zelf een screenshot of een
+    # letter van. Daarom hier hetzelfde plaatje, rechtstreeks uit static/.
+    pad = settings.BASE_DIR / "static" / "img" / "icoon-180.png"
+    antwoord = HttpResponse(pad.read_bytes(), content_type="image/png")
+    antwoord["Cache-Control"] = "public, max-age=86400"
+    return antwoord

@@ -1433,3 +1433,11 @@ class AppOpBeginschermTest(TestCase):
         self.client.force_login(self.medewerker)
         self.assertIn('id="installeer"', self.client.get(reverse("start")).content.decode())
         self.assertNotIn('id="installeer"', self.client.get(reverse("klussen")).content.decode())
+
+    def test_beginschermicoon_ook_in_de_root(self):
+        # iOS vraagt dit soms blind op; een 404 gaf een screenshot als icoon.
+        for pad in ("/apple-touch-icon.png", "/apple-touch-icon-precomposed.png"):
+            antwoord = self.client.get(pad)
+            self.assertEqual(antwoord.status_code, 200, pad)
+            self.assertEqual(antwoord["Content-Type"], "image/png")
+            self.assertTrue(antwoord.content.startswith(bytes.fromhex("89504e47")))  # PNG-handtekening

@@ -49,6 +49,18 @@ body{
      kaart op een laptop een halve balkbreedte op tussen korte en lange
      schermen. Op een telefoon zweeft de balk en kost dit niets. */
   scrollbar-gutter:stable;
+  /* Zonder dit tekende Chrome/Edge (en de geïnstalleerde app op Windows en
+     Android) een grijze standaardbalk over de hele rechterrand. Nu dezelfde
+     dunne doorzichtige balk als .klussen-slider en .raster-scroll. */
+  scrollbar-width:thin; scrollbar-color:rgba(255,255,255,0.2) transparent;
+}
+body::-webkit-scrollbar{ width:6px; }
+body::-webkit-scrollbar-track{ background:transparent; }
+body::-webkit-scrollbar-thumb{ background:rgba(255,255,255,0.2); border-radius:999px; }
+/* Op een aanraakscherm scrol je met je duim; daar hoeft er geen balk te staan. */
+@media (pointer:coarse){
+  body{ scrollbar-width:none; }
+  body::-webkit-scrollbar{ display:none; }
 }
 /* ruimte voor de zwevende navigatie: een kolom links op een breed scherm,
    een balk onderaan op een telefoon — zie .sidebar hieronder. Alleen
