@@ -140,10 +140,9 @@
     let horizontaleScroller = null;
     let verticaleScroller = null;
 
-    // html,body staan op height:100% (zie app.css), waardoor niet het venster
-    // maar <body> zelf de scrollende doos is (window.scrollY blijft dan altijd
-    // 0). Zoek daarom het element dat écht overloopt i.p.v. domweg window aan
-    // te nemen — anders scrolt een gewone swipe straks nergens naartoe.
+    // Normaal scrolt het venster (document.scrollingElement). Tot oktober
+    // 2026 was dat <body> (html,body{height:100%}, zie app.css); deze
+    // terugval blijft staan voor als iemand dat ooit terugzet.
     function zoekVerticaleScroller() {
       const el = document.scrollingElement;
       if (el && el.scrollHeight > el.clientHeight) return el;

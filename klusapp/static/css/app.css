@@ -25,12 +25,34 @@
    verbergen door de browser, waardoor een element met hidden tóch zichtbaar
    blijft. Daarom hier één keer hard gezet. */
 [hidden]{ display:none !important; }
-html,body{ height:100%; overflow-x:hidden; }
+/* De pagina zelf scrolt, niet <body>. Stond eerder op html,body{height:100%}
+   met overflow-x:hidden, waardoor <body> een eigen scrollbak werd: dan
+   tekende de geïnstalleerde iPhone-app rechts een blijvende balk, werkte
+   tikken op de statusbalk (naar boven) niet en bleef window.scrollY altijd
+   0. Nu krijgt het venster de gewone scroll van het toestel; clip snijdt
+   alleen af wat zijwaarts uitsteekt, zonder een scrollbak te maken. */
+html{ overflow-x:hidden; }
+body{ overflow-x:clip; }
 /* Safari op iOS 26 negeert <meta name="theme-color"> en kleurt de balk
    boven- en onderin naar de effen background-color van html/body. Het
    verloop hieronder telt daarvoor niet mee; zonder deze kleur werd de balk
    wit. #1D1D1B = eerste kleur van het verloop en theme-color. */
-html{ background-color:#1D1D1B; }
+html{
+  background-color:#1D1D1B;
+  /* Reserveer de ruimte voor de scrollbalk altijd, anders schuift de
+     gecentreerde kaart op een laptop een halve balkbreedte op tussen korte
+     en lange schermen. Op een telefoon zweeft de balk en kost dit niets. */
+  scrollbar-gutter:stable;
+}
+/* Met een muis: een dunne doorzichtige balk zoals .klussen-slider, in plaats
+   van de grijze standaardbalk van Chrome/Edge. Op een aanraakscherm de balk
+   van het toestel zelf, die alleen tijdens het scrollen verschijnt. */
+@media (pointer:fine){
+  html{ scrollbar-width:thin; scrollbar-color:rgba(255,255,255,0.2) transparent; }
+  html::-webkit-scrollbar{ width:6px; }
+  html::-webkit-scrollbar-track{ background:transparent; }
+  html::-webkit-scrollbar-thumb{ background:rgba(255,255,255,0.2); border-radius:999px; }
+}
 body{
   margin:0;
   font-family:'Inter',system-ui,-apple-system,sans-serif;
@@ -44,23 +66,6 @@ body{
   padding-top:calc(1.6rem + env(safe-area-inset-top));
   display:flex; flex-direction:column; align-items:center;
   -webkit-text-size-adjust:100%;
-  /* body is hier de scrollcontainer (zie overflow-x hierboven). Reserveer
-     de ruimte voor de scrollbalk altijd, anders schuift de gecentreerde
-     kaart op een laptop een halve balkbreedte op tussen korte en lange
-     schermen. Op een telefoon zweeft de balk en kost dit niets. */
-  scrollbar-gutter:stable;
-  /* Zonder dit tekende Chrome/Edge (en de geïnstalleerde app op Windows en
-     Android) een grijze standaardbalk over de hele rechterrand. Nu dezelfde
-     dunne doorzichtige balk als .klussen-slider en .raster-scroll. */
-  scrollbar-width:thin; scrollbar-color:rgba(255,255,255,0.2) transparent;
-}
-body::-webkit-scrollbar{ width:6px; }
-body::-webkit-scrollbar-track{ background:transparent; }
-body::-webkit-scrollbar-thumb{ background:rgba(255,255,255,0.2); border-radius:999px; }
-/* Op een aanraakscherm scrol je met je duim; daar hoeft er geen balk te staan. */
-@media (pointer:coarse){
-  body{ scrollbar-width:none; }
-  body::-webkit-scrollbar{ display:none; }
 }
 /* ruimte voor de zwevende navigatie: een kolom links op een breed scherm,
    een balk onderaan op een telefoon — zie .sidebar hieronder. Alleen
