@@ -33,6 +33,10 @@
    alleen af wat zijwaarts uitsteekt, zonder een scrollbak te maken. */
 html{ overflow-x:hidden; }
 body{ overflow-x:clip; }
+/* App-knoppen voelen als knoppen: lang indrukken geeft geen menu "Open link /
+   Kopieer" en selecteert geen tekst, zoals in een gewone app. Alleen op de
+   navigatie, de app-tegels en het logo — tekst en velden blijven selecteerbaar. */
+.sidebar, .apptegel, .merk{ -webkit-touch-callout:none; -webkit-user-select:none; user-select:none; }
 /* Safari op iOS 26 negeert <meta name="theme-color"> en kleurt de balk
    boven- en onderin naar de effen background-color van html/body. Het
    verloop hieronder telt daarvoor niet mee; zonder deze kleur werd de balk

@@ -1441,3 +1441,11 @@ class AppOpBeginschermTest(TestCase):
             self.assertEqual(antwoord.status_code, 200, pad)
             self.assertEqual(antwoord["Content-Type"], "image/png")
             self.assertTrue(antwoord.content.startswith(bytes.fromhex("89504e47")))  # PNG-handtekening
+
+    def test_laadschermen_voor_iphone(self):
+        # Zonder exact passende apple-touch-startup-image opent iOS op zwart.
+        html = self.client.get(reverse("inloggen")).content.decode()
+        self.assertGreaterEqual(html.count('rel="apple-touch-startup-image"'), 14)
+        self.assertIn("(device-width: 402px) and (device-height: 874px)", html)
+        for href in re.findall(r'apple-touch-startup-image" media="[^"]+" href="([^"]+)"', html):
+            self.assertTrue(href.startswith("/static/img/opstart/"), href)

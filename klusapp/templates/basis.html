@@ -15,6 +15,7 @@
   <link rel="manifest" href="{% url 'manifest' %}">
   <meta name="apple-mobile-web-app-title" content="Klusapp">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  {% include "_opstartschermen.html" %}
   <link rel="stylesheet" href="{% static 'css/app.css' %}">
   {% comment %} Gedeelde veer/projectie/rubberband (static/js/beweging.js).
      Bovenaan en zonder defer, zodat elk scherm en elk fragment dat later in
