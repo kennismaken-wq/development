@@ -1,9 +1,26 @@
 {% extends "basis.html" %}
-{% load pictogrammen %}
+{% load pictogrammen static %}
 {% block titel %}Start{% endblock %}
 {% block kop %}Hai, {{ user.first_name|default:user.naam }}{% endblock %}
 {% block sub %}{{ vandaag|date:"l j F Y"|capfirst }}{% endblock %}
 {% block inhoud %}
+  {% comment %} "Zet de app op je beginscherm". Verborgen tot
+     static/js/app-installeren.js weet dat het kan: Android krijgt een knop,
+     de iPhone een uitleg (Safari heeft geen installatieknop). Staat de app
+     er al op, of is het balkje weggetikt, dan blijft het weg. {% endcomment %}
+  <div class="installeer" id="installeer" hidden>
+    <img src="{% static 'img/icoon-180.png' %}" alt="" width="44" height="44">
+    <div class="installeer-tekst">
+      <strong>Zet de klusapp op je beginscherm</strong>
+      <span data-soort="android" hidden>Dan opent hij als een echte app, zonder adresbalk.</span>
+      <span data-soort="ios" hidden>Tik op Deel (het vierkantje met de pijl) en kies ‘Zet op beginscherm’.</span>
+    </div>
+    <div class="installeer-knoppen">
+      <button type="button" class="knop-stil" data-soort="android" data-actie="installeren" hidden>Installeren</button>
+      <button type="button" class="knop-stil" data-actie="weg" aria-label="Niet meer tonen">✕</button>
+    </div>
+  </div>
+
   {% comment %} Helemaal bovenaan je eigen uren van deze week (de maand eronder): dat is het cijfer
      waar iedereen die de app opent als eerste naar kijkt, en het stond eerder
      als twee losse tegels onder de apps — ver onder de vouw, precies waar je

@@ -1377,3 +1377,59 @@ class MedewerkerVerwijderenTest(TestCase):
         html = self.client.get(reverse("medewerkers")).content.decode()
         self.assertIn(reverse("medewerker_verwijderen", args=[self.sam.pk]), html)
         self.assertNotIn(reverse("medewerker_verwijderen", args=[self.eigenaar.pk]), html)
+
+
+class AppOpBeginschermTest(TestCase):
+    """De klusapp als PWA (config/pwa.py): manifest, service worker en
+    offline-pagina moeten zonder inloggen bereikbaar zijn, en de offline-
+    pagina mag nooit gegevens van wie ingelogd is bevatten — hij staat in de
+    cache van de telefoon."""
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.medewerker = Medewerker.objects.create_user(
+            "sam", password="test1234", first_name="Sam", rol=Medewerker.Rol.MEDEWERKER
+        )
+
+    def test_manifest_zonder_inloggen(self):
+        antwoord = self.client.get("/manifest.webmanifest")
+        self.assertEqual(antwoord.status_code, 200)
+        self.assertEqual(antwoord["Content-Type"], "application/manifest+json")
+        manifest = antwoord.json()
+        self.assertEqual(manifest["display"], "standalone")
+        self.assertEqual(manifest["start_url"], "/")
+        self.assertEqual(manifest["short_name"], "Klusapp")
+        maten = {(i["sizes"], i.get("purpose", "any")) for i in manifest["icons"]}
+        self.assertIn(("192x192", "any"), maten)
+        self.assertIn(("512x512", "any"), maten)
+        self.assertIn(("512x512", "maskable"), maten)
+
+    def test_service_worker_in_de_root(self):
+        antwoord = self.client.get("/sw.js")
+        self.assertEqual(antwoord.status_code, 200)
+        self.assertTrue(antwoord["Content-Type"].startswith("text/javascript"))
+        self.assertEqual(antwoord["Service-Worker-Allowed"], "/")
+        self.assertIn("no-cache", antwoord["Cache-Control"])
+        js = antwoord.content.decode()
+        self.assertIn('"/static/css/app.css"', js)
+        self.assertIn('"/offline/"', js)
+        self.assertNotIn("&quot;", js)
+
+    def test_offline_zonder_navigatie_of_naam(self):
+        self.client.force_login(self.medewerker)
+        antwoord = self.client.get(reverse("offline"))
+        self.assertEqual(antwoord.status_code, 200)
+        html = antwoord.content.decode()
+        self.assertIn("Geen verbinding", html)
+        self.assertNotIn('class="sidebar', html)
+        self.assertNotIn("Sam", html)
+
+    def test_basis_verwijst_naar_manifest(self):
+        html = self.client.get(reverse("inloggen")).content.decode()
+        self.assertIn('rel="manifest" href="/manifest.webmanifest"', html)
+        self.assertIn("app-installeren.js", html)
+
+    def test_installeerbalkje_alleen_op_startscherm(self):
+        self.client.force_login(self.medewerker)
+        self.assertIn('id="installeer"', self.client.get(reverse("start")).content.decode())
+        self.assertNotIn('id="installeer"', self.client.get(reverse("klussen")).content.decode())

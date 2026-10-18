@@ -1,0 +1,29 @@
+{% load static %}<!doctype html>
+{% comment %} Wat de app toont als er geen netwerk is (zie templates/sw.js).
+   Bewust níét op basis.html: deze pagina staat in de cache van de telefoon,
+   en basis.html zou de navigatie en naam van wie toevallig ingelogd was
+   meenemen. "Opnieuw proberen" herlaadt het scherm dat je probeerde te
+   openen — de service worker toont deze pagina op díé url. {% endcomment %}
+<html lang="nl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#1D1D1B">
+  <title>Geen verbinding · De Groene M</title>
+  <link rel="icon" href="{% static 'img/favicon.png' %}" sizes="32x32">
+  <link rel="stylesheet" href="{% static 'css/app.css' %}">
+</head>
+<body>
+  <div class="kaart glas inloggen">
+    <div class="kop">
+      <img class="merk" src="{% static 'img/logo-de-groene-m-licht.png' %}" alt="" width="512" height="437">
+      <div class="koptekst">
+        <h1>Geen verbinding</h1>
+        <p class="sub">De klusapp kan de server nu niet bereiken.</p>
+      </div>
+    </div>
+    <p class="uitleg" style="text-align:center">Controleer je wifi of mobiele data en probeer het zo opnieuw.</p>
+    <p style="margin-top:1.6rem"><button type="button" class="knop" onclick="location.reload()">Opnieuw proberen</button></p>
+  </div>
+</body>
+</html>

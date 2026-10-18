@@ -3,6 +3,7 @@ from django.conf import settings
 from django.contrib.auth import views as auth_views
 from django.urls import include, path, reverse_lazy
 
+from config import pwa
 from medewerkers import views as medewerkers_views
 from medewerkers.forms import InlogForm, NieuwWachtwoordForm, WachtwoordVergetenForm
 
@@ -24,6 +25,10 @@ nog_te_bouwen = []
 
 urlpatterns = [
     path("", medewerkers_views.start, name="start"),
+    # De app op het beginscherm (PWA), zie config/pwa.py
+    path("manifest.webmanifest", pwa.manifest, name="manifest"),
+    path("sw.js", pwa.service_worker, name="service_worker"),
+    path("offline/", pwa.offline, name="offline"),
     path(
         "inloggen/",
         auth_views.LoginView.as_view(redirect_authenticated_user=True, authentication_form=InlogForm),

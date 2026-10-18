@@ -8,12 +8,20 @@
   {% load static %}
   <link rel="icon" href="{% static 'img/favicon.png' %}" sizes="32x32">
   <link rel="apple-touch-icon" href="{% static 'img/icoon-180.png' %}">
+  {% comment %} Op het beginscherm opent de app schermvullend, zonder
+     adresbalk (PWA, zie config/pwa.py en development/PWA.md). De
+     statusbalk is doorzichtig; body houdt al ruimte vrij via
+     env(safe-area-inset-top). {% endcomment %}
+  <link rel="manifest" href="{% url 'manifest' %}">
+  <meta name="apple-mobile-web-app-title" content="Klusapp">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <link rel="stylesheet" href="{% static 'css/app.css' %}">
   {% comment %} Gedeelde veer/projectie/rubberband (static/js/beweging.js).
      Bovenaan en zonder defer, zodat elk scherm en elk fragment dat later in
      een <dialog> wordt gezet er al over beschikt. {% endcomment %}
   <script src="{% static 'js/beweging.js' %}"></script>
   <script src="{% static 'js/klus-overgang.js' %}"></script>
+  <script src="{% static 'js/app-installeren.js' %}" defer></script>
 </head>
 <body{% if user.is_authenticated %} class="met-navigatie"{% endif %}>
   {% if user.is_authenticated %}

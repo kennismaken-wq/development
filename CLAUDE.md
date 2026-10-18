@@ -72,7 +72,9 @@ Draait op `:5001`.
   moeten dus als die user draaien (`sudo -u develop -H git -C /srv/handigerai/develop-tool ...`),
   anders klaagt git over "dubious ownership".
 - Service: `develop-tool.service` · timer: `develop-auto-deploy.timer`
-- nginx stuurt `develop.handigerai.nl` → `127.0.0.1:5001`
+- nginx stuurt `develop.handigerai.nl` → `127.0.0.1:5001`. Daar draait de **klusapp**
+  (gunicorn), niet de Flask-tool uit de root: de naam `develop-tool` is historisch,
+  zie `klusapp/docs/DEPLOY.md`. Lokaal gebruikt de Flask-tool toevallig ook `:5001`.
 - De server-kloon wordt bij elke deploy hard gereset. Bewerk daar dus nooit bestanden
   direct — dat werk is bij de volgende deploy weg.
 

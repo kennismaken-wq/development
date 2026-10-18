@@ -728,6 +728,19 @@ input[type=time]::-webkit-calendar-picker-indicator{ filter:invert(1); opacity:.
   .meldingen{ bottom:calc(5.4rem + env(safe-area-inset-bottom)); }
 }
 
+/* "Zet de klusapp op je beginscherm" bovenaan het startscherm, zie
+   static/js/app-installeren.js. Zelfde vorm als .melding, in de accentkleur
+   van .melding.success. */
+.installeer{
+  display:flex; align-items:center; gap:.8rem;
+  margin:0 0 1.4rem; padding:.75rem .75rem .75rem .9rem; border-radius:14px;
+  background:rgba(var(--accent-rgb),0.12); border:1px solid rgba(var(--accent-rgb),0.35);
+}
+.installeer img{ width:44px; height:44px; border-radius:11px; flex:none; }
+.installeer-tekst{ flex:1; min-width:0; font-size:13px; line-height:1.45; color:rgba(255,255,255,0.75); }
+.installeer-tekst strong{ display:block; color:#fff; font-size:14px; font-weight:600; }
+.installeer-knoppen{ display:flex; gap:.4rem; flex:none; }
+
 /* ══════════ BIJLAGEN: FOTO'S EN DOCUMENTEN ══════════
    Gedeelde bouwstenen voor het klusdossier, de fotodropbox en de foto's bij
    een uurblok. Drie plekken, één vormtaal. */
@@ -740,7 +753,7 @@ input[type=time]::-webkit-calendar-picker-indicator{ filter:invert(1); opacity:.
 .foto-zoekbalk input{
   -webkit-appearance:none; appearance:none;
   background:none; border:none; outline:none; flex:1 1 auto; min-width:0;
-  font-family:'Inter',sans-serif; font-size:13.5px; color:#fff;
+  font-family:'Inter',sans-serif; font-size:16px; color:#fff;  /* onder 16px zoomt iOS in bij het tikken */
 }
 .foto-zoekbalk input::placeholder{ color:rgba(255,255,255,0.45); }
 /* verbergt de zoekknop die sommige browsers in een type=search tonen */
