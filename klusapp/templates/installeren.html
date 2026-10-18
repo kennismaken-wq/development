@@ -1,0 +1,43 @@
+{% extends "basis.html" %}
+{% load static %}
+{% block titel %}App installeren{% endblock %}
+{% block kop %}De klusapp op je telefoon{% endblock %}
+{% block sub %}Eén keer instellen, daarna gewoon een icoon op je beginscherm{% endblock %}
+{% block inhoud %}
+  {% comment %} De link die je rondstuurt: config/pwa.py:installeren.
+     static/js/installatiepagina.js kijkt welk toestel er voor de pagina zit
+     en zet precies één blok hieronder aan. Zonder JavaScript blijft het
+     computerblok staan, met de QR-code en de link. {% endcomment %}
+  <div class="installatie" data-toestel="klaar" hidden>
+    <p>De klusapp staat al op je beginscherm. Je kunt dit venster sluiten.</p>
+    <p style="margin-top:1.4rem"><a class="knop" href="{% url 'start' %}">Naar de klusapp</a></p>
+  </div>
+
+  <div class="installatie" data-toestel="android" hidden>
+    <p data-android="knop" hidden><button type="button" class="knop" data-actie="installeren">Installeer de klusapp</button></p>
+    <p class="uitleg" data-android="knop" hidden>Tik op de knop en daarna op ‘Installeren’. Het icoon staat dan op je beginscherm.</p>
+    <ol class="installatie-stappen" data-android="menu">
+      <li>Tik rechtsboven op <strong>⋮</strong>.</li>
+      <li>Kies <strong>App installeren</strong> of <strong>Toevoegen aan startscherm</strong>.</li>
+      <li>Tik op <strong>Installeren</strong>.</li>
+    </ol>
+  </div>
+
+  <div class="installatie" data-toestel="ios" hidden>
+    <p><a class="knop" href="{% url 'webclip_profiel' %}">Installatieprofiel downloaden</a></p>
+    <ol class="installatie-stappen">
+      <li>Tik hierboven op de knop en daarna op <strong>Sta toe</strong>.</li>
+      <li>Open <strong>Instellingen</strong> en tik bovenaan op <strong>Profiel gedownload</strong>.</li>
+      <li>Tik op <strong>Installeer</strong> en vul je toegangscode in. Er staat ‘Niet geverifieerd’ bij; dat klopt, het profiel zet alleen het icoon neer.</li>
+    </ol>
+    <p class="uitleg">Werkt de knop niet? Open deze pagina dan in Safari, of tik op ••• › <strong>Deel</strong> › <strong>Zet op beginscherm</strong>.</p>
+  </div>
+
+  <div class="installatie" data-toestel="computer">
+    <p>Scan de code met de camera van je telefoon:</p>
+    <div class="installatie-qr">{{ qr|safe }}</div>
+    <p class="uitleg">Of stuur deze link door: <a href="{{ link }}">{{ link }}</a></p>
+  </div>
+
+  <script src="{% static 'js/installatiepagina.js' %}"></script>
+{% endblock %}

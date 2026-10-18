@@ -1434,6 +1434,34 @@ class AppOpBeginschermTest(TestCase):
         self.assertIn('id="installeer"', self.client.get(reverse("start")).content.decode())
         self.assertNotIn('id="installeer"', self.client.get(reverse("klussen")).content.decode())
 
+    def test_installatielink_zonder_inloggen(self):
+        antwoord = self.client.get(reverse("installeren"))
+        self.assertEqual(antwoord.status_code, 200)
+        html = antwoord.content.decode()
+        self.assertIn("<svg", html)  # de QR-code
+        self.assertIn("http://testserver/installeren/", html)
+        self.assertIn(reverse("webclip_profiel"), html)
+        self.assertNotIn('class="sidebar', html)
+
+    def test_inlogscherm_wijst_naar_installatielink(self):
+        self.assertIn(reverse("installeren"), self.client.get(reverse("inloggen")).content.decode())
+
+    def test_webclip_profiel_voor_iphone(self):
+        import plistlib
+
+        antwoord = self.client.get(reverse("webclip_profiel"))
+        self.assertEqual(antwoord.status_code, 200)
+        self.assertEqual(antwoord["Content-Type"], "application/x-apple-aspen-config")
+        profiel = plistlib.loads(antwoord.content)
+        self.assertEqual(profiel["PayloadType"], "Configuration")
+        clip = profiel["PayloadContent"][0]
+        self.assertEqual(clip["PayloadType"], "com.apple.webClip.managed")
+        self.assertEqual(clip["URL"], "http://testserver/")
+        self.assertTrue(clip["FullScreen"])
+        self.assertTrue(clip["Icon"].startswith(bytes.fromhex("89504e47")))  # PNG-handtekening
+        # Zelfde host, zelfde UUID: opnieuw installeren vervangt het profiel.
+        self.assertEqual(profiel["PayloadUUID"], plistlib.loads(self.client.get(reverse("webclip_profiel")).content)["PayloadUUID"])
+
     def test_beginschermicoon_ook_in_de_root(self):
         # iOS vraagt dit soms blind op; een 404 gaf een screenshot als icoon.
         for pad in ("/apple-touch-icon.png", "/apple-touch-icon-precomposed.png"):

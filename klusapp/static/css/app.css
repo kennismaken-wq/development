@@ -768,6 +768,15 @@ input[type=time]::-webkit-calendar-picker-indicator{ filter:invert(1); opacity:.
 .installeer-tekst strong{ display:block; color:#fff; font-size:14px; font-weight:600; }
 .installeer-knoppen{ display:flex; gap:.4rem; flex:none; }
 
+/* De installatielink (/installeren/): één blok per toestel */
+.installatie > p:first-child{ margin-top:0; }
+.installatie-stappen{ margin:1.2rem 0; padding-left:1.3rem; font-size:14px; line-height:1.55; color:rgba(255,255,255,0.85); }
+.installatie-stappen li + li{ margin-top:.5rem; }
+.installatie-qr{ display:flex; justify-content:center; margin:1.2rem 0; }
+.installatie-qr svg{ border-radius:12px; max-width:100%; height:auto; }
+.installatie a{ word-break:break-all; }
+.installatie a.knop{ word-break:normal; }
+
 /* ══════════ BIJLAGEN: FOTO'S EN DOCUMENTEN ══════════
    Gedeelde bouwstenen voor het klusdossier, de fotodropbox en de foto's bij
    een uurblok. Drie plekken, één vormtaal. */
