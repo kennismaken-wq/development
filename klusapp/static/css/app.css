@@ -49,13 +49,18 @@ html{
   scrollbar-gutter:stable;
 }
 /* Met een muis: een dunne doorzichtige balk zoals .klussen-slider, in plaats
-   van de grijze standaardbalk van Chrome/Edge. Op een aanraakscherm de balk
-   van het toestel zelf, die alleen tijdens het scrollen verschijnt. */
+   van de grijze standaardbalk van Chrome/Edge. Op een aanraakscherm geen
+   balk: in de iPhone-app viel zelfs de gewone scrollindicator op als een
+   streep langs de rand. */
 @media (pointer:fine){
   html{ scrollbar-width:thin; scrollbar-color:rgba(255,255,255,0.2) transparent; }
   html::-webkit-scrollbar{ width:6px; }
   html::-webkit-scrollbar-track{ background:transparent; }
   html::-webkit-scrollbar-thumb{ background:rgba(255,255,255,0.2); border-radius:999px; }
+}
+@media (pointer:coarse){
+  html{ scrollbar-width:none; }
+  html::-webkit-scrollbar{ display:none; }
 }
 body{
   margin:0;

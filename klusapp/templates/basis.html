@@ -15,7 +15,41 @@
   <link rel="manifest" href="{% url 'manifest' %}">
   <meta name="apple-mobile-web-app-title" content="Klusapp">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  {% comment %} Sinds iOS 26 niet meer nodig om als app te openen, maar
+     zonder deze tag slaat iOS de laadschermen hieronder over en opent de
+     app op zwart. {% endcomment %}
+  <meta name="apple-mobile-web-app-capable" content="yes">
   {% include "_opstartschermen.html" %}
+  {% comment %} Opstartscherm zoals bij een gewone app: het blad in het
+     midden, even stil, dan faadt de app in. Alleen in de app op het
+     beginscherm en alleen bij de eerste keer openen (sessionStorage: iOS
+     wist die als de app een tijdje dicht is geweest). Inline, zodat het er
+     al staat voordat app.css binnen is; zelfde kleur, plek en grootte (30%
+     van de korte zijde) als de iOS-laadschermen, zodat die naadloos
+     overlopen. Het weghalen gebeurt onderaan de body. {% endcomment %}
+  <script>
+    (function () {
+      try {
+        var app = matchMedia("(display-mode: standalone)").matches || navigator.standalone === true;
+        if (app && !sessionStorage.getItem("opgestart")) {
+          sessionStorage.setItem("opgestart", "1");
+          document.documentElement.classList.add("opstarten");
+        }
+      } catch (e) {}
+    })();
+  </script>
+  <style>
+    html{ background-color:#1D1D1B; }
+    .opstartscherm{ display:none; }
+    html.opstarten .opstartscherm{
+      display:flex; align-items:center; justify-content:center;
+      position:fixed; inset:0; z-index:9999; background:#1D1D1B;
+      transition:opacity .35s ease;
+    }
+    html.opstarten .opstartscherm.weg{ opacity:0; }
+    .opstartscherm img{ width:30vmin; height:auto; }
+    @media (prefers-reduced-motion:reduce){ html.opstarten .opstartscherm{ transition:none; } }
+  </style>
   <link rel="stylesheet" href="{% static 'css/app.css' %}">
   {% comment %} Gedeelde veer/projectie/rubberband (static/js/beweging.js).
      Bovenaan en zonder defer, zodat elk scherm en elk fragment dat later in
@@ -25,6 +59,7 @@
   <script src="{% static 'js/app-installeren.js' %}" defer></script>
 </head>
 <body{% if user.is_authenticated %} class="met-navigatie"{% endif %}>
+  <div class="opstartscherm" aria-hidden="true"><img src="{% static 'img/logo-de-groene-m-licht.png' %}" alt="" width="512" height="437"></div>
   {% if user.is_authenticated %}
     {% load pictogrammen %}
     <nav class="sidebar glas" aria-label="Navigatie">
@@ -100,5 +135,22 @@
     <script src="{% static 'js/dicteren.js' %}" defer></script>
   {% endif %}
   <script src="{% static 'js/eenmaal-versturen.js' %}"></script>
+  <script>
+    /* Opstartscherm (zie de head): minstens 0,9 s laten staan, ook als de
+       pagina sneller klaar is — anders flitst het blad alleen even. */
+    (function () {
+      var html = document.documentElement;
+      if (!html.classList.contains("opstarten")) return;
+      var scherm = document.querySelector(".opstartscherm");
+      function weg() {
+        setTimeout(function () {
+          scherm.classList.add("weg");
+          setTimeout(function () { html.classList.remove("opstarten"); }, 400);
+        }, Math.max(0, 900 - performance.now()));
+      }
+      if (document.readyState === "complete") weg();
+      else window.addEventListener("load", weg);
+    })();
+  </script>
 </body>
 </html>

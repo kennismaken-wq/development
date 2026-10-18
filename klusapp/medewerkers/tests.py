@@ -1477,3 +1477,13 @@ class AppOpBeginschermTest(TestCase):
         self.assertIn("(device-width: 402px) and (device-height: 874px)", html)
         for href in re.findall(r'apple-touch-startup-image" media="[^"]+" href="([^"]+)"', html):
             self.assertTrue(href.startswith("/static/img/opstart/"), href)
+
+    def test_laadschermen_hebben_capable_tag_nodig(self):
+        # Zonder deze tag slaat iOS de apple-touch-startup-images over.
+        html = self.client.get(reverse("inloggen")).content.decode()
+        self.assertIn('<meta name="apple-mobile-web-app-capable" content="yes">', html)
+
+    def test_opstartscherm_staat_klaar(self):
+        html = self.client.get(reverse("inloggen")).content.decode()
+        self.assertIn('class="opstartscherm"', html)
+        self.assertIn('sessionStorage.getItem("opgestart")', html)
