@@ -111,8 +111,16 @@ forum.
   dingen: rechts blijft een balk staan, tikken op de statusbalk scrolt niet naar
   boven, en `window.scrollY` blijft 0. Gebruik `html{overflow-x:hidden}` plus
   `body{overflow-x:clip}`, zonder height. Een dunne balk alleen bij een muis:
-  `@media (pointer:fine){ html{scrollbar-width:thin; …} }`.
-- **Laadscherm op de iPhone:** iOS maakt er geen uit het manifest. Zonder een
+  `@media (pointer:fine){ html{scrollbar-width:thin; …} }`. Op een aanraakscherm
+  (`pointer:coarse`) `scrollbar-width:none` op html: in de iPhone-app viel zelfs de
+  gewone indicator op als een streep.
+- **Laadscherm op de iPhone:** de laadschermen werken alleen als
+  `<meta name="apple-mobile-web-app-capable" content="yes">` er ook staat, ook
+  in iOS 26 en ook met een manifest. Zonder die tag bleef het scherm zwart. Zet
+  daarnaast een eigen opstartscherm in de pagina: in de head, inline, met het logo op
+  dezelfde plek en maat; alleen in de app (standalone) en bij de eerste keer openen
+  (`sessionStorage`); minstens 0,9 s, daarna infaden. Zo voelt het als Spotify.
+  iOS maakt er geen uit het manifest. Zonder een
   `<link rel="apple-touch-startup-image" media="…">` die precies op het toestel past,
   opent de app op een zwart scherm. Maak per formaat een PNG met het logo in het
   midden, op de achtergrondkleur (klusapp: `templates/_opstartschermen.html`, 32
