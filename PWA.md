@@ -106,9 +106,22 @@ forum.
 - **Effen `background-color` op `html` en `body`**, ook als de achtergrond een
   verloop is. Safari op iOS 26 negeert `theme-color` en kleurt de balk boven en
   onder naar die effen kleur; zonder blijft hij wit.
-- **Scrollbalk:** is de body de scrollcontainer, dan tekenen Chrome en Edge een
-  grijze standaardbalk. Maak hem dun en doorzichtig (`scrollbar-width:thin` plus
-  `::-webkit-scrollbar`) en verberg hem onder `@media (pointer:coarse)`.
+- **Laat de pagina zelf scrollen, niet `<body>`.** Met `html,body{height:100%}` en
+  overflow wordt de body een eigen scrollbak. Dan gebeurt er op de iPhone-app drie
+  dingen: rechts blijft een balk staan, tikken op de statusbalk scrolt niet naar
+  boven, en `window.scrollY` blijft 0. Gebruik `html{overflow-x:hidden}` plus
+  `body{overflow-x:clip}`, zonder height. Een dunne balk alleen bij een muis:
+  `@media (pointer:fine){ html{scrollbar-width:thin; …} }`.
+- **Laadscherm op de iPhone:** iOS maakt er geen uit het manifest. Zonder een
+  `<link rel="apple-touch-startup-image" media="…">` die precies op het toestel past,
+  opent de app op een zwart scherm. Maak per formaat een PNG met het logo in het
+  midden, op de achtergrondkleur (klusapp: `templates/_opstartschermen.html`, 32
+  stuks). Android maakt zijn laadscherm zelf uit het manifest. iOS bewaart het
+  laadscherm en het icoon bij het installeren: na een wijziging de app verwijderen en
+  opnieuw toevoegen.
+- Geen lang-indrukken-menu op de navigatie, tegels en het logo:
+  `-webkit-touch-callout:none; user-select:none`. Alleen daar; tekst blijft
+  selecteerbaar.
 - Elke vaste balk onderin: `bottom: calc(… + env(safe-area-inset-bottom))`.
 - **Invoervelden minimaal 16px.** Bij kleinere tekst zoomt iOS in zodra je erop tikt.
   Let op zoekvelden die in een eigen pil staan.
