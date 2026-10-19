@@ -53,6 +53,7 @@ INSTALLED_APPS = [
     "medewerkers",
     "klussen",
     "uren",
+    "pushberichten",
 ]
 
 MIDDLEWARE = [
@@ -80,6 +81,7 @@ TEMPLATES = [
                 "django.contrib.messages.context_processors.messages",
                 "medewerkers.context_processors.tegels",
                 "medewerkers.context_processors.wissel",
+                "pushberichten.context_processors.testmelding",
             ],
         },
     },

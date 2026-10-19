@@ -57,6 +57,12 @@
   <script src="{% static 'js/beweging.js' %}"></script>
   <script src="{% static 'js/klus-overgang.js' %}"></script>
   <script src="{% static 'js/app-installeren.js' %}" defer></script>
+  {% if testmelding %}
+    {% comment %} TIJDELIJK / TEST: pushmeldingen, alleen op develop. Zie
+       pushberichten/ en static/js/pushmelding.js. {% endcomment %}
+    <meta name="csrf-token" content="{{ csrf_token }}">
+    <script src="{% static 'js/pushmelding.js' %}" defer></script>
+  {% endif %}
 </head>
 <body{% if user.is_authenticated %} class="met-navigatie"{% endif %}>
   <div class="opstartscherm" aria-hidden="true"><img src="{% static 'img/logo-de-groene-m-licht.png' %}" alt="" width="512" height="437"></div>

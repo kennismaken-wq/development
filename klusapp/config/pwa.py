@@ -74,7 +74,12 @@ def service_worker(request):
     versie = hashlib.sha1("\n".join([offline_url, *bestanden]).encode()).hexdigest()[:12]
     js = render_to_string(
         "sw.js",
-        {"versie": versie, "bestanden": bestanden, "offline_url": offline_url},
+        {
+            "versie": versie,
+            "bestanden": bestanden,
+            "offline_url": offline_url,
+            "icoon": static("img/icoon-192.png"),  # bij pushmeldingen
+        },
     )
     antwoord = HttpResponse(js, content_type="text/javascript; charset=utf-8")
     antwoord["Service-Worker-Allowed"] = "/"

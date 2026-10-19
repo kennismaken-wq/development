@@ -75,4 +75,36 @@ self.addEventListener("fetch", function (event) {
     );
   }
 });
+
+/* Pushmeldingen (pushberichten/versturen.py stuurt {titel, tekst, url}).
+   iOS trekt het abonnement in als een push geen melding toont, dus er komt
+   altijd een melding, ook als de inhoud onleesbaar is. */
+self.addEventListener("push", function (event) {
+  var bericht = {};
+  try { bericht = event.data ? event.data.json() : {}; } catch (e) {}
+  event.waitUntil(
+    self.registration.showNotification(bericht.titel || "De Groene M", {
+      body: bericht.tekst || "",
+      icon: "{{ icoon|escapejs }}",
+      data: { url: bericht.url || "/" },
+    })
+  );
+});
+
+// Tik op de melding: de app naar voren halen, of openen als hij dicht is.
+self.addEventListener("notificationclick", function (event) {
+  event.notification.close();
+  var doel = new URL((event.notification.data && event.notification.data.url) || "/", self.location.origin).href;
+  event.waitUntil(
+    self.clients.matchAll({ type: "window", includeUncontrolled: true }).then(function (vensters) {
+      for (var i = 0; i < vensters.length; i++) {
+        if ("focus" in vensters[i]) {
+          vensters[i].navigate(doel);
+          return vensters[i].focus();
+        }
+      }
+      return self.clients.openWindow(doel);
+    })
+  );
+});
 {% endautoescape %}
