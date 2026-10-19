@@ -1,36 +1,39 @@
 {% extends "basis.html" %}
 {% load static %}
 {% block titel %}App installeren{% endblock %}
-{% block kop %}De klusapp op je telefoon{% endblock %}
-{% block sub %}Eén keer instellen, daarna gewoon een icoon op je beginscherm{% endblock %}
+{% block kop %}De Groene M op je telefoon{% endblock %}
+{% block sub %}Eén keer klaarzetten, daarna open je hem met het icoon op je beginscherm{% endblock %}
 {% block inhoud %}
   {% comment %} De link die je rondstuurt: config/pwa.py:installeren.
      static/js/installatiepagina.js kijkt welk toestel er voor de pagina zit
      en zet precies één blok hieronder aan. Zonder JavaScript blijft het
-     computerblok staan, met de QR-code en de link. {% endcomment %}
+     computerblok staan, met de QR-code en de link. Niets om te downloaden:
+     de iPhone krijgt de stappen via het Deel-menu. {% endcomment %}
   <div class="installatie" data-toestel="klaar" hidden>
-    <p>De klusapp staat al op je beginscherm. Je kunt dit venster sluiten.</p>
-    <p style="margin-top:1.4rem"><a class="knop" href="{% url 'start' %}">Naar de klusapp</a></p>
+    <p>De Groene M staat al op je beginscherm.</p>
+    <p style="margin-top:1.4rem"><a class="knop" href="{% url 'start' %}">Naar de app</a></p>
   </div>
 
   <div class="installatie" data-toestel="android" hidden>
-    <p data-android="knop" hidden><button type="button" class="knop" data-actie="installeren">Installeer de klusapp</button></p>
+    <p data-android="knop" hidden><button type="button" class="knop" data-actie="installeren">Zet op beginscherm</button></p>
     <p class="uitleg" data-android="knop" hidden>Tik op de knop en daarna op ‘Installeren’. Het icoon staat dan op je beginscherm.</p>
     <ol class="installatie-stappen" data-android="menu">
-      <li>Tik rechtsboven op <strong>⋮</strong>.</li>
+      <li>Tik rechtsboven op <strong>⋮</strong> (de drie puntjes).</li>
       <li>Kies <strong>App installeren</strong> of <strong>Toevoegen aan startscherm</strong>.</li>
       <li>Tik op <strong>Installeren</strong>.</li>
+      <li>Open de app voortaan met het icoon <strong>De Groene M</strong> op je beginscherm.</li>
     </ol>
   </div>
 
   <div class="installatie" data-toestel="ios" hidden>
-    <p><a class="knop" href="{% url 'webclip_profiel' %}">Installatieprofiel downloaden</a></p>
     <ol class="installatie-stappen">
-      <li>Tik hierboven op de knop en daarna op <strong>Sta toe</strong>.</li>
-      <li>Open <strong>Instellingen</strong> en tik bovenaan op <strong>Profiel gedownload</strong>.</li>
-      <li>Tik op <strong>Installeer</strong> en vul je toegangscode in. Er staat ‘Niet geverifieerd’ bij; dat klopt, het profiel zet alleen het icoon neer.</li>
+      <li>Tik rechtsonder op <strong>•••</strong> (de drie puntjes naast de adresbalk).</li>
+      <li>Tik op <strong>Deel</strong>, het vierkantje met de pijl omhoog.</li>
+      <li>Scroll een stukje omlaag en tik op <strong>Zet op beginscherm</strong>.</li>
+      <li>De naam staat al goed: <strong>De Groene M</strong>. Tik rechtsboven op <strong>Voeg toe</strong>.</li>
+      <li>Open de app voortaan met het icoon op je beginscherm. Je logt daar één keer opnieuw in.</li>
     </ol>
-    <p class="uitleg">Werkt de knop niet? Open deze pagina dan in Safari, of tik op ••• › <strong>Deel</strong> › <strong>Zet op beginscherm</strong>.</p>
+    <p class="uitleg">Zie je geen ••• of geen Deel? Dan staat de link open in een andere app (bijvoorbeeld WhatsApp of Gmail). Open hem eerst in <strong>Safari</strong> en begin dan bij stap 1.</p>
   </div>
 
   <div class="installatie" data-toestel="computer">

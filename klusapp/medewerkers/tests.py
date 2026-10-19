@@ -1398,7 +1398,8 @@ class AppOpBeginschermTest(TestCase):
         manifest = antwoord.json()
         self.assertEqual(manifest["display"], "standalone")
         self.assertEqual(manifest["start_url"], "/")
-        self.assertEqual(manifest["short_name"], "Klusapp")
+        self.assertEqual(manifest["name"], "De Groene M")
+        self.assertEqual(manifest["short_name"], "De Groene M")
         maten = {(i["sizes"], i.get("purpose", "any")) for i in manifest["icons"]}
         self.assertIn(("192x192", "any"), maten)
         self.assertIn(("512x512", "any"), maten)
@@ -1449,27 +1450,16 @@ class AppOpBeginschermTest(TestCase):
         html = antwoord.content.decode()
         self.assertIn("<svg", html)  # de QR-code
         self.assertIn("http://testserver/installeren/", html)
-        self.assertIn(reverse("webclip_profiel"), html)
+        self.assertIn("Zet op beginscherm", html)
+        self.assertNotIn(".mobileconfig", html)  # geen download meer
         self.assertNotIn('class="sidebar', html)
 
     def test_inlogscherm_wijst_naar_installatielink(self):
         self.assertIn(reverse("installeren"), self.client.get(reverse("inloggen")).content.decode())
 
-    def test_webclip_profiel_voor_iphone(self):
-        import plistlib
-
-        antwoord = self.client.get(reverse("webclip_profiel"))
-        self.assertEqual(antwoord.status_code, 200)
-        self.assertEqual(antwoord["Content-Type"], "application/x-apple-aspen-config")
-        profiel = plistlib.loads(antwoord.content)
-        self.assertEqual(profiel["PayloadType"], "Configuration")
-        clip = profiel["PayloadContent"][0]
-        self.assertEqual(clip["PayloadType"], "com.apple.webClip.managed")
-        self.assertEqual(clip["URL"], "http://testserver/")
-        self.assertTrue(clip["FullScreen"])
-        self.assertTrue(clip["Icon"].startswith(bytes.fromhex("89504e47")))  # PNG-handtekening
-        # Zelfde host, zelfde UUID: opnieuw installeren vervangt het profiel.
-        self.assertEqual(profiel["PayloadUUID"], plistlib.loads(self.client.get(reverse("webclip_profiel")).content)["PayloadUUID"])
+    def test_beginschermnaam_is_de_groene_m(self):
+        html = self.client.get(reverse("installeren")).content.decode()
+        self.assertIn('<meta name="apple-mobile-web-app-title" content="De Groene M">', html)
 
     def test_beginschermicoon_ook_in_de_root(self):
         # iOS vraagt dit soms blind op; een 404 gaf een screenshot als icoon.

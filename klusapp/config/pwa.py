@@ -7,8 +7,6 @@ productie hasht WhiteNoise de bestandsnamen onder /static/. Geen van drieën
 vraagt om inloggen — de telefoon haalt ze op voordat iemand ingelogd is.
 """
 import hashlib
-import plistlib
-import uuid
 
 import segno
 
@@ -40,8 +38,8 @@ def manifest(request):
     return JsonResponse(
         {
             "id": "/",
-            "name": "Klusapp · De Groene M",
-            "short_name": "Klusapp",
+            "name": "De Groene M",
+            "short_name": "De Groene M",
             "description": "Uren en klussen van De Groene M",
             "lang": "nl",
             "start_url": "/",
@@ -101,55 +99,19 @@ def apple_touch_icon(request):
 # ── De installatielink ──────────────────────────────────────────────────
 # /installeren/ is de link die je rondstuurt (of als QR-code ophangt). Hij
 # vraagt niet om inloggen en kijkt zelf wat voor toestel er voor hem zit:
-# Android krijgt de installeerknop van Chrome, de iPhone een
-# installatieprofiel, een computer de QR-code om met de telefoon te scannen.
-# Vanzelf op het beginscherm zetten kan geen enkele website; dit is het
-# kortste wat de telefoons toestaan.
+# Android krijgt de installeerknop van Chrome, de iPhone de stappen via het
+# Deel-menu, een computer de QR-code om met de telefoon te scannen. Vanzelf
+# op het beginscherm zetten kan geen enkele website.
+#
+# Tot 19-10-2026 kreeg de iPhone hier een installatieprofiel (.mobileconfig)
+# om te downloaden. Weggehaald: downloaden en dan via Instellingen een "niet
+# geverifieerd" profiel installeren voelde niet goed. Wie de pagina zelf op
+# het beginscherm zet, komt toch op de startpagina uit: het manifest heeft
+# start_url "/", en static/js/installatiepagina.js stuurt de app door als hij
+# toch op /installeren/ opent.
 
 
 def installeren(request):
     link = request.build_absolute_uri(reverse("installeren"))
     qr = segno.make(link, error="m").svg_inline(scale=5, border=2, dark=KLEUR, light="#ffffff")
     return render(request, "installeren.html", {"qr": qr, "link": link})
-
-
-def webclip_profiel(request):
-    """Een iOS-configuratieprofiel met één Web Clip: open je het in Safari en
-    installeer je het via Instellingen, dan staat de klusapp met icoon op het
-    beginscherm en opent hij schermvullend — zonder dat iemand het Deel-menu
-    hoeft te vinden. Het profiel is niet ondertekend, dus iOS zet er "Niet
-    geverifieerd" bij; dat zegt de installatiepagina er eerlijk bij.
-
-    De UUID's volgen uit de host, zodat opnieuw installeren het oude profiel
-    vervangt in plaats van een tweede icoon te geven."""
-    host = request.get_host().split(":")[0]
-    sleutel = f"nl.handigerai.{host}.klusapp"
-    icoon = (settings.BASE_DIR / "static" / "img" / "icoon-180.png").read_bytes()
-    profiel = {
-        "PayloadContent": [
-            {
-                "PayloadType": "com.apple.webClip.managed",
-                "PayloadVersion": 1,
-                "PayloadIdentifier": f"{sleutel}.webclip",
-                "PayloadUUID": str(uuid.uuid5(uuid.NAMESPACE_DNS, f"{host}.webclip")).upper(),
-                "PayloadDisplayName": "Klusapp",
-                "URL": request.build_absolute_uri("/"),
-                "Label": "Klusapp",
-                "Icon": icoon,
-                "Precomposed": True,
-                "FullScreen": True,
-                "IsRemovable": True,
-            }
-        ],
-        "PayloadType": "Configuration",
-        "PayloadVersion": 1,
-        "PayloadIdentifier": sleutel,
-        "PayloadUUID": str(uuid.uuid5(uuid.NAMESPACE_DNS, host)).upper(),
-        "PayloadDisplayName": "Klusapp · De Groene M",
-        "PayloadDescription": "Zet de klusapp van De Groene M op je beginscherm.",
-        "PayloadOrganization": "De Groene M",
-        "PayloadRemovalDisallowed": False,
-    }
-    antwoord = HttpResponse(plistlib.dumps(profiel), content_type="application/x-apple-aspen-config")
-    antwoord["Content-Disposition"] = 'attachment; filename="klusapp.mobileconfig"'
-    return antwoord

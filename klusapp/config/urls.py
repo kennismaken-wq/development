@@ -32,7 +32,6 @@ urlpatterns = [
     path("apple-touch-icon.png", pwa.apple_touch_icon, name="apple_touch_icon"),
     path("apple-touch-icon-precomposed.png", pwa.apple_touch_icon),
     path("installeren/", pwa.installeren, name="installeren"),
-    path("installeren/klusapp.mobileconfig", pwa.webclip_profiel, name="webclip_profiel"),
     path(
         "inloggen/",
         auth_views.LoginView.as_view(redirect_authenticated_user=True, authentication_form=InlogForm),
