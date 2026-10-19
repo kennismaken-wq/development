@@ -28,6 +28,12 @@ DEBUG = os.environ.get("DJANGO_DEBUG", "1") == "1"
 # degroenem.handigerai.nl, Maartens echte omgeving (docs/DEPLOY.md).
 TESTFUNCTIES = os.environ.get("KLUSAPP_TESTFUNCTIES", "1") == "1"
 
+# Het balkje "Zet de klusapp op je beginscherm" op het startscherm
+# (static/js/app-installeren.js). Op Maartens omgeving uit: daar krijgen
+# mensen de installatielink /installeren/ toegestuurd. De app blijft daar
+# gewoon installeerbaar (manifest, service worker, iconen).
+INSTALLEERBALK = os.environ.get("KLUSAPP_INSTALLEERBALK", "1" if TESTFUNCTIES else "0") == "1"
+
 # In productie moet de sleutel uit de omgeving komen; lokaal mag een vaste
 # ontwikkelsleutel, zodat je niet elke keer opnieuw hoeft in te loggen.
 SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY", "" if not DEBUG else "ontwikkel-sleutel-niet-voor-productie")

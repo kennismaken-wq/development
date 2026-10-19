@@ -1434,6 +1434,15 @@ class AppOpBeginschermTest(TestCase):
         self.assertIn('id="installeer"', self.client.get(reverse("start")).content.decode())
         self.assertNotIn('id="installeer"', self.client.get(reverse("klussen")).content.decode())
 
+    def test_geen_installeerbalkje_als_uitgezet(self):
+        self.client.force_login(self.medewerker)
+        with self.settings(INSTALLEERBALK=False):
+            html = self.client.get(reverse("start")).content.decode()
+        self.assertNotIn('id="installeer"', html)
+        # De app blijft installeerbaar.
+        self.assertIn('rel="manifest"', html)
+        self.assertIn("app-installeren.js", html)
+
     def test_installatielink_zonder_inloggen(self):
         antwoord = self.client.get(reverse("installeren"))
         self.assertEqual(antwoord.status_code, 200)

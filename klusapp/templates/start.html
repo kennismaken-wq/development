@@ -7,7 +7,9 @@
   {% comment %} "Zet de app op je beginscherm". Verborgen tot
      static/js/app-installeren.js weet dat het kan: Android krijgt een knop,
      de iPhone een uitleg (Safari heeft geen installatieknop). Staat de app
-     er al op, of is het balkje weggetikt, dan blijft het weg. {% endcomment %}
+     er al op, of is het balkje weggetikt, dan blijft het weg. Uit met
+     settings.INSTALLEERBALK (Maartens omgeving). {% endcomment %}
+  {% if installeerbalk %}
   <div class="installeer" id="installeer" hidden>
     <img src="{% static 'img/icoon-180.png' %}" alt="" width="44" height="44">
     <div class="installeer-tekst">
@@ -20,6 +22,7 @@
       <button type="button" class="knop-stil" data-actie="weg" aria-label="Niet meer tonen">✕</button>
     </div>
   </div>
+  {% endif %}
 
   {% comment %} Helemaal bovenaan je eigen uren van deze week (de maand eronder): dat is het cijfer
      waar iedereen die de app opent als eerste naar kijkt, en het stond eerder

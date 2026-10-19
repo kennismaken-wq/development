@@ -144,6 +144,7 @@ def start(request):
         "start.html",
         {
             "vandaag": vandaag,
+            "installeerbalk": settings.INSTALLEERBALK,
             "onderdelen": _onderdelen_met_cijfers(request.user, vandaag, maandag, zondag, uren_stats),
             # TIJDELIJK: de opruimknop verschijnt alleen zolang er
             # testmedewerkers in de database staan.

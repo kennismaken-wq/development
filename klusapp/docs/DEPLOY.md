@@ -194,6 +194,7 @@ Sinds oktober 2026 draaien er twee installaties van de klusapp op deze VPS:
 | Poort · service | 5001 · `develop-tool.service` | 5002 · `degroenem.service` |
 | Updaten | vanzelf, elke push naar `main` | met de hand: `docs/deploy-degroenem.sh` |
 | Testfuncties | aan | uit (`KLUSAPP_TESTFUNCTIES=0`) |
+| Installeerbalkje op start | aan | uit (volgt testfuncties; `KLUSAPP_INSTALLEERBALK`) |
 
 Alles is apart: map, database, `.env` (eigen secret key), media en log. Alleen
 de mailinstellingen zijn dezelfde (kennismaken@handigerai.nl). De werkwijze:
