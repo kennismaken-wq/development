@@ -660,7 +660,13 @@ def klus_uren_export(request, pk):
 @alleen_eigenaar
 def klus_nieuw(request):
     terugpijl = _terugpijl(request)
-    formulier = KlusForm(request.POST or None)
+    # ?soort= uit de knop op het klussenoverzicht: de klus staat dan al op het
+    # filter waar je vandaan kwam.
+    soort = request.GET.get("soort")
+    formulier = KlusForm(
+        request.POST or None,
+        initial={"soort": soort} if soort in Klus.Soort.values else None,
+    )
     # Eén formulier op de pagina, twee Django-formulieren erachter: bestanden
     # kiezen is optioneel (zie NieuweKlusBijlagenForm), dus die mogen de klus
     # zelf nooit blokkeren.

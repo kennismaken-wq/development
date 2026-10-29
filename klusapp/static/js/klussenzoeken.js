@@ -20,6 +20,16 @@
 
   let volgnummer = 0;
 
+  // De knop "Nieuwe klus" neemt de gekozen soort mee (zie klussen.html).
+  function nieuweKlusBijwerken() {
+    const knop = document.getElementById("klus-nieuw-knop");
+    const soort = form.ownerDocument.querySelector('input[name="soort"]:checked');
+    if (!knop || !soort) return;
+    const adres = new URL(knop.href);
+    adres.searchParams.set("soort", soort.value);
+    knop.href = adres.toString();
+  }
+
   function huidigeLijst() {
     return document.querySelector(".klussenlijst-resultaten");
   }
@@ -39,6 +49,7 @@
         const oudeLijst = huidigeLijst();
         if (nieuweLijst && oudeLijst) oudeLijst.replaceWith(nieuweLijst);
         history.replaceState(null, "", url);
+        nieuweKlusBijwerken();
       })
       .catch(function () {
         // Geen verbinding of iets anders mis: gewoon submitten als vangnet.

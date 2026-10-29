@@ -7,6 +7,17 @@
     <input type="search" name="q" value="{{ zoek }}" placeholder="Zoek op naam of adres…">
   </form>
 
+  {% comment %} Nieuwe klus bovenaan, vóór de filters: wie dit scherm opent om
+     een klus toe te voegen hoeft niet eerst langs de hele lijst te scrollen
+     (feedback Maarten, 29-10-2026). Het gekozen soort-filter gaat mee, zodat
+     de klus al op de goede soort staat; klussenzoeken.js houdt dat bij als
+     je van pil wisselt. {% endcomment %}
+  {% if user.is_eigenaar %}
+    <p class="klus-nieuw-boven">
+      <a class="knop" id="klus-nieuw-knop" href="{% url 'klus_nieuw' %}?soort={{ soort }}">Nieuwe klus</a>
+    </p>
+  {% endif %}
+
   {% comment %} Eén filterrij, twee gelijkwaardige groepen:
 
        [ Aanleg | Onderhoud | Van Ee ]   [ Actief | Afgerond ]
@@ -52,12 +63,6 @@
   </div>
 
   {% include "klussen/_klussenlijst.html" %}
-
-  {% if user.is_eigenaar %}
-    <p style="margin-top:1.2rem">
-      <a class="knop" href="{% url 'klus_nieuw' %}">Nieuwe klus</a>
-    </p>
-  {% endif %}
 
   {% load static %}
   <script src="{% static 'js/klussenzoeken.js' %}"></script>
