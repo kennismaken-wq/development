@@ -3,7 +3,8 @@
    aangevinkte mensen in. Zo staan er geen tientallen formulieren in de
    pagina. Verwacht `zichtbaarheid_formulier` en `terug`. {% endcomment %}
 <dialog id="zichtbaarheid-wijzigen" class="foto-invoegen">
-  <form method="post">
+  <form method="post" class="uploadveld glas">
+    <button type="button" class="dialog-sluiten" onclick="this.closest('dialog').close()" aria-label="Sluiten">×</button>
     {% csrf_token %}
     <input type="hidden" name="terug" value="{{ terug }}">
     <h2 class="zicht-titel" data-zichtbaarheid-titel>Wie ziet dit?</h2>
