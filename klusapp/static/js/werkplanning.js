@@ -57,6 +57,8 @@
     const r1 = Math.min(a.r, b.r), r2 = Math.max(a.r, b.r);
     const k1 = Math.min(a.k, b.k), k2 = Math.max(a.k, b.k);
     return groep(van).filter(function (cel) {
+      // Een ingeklapte groep klussen doet niet mee in een blok.
+      if (isKlus(cel) && cel.offsetParent === null) return false;
       const p = plek(cel);
       return p.r >= r1 && p.r <= r2 && p.k >= k1 && p.k <= k2;
     });
@@ -311,6 +313,13 @@
       return;
     }
 
+    const groepknop = e.target.closest("[data-groep-inklappen]");
+    if (groepknop) {
+      const soort = groepknop.dataset.groepInklappen;
+      zetGroepDicht(soort, !bord.classList.contains("dicht-" + soort));
+      return;
+    }
+
     const inklap = e.target.closest("[data-klussen-inklappen]");
     if (inklap) {
       zetKlussenDicht(!bord.classList.contains("klussen-dicht"));
@@ -430,6 +439,28 @@
   try {
     if (localStorage.getItem(inklapSleutel) === "1") zetKlussenDicht(true);
   } catch (fout) { /* open laten */ }
+
+  // Elke soort (Aanleg, Van Ee, Onderhoud) los in- en uitklappen, ook
+  // onthouden: wie onderhoud apart wil zien, klapt de rest dicht.
+  function zetGroepDicht(soort, dicht) {
+    bord.classList.toggle("dicht-" + soort, dicht);
+    const knop = bord.querySelector('[data-groep-inklappen="' + soort + '"]');
+    if (knop) {
+      const naam = knop.parentNode.querySelector(".wie").textContent.trim();
+      knop.textContent = dicht ? "+" : "−";
+      knop.setAttribute("aria-expanded", dicht ? "false" : "true");
+      knop.title = naam + (dicht ? " uitklappen" : " inklappen");
+      knop.setAttribute("aria-label", knop.title);
+    }
+    try { localStorage.setItem("werkplanning-dicht-" + soort, dicht ? "1" : ""); } catch (fout) { /* dan maar niet onthouden */ }
+  }
+  bord.querySelectorAll("[data-groep-inklappen]").forEach(function (knop) {
+    try {
+      if (localStorage.getItem("werkplanning-dicht-" + knop.dataset.groepInklappen) === "1") {
+        zetGroepDicht(knop.dataset.groepInklappen, true);
+      }
+    } catch (fout) { /* open laten */ }
+  });
 
   // De namenkolom inklappen met het pijltje in de hoek: alleen bol of
   // waaier blijft staan. Ook onthouden per browser.

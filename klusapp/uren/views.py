@@ -865,14 +865,19 @@ def _werkdagen_tot(medewerker, vanaf, tot):
     return dagen
 
 
-SOORT_VOLGORDE = {"onderhoud": 0, "van_ee": 1, "aanleg": 2}
+# Aanleg bovenaan: daar wordt het meest op gepland, onderhoud loopt het hele
+# jaar door en zat eerst bovenaan in de weg (feedback Maarten, 29-10-2026).
+SOORT_VOLGORDE = {"aanleg": 0, "van_ee": 1, "onderhoud": 2}
 
 
 def _klusrijen(request, dagen, cellen, vandaag):
     """De klussenregels onder de mensen, zoals in de Excel: elke lopende
     klus, plus een afgeronde die in deze periode nog iets heeft (en wat er
-    met ?extra= bij gezet is). Onderhoud en Van Ee bovenaan: die lopen het
-    hele jaar door.
+    met ?extra= bij gezet is). Per soort een eigen groep met een kopje dat
+    je kunt inklappen: Aanleg, dan Van Ee, dan Onderhoud. De eerste regel
+    van een groep draagt het kopje (groep_start), zodat de rijen zelf één
+    platte lijst blijven en data-q doorloopt — de selectie in
+    werkplanning.js rekent daarmee.
 
     Met honderd klussen maal 365 dagen zijn dat tienduizenden cellen. Die
     door de templatelus halen kost seconden; daarom bouwt _kluscellen_html
@@ -901,7 +906,11 @@ def _klusrijen(request, dagen, cellen, vandaag):
         ),
         key=lambda k: (SOORT_VOLGORDE.get(k.soort, 9), k.naam.lower()),
     )
+    per_soort = {}
+    for klus in klussen:
+        per_soort[klus.soort] = per_soort.get(klus.soort, 0) + 1
     rijen = []
+    vorige_soort = None
     for q, klus in enumerate(klussen):
         klus.kleur = kalender.kleur_van(klus)
         klus.voorbeeld_items, klus.voorbeeld_meer = voorbeeld.items_voor_stapel(klus)
@@ -913,8 +922,11 @@ def _klusrijen(request, dagen, cellen, vandaag):
                 "gepland_per_dag": [(klus.pk, d) in gepland for d in dagen],
                 "aantal_dagen": aantal,
                 "cellen_html": _kluscellen_html(q, klus, dagen, gepland, mensen, vandaag),
+                "groep_start": klus.soort != vorige_soort,
+                "groep_aantal": per_soort[klus.soort],
             }
         )
+        vorige_soort = klus.soort
     return rijen
 
 
@@ -949,7 +961,8 @@ def _kluscellen_html(q, klus, dagen, gepland, mensen, vandaag):
     delen = []
     for k, datum in enumerate(dagen):
         sleutel = (klus.pk, datum)
-        klassen = "bord-cel wp-kc"
+        # g-<soort>: daarmee verbergt de css een ingeklapte groep.
+        klassen = f"bord-cel wp-kc g-{klus.soort}"
         attrs = f' data-q="{q}" data-k="{k}"'
         inhoud = ""
         if sleutel in gepland:

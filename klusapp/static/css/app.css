@@ -2568,7 +2568,13 @@ a.wp-klus{ text-decoration:none; }
 @media (hover:hover){ .wp-inklap:hover{ background:rgba(255,255,255,0.16); } }
 .wp-blokkop-aantal{ font-size:11px; color:rgba(255,255,255,0.5); }
 /* ingeklapt: alleen de kopregel blijft staan */
-.klussen-dicht .wp-klusnaam, .klussen-dicht .wp-kc, .klussen-dicht .wp-klusleeg{ display:none; }
+.klussen-dicht .wp-klusnaam, .klussen-dicht .wp-kc, .klussen-dicht .wp-klusleeg, .klussen-dicht .wp-groepkop{ display:none; }
+/* Kopje per soort binnen het klussenblok: zelfde vorm als de blokkop, maar
+   kleiner, zodat het leest als onderverdeling en niet als nieuw blok. */
+.wp-groepkop{ grid-column:1 / -1; padding:.5rem 0 .3rem; border-top:1px solid rgba(255,255,255,0.1); }
+.wp-groepkop .wie{ font-size:12px; font-weight:600; text-transform:uppercase; letter-spacing:.06em; color:rgba(255,255,255,0.75); }
+.wp-groepkop .wp-inklap{ width:22px; height:22px; font-size:14px; }
+.dicht-aanleg .g-aanleg, .dicht-van_ee .g-van_ee, .dicht-onderhoud .g-onderhoud{ display:none; }
 
 /* Namen ingeklapt: de kolom wordt zo smal als de fotowaaier en houdt alleen
    de bol of de waaier over. De naam staat dan nog in de tooltip. */

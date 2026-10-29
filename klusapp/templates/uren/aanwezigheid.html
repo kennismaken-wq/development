@@ -129,7 +129,17 @@
         </span>
       </div>
       {% for rij in klusrijen %}
-        <a class="bord-naam wp-klusnaam" href="{% url 'klus_detail' rij.klus.pk %}?terug={{ request.get_full_path|urlencode }}" data-q="{{ forloop.counter0 }}" data-klus="{{ rij.klus.pk }}" title="{{ rij.klus.naam }} openen">
+        {% if rij.groep_start %}
+          {# Kopje per soort; klapt alleen die groep in. werkplanning.js onthoudt het. #}
+          <div class="wp-groepkop g-kop-{{ rij.klus.soort }}">
+            <span class="wp-blokkop-inhoud">
+              <button type="button" class="wp-inklap" data-groep-inklappen="{{ rij.klus.soort }}" aria-expanded="true" aria-label="{{ rij.klus.get_soort_display }} inklappen" title="{{ rij.klus.get_soort_display }} inklappen">−</button>
+              <span class="wie">{{ rij.klus.get_soort_display }}</span>
+              <span class="wp-blokkop-aantal">{{ rij.groep_aantal }}</span>
+            </span>
+          </div>
+        {% endif %}
+        <a class="bord-naam wp-klusnaam g-{{ rij.klus.soort }}" href="{% url 'klus_detail' rij.klus.pk %}?terug={{ request.get_full_path|urlencode }}" data-q="{{ forloop.counter0 }}" data-klus="{{ rij.klus.pk }}" title="{{ rij.klus.naam }} openen">
           {% with klus=rij.klus %}
             {% if klus.voorbeeld_items %}
               <span class="voorbeeldstapel wp-waaier">

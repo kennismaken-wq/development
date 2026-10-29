@@ -971,13 +971,21 @@ class WerkplanningTest(TestCase):
         Inzet.objects.create(medewerker=self.maarten, datum=self.maandag, klus=tuin)
         antwoord = self.client.get("/aanwezigheid/?dag=2026-09-07")
         rijen = antwoord.context["klusrijen"]
-        # alle lopende, onderhoud bovenaan; een afgeronde alleen als hij in
-        # deze periode nog iets heeft
-        self.assertEqual([r["klus"] for r in rijen], [onderhoud, leeg, afgerond, tuin])
+        # alle lopende, aanleg bovenaan en onderhoud onderaan; een afgeronde
+        # alleen als hij in deze periode nog iets heeft
+        self.assertEqual([r["klus"] for r in rijen], [leeg, afgerond, tuin, onderhoud])
         self.assertNotIn(nog_ouder, [r["klus"] for r in rijen])
-        self.assertIn('<span class="wp-mensen">2 man</span>', rijen[3]["cellen_html"])
+        self.assertIn('<span class="wp-mensen">2 man</span>', rijen[2]["cellen_html"])
         # de notitie wordt ge-escaped
-        self.assertIn("&lt;b&gt;x&lt;/b&gt;", rijen[2]["cellen_html"])
+        self.assertIn("&lt;b&gt;x&lt;/b&gt;", rijen[1]["cellen_html"])
+        # een kopje per soort, op de eerste regel van elke groep
+        self.assertEqual([r["groep_start"] for r in rijen], [True, False, False, True])
+        self.assertEqual([r["groep_aantal"] for r in rijen], [3, 3, 3, 1])
+        html = antwoord.content.decode()
+        self.assertIn('data-groep-inklappen="aanleg"', html)
+        self.assertIn('data-groep-inklappen="onderhoud"', html)
+        self.assertNotIn('data-groep-inklappen="van_ee"', html)
+        self.assertIn("wp-kc g-onderhoud", rijen[3]["cellen_html"])
         # lege blaadjes voor een klus zonder foto's
         self.assertIn("wp-waaier-leeg", antwoord.content.decode())
         # en een afgeronde klus kan er met ?extra= bij
