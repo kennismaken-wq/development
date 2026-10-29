@@ -80,6 +80,17 @@ class KlusForm(VersieMixin, forms.ModelForm):
         widget=forms.RadioSelect,
         initial="True",
     )
+    # Alleen bij een nieuwe klus: zet de klus vanaf de startdatum dit aantal
+    # werkdagen op de werkplanning (feedback Maarten, 29-10-2026). Geen
+    # modelveld: wat er gepland staat zijn de Klusdagen zelf, en daar pas je
+    # het daarna ook aan. Zie klussen.views.klus_nieuw.
+    aantal_werkdagen = forms.IntegerField(
+        label="Aantal werkdagen",
+        required=False,
+        min_value=1,
+        max_value=120,
+        widget=forms.NumberInput(attrs={"inputmode": "numeric", "placeholder": "bv. 5"}),
+    )
 
     class Meta:
         model = Klus
@@ -140,7 +151,11 @@ class KlusForm(VersieMixin, forms.ModelForm):
             # hier geen kleurkiezer tonen.
             self.fields["kleur"].widget = forms.HiddenInput()
             self.fields["kleur"].required = False
-        elif not self.initial.get("kleur"):
+        else:
+            # Bij bewerken niet: dan staat er misschien al planning, en die
+            # stil overschrijven is erger dan hem in de werkplanning aanpassen.
+            del self.fields["aantal_werkdagen"]
+        if self.instance.pk and not self.initial.get("kleur"):
             # Een kleurkiezer kan niet leeg zijn; zonder beginwaarde toont de
             # browser zwart en lijkt er een kleur gekozen die er niet is.
             self.initial["kleur"] = "#95BF1D"
@@ -160,6 +175,7 @@ class KlusForm(VersieMixin, forms.ModelForm):
         # zonder begin (SPEC §1); een startdatum zou daar niets betekenen.
         if gegevens.get("soort") == Klus.Soort.ONDERHOUD:
             gegevens["startdatum"] = None
+            gegevens["aantal_werkdagen"] = None
         elif not gegevens.get("startdatum"):
             self.add_error("startdatum", "Vul de startdatum van de klus in.")
         return gegevens

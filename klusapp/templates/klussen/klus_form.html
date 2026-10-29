@@ -85,6 +85,17 @@
       <label for="{{ formulier.startdatum.id_for_label }}">{{ formulier.startdatum.label }}</label>
       {{ formulier.startdatum }}
       {% for fout in formulier.startdatum.errors %}<p class="fout">{{ fout }}</p>{% endfor %}
+      {% comment %} Startdatum + aantal werkdagen zet de klus meteen op de
+         werkplanning (zie klussen.views.klus_nieuw). Bij bewerken staat hier
+         een link: bestaande planning pas je daar aan. {% endcomment %}
+      {% if formulier.aantal_werkdagen %}
+        <label for="{{ formulier.aantal_werkdagen.id_for_label }}">{{ formulier.aantal_werkdagen.label }}</label>
+        {{ formulier.aantal_werkdagen }}
+        {% for fout in formulier.aantal_werkdagen.errors %}<p class="fout">{{ fout }}</p>{% endfor %}
+        <p class="uitleg">Wordt ingepland in de werkplanning, zonder weekend en feestdagen. Daar kun je het daarna aanpassen.</p>
+      {% elif klus %}
+        <p class="uitleg">De planning van deze klus pas je aan in de <a href="{% url 'aanwezigheid' %}{% if klus.startdatum %}?dag={{ klus.startdatum|date:'Y-m-d' }}{% endif %}">werkplanning</a>.</p>
+      {% endif %}
     </div>
 
     <label for="{{ formulier.beschrijving.id_for_label }}">{{ formulier.beschrijving.label }}</label>

@@ -96,6 +96,21 @@ def nederlandse_feestdagen_tussen(van, tot):
     return _tussen(van, tot, nederlandse_feestdagen)
 
 
+def werkdagen_vanaf(start, aantal):
+    """De eerste `aantal` werkdagen vanaf `start` (zelf meegeteld): maandag
+    tot en met vrijdag, zonder vrije feestdagen. Voor het inplannen van een
+    nieuwe klus (klussen.views.klus_nieuw)."""
+    # Ruim genoeg: zelfs met kerst en een weekend erin haal je dit nooit.
+    vrij = feestdagen_tussen(start, start + timedelta(days=aantal * 2 + 14))
+    dagen = []
+    dag = start
+    while len(dagen) < aantal:
+        if dag.weekday() < 5 and dag not in vrij:
+            dagen.append(dag)
+        dag += timedelta(days=1)
+    return dagen
+
+
 def in_dienst_op(medewerker, dag):
     if medewerker.in_dienst_sinds and dag < medewerker.in_dienst_sinds:
         return False

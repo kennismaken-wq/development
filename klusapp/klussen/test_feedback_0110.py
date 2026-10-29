@@ -276,3 +276,72 @@ class WerkbestandenTabTest(TestCase):
         self.assertEqual(html.count('id="werkbestand-invoegen"'), 1)
         self.assertEqual(html.count('id="document-invoegen"'), 1)
         self.assertIn('accept=".doc,.docx,.xls,.xlsx"', html)
+
+
+class FeedbackOktoberTest(TestCase):
+    """Feedback 29-10-2026: nieuwe klus inplannen en de knop bovenaan."""
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.maarten = Medewerker.objects.create_user(
+            "maarten", password="x", first_name="Maarten", rol=Medewerker.Rol.EIGENAAR
+        )
+
+    def setUp(self):
+        self.client.force_login(self.maarten)
+
+    def nieuw(self, **velden):
+        gegevens = {
+            "soort": "aanleg", "opdrachtgever": "Fam. Vermeer", "adres": "Dijkweg 12",
+            "plaats": "Delft", "naam": "Tuin Vermeer", "startdatum": "2026-10-30", "actief": "True",
+        }
+        gegevens.update(velden)
+        return self.client.post(reverse("klus_nieuw"), gegevens, follow=True)
+
+    def test_werkdagen_slaan_weekend_over(self):
+        from datetime import date
+
+        from uren.models import Klusdag
+
+        antwoord = self.nieuw(aantal_werkdagen="3")  # vrijdag 30-10
+        klus = Klus.objects.get()
+        dagen = list(Klusdag.objects.filter(klus=klus).values_list("datum", flat=True))
+        self.assertEqual(dagen, [date(2026, 10, 30), date(2026, 11, 2), date(2026, 11, 3)])
+        self.assertContains(antwoord, "3 werkdagen ingepland")
+
+    def test_feestdag_telt_niet_mee(self):
+        from datetime import date
+
+        from uren.bezetting import werkdagen_vanaf
+
+        # do 24-12-2026; eerste kerstdag valt op vrijdag, dan het weekend
+        self.assertEqual(
+            werkdagen_vanaf(date(2026, 12, 24), 2), [date(2026, 12, 24), date(2026, 12, 28)]
+        )
+
+    def test_zonder_aantal_niets_ingepland(self):
+        from uren.models import Klusdag
+
+        self.nieuw()
+        self.assertTrue(Klus.objects.exists())
+        self.assertFalse(Klusdag.objects.exists())
+
+    def test_onderhoud_wordt_niet_ingepland(self):
+        from uren.models import Klusdag
+
+        self.nieuw(soort="onderhoud", aantal_werkdagen="5")
+        self.assertTrue(Klus.objects.exists())
+        self.assertFalse(Klusdag.objects.exists())
+
+    def test_bewerken_heeft_geen_aantal_maar_een_link(self):
+        klus = Klus.objects.create(naam="Tuin", soort=Klus.Soort.AANLEG, opdrachtgever="X")
+        self.assertNotIn("aantal_werkdagen", KlusForm(instance=klus).fields)
+        antwoord = self.client.get(reverse("klus_bewerken", args=[klus.pk]))
+        self.assertContains(antwoord, reverse("aanwezigheid"))
+
+    def test_knop_nieuwe_klus_boven_de_filters_met_soort(self):
+        html = self.client.get(reverse("klussen") + "?soort=van_ee").content.decode()
+        self.assertIn('href="/klussen/nieuw/?soort=van_ee"', html)
+        self.assertLess(html.index('id="klus-nieuw-knop"'), html.index('id="klus-filters"'))
+        formulier = self.client.get(reverse("klus_nieuw") + "?soort=van_ee").context["formulier"]
+        self.assertEqual(formulier["soort"].value(), "van_ee")

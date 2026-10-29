@@ -13,13 +13,15 @@ from django.http import FileResponse, Http404, HttpResponse, HttpResponseNotAllo
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
+from django.utils.formats import date_format
 from django.utils.http import url_has_allowed_host_and_scheme
 from django.utils.text import slugify
 from django.views.decorators.clickjacking import xframe_options_sameorigin
 
 from medewerkers.rechten import alleen_eigenaar
 from uren import export as uren_export
-from uren import totalen
+from uren import bezetting, totalen
+from uren.models import Klusdag
 
 from . import afbeeldingen, bestandstypen, kleuren, opdrachtgevers, pdf_thumbnails, voorbeeld
 from .forms import AlleenFotosForm, BijlageForm, KlusForm, KlusFotoForm, NieuweKlusBijlagenForm, ZichtbaarheidForm
@@ -734,6 +736,14 @@ def klus_nieuw(request):
             # gelden als iemand het verborgen veld zelf zou aanpassen.
             klus.kleur = kleuren.volgende_kleur()
             klus.save()
+            # Startdatum + aantal werkdagen: meteen op de werkplanning, waar je
+            # het daarna verschuift of aanvult. Alleen de klus, niet wie er
+            # heen gaat: dat plan je zelf in.
+            aantal = formulier.cleaned_data.get("aantal_werkdagen")
+            ingepland = []
+            if aantal and klus.startdatum:
+                ingepland = bezetting.werkdagen_vanaf(klus.startdatum, aantal)
+                Klusdag.objects.bulk_create([Klusdag(klus=klus, datum=dag) for dag in ingepland])
 
         datum = bijlagenformulier.cleaned_data["datum"] or timezone.localdate()
         toelichting = bijlagenformulier.cleaned_data["toelichting"]
@@ -770,7 +780,14 @@ def klus_nieuw(request):
                     # De klus staat er al; alleen het ene bestand mislukt, niet de rest.
                     messages.error(request, f"{bestand.name}: {probleem}")
 
-        messages.success(request, f"Klus '{klus.naam}' aangemaakt.")
+        if ingepland:
+            messages.success(
+                request,
+                f"Klus '{klus.naam}' aangemaakt en {len(ingepland)} werkdag{'en' if len(ingepland) > 1 else ''} "
+                f"ingepland: {date_format(ingepland[0], 'D j b')} t/m {date_format(ingepland[-1], 'D j b')}.",
+            )
+        else:
+            messages.success(request, f"Klus '{klus.naam}' aangemaakt.")
         # Begonnen vanaf de werkplanning? Dan brengt het pijltje op de nieuwe
         # klus je daar ook weer terug.
         return redirect(_met_terug(klus.get_absolute_url(), terugpijl))
