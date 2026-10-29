@@ -1059,6 +1059,38 @@ class TelefoonInvoerTest(TestCase):
             self.assertIn(f'name="{veld}"', inhoud)
         self.assertEqual(inhoud.count('autocapitalize="words"'), 4)
 
+    def test_geen_dubbele_ids_op_het_klusdossier(self):
+        # Foto- en documentdialoog staan samen op het dossier. Met twee keer
+        # id_bestanden opende "Foto's kiezen" het veld van de documentdialoog
+        # en bleef er "Nog niets gekozen" staan (melding Maarten, 29-10-2026).
+        klus = Klus.objects.create(naam="Tuin Vermeer", opdrachtgever="Vermeer")
+        html = self.client.get(reverse("klus_detail", args=[klus.pk])).content.decode()
+        ids = re.findall(r'\sid="([^"]+)"', html)
+        dubbel = sorted({i for i in ids if ids.count(i) > 1})
+        self.assertEqual(dubbel, [])
+        self.assertIn('id="id_foto_bestanden"', html)
+
+    def test_email_van_de_opdrachtgever(self):
+        klus = Klus.objects.create(naam="Tuin Vermeer", opdrachtgever="Vermeer")
+        adres = reverse("klus_bewerken", args=[klus.pk])
+        self.client.post(
+            adres,
+            {
+                "naam": "Tuin Vermeer",
+                "soort": Klus.Soort.AANLEG,
+                "opdrachtgever": "Vermeer",
+                "email": "vermeer@example.nl",
+                "startdatum": "2026-10-29",
+                "kleur": "#95BF1D",
+                "actief": "True",
+                "versie": versie_van(self.client, adres),
+            },
+        )
+        klus.refresh_from_db()
+        self.assertEqual(klus.email, "vermeer@example.nl")
+        antwoord = self.client.get(reverse("klus_detail", args=[klus.pk]))
+        self.assertContains(antwoord, 'href="mailto:vermeer@example.nl"')
+
 
 class KlusKleurTest(TestCase):
     """Automatische kleurtoewijzing bij het aanmaken van een klus (klussen.kleuren)."""

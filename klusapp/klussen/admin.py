@@ -7,7 +7,7 @@ from .models import Bijlage, Klus, Notitie
 class KlusAdmin(admin.ModelAdmin):
     list_display = ["naam", "soort", "plaats", "actief"]
     list_filter = ["soort", "actief"]
-    search_fields = ["naam", "opdrachtgever", "adres", "plaats"]
+    search_fields = ["naam", "opdrachtgever", "email", "adres", "plaats"]
 
 
 @admin.register(Bijlage)

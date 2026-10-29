@@ -83,7 +83,7 @@ class KlusForm(VersieMixin, forms.ModelForm):
 
     class Meta:
         model = Klus
-        fields = ["soort", "opdrachtgever", "adres", "plaats", "naam", "startdatum", "beschrijving", "kleur", "actief"]
+        fields = ["soort", "opdrachtgever", "email", "adres", "plaats", "naam", "startdatum", "beschrijving", "kleur", "actief"]
         widgets = {
             # Twee keuzepillen in plaats van een <select>: dit is de keuze die
             # bepaalt wat de rest van het formulier betekent, en die hoort er
@@ -101,6 +101,9 @@ class KlusForm(VersieMixin, forms.ModelForm):
             # Dit zijn allemaal namen en adressen, dus elk woord een hoofdletter.
             "naam": forms.TextInput(attrs={"autocapitalize": "words"}),
             "opdrachtgever": forms.TextInput(attrs={"autocapitalize": "words"}),
+            # Zelfde reden als bij het adres: niet het eigen mailadres van de
+            # medewerker voorstellen. inputmode geeft het @-toetsenbord.
+            "email": forms.EmailInput(attrs={"autocomplete": "off", "inputmode": "email", "autocapitalize": "none"}),
             # autocomplete uit: de browser zou hier het thuisadres van de
             # medewerker voorstellen, terwijl dit het adres van de klant is.
             "adres": forms.TextInput(attrs={"autocapitalize": "words", "autocomplete": "off"}),
@@ -113,6 +116,7 @@ class KlusForm(VersieMixin, forms.ModelForm):
             "soort": "Soort",
             "startdatum": "Startdatum",
             "opdrachtgever": "Opdrachtgever",
+            "email": "E-mail opdrachtgever",
             "adres": "Adres",
             "plaats": "Plaats",
             "beschrijving": "Beschrijving",
@@ -302,6 +306,12 @@ class KlusFotoForm(BijlageForm):
     bestandsbrowser. Met accept="image/*" alleen komt de galerij wel terug."""
 
     def __init__(self, *args, **kwargs):
+        # Eigen id's: dit formulier staat op het klusdossier en het uurblok
+        # samen met de BijlageForm van de documentdialoog. Met dezelfde
+        # id_bestanden opende het label "Foto's kiezen" het bestandsveld van
+        # de documentdialoog; de foto's kwamen daar terecht en hier bleef
+        # "Nog niets gekozen" staan (melding Maarten, 29-10-2026).
+        kwargs.setdefault("auto_id", "id_foto_%s")
         super().__init__(*args, **kwargs)
         self.fields["bestanden"].widget.attrs["accept"] = "image/*"
         self.fields["bestanden"].widget.attrs.update(

@@ -47,6 +47,9 @@
       <label for="{{ formulier.opdrachtgever.id_for_label }}">{{ formulier.opdrachtgever.label }}</label>
       {{ formulier.opdrachtgever }}
       {% for fout in formulier.opdrachtgever.errors %}<p class="fout">{{ fout }}</p>{% endfor %}
+      <label for="{{ formulier.email.id_for_label }}">{{ formulier.email.label }}</label>
+      {{ formulier.email }}
+      {% for fout in formulier.email.errors %}<p class="fout">{{ fout }}</p>{% endfor %}
     </div>
 
     {% comment %} ── 3. Waar. De adressen die deze opdrachtgever al heeft komen hierboven

@@ -20,6 +20,9 @@
     {% if klus.opdrachtgever %}
       <p class="regel"><span class="lbl">Opdrachtgever</span>{{ klus.opdrachtgever }}</p>
     {% endif %}
+    {% if klus.email %}
+      <p class="regel"><span class="lbl">E-mail</span><a href="mailto:{{ klus.email }}">{{ klus.email }}</a></p>
+    {% endif %}
     {% if klus.adres or klus.plaats %}
       <p class="regel"><span class="lbl">Adres</span>{{ klus.adres }}{% if klus.adres and klus.plaats %}, {% endif %}{{ klus.plaats }}</p>
     {% endif %}

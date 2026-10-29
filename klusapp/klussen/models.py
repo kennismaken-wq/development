@@ -40,6 +40,9 @@ class Klus(models.Model):
     naam = models.CharField(max_length=120)
     soort = models.CharField(max_length=20, choices=Soort.choices, default=Soort.AANLEG)
     opdrachtgever = models.CharField(max_length=120, blank=True)
+    # Contact van de klant (verzoek Maarten, 29-10-2026). Niet verplicht: lang
+    # niet elke klant mailt, en bestaande klussen hebben er geen.
+    email = models.EmailField("e-mail", blank=True)
     adres = models.CharField(max_length=200, blank=True)
     plaats = models.CharField(max_length=80, blank=True)
     # Leeg bij onderhoud: een onderhoudsklant is een terugkerende afspraak
