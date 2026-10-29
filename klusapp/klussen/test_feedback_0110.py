@@ -243,3 +243,36 @@ class VanEeTest(TestCase):
         })
         self.assertFalse(formulier.is_valid())
         self.assertIn("opdrachtgever", formulier.errors)
+
+
+@override_settings(MEDIA_ROOT=MEDIA)
+class WerkbestandenTabTest(TestCase):
+    """Feedback 29-10-2026: Word en Excel op een eigen tabblad."""
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.maarten = Medewerker.objects.create_user(
+            "maarten", password="x", first_name="Maarten", rol=Medewerker.Rol.EIGENAAR
+        )
+        cls.klus = Klus.objects.create(naam="Tuin Vermeer")
+
+    def upload(self, naam):
+        self.client.post(
+            reverse("bijlage_toevoegen"),
+            {"klus": self.klus.pk, "forceer_document": "1", "bestanden": SimpleUploadedFile(naam, b"x")},
+        )
+
+    def test_word_en_excel_apart_van_pdf(self):
+        self.client.force_login(self.maarten)
+        self.upload("calculatie.xlsx")
+        self.upload("offerte.docx")
+        self.upload("tekening.pdf")
+        antwoord = self.client.get(self.klus.get_absolute_url())
+        werk = sorted(b.originele_naam for b in antwoord.context["werkbestanden"])
+        overig = [b.originele_naam for b in antwoord.context["document_bijlagen"]]
+        self.assertEqual(werk, ["calculatie.xlsx", "offerte.docx"])
+        self.assertEqual(overig, ["tekening.pdf"])
+        html = antwoord.content.decode()
+        self.assertEqual(html.count('id="werkbestand-invoegen"'), 1)
+        self.assertEqual(html.count('id="document-invoegen"'), 1)
+        self.assertIn('accept=".doc,.docx,.xls,.xlsx"', html)

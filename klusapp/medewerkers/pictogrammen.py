@@ -63,6 +63,14 @@ PICTOGRAMMEN = {
     "bestanden": (
         '<path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>'
     ),
+    # Een blad met een tabelletje erin: Word en Excel op het klusdossier.
+    "werkbestanden": (
+        '<path d="M7 3h7l4 4v13a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z"/>'
+        '<path d="M14 3v4h4"/>'
+        '<rect x="8.5" y="11" width="7" height="6" rx=".5"/>'
+        '<line x1="8.5" y1="14" x2="15.5" y2="14"/>'
+        '<line x1="12" y1="11" x2="12" y2="17"/>'
+    ),
     # zelfde tekening als het documentpictogram in _documentenlijst.html
     "documenten": (
         '<path d="M7 3h7l4 4v13a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z"/>'

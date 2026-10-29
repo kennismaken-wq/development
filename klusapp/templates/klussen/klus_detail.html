@@ -72,9 +72,11 @@
     {% endif %}
   </section>
 
-  {% comment %} Drie tabbladen (29-09-2026):
+  {% comment %} Vier tabbladen (29-09-2026, Werkbestanden 29-10-2026):
      - Bestanden: alles wat inhoudelijk bij de klus hoort, foto of document,
        door elkaar (_bestandenraster.html);
+     - Werkbestanden: Word en Excel, zoals offertes en calculaties (zelfde
+       raster, zie bestandstypen.WERKBESTAND_SUFFIXEN);
      - Uren: wie er hoeveel aan heeft gewerkt;
      - Media: foto's die eventueel op social media komen (_fotoraster.html).
      static/js/klustabs.js wisselt op een klik; Bestanden staat hier al open
@@ -84,6 +86,10 @@
       <button type="button" class="tabblad actief" data-tab="bestanden">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">{{ "bestanden"|pictogram }}</svg>
         Bestanden
+      </button>
+      <button type="button" class="tabblad" data-tab="werkbestanden">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">{{ "werkbestanden"|pictogram }}</svg>
+        Werkbestanden
       </button>
       <button type="button" class="tabblad" data-tab="uren">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">{{ "uren"|pictogram }}</svg>
@@ -97,6 +103,10 @@
 
     <div class="tabblad-paneel" data-tab="bestanden">
       {% include "klussen/_bestandenraster.html" with klus_pk=klus.pk %}
+    </div>
+
+    <div class="tabblad-paneel" data-tab="werkbestanden" hidden>
+      {% include "klussen/_bestandenraster.html" with klus_pk=klus.pk document_bijlagen=werkbestanden formulier=werkbestand_formulier dialoog="werkbestand-invoegen" leeg="Nog geen Word- of Excelbestanden." zonder_script=True %}
     </div>
 
     <div class="tabblad-paneel" data-tab="uren" hidden>

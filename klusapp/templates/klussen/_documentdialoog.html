@@ -5,11 +5,11 @@
    klussen.views.bijlage_toevoegen, forceer_document). Verwacht dezelfde
    BijlageForm-context als _uploadveld.html (formulier/upload_url/terug, evt.
    klus_pk/uurblok_pk). {% endcomment %}
-<dialog id="document-invoegen" class="foto-invoegen">
+<dialog id="{{ dialoog|default:"document-invoegen" }}" class="foto-invoegen">
   {% include "klussen/_uploadveld.html" with forceer_document=True %}
 </dialog>
 <script>
-  document.getElementById("document-invoegen").addEventListener("click", function (e) {
+  document.getElementById("{{ dialoog|default:"document-invoegen" }}").addEventListener("click", function (e) {
     if (e.target === this) this.close();
   });
 </script>

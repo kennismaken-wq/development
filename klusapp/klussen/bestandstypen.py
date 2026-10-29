@@ -24,6 +24,13 @@ TOEGESTANE_SUFFIXEN = AFBEELDING_SUFFIXEN | NIET_ONDERSTEUNDE_SUFFIXEN | DOCUMEN
 # afbeelding waar script in kan.
 INLINE_SUFFIXEN = {".jpg", ".jpeg", ".png", ".gif", ".webp", ".pdf"}
 
+# Word en Excel krijgen op het klusdossier een eigen tabblad "Werkbestanden"
+# (feedback Maarten, 29-10-2026): offertes en calculaties waar je mee werkt,
+# los van de tekeningen en pdf's onder "Bestanden". Puur op extensie, dus wat
+# er al stond verhuist vanzelf mee.
+WERKBESTAND_SUFFIXEN = {".doc", ".docx", ".xls", ".xlsx"}
+WERKBESTAND_ACCEPT = ",".join(sorted(WERKBESTAND_SUFFIXEN))
+
 WEIGERTEKST = "dit soort bestand kan hier niet bij. Wel: foto's, pdf, Word, Excel en tekst."
 
 
@@ -37,3 +44,7 @@ def toegestaan(naam):
 
 def inline(naam):
     return suffix(naam) in INLINE_SUFFIXEN
+
+
+def is_werkbestand(bijlage):
+    return suffix(bijlage.originele_naam or bijlage.bestand.name) in WERKBESTAND_SUFFIXEN

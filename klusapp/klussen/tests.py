@@ -1665,7 +1665,7 @@ class KlusTabbladenTest(TestCase):
         self.client.force_login(self.sam)
         html = self.client.get(self.klus.get_absolute_url()).content.decode()
         tabs = re.findall(r'class="tabblad(?: actief)?" data-tab="(\w+)"', html)
-        self.assertEqual(tabs, ["bestanden", "uren", "media"])
+        self.assertEqual(tabs, ["bestanden", "werkbestanden", "uren", "media"])
         self.assertIn('class="tabblad actief" data-tab="bestanden"', html)
         self.assertIn('data-tab="uren" hidden>', html)
         self.assertIn('data-tab="media" hidden>', html)

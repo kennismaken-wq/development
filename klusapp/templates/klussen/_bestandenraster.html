@@ -11,11 +11,16 @@
    overlay (data-overlay, zie _fotopopup.html).
 
    Verwacht `document_bijlagen`, `terug` en de uploadcontext van
-   _uploadveld.html (formulier/upload_url, evt. klus_pk). {% endcomment %}
+   _uploadveld.html (formulier/upload_url, evt. klus_pk).
+
+   Ook gebruikt voor het tabblad Werkbestanden (Word en Excel), met
+   `dialoog` (een eigen id voor de uploaddialoog), `leeg` (de tekst als er
+   niets staat) en `zonder_script` (fotoraster.js staat er dan al).
+   {% endcomment %}
 {% load bijlagen %}
 {% load static %}
 <div class="fotoraster">
-  <button type="button" class="fotokaart-nieuw" onclick="document.getElementById('document-invoegen').showModal()" aria-label="Bestand toevoegen">
+  <button type="button" class="fotokaart-nieuw" onclick="document.getElementById('{{ dialoog|default:"document-invoegen" }}').showModal()" aria-label="Bestand toevoegen">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
   </button>
   {% for bijlage in document_bijlagen %}
@@ -69,7 +74,7 @@
   {% endfor %}
 </div>
 {% if not document_bijlagen %}
-  <p class="leeg">Nog geen bestanden.</p>
+  <p class="leeg">{{ leeg|default:"Nog geen bestanden." }}</p>
 {% endif %}
 {% include "klussen/_documentdialoog.html" %}
-<script src="{% static 'js/fotoraster.js' %}"></script>
+{% if not zonder_script %}<script src="{% static 'js/fotoraster.js' %}"></script>{% endif %}

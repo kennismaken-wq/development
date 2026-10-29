@@ -599,9 +599,13 @@ def klus_detail(request, pk):
             "alleen_eigen_uren": alleen_eigen_uren,
             "totaal": totalen.totaal_van(gewerkt),
             "foto_posts": groepeer_in_posts(los for los in bijlagen if los.is_foto),
-            "document_bijlagen": [los for los in bijlagen if not los.is_foto],
+            "document_bijlagen": [
+                los for los in bijlagen if not los.is_foto and not bestandstypen.is_werkbestand(los)
+            ],
+            "werkbestanden": [los for los in bijlagen if not los.is_foto and bestandstypen.is_werkbestand(los)],
             "notities": klus.notities.select_related("geschreven_door"),
             "formulier": BijlageForm(),
+            "werkbestand_formulier": _werkbestand_formulier(),
             # De dialoog achter het slotje alleen in de pagina als er iets te
             # wijzigen valt: hij noemt alle medewerkers bij naam, en een
             # medewerker zonder eigen document hoeft die lijst niet te zien.
@@ -614,6 +618,15 @@ def klus_detail(request, pk):
             "terugpijl": terugpijl,
         },
     )
+
+
+def _werkbestand_formulier():
+    """Het uploadveld achter het tabblad Werkbestanden: zelfde BijlageForm,
+    maar de telefoon biedt alleen Word en Excel aan, en eigen id's zodat de
+    labels niet naar het veld in de documentendialoog wijzen."""
+    formulier = BijlageForm(auto_id="wb_%s")
+    formulier.fields["bestanden"].widget.attrs["accept"] = bestandstypen.WERKBESTAND_ACCEPT
+    return formulier
 
 
 @login_required
