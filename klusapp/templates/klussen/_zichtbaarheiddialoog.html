@@ -1,0 +1,37 @@
+{% comment %} Eén dialoog voor alle documenten op het dossier: het slotje op een
+   tegel (_bestandenraster.html) zet hier de actie, de titel en de
+   aangevinkte mensen in. Zo staan er geen tientallen formulieren in de
+   pagina. Verwacht `zichtbaarheid_formulier` en `terug`. {% endcomment %}
+<dialog id="zichtbaarheid-wijzigen" class="foto-invoegen">
+  <form method="post">
+    {% csrf_token %}
+    <input type="hidden" name="terug" value="{{ terug }}">
+    <h2 class="zicht-titel" data-zichtbaarheid-titel>Wie ziet dit?</h2>
+    {% include "klussen/_zichtbaarvoor.html" with veld=zichtbaarheid_formulier.zichtbaar_voor %}
+    <p class="zicht-uitleg">Niemand aangevinkt: iedereen ziet het. De eigenaar en wie het toevoegde zien het altijd.</p>
+    <button type="submit" class="knop" style="margin-top:1.1rem">Opslaan</button>
+  </form>
+</dialog>
+<script>
+  (function () {
+    const dialoog = document.getElementById("zichtbaarheid-wijzigen");
+    if (!dialoog) return;
+    const formulier = dialoog.querySelector("form");
+    const titel = dialoog.querySelector("[data-zichtbaarheid-titel]");
+    dialoog.addEventListener("click", function (e) {
+      if (e.target === dialoog) dialoog.close();
+    });
+    document.addEventListener("click", function (e) {
+      const knop = e.target.closest("[data-zichtbaarheid]");
+      if (!knop) return;
+      e.preventDefault();
+      const gekozen = knop.dataset.gekozen ? knop.dataset.gekozen.split(",") : [];
+      formulier.action = knop.dataset.zichtbaarheid;
+      titel.textContent = "Wie ziet " + knop.dataset.naam + "?";
+      formulier.querySelectorAll('input[name="zicht-zichtbaar_voor"]').forEach(function (vinkje) {
+        vinkje.checked = gekozen.indexOf(vinkje.value) !== -1;
+      });
+      dialoog.showModal();
+    });
+  })();
+</script>

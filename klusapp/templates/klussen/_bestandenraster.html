@@ -48,6 +48,16 @@
         {% include "klussen/_afgeschermd.html" %}
       </figcaption>
       {% if bijlage|mag_weg:user %}
+        {% comment %} Slotje: achteraf wijzigen wie dit ziet. Zelfde regel als
+           verwijderen; opent de gedeelde dialoog in
+           _zichtbaarheiddialoog.html. {% endcomment %}
+        <button type="button" class="zicht-knop{% if bijlage.zichtbaar_voor.all %} aan{% endif %}"
+                data-zichtbaarheid="{% url 'bijlage_zichtbaarheid' bijlage.pk %}"
+                data-naam="{{ bijlage.toonnaam }}"
+                data-gekozen="{% for m in bijlage.zichtbaar_voor.all %}{{ m.pk }}{% if not forloop.last %},{% endif %}{% endfor %}"
+                title="Wie ziet dit?" aria-label="Wie ziet {{ bijlage.toonnaam }}?">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
+        </button>
         <form method="post" action="{% url 'bijlage_verwijderen' bijlage.pk %}" class="weg"
               onsubmit="return confirm('Dit bestand verwijderen?');">
           {% csrf_token %}

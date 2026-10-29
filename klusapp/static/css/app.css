@@ -1416,6 +1416,20 @@ dialog.foto-invoegen .uploadveld, dialog.uren-invoegen .uurblokformulier, dialog
 
 /* verwijderknopje rechtsboven op de kaart */
 .weg{ position:absolute; top:.4rem; right:.4rem; }
+/* Slotje links van het prullenbakje: wie ziet dit document. Zelfde rondje als
+   .weg button; groen gevuld als het al is afgeschermd. */
+.zicht-knop{
+  position:absolute; top:.4rem; right:2.5rem;
+  width:26px; height:26px; border-radius:50%; cursor:pointer; padding:0;
+  display:flex; align-items:center; justify-content:center;
+  background:rgba(0,0,0,0.45); color:#fff; border:1px solid rgba(255,255,255,0.25);
+}
+.zicht-knop::after{ content:''; position:absolute; inset:-7px; border-radius:50%; }
+.zicht-knop svg{ width:13px; height:13px; }
+.zicht-knop.aan{ background:rgba(149,191,29,0.85); }
+@media (hover:hover){ .zicht-knop:hover{ background:rgba(149,191,29,0.85); } }
+.zicht-titel{ font-family:'Fraunces',serif; font-style:italic; font-weight:600; font-size:1.15rem; margin:0 0 .8rem; }
+.zicht-uitleg{ font-size:12px; color:rgba(255,255,255,0.6); margin:.6rem 0 0; }
 .weg button{
   position:relative;
   width:26px; height:26px; border-radius:50%; cursor:pointer;

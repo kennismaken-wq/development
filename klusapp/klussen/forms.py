@@ -231,9 +231,9 @@ class BijlageForm(forms.Form):
         required=False,
         widget=forms.Textarea(attrs={"rows": 2}),
     )
-    # Alleen bij een document, en alleen voor de eigenaar in beeld (zie
-    # klussen/_uploadveld.html en klussen.views.bijlage_toevoegen). Niemand
-    # aangevinkt is iedereen; zie Bijlage.zichtbaar_voor.
+    # Alleen bij een document in beeld (zie klussen/_uploadveld.html en
+    # klussen.views.bijlage_toevoegen). Niemand aangevinkt is iedereen; zie
+    # Bijlage.zichtbaar_voor.
     zichtbaar_voor = forms.ModelMultipleChoiceField(
         label="Alleen zichtbaar voor",
         queryset=Medewerker.objects.none(),
@@ -243,11 +243,33 @@ class BijlageForm(forms.Form):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        # De eigenaar ziet altijd alles, en wie uit dienst is hoeft niets te
-        # zien: die staan er dus niet tussen.
-        self.fields["zichtbaar_voor"].queryset = Medewerker.objects.filter(
-            rol=Medewerker.Rol.MEDEWERKER, uit_dienst_sinds__isnull=True
-        ).order_by(Lower("first_name"), Lower("last_name"))
+        self.fields["zichtbaar_voor"].queryset = kiesbare_medewerkers()
+
+
+def kiesbare_medewerkers():
+    """Wie je in "Alleen zichtbaar voor" kunt aanvinken. De eigenaar ziet
+    altijd alles, en wie uit dienst is hoeft niets te zien: die staan er dus
+    niet tussen."""
+    return Medewerker.objects.filter(
+        rol=Medewerker.Rol.MEDEWERKER, uit_dienst_sinds__isnull=True
+    ).order_by(Lower("first_name"), Lower("last_name"))
+
+
+class ZichtbaarheidForm(forms.Form):
+    """Achteraf wijzigen wie een document ziet (feedback Maarten, 29-10-2026):
+    bij het uploaden vergeten af te schermen, of de voorman is gewisseld.
+    Zelfde veld als bij uploaden; zie klussen.views.bijlage_zichtbaarheid."""
+
+    zichtbaar_voor = forms.ModelMultipleChoiceField(
+        label="Alleen zichtbaar voor",
+        queryset=Medewerker.objects.none(),
+        required=False,
+        widget=forms.CheckboxSelectMultiple,
+    )
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["zichtbaar_voor"].queryset = kiesbare_medewerkers()
 
 
 class AlleenFotosForm(BijlageForm):

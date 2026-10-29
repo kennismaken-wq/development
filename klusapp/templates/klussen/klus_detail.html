@@ -151,5 +151,6 @@
       {% include "klussen/_fotoraster.html" with klus_pk=klus.pk %}
     </div>
   </div>
+  {% if zichtbaarheid_formulier %}{% include "klussen/_zichtbaarheiddialoog.html" %}{% endif %}
   <script src="{% static 'js/klustabs.js' %}"></script>
 {% endblock %}

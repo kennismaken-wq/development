@@ -22,7 +22,7 @@ from uren import export as uren_export
 from uren import totalen
 
 from . import afbeeldingen, bestandstypen, kleuren, opdrachtgevers, pdf_thumbnails, voorbeeld
-from .forms import AlleenFotosForm, BijlageForm, KlusForm, KlusFotoForm, NieuweKlusBijlagenForm
+from .forms import AlleenFotosForm, BijlageForm, KlusForm, KlusFotoForm, NieuweKlusBijlagenForm, ZichtbaarheidForm
 from .fotoposts import groepeer_in_posts
 from .models import Bijlage, Klus, Notitie
 
@@ -187,10 +187,11 @@ def bijlage_toevoegen(request):
     # gelden — de fotodropbox toont die dialoog niet.
     forceer_document = not alleen_fotos and request.POST.get("forceer_document") == "1"
     batch = batch_van_upload(formulier.cleaned_data["bestanden"])
-    # Afschermen kan alleen de eigenaar, en alleen een document: het veld
-    # staat ook alleen dan in beeld (klussen/_uploadveld.html). Een foto is
-    # voor het hele team, en een medewerker die iets post moet niet per
-    # ongeluk zijn collega's buitensluiten.
+    # Afschermen bij het uploaden kan alleen de eigenaar, en alleen een
+    # document: het veld staat ook alleen dan in beeld
+    # (klussen/_uploadveld.html). Een foto is voor het hele team. Een
+    # medewerker kan zijn eigen document achteraf afschermen, via het slotje
+    # op de tegel (bijlage_zichtbaarheid).
     afgeschermd_voor = (
         formulier.cleaned_data["zichtbaar_voor"] if request.user.is_eigenaar and forceer_document else []
     )
@@ -225,6 +226,29 @@ def bijlage_verwijderen(request, pk):
     standaard = bijlage.klus.get_absolute_url() if bijlage.klus else reverse("fotos")
     bijlage.delete()
     messages.success(request, "Verwijderd.")
+    return _terug_naar(request, standaard)
+
+
+@login_required
+def bijlage_zichtbaarheid(request, pk):
+    """Achteraf wijzigen wie een document ziet (feedback Maarten, 29-10-2026).
+    Mag wie het document toevoegde en de eigenaar — dezelfde regel als
+    verwijderen. Een foto is voor het hele team en valt hier dus buiten."""
+    if request.method != "POST":
+        return HttpResponseNotAllowed(["POST"])
+    bijlage = get_object_or_404(Bijlage, pk=pk)
+    if bijlage.is_foto or not bijlage.mag_verwijderen(request.user):
+        raise Http404
+    standaard = bijlage.klus.get_absolute_url() if bijlage.klus else reverse("fotos")
+    formulier = ZichtbaarheidForm(request.POST, prefix="zicht")
+    if formulier.is_valid():
+        lijst = formulier.cleaned_data["zichtbaar_voor"]
+        bijlage.zichtbaar_voor.set(lijst)
+        if lijst:
+            namen = ", ".join(m.naam for m in lijst)
+            messages.success(request, f"{bijlage.toonnaam} is nu alleen zichtbaar voor {namen}.")
+        else:
+            messages.success(request, f"{bijlage.toonnaam} is nu voor iedereen zichtbaar.")
     return _terug_naar(request, standaard)
 
 
@@ -578,6 +602,12 @@ def klus_detail(request, pk):
             "document_bijlagen": [los for los in bijlagen if not los.is_foto],
             "notities": klus.notities.select_related("geschreven_door"),
             "formulier": BijlageForm(),
+            # De dialoog achter het slotje alleen in de pagina als er iets te
+            # wijzigen valt: hij noemt alle medewerkers bij naam, en een
+            # medewerker zonder eigen document hoeft die lijst niet te zien.
+            "zichtbaarheid_formulier": ZichtbaarheidForm(prefix="zicht")
+            if any(los.mag_verwijderen(request.user) for los in bijlagen if not los.is_foto)
+            else None,
             "foto_formulier": KlusFotoForm(),
             "upload_url": reverse("bijlage_toevoegen"),
             "terug": request.get_full_path(),

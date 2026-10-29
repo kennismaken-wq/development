@@ -64,10 +64,65 @@ class DocumentAfschermenTest(TestCase):
         self.client.force_login(self.sam)
         self.assertEqual(self.client.get(reverse("media_bestand", args=[tekening.bestand.name])).status_code, 200)
 
-    def test_medewerker_kan_niet_afschermen(self):
-        # Het veld staat bij hem niet in beeld; ook met de hand gepost telt het niet.
+    def test_medewerker_kan_niet_afschermen_bij_uploaden(self):
+        # Het veld staat bij hem niet in beeld; ook met de hand gepost telt het
+        # niet. Achteraf kan hij het wel, zie test_uploader_wijzigt_achteraf.
         bestand = self.upload(self.sam, [self.voorman])
         self.assertFalse(bestand.zichtbaar_voor.exists())
+
+    def test_foto_wordt_niet_afgeschermd(self):
+        foto = self.upload(self.maarten, [self.voorman], document=False)
+        self.assertFalse(foto.zichtbaar_voor.exists())
+
+    def wijzig(self, door, bijlage, zichtbaar_voor):
+        self.client.force_login(door)
+        return self.client.post(
+            reverse("bijlage_zichtbaarheid", args=[bijlage.pk]),
+            {"zicht-zichtbaar_voor": [m.pk for m in zichtbaar_voor]},
+        )
+
+    def test_uploader_wijzigt_achteraf(self):
+        offerte = self.upload(self.sam)
+        self.wijzig(self.sam, offerte, [self.voorman])
+        self.assertEqual(list(offerte.zichtbaar_voor.all()), [self.voorman])
+        # en weer open voor iedereen
+        self.wijzig(self.sam, offerte, [])
+        self.assertFalse(offerte.zichtbaar_voor.exists())
+
+    def test_eigenaar_wijzigt_document_van_een_ander(self):
+        offerte = self.upload(self.sam)
+        self.wijzig(self.maarten, offerte, [self.voorman])
+        self.assertEqual(list(offerte.zichtbaar_voor.all()), [self.voorman])
+        url = reverse("media_bestand", args=[offerte.bestand.name])
+        self.client.force_login(self.voorman)
+        self.assertEqual(self.client.get(url).status_code, 200)
+        # sam voegde het toe en ziet het dus nog steeds
+        self.client.force_login(self.sam)
+        self.assertEqual(self.client.get(url).status_code, 200)
+
+    def test_ander_mag_niet_wijzigen(self):
+        offerte = self.upload(self.maarten, [self.voorman])
+        antwoord = self.wijzig(self.voorman, offerte, [])
+        self.assertEqual(antwoord.status_code, 404)
+        self.assertEqual(list(offerte.zichtbaar_voor.all()), [self.voorman])
+
+    def test_na_afschermen_ziet_de_rest_het_niet_meer(self):
+        tekening = self.upload(self.maarten)
+        self.wijzig(self.maarten, tekening, [self.voorman])
+        self.client.force_login(self.sam)
+        self.assertEqual(self.client.get(reverse("media_bestand", args=[tekening.bestand.name])).status_code, 404)
+        self.assertNotContains(self.client.get(self.klus.get_absolute_url()), "offerte.txt")
+
+    def test_zichtbaarheid_alleen_post(self):
+        offerte = self.upload(self.maarten)
+        self.assertEqual(self.client.get(reverse("bijlage_zichtbaarheid", args=[offerte.pk])).status_code, 405)
+
+    def test_slotje_alleen_voor_wie_mag_wijzigen(self):
+        offerte = self.upload(self.maarten)
+        url = reverse("bijlage_zichtbaarheid", args=[offerte.pk])
+        self.assertContains(self.client.get(self.klus.get_absolute_url()), url)
+        self.client.force_login(self.sam)
+        self.assertNotContains(self.client.get(self.klus.get_absolute_url()), url)
 
     def test_eigenaar_ziet_altijd_alles(self):
         offerte = self.upload(self.maarten, [self.voorman])

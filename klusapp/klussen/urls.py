@@ -13,6 +13,7 @@ urlpatterns = [
     path("fotos/", views.fotos, name="fotos"),
     path("bijlagen/toevoegen/", views.bijlage_toevoegen, name="bijlage_toevoegen"),
     path("bijlagen/<int:pk>/verwijderen/", views.bijlage_verwijderen, name="bijlage_verwijderen"),
+    path("bijlagen/<int:pk>/zichtbaar/", views.bijlage_zichtbaarheid, name="bijlage_zichtbaarheid"),
     path("bijlagen/post/<uuid:batch>/verwijderen/", views.post_verwijderen, name="post_verwijderen"),
     # Geüploade bestanden gaan door Django heen voor de rechtencontrole; ze
     # staan bewust niet als statische map open.
