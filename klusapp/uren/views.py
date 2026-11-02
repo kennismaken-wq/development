@@ -649,14 +649,14 @@ def aanwezigheid(request):
                 "in_dienst": sum(1 for c in kolom if c.stand != bezetting.BUITEN),
             }
         )
-    rijen = [
-        {"medewerker": m, "cellen": [cellen[(m.pk, datum)] for datum in dagen]} for m in medewerkers
-    ]
-    for rij in rijen:
+    rijen = []
+    for r, m in enumerate(medewerkers):
+        rij = [cellen[(m.pk, datum)] for datum in dagen]
         # een feestdag staat al in de kop; daar geen hoekje voor in elke rij
-        teksten = [cel.opmerking or (cel.reden_tekst if cel.reden else "") for cel in rij["cellen"]]
-        for cel, lengte in zip(rij["cellen"], _reeksen(teksten)):
+        teksten = [cel.opmerking or (cel.reden_tekst if cel.reden else "") for cel in rij]
+        for cel, lengte in zip(rij, _reeksen(teksten)):
             cel.reeks, cel.reeksklasse = lengte, _reeksklasse(lengte)
+        rijen.append({"medewerker": m, "cellen": rij, "cellen_html": _mensencellen_html(r, m, rij, vandaag)})
     klusrijen = _klusrijen(request, dagen, cellen.values(), vandaag)
     for kopdag in kopdagen:
         kopdag["klussen"] = sum(1 for rij in klusrijen if rij["gepland_per_dag"][kopdag["index"]])
@@ -951,10 +951,57 @@ def _reeksklasse(lengte):
     return " reeks" if lengte > 1 else " los" if lengte == 1 else ""
 
 
+def _mensencellen_html(r, medewerker, rij, vandaag):
+    """Het jaar van één medewerker als html: een strook met 365 cellen.
+
+    Stond tot 02-11-2026 als lus in de template, maar met vijftien man was
+    dat het grootste deel van de laadtijd (seconden). Een strook per rij
+    laat de browser ook de rijen buiten beeld overslaan (app.css,
+    .wp-strook). Wat de gebruiker intypt gaat door escape()."""
+    delen = []
+    for k, cel in enumerate(rij):
+        klassen = "bord-cel wp-cel"
+        if cel.stand != bezetting.BUITEN:
+            klassen += f" {cel.stand}"
+        else:
+            klassen += " buiten"
+        if cel.datum == vandaag:
+            klassen += " vandaag"
+        if cel.datum.weekday() == 0 and k:
+            klassen += " weekstart"
+        if cel.stand == bezetting.BUITEN:
+            delen.append(f'<div class="{klassen}"></div>')
+            continue
+        klassen += cel.reeksklasse
+        attrs = f' style="--reeks:{cel.reeks}"' if cel.reeks > 1 else ""
+        stand = {bezetting.AANWEZIG: "ja", bezetting.AFWEZIG: "nee"}.get(cel.stand, "")
+        attrs += (
+            f' data-r="{r}" data-k="{k}" data-cel="{medewerker.pk}:{cel.datum.isoformat()}"'
+            f' data-stand="{stand}"'
+        )
+        if cel.reden:
+            attrs += f' data-reden="{escape(cel.reden)}"'
+        if cel.opmerking:
+            attrs += f' data-opmerking="{escape(cel.opmerking)}"'
+        if cel.klussen:
+            attrs += f' data-klussen="{cel.klus_ids}"'
+        inhoud = "".join(
+            f'<span class="wp-kluslijn"><i style="background:{escape(klus.kleur)}"></i>'
+            f'<span class="naam">{escape(klus.naam)}</span></span>'
+            for klus in cel.klussen
+        )
+        if cel.opmerking:
+            inhoud += f'<span class="tekst{" sub" if cel.klussen else ""}">{escape(cel.opmerking)}</span>'
+        elif cel.reden_tekst:
+            inhoud += f'<span class="tekst">{escape(cel.reden_tekst)}</span>'
+        delen.append(f'<button type="button" class="{klassen}"{attrs}>{inhoud}</button>')
+    return mark_safe(f'<div class="wp-strook">{"".join(delen)}</div>')
+
+
 def _kluscellen_html(q, klus, dagen, gepland, mensen, vandaag):
-    """Alle cellen van één klusregel als html. Zelfde opmaak als de cellen
-    van de mensen (templates/uren/aanwezigheid.html); wat de gebruiker
-    intypt (de notitie) gaat door escape()."""
+    """Alle cellen van één klusregel als html, in een strook zoals bij de
+    mensen (_mensencellen_html); wat de gebruiker intypt (de notitie) gaat
+    door escape()."""
     kleur = escape(klus.kleur)
     notities = [gepland.get((klus.pk, datum), "") for datum in dagen]
     reeksen = _reeksen(notities)
@@ -981,7 +1028,7 @@ def _kluscellen_html(q, klus, dagen, gepland, mensen, vandaag):
         if sleutel in mensen:
             inhoud += f'<span class="wp-mensen">{mensen[sleutel]} man</span>'
         delen.append(f'<button type="button" class="{klassen}"{attrs}>{inhoud}</button>')
-    return mark_safe("".join(delen))
+    return mark_safe(f'<div class="wp-strook g-{klus.soort}" data-soort="{klus.soort}">{"".join(delen)}</div>')
 
 
 def _planbare_klussen(cellen):

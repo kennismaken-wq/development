@@ -52,25 +52,57 @@
     return { r: Number(isKlus(cel) ? cel.dataset.q : cel.dataset.r), k: Number(cel.dataset.k) };
   }
 
+  // Per groep de cellen als rijen van dagen, zodat een blok alleen de
+  // cellen binnen het blok langsloopt en niet alle tienduizenden.
+  const raster = new Map();
+  function rasterVan(lijst) {
+    if (!raster.has(lijst)) {
+      const rijen = [];
+      lijst.forEach(function (cel) {
+        const p = plek(cel);
+        (rijen[p.r] = rijen[p.r] || [])[p.k] = cel;
+      });
+      raster.set(lijst, rijen);
+    }
+    return raster.get(lijst);
+  }
+
+  // Een ingeklapte groep klussen doet niet mee in een blok. Op de klassen
+  // van het bord en niet op offsetParent: dat dwingt de browser het hele
+  // bord op te meten, bij elke muisbeweging tijdens het slepen.
+  function ingeklapt(cel) {
+    if (!isKlus(cel)) return false;
+    return bord.classList.contains("klussen-dicht") ||
+      bord.classList.contains("dicht-" + cel.parentNode.dataset.soort);
+  }
+
   function blok(van, tot) {
     const a = plek(van), b = plek(tot);
     const r1 = Math.min(a.r, b.r), r2 = Math.max(a.r, b.r);
     const k1 = Math.min(a.k, b.k), k2 = Math.max(a.k, b.k);
-    return groep(van).filter(function (cel) {
-      // Een ingeklapte groep klussen doet niet mee in een blok.
-      if (isKlus(cel) && cel.offsetParent === null) return false;
-      const p = plek(cel);
-      return p.r >= r1 && p.r <= r2 && p.k >= k1 && p.k <= k2;
-    });
+    const rijen = rasterVan(groep(van));
+    const uit = [];
+    for (let r = r1; r <= r2; r++) {
+      const rij = rijen[r];
+      if (!rij) continue;
+      for (let k = k1; k <= k2; k++) {
+        if (rij[k] && !ingeklapt(rij[k])) uit.push(rij[k]);
+      }
+    }
+    return uit;
   }
 
-  function markeer(gekozen) {
-    cellen.concat(kluscellen).forEach(function (cel) { cel.classList.remove("gekozen"); });
-    gekozen.forEach(function (cel) { cel.classList.add("gekozen"); });
+  // De gekozen cellen. Markeren haalt alleen de vorige keuze weg in plaats
+  // van langs elke cel van het bord te gaan.
+  let keuze = [];
+  function markeer(nieuw) {
+    keuze.forEach(function (cel) { cel.classList.remove("gekozen"); });
+    keuze = nieuw.slice();
+    keuze.forEach(function (cel) { cel.classList.add("gekozen"); });
   }
 
   function gekozen() {
-    return cellen.concat(kluscellen).filter(function (cel) { return cel.classList.contains("gekozen"); });
+    return keuze.slice();
   }
 
   function openSelectie(lijst) {

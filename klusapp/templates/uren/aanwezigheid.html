@@ -35,7 +35,7 @@
   {% endcomment %}
   <div class="bord-scroll wp-scroll">
     <div class="bord wp-bord wp-zoom-week" id="wp-bord" data-startkolom="{{ startkolom }}"
-         style="grid-template-columns:{{ bordkolommen }}">
+         style="grid-template-columns:{{ bordkolommen }};--dagen:{{ kopdagen|length }}">
       {% comment %} Het pijltje klapt de namenkolom in tot alleen de bol of
          de fotowaaier, voor meer dagen in beeld; werkplanning.js onthoudt het. {% endcomment %}
       <div class="bord-hoek wp-hoek">
@@ -89,23 +89,15 @@
             {% if not rij.medewerker.vaste_werkdagen %}<span class="functie">geen vaste dagen</span>{% elif rij.medewerker.functie %}<span class="functie">{{ rij.medewerker.functie }}</span>{% endif %}
           </span>
         </button>
-        {% comment %} Het jaar telt 365 cellen per persoon, dus zo kaal mogelijk:
-           geen tooltip in de html (werkplanning.js maakt hem bij aanwijzen)
-           en spaceless tussen de tags. De achtergrond gaat alleen over er
-           zijn of niet; een klus is een rondje in zijn kleur met de naam
-           erachter, één regel per klus. {% endcomment %}
-        {% spaceless %}
-        {% for cel in rij.cellen %}
-          {% if cel.stand == "buiten" %}
-            <div class="bord-cel wp-cel buiten{% if cel.datum == vandaag %} vandaag{% endif %}{% if cel.datum.weekday == 0 and not forloop.first %} weekstart{% endif %}"></div>
-          {% else %}
-            <button type="button" class="bord-cel wp-cel {{ cel.stand }}{% if cel.datum == vandaag %} vandaag{% endif %}{% if cel.datum.weekday == 0 and not forloop.first %} weekstart{% endif %}{{ cel.reeksklasse }}"{% if cel.reeks > 1 %} style="--reeks:{{ cel.reeks }}"{% endif %} data-r="{{ r }}" data-k="{{ forloop.counter0 }}" data-cel="{{ rij.medewerker.pk }}:{{ cel.datum|date:'Y-m-d' }}" data-stand="{% if cel.stand == 'aanwezig' %}ja{% elif cel.stand == 'afwezig' %}nee{% endif %}"{% if cel.reden %} data-reden="{{ cel.reden }}"{% endif %}{% if cel.opmerking %} data-opmerking="{{ cel.opmerking }}"{% endif %}{% if cel.klussen %} data-klussen="{{ cel.klus_ids }}"{% endif %}>
-              {% for klus in cel.klussen %}<span class="wp-kluslijn"><i style="background:{{ klus.kleur }}"></i><span class="naam">{{ klus.naam }}</span></span>{% endfor %}
-              {% if cel.opmerking %}<span class="tekst{% if cel.klussen %} sub{% endif %}">{{ cel.opmerking }}</span>{% elif cel.reden_tekst %}<span class="tekst">{{ cel.reden_tekst }}</span>{% endif %}
-            </button>
-          {% endif %}
-        {% endfor %}
-        {% endspaceless %}
+        {% comment %} Het jaar telt 365 cellen per persoon. Die bouwt de view
+           als één strook per rij (uren/views.py, _mensencellen_html): als
+           templatelus kostte dat seconden, en per strook kan de browser een
+           rij buiten beeld overslaan (app.css, .wp-strook). Zo kaal
+           mogelijk: geen tooltip in de html (werkplanning.js maakt hem bij
+           aanwijzen). De achtergrond gaat alleen over er zijn of niet; een
+           klus is een rondje in zijn kleur met de naam erachter, één regel
+           per klus. {% endcomment %}
+        {{ rij.cellen_html }}
         {% endwith %}
       {% empty %}
         <p class="leeg" style="grid-column:1 / -1">Er is niemand in dienst.</p>
@@ -115,9 +107,9 @@
          lopende klus, met zijn fotowaaier bij de naam (lege blaadjes als er
          nog niets in zit). Een gekleurde cel is een dag dat de klus gepland
          staat, met de notitie erin (bij Van Ee de locatie); "2 man" komt uit
-         de cellen hierboven. De cellen bouwt de view zelf op
-         (uren/views.py, _kluscellen_html): met honderd klussen maal 365
-         dagen is de templatelus te traag. De naam opent de klus zelf; het
+         de cellen hierboven. De cellen bouwt de view zelf op, als
+         strook per regel (uren/views.py, _kluscellen_html): met honderd
+         klussen maal 365 dagen is de templatelus te traag. De naam opent de klus zelf; het
          minteken klapt het blok in;
          werkplanning.js onthoudt dat. {% endcomment %}
       <div class="wp-blokkop">
