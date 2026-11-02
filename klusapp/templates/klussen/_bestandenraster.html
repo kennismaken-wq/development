@@ -17,6 +17,10 @@
 <div class="fotoraster">
   <button type="button" class="fotokaart-nieuw" onclick="document.getElementById('document-invoegen').showModal()" aria-label="Bestand toevoegen">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+    {% comment %} Zeggen wat erin mag: Word en Excel konden hier al, maar dat
+       zag niemand (feedback Maarten, 29-10-2026). Een apart tabblad ervoor
+       maakte het alleen verwarrender: twee plekken voor één soort ding. {% endcomment %}
+    <span class="fotokaart-nieuw-tekst">Pdf, tekening, Word of Excel</span>
   </button>
   {% for bijlage in document_bijlagen %}
     <figure class="fotokaart">

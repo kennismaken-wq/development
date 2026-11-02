@@ -1289,6 +1289,9 @@ input[type=file]:focus-visible + .bestandsknop{
 }
 @media (hover:hover){ .fotokaart-nieuw:hover{ background:rgba(255,255,255,0.10); color:#fff; } }
 .fotokaart-nieuw svg{ width:22px; height:22px; }
+/* wat er in het +-vak van Bestanden mag (_bestandenraster.html) */
+.fotokaart-nieuw:has(.fotokaart-nieuw-tekst){ flex-direction:column; gap:.5rem; }
+.fotokaart-nieuw-tekst{ font-family:'Inter',sans-serif; font-size:11.5px; line-height:1.35; padding:0 .8rem; text-align:center; }
 
 /* post van meerdere foto's uit één upload (_fotoraster.html): zelfde kaart als
    .fotokaart, maar met een mini-collage in plaats van één afbeelding. De
