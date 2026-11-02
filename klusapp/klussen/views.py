@@ -689,6 +689,32 @@ def klus_uren_export(request, pk):
     return antwoord
 
 
+def plan_werkdagen(klus, aantal):
+    """Startdatum + aantal werkdagen: de klus op de werkplanning, waar je hem
+    daarna verschuift of aanvult. Alleen de klus, niet wie er heen gaat: dat
+    plan je zelf in.
+
+    Bij een bestaande klus vult dit alleen aan: een dag die al gepland staat
+    blijft zoals hij is (met zijn notitie), en niets wordt weggehaald. Stil
+    planning overschrijven is erger dan een dag te veel, en die haal je in de
+    werkplanning met één tik weg. Geeft (bijgekomen dagen, dagen die er al
+    stonden) terug."""
+    if not aantal or not klus.startdatum:
+        return [], []
+    dagen = bezetting.werkdagen_vanaf(klus.startdatum, aantal)
+    al = set(Klusdag.objects.filter(klus=klus, datum__in=dagen).values_list("datum", flat=True))
+    nieuw = [dag for dag in dagen if dag not in al]
+    Klusdag.objects.bulk_create([Klusdag(klus=klus, datum=dag) for dag in nieuw])
+    return nieuw, sorted(al)
+
+
+def _dagen(dagen):
+    tekst = f"{len(dagen)} werkdag{'en' if len(dagen) > 1 else ''}"
+    if len(dagen) == 1:
+        return f"{tekst} ({date_format(dagen[0], 'D j b')})"
+    return f"{tekst} ({date_format(dagen[0], 'D j b')} t/m {date_format(dagen[-1], 'D j b')})"
+
+
 @alleen_eigenaar
 def klus_nieuw(request):
     terugpijl = _terugpijl(request)
@@ -723,14 +749,7 @@ def klus_nieuw(request):
             # gelden als iemand het verborgen veld zelf zou aanpassen.
             klus.kleur = kleuren.volgende_kleur()
             klus.save()
-            # Startdatum + aantal werkdagen: meteen op de werkplanning, waar je
-            # het daarna verschuift of aanvult. Alleen de klus, niet wie er
-            # heen gaat: dat plan je zelf in.
-            aantal = formulier.cleaned_data.get("aantal_werkdagen")
-            ingepland = []
-            if aantal and klus.startdatum:
-                ingepland = bezetting.werkdagen_vanaf(klus.startdatum, aantal)
-                Klusdag.objects.bulk_create([Klusdag(klus=klus, datum=dag) for dag in ingepland])
+            ingepland, _ = plan_werkdagen(klus, formulier.cleaned_data.get("aantal_werkdagen"))
 
         datum = bijlagenformulier.cleaned_data["datum"] or timezone.localdate()
         toelichting = bijlagenformulier.cleaned_data["toelichting"]
@@ -798,8 +817,18 @@ def klus_bewerken(request, pk):
     terug_naar_klus = _met_terug(klus.get_absolute_url(), _terugpijl(request))
     formulier = KlusForm(request.POST or None, instance=klus)
     if request.method == "POST" and formulier.is_valid():
-        formulier.save()
-        messages.success(request, "Opgeslagen.")
+        with transaction.atomic():
+            formulier.save()
+            nieuw, al = plan_werkdagen(klus, formulier.cleaned_data.get("aantal_werkdagen"))
+        if nieuw:
+            melding = f"Opgeslagen en {_dagen(nieuw)} ingepland."
+            if al:
+                melding += f" {len(al)} stond{'en' if len(al) > 1 else ''} er al."
+            messages.success(request, melding)
+        elif al:
+            messages.success(request, "Opgeslagen. Die werkdagen stonden al op de werkplanning.")
+        else:
+            messages.success(request, "Opgeslagen.")
         return redirect(terug_naar_klus)
     return render(
         request,
@@ -809,6 +838,7 @@ def klus_bewerken(request, pk):
             "klus": klus,
             "nieuw": False,
             "terugpijl": terug_naar_klus,
+            "geplande_dagen": klus.klusdagen.count(),
             # Zonder deze klus zelf: anders waarschuwt het formulier bij het
             # bewerken dat er op dit adres al een klus staat — namelijk deze.
             "opdrachtgevers": opdrachtgevers.bekende_opdrachtgevers(uitgezonderd=klus),

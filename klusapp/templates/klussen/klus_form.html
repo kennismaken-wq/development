@@ -86,15 +86,19 @@
       {{ formulier.startdatum }}
       {% for fout in formulier.startdatum.errors %}<p class="fout">{{ fout }}</p>{% endfor %}
       {% comment %} Startdatum + aantal werkdagen zet de klus meteen op de
-         werkplanning (zie klussen.views.klus_nieuw). Bij bewerken staat hier
-         een link: bestaande planning pas je daar aan. {% endcomment %}
-      {% if formulier.aantal_werkdagen %}
-        <label for="{{ formulier.aantal_werkdagen.id_for_label }}">{{ formulier.aantal_werkdagen.label }}</label>
-        {{ formulier.aantal_werkdagen }}
-        {% for fout in formulier.aantal_werkdagen.errors %}<p class="fout">{{ fout }}</p>{% endfor %}
+         werkplanning (zie klussen.views.plan_werkdagen). Bij bewerken vult
+         het alleen aan; wat er al staat pas je in de werkplanning aan. {% endcomment %}
+      <label for="{{ formulier.aantal_werkdagen.id_for_label }}">{{ formulier.aantal_werkdagen.label }}</label>
+      {{ formulier.aantal_werkdagen }}
+      {% for fout in formulier.aantal_werkdagen.errors %}<p class="fout">{{ fout }}</p>{% endfor %}
+      {% if klus %}
+        <p class="uitleg">
+          {% if geplande_dagen %}Staat nu {{ geplande_dagen }} dag{{ geplande_dagen|pluralize:"en" }} op de werkplanning. Een aantal hier vult vanaf de startdatum aan, zonder weekend en feestdagen; er gaat niets weg.
+          {% else %}Wordt vanaf de startdatum ingepland in de werkplanning, zonder weekend en feestdagen.{% endif %}
+          Aanpassen doe je in de <a href="{% url 'aanwezigheid' %}{% if klus.startdatum %}?dag={{ klus.startdatum|date:'Y-m-d' }}{% endif %}">werkplanning</a>.
+        </p>
+      {% else %}
         <p class="uitleg">Wordt ingepland in de werkplanning, zonder weekend en feestdagen. Daar kun je het daarna aanpassen.</p>
-      {% elif klus %}
-        <p class="uitleg">De planning van deze klus pas je aan in de <a href="{% url 'aanwezigheid' %}{% if klus.startdatum %}?dag={{ klus.startdatum|date:'Y-m-d' }}{% endif %}">werkplanning</a>.</p>
       {% endif %}
     </div>
 

@@ -11,6 +11,7 @@ from django.test import TestCase, override_settings
 from django.urls import reverse
 
 from medewerkers.models import Medewerker
+from medewerkers.tests import versie_van
 
 from .forms import BijlageForm, KlusForm
 from .models import Bijlage, Klus
@@ -300,11 +301,58 @@ class FeedbackOktoberTest(TestCase):
         self.assertTrue(Klus.objects.exists())
         self.assertFalse(Klusdag.objects.exists())
 
-    def test_bewerken_heeft_geen_aantal_maar_een_link(self):
+    def bewerk(self, klus, **velden):
+        gegevens = {
+            "soort": klus.soort, "opdrachtgever": klus.opdrachtgever, "adres": klus.adres,
+            "plaats": klus.plaats, "naam": klus.naam, "startdatum": "2026-10-30",
+            "kleur": "#95BF1D", "actief": "True",
+        }
+        gegevens.update(velden)
+        adres = reverse("klus_bewerken", args=[klus.pk])
+        gegevens["versie"] = versie_van(self.client, adres)
+        return self.client.post(adres, gegevens, follow=True)
+
+    def test_bewerken_heeft_aantal_en_een_link(self):
         klus = Klus.objects.create(naam="Tuin", soort=Klus.Soort.AANLEG, opdrachtgever="X")
-        self.assertNotIn("aantal_werkdagen", KlusForm(instance=klus).fields)
+        self.assertIn("aantal_werkdagen", KlusForm(instance=klus).fields)
         antwoord = self.client.get(reverse("klus_bewerken", args=[klus.pk]))
         self.assertContains(antwoord, reverse("aanwezigheid"))
+
+    def test_oude_klus_inplannen(self):
+        from datetime import date
+
+        from uren.models import Klusdag
+
+        klus = Klus.objects.create(naam="Tuin", soort=Klus.Soort.AANLEG, opdrachtgever="X")
+        antwoord = self.bewerk(klus, aantal_werkdagen="3")  # vrijdag 30-10
+        dagen = list(Klusdag.objects.filter(klus=klus).values_list("datum", flat=True))
+        self.assertEqual(dagen, [date(2026, 10, 30), date(2026, 11, 2), date(2026, 11, 3)])
+        self.assertContains(antwoord, "3 werkdagen")
+
+    def test_bewerken_vult_aan_en_haalt_niets_weg(self):
+        from datetime import date
+
+        from uren.models import Klusdag
+
+        klus = Klus.objects.create(naam="Tuin", soort=Klus.Soort.AANLEG, opdrachtgever="X")
+        Klusdag.objects.create(klus=klus, datum=date(2026, 10, 30), notitie="met kraan")
+        Klusdag.objects.create(klus=klus, datum=date(2026, 11, 20))
+        antwoord = self.bewerk(klus, aantal_werkdagen="2")
+        dagen = list(Klusdag.objects.filter(klus=klus).values_list("datum", "notitie"))
+        self.assertEqual(
+            dagen, [(date(2026, 10, 30), "met kraan"), (date(2026, 11, 2), ""), (date(2026, 11, 20), "")]
+        )
+        self.assertContains(antwoord, "1 stond er al")
+
+    def test_bewerken_zonder_aantal_laat_planning_staan(self):
+        from datetime import date
+
+        from uren.models import Klusdag
+
+        klus = Klus.objects.create(naam="Tuin", soort=Klus.Soort.AANLEG, opdrachtgever="X")
+        Klusdag.objects.create(klus=klus, datum=date(2026, 11, 20))
+        self.bewerk(klus)
+        self.assertEqual(Klusdag.objects.filter(klus=klus).count(), 1)
 
     def test_knop_nieuwe_klus_boven_de_filters_met_soort(self):
         html = self.client.get(reverse("klussen") + "?soort=van_ee").content.decode()
