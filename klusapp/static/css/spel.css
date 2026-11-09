@@ -1,0 +1,81 @@
+/* Het springspel (templates/spel/spel.html). Los van app.css: alleen deze
+   pagina heeft het nodig. Kleuren, .glas en de knoppen komen wel uit app.css. */
+
+html:has(.spelpagina){ overflow:hidden; scrollbar-gutter:auto; }
+.spelpagina{
+  position:fixed; inset:0; overflow:hidden; padding:0;
+  -webkit-touch-callout:none; -webkit-user-select:none; user-select:none;
+}
+
+/* Op een laptop een staande kolom ter grootte van een telefoon; de hoogte
+   begrenst de breedte, zodat het spel in een liggend venster speelbaar blijft. */
+.spel{
+  position:relative; height:100%; width:min(100%, 430px, 75dvh); margin:0 auto;
+  overflow:hidden; touch-action:none;
+}
+@media (min-width:700px){
+  .spel{ border-left:1px solid rgba(255,255,255,0.10); border-right:1px solid rgba(255,255,255,0.10); }
+}
+.speelveld{ position:absolute; inset:0; width:100%; height:100%; display:block; }
+
+.spel-boven{
+  position:absolute; left:0; right:0; top:0; display:flex; align-items:center; gap:.8rem;
+  padding:calc(env(safe-area-inset-top) + .7rem) 1rem .7rem;
+  pointer-events:none;
+}
+.spel-terug{ pointer-events:auto; width:44px; height:44px; padding:0; }
+.spel-terug svg{ width:20px; height:20px; }
+.spel-score{
+  margin-left:auto; color:#fff;
+  font-family:'Fraunces',serif; font-style:italic; font-weight:600; font-size:2rem;
+  font-variant-numeric:tabular-nums; line-height:1;
+  text-shadow:0 2px 12px rgba(0,0,0,0.45);
+}
+
+.spel-verder{
+  position:absolute; left:50%; top:50%; transform:translate(-50%,-50%);
+  min-height:50px; padding:.85rem 2rem; font-size:15px; font-weight:600;
+}
+
+.spel-paneel{
+  position:absolute; left:1rem; right:1rem;
+  top:calc(env(safe-area-inset-top) + 4.4rem);
+  max-height:calc(100% - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 5.6rem);
+  overflow-y:auto; overscroll-behavior:contain; touch-action:pan-y;
+  border-radius:22px; padding:1.3rem 1.1rem 1.4rem;
+  color:#fff;
+}
+.spel-paneel h1{
+  font-family:'Fraunces',serif; font-style:italic; font-weight:600;
+  font-size:2rem; line-height:1.15; margin:0; text-align:center;
+}
+.spel-beste{ margin:.4rem 0 1.2rem; text-align:center; font-size:13px; color:rgba(255,255,255,0.6); }
+.spel-beste strong{ color:var(--hi); font-weight:600; }
+.spel-eindscore{
+  margin:0; text-align:center; color:var(--hi);
+  font-family:'Fraunces',serif; font-style:italic; font-weight:600; font-size:3.2rem; line-height:1.1;
+}
+.spel-status{ margin:.3rem 0 1.2rem; min-height:1.3em; text-align:center; font-size:13px; color:rgba(255,255,255,0.7); }
+#paneel-einde{ text-align:center; }
+#spel-opnieuw-opslaan{ margin:-.5rem 0 1.2rem; }
+.spel-besturing{ display:flex; gap:.4rem; margin-bottom:.7rem; }
+.spel-keuze{
+  flex:1 1 0; min-height:44px; border-radius:999px; cursor:pointer;
+  background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.18);
+  color:rgba(255,255,255,0.75); font-family:'Inter',sans-serif; font-size:14px; font-weight:500;
+}
+.spel-keuze[aria-pressed="true"]{
+  background:rgba(var(--accent-rgb),0.22); border-color:rgba(var(--accent-rgb),0.6); color:#fff;
+}
+.spel-paneel .sectiekop{ margin:1.4rem 0 .6rem; }
+
+.scorebord{ list-style:none; margin:0; padding:0; display:grid; gap:.4rem; }
+.scoreregel{
+  display:flex; align-items:center; gap:.65rem; padding:.45rem .8rem .45rem .6rem;
+  border-radius:16px; background:rgba(255,255,255,0.07); border:1px solid rgba(255,255,255,0.14);
+}
+.scoreregel.ik{ background:rgba(var(--accent-rgb),0.16); border-color:rgba(var(--accent-rgb),0.45); }
+.scoreregel .plaats{ width:1.3rem; text-align:center; font-size:13px; font-weight:600; color:rgba(255,255,255,0.55); }
+.scoreregel .mw-bol{ width:32px; height:32px; font-size:11px; }
+.scoreregel .naam{ flex:1 1 auto; min-width:0; font-size:14px; font-weight:500; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.scoreregel .punten{ font-size:15px; font-weight:600; color:var(--hi); font-variant-numeric:tabular-nums; }

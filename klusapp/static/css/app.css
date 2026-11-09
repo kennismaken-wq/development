@@ -3165,3 +3165,14 @@ h1{ letter-spacing:-0.015em; }
   mask-image:linear-gradient(to bottom, #000 calc(100% - 10px), transparent 100%);
   -webkit-mask-image:linear-gradient(to bottom, #000 calc(100% - 10px), transparent 100%);
 }
+
+/* Het kleine icoon rechtsboven op het startscherm naar het springspel. Bewust
+   geen tegel en niet in de balk (offerte 2026-O01). Het vlak is 44px om goed
+   te kunnen tikken; het icoon zelf blijft klein en rustig. */
+.spel-ingang{
+  flex-shrink:0; width:44px; height:44px; margin:-.4rem -.4rem 0 0;
+  display:flex; align-items:center; justify-content:center;
+  color:rgba(255,255,255,0.45); border-radius:999px;
+}
+.spel-ingang svg{ width:20px; height:20px; }
+@media (hover:hover){ .spel-ingang:hover{ color:rgba(255,255,255,0.75); } }

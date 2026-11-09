@@ -175,6 +175,17 @@ gespreksverslag met Maarten. Punt 3 en 8 stonden ten onrechte op rood/geel; dat 
 hierboven rechtgezet. **Houd hem bij**: iemand heeft eerder werk ingepland dat al af
 was omdat deze tabel achterliep op de code.
 
+**Bijgewerkt 09-11-2026: springspel met scorebord (offerte 2026-O01, onderdeel 3).**
+"De Groene Sprong" in `spel/`: Doodle Jump-achtig, met een hovenier en heggen, tikken
+links/rechts, op een eigen pagina zonder `basis.html` (de navigatiebalk zou over het
+speelveld vallen). Regels en tekenen in `static/js/springspel.js`. Het scorebord is
+één bord aller tijden (`BesteScore`, één rij per persoon), voor iedereen die in dienst
+is. De score ontstaat op de telefoon; `spel.views.spel_score` begrenst hem op de
+serverzijdig gemeten speeltijd. Dat is een grens en geen bewijs. Powerups: imkerpak
+(vangt één steek op) en bladblazer (paar seconden omhoog). Tijdens het klimmen staat op
+de hoogte van elke collega een vlaggetje (`spel.scorebord.vlaggen`). Extra spelletjes zijn
+meerwerk (€ 120 per spel).
+
 Vier dingen die bij diezelfde controle boven water kwamen en meteen zijn opgelost:
 
 1. **Het maandtotaal telde de rand-dagen mee.** `_maand_weergave` somde het hele
@@ -262,6 +273,7 @@ zet 'm in de `urls.py` van je eigen app, en haal de vlag `in_aanbouw` uit de teg
 | `/medewerkers/<pk>/kaart/` | `medewerker_kaart` | persoonskaart als venster op het weekoverzicht | ✅ af |
 | `/medewerkers/<pk>/dienst/` | `medewerker_dienst` | uit/in dienst zetten | ✅ af |
 | `/wachtwoord-vergeten/` (+ `/verstuurd/`, `/wachtwoord-herstellen/<uid>/<token>/`, `/wachtwoord-herstellen/klaar/`) | `wachtwoord_vergeten` e.a. | reset via mail naar het adres op het profiel; Django's eigen flow, link werkt 24 uur | ✅ af (30-09) |
+| `/spel/` (+ `/spel/start/`, `/spel/score/`) | `spel` e.a. | springspel met scorebord (meerwerk) | ✅ af |
 | `/mijn-profiel/` | `mijn_profiel` | eigen gegevens + wachtwoord; een wachtwoord wijzigt ieder alleen zelf — het wachtwoordscherm voor de eigenaar is op 28-09-2026 weggehaald | ✅ af |
 
 ## 3. Werkafspraken

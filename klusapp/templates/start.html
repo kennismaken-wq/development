@@ -3,6 +3,11 @@
 {% block titel %}Start{% endblock %}
 {% block kop %}Hai, {{ user.first_name|default:user.naam }}{% endblock %}
 {% block sub %}{{ vandaag|date:"l j F Y"|capfirst }}{% endblock %}
+{% block kopactie %}
+  <a class="spel-ingang" href="{% url 'spel' %}" aria-label="Spel">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">{{ "spel"|pictogram }}</svg>
+  </a>
+{% endblock %}
 {% block inhoud %}
   {% comment %} "Zet de app op je beginscherm". Verborgen tot
      static/js/app-installeren.js weet dat het kan: Android krijgt een knop,

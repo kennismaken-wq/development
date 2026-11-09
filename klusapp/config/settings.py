@@ -54,6 +54,7 @@ INSTALLED_APPS = [
     "klussen",
     "uren",
     "pushberichten",
+    "spel",
 ]
 
 MIDDLEWARE = [

@@ -27,6 +27,10 @@ tegel staat meer op `in_aanbouw`. Op 24-09-2026 is de lijst nagelopen tegen
 artikel 2 én tegen het gespreksverslag met Maarten; de negen punten staan.
 **Per contractpunt staat de stand in [CONTEXT.md](CONTEXT.md) §1.**
 
+**Meerwerk (offerte 2026-O01, onderdeel 3):** het springspel met scorebord staat
+in `spel/`, op `/spel/`, met een klein icoon rechtsboven op het startscherm.
+Zie CONTEXT.md §1.
+
 Wat nog open staat, is geen contractpunt maar komt wel uit de contractreview
 (SPEC §8) en uit dat gesprek:
 

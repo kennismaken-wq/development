@@ -1,0 +1,14 @@
+{% if rijen %}
+  <ol class="scorebord">
+    {% for rij in rijen %}
+      <li class="scoreregel{% if rij.medewerker_id == user.pk %} ik{% endif %}">
+        <span class="plaats">{{ forloop.counter }}</span>
+        {% include "_medewerkerbol.html" with persoon=rij.medewerker klasse="mw-bol" %}
+        <span class="naam">{{ rij.medewerker.naam }}</span>
+        <span class="punten">{{ rij.punten }}</span>
+      </li>
+    {% endfor %}
+  </ol>
+{% else %}
+  <p class="leeg">Nog geen scores.</p>
+{% endif %}
