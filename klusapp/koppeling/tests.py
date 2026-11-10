@@ -300,7 +300,7 @@ class ProtocolTests(Basis):
         self.assertIsNotNone(Koppeling.objects.get().laatst_gebruikt_op)
 
 
-class ToolTests(Basis):
+class ToolData(Basis):
     @classmethod
     def setUpTestData(cls):
         super().setUpTestData()
@@ -320,6 +320,8 @@ class ToolTests(Basis):
     def setUp(self):
         self.access, _, _ = self.koppel()
 
+
+class ToolTests(ToolData):
     def test_vandaag(self):
         uitkomst = self.tool(self.access, "vandaag")["structuredContent"]
         self.assertEqual(uitkomst["datum"], timezone.localdate().isoformat())
@@ -476,9 +478,63 @@ class BestandTests(Basis):
         b = self.bijlage("tekening.dwg", b"\x00\x01")
         self.assertTrue(self.tool(self.access, "bekijk_bestand", bestand_id=b.pk)["isError"])
 
-    def test_zoek_bestanden_ook_afgeschermde(self):
-        """De eigenaar ziet alles in de app, dus Claude ook; wel staat erbij voor wie het is."""
+    def test_zoek_bestanden_ook_afgeschermde_zonder_rechten(self):
+        """De eigenaar ziet alles in de app, dus Claude ook. Wie het verder mag
+        zien, is een instelling van de app en gaat niet mee."""
         b = self.bijlage("offerte.pdf", b"%PDF")
         b.zichtbaar_voor.add(self.henk)
         uitkomst = self.tool(self.access, "zoek_bestanden", zoekterm="offerte")["structuredContent"]
-        self.assertEqual(uitkomst["bestanden"][0]["alleen_zichtbaar_voor"], ["Henk de Vries"])
+        self.assertEqual(uitkomst["bestanden"][0]["naam"], "offerte.pdf")
+        self.assertNotIn("zichtbaar", json.dumps(uitkomst))
+
+    def test_geen_opslagpad(self):
+        b = self.bijlage("offerte.pdf", b"%PDF")
+        tekst = json.dumps(self.tool(self.access, "klus_dossier", klus_id=self.klus.pk))
+        self.assertNotIn(b.bestand.name, tekst)
+        self.assertNotIn("bijlagen/", tekst)
+
+
+class GeenLekTests(ToolData):
+    """Alleen bedrijfsgegevens: niets over code, server, accounts of rechten."""
+
+    VERBODEN = [
+        "gebruikersnaam", "username", "wachtwoord", "password", '"rol"', "eigenaar", "verborgen",
+        "zichtbaar", "bijlagen/", "thumbnails/", "/srv/", "media", ".py", "traceback", "django",
+        "http://", "https://", "telefoon", "noodcontact", "postcode", "woonplaats", "backup",
+        "kleur", "_hash", "token", "Exception",
+    ]
+
+    def test_geen_enkele_tool_lekt(self):
+        self.henk.telefoon = "0612345678"
+        self.henk.save()
+        admin = Medewerker.objects.create_user("admin", rol=Medewerker.Rol.EIGENAAR, verborgen=True)
+        Notitie.objects.create(klus=self.tuin, tekst="Hek dicht", geschreven_door=admin)
+        aanroepen = [
+            ("vandaag", {}), ("zoek_klussen", {}), ("klus_dossier", {"klus_id": self.tuin.pk}),
+            ("opdrachtgevers", {}), ("medewerkers", {"ook_uit_dienst": True}),
+            ("uren", {"van": "2026-11-01", "tot": "2026-11-30"}),
+            ("werkplanning", {"van": "2026-11-10", "tot": "2026-11-16"}),
+            ("aanwezigheid", {"van": "2026-11-09", "tot": "2026-11-13"}),
+            ("zoek_notities", {}), ("zoek_bestanden", {}),
+            ("uren", {"medewerker": "niemand"}), ("klus_dossier", {"klus_id": "x"}),
+        ]
+        for naam, argumenten in aanroepen:
+            tekst = json.dumps(self.tool(self.access, naam, **argumenten), ensure_ascii=False).lower()
+            for woord in self.VERBODEN:
+                self.assertNotIn(woord.lower(), tekst, f"{naam} geeft '{woord}' mee")
+        self.assertNotIn("0612345678", tekst)
+        notities = self.tool(self.access, "zoek_notities", zoekterm="hek")["structuredContent"]["notities"]
+        self.assertEqual(notities[0]["door"], "HandigerAI")
+
+    def test_onverwachte_fout_geeft_geen_details(self):
+        from unittest.mock import patch
+
+        with patch("koppeling.gereedschap.Klus.objects.all", side_effect=RuntimeError("geheim /srv/pad")):
+            uitkomst = self.tool(self.access, "zoek_klussen")
+        self.assertTrue(uitkomst["isError"])
+        self.assertNotIn("geheim", json.dumps(uitkomst))
+
+    def test_tool_beschrijvingen_noemen_geen_techniek(self):
+        tekst = json.dumps(self.mcp(self.access, "tools/list").json()).lower()
+        for woord in ("dropbox", "django", "database", "server", "http", "model"):
+            self.assertNotIn(woord, tekst)

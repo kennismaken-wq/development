@@ -3,7 +3,14 @@
 Elke tool is een gewone functie die een dict teruggeeft (of, voor een
 bestand, een lijst MCP-inhoudsblokken). `mcp.py` maakt er JSON-RPC van.
 
-Twee vuistregels:
+Drie vuistregels:
+
+- Alleen bedrijfsgegevens, nooit iets over de app zelf. Elke tool zet
+  veld voor veld neer wat eruit gaat — nooit een heel model, een
+  bestandspad, een adres in de app, een accountnaam, een rol of rechten
+  (wie een document mag zien). Ook foutmeldingen zijn eigen zinnen, geen
+  Python-fouten. Wie hier een veld toevoegt: is het iets wat Maarten op een
+  scherm als gegeven ziet staan? Anders niet. `GeenLekTests` bewaakt dit.
 
 - Medewerkers worden op naam gevonden, niet op id: Maarten vraagt "waar was
   Henk", en Claude moet dat zonder tussenstap kunnen doorgeven.
@@ -75,7 +82,11 @@ def _tijd(t):
 
 
 def _naam(persoon):
-    return persoon.naam if persoon else "onbekend"
+    # Het verborgen beheeraccount van HandigerAI heet intern "admin"; dat is
+    # een accountnaam en geen bedrijfsgegeven.
+    if persoon is None:
+        return "onbekend"
+    return "HandigerAI" if persoon.verborgen else persoon.naam
 
 
 def _medewerker(naam):
@@ -132,7 +143,6 @@ def _bestand_kort(b):
         "klus_id": b.klus_id,
         "klus": b.klus.naam if b.klus_id else "(algemeen, niet aan een klus gekoppeld)",
         "toegevoegd_door": _naam(b.toegevoegd_door),
-        "alleen_zichtbaar_voor": [m.naam for m in b.zichtbaar_voor.all()],
     }
 
 
@@ -201,7 +211,7 @@ def klus_dossier(argumenten):
     gepland = sorted({kd.datum for kd in klusdagen.filter(datum__gte=nu)} | set(ingepland))
     notitie_per_dag = {kd.datum: kd.notitie for kd in klusdagen}
 
-    bestanden = klus.bijlagen.select_related("toegevoegd_door", "klus").prefetch_related("zichtbaar_voor")
+    bestanden = klus.bijlagen.select_related("toegevoegd_door", "klus")
     notities = klus.notities.select_related("geschreven_door")
 
     return {
@@ -285,9 +295,7 @@ def medewerkers(argumenten):
         "medewerkers": [
             {
                 "naam": m.naam,
-                "gebruikersnaam": m.username,
                 "functie": m.functie,
-                "rol": m.get_rol_display(),
                 "vaste_werkdagen": [DAGNAMEN[d] for d in sorted(m.vaste_werkdagen or [])],
                 "in_dienst_sinds": m.in_dienst_sinds.isoformat() if m.in_dienst_sinds else None,
                 "uit_dienst_sinds": m.uit_dienst_sinds.isoformat() if m.uit_dienst_sinds else None,
@@ -471,7 +479,7 @@ def zoek_notities(argumenten):
 
 
 def zoek_bestanden(argumenten):
-    rijen = Bijlage.objects.select_related("klus", "toegevoegd_door").prefetch_related("zichtbaar_voor")
+    rijen = Bijlage.objects.select_related("klus", "toegevoegd_door")
     klus = _klus(argumenten.get("klus_id"))
     if klus:
         rijen = rijen.filter(klus=klus)
@@ -688,7 +696,7 @@ TOOLS = [
             zoekterm={"type": "string"},
             klus_id=_KLUS_ID,
             soort={"type": "string", "enum": ["foto", "document"]},
-            alleen_algemeen={"type": "boolean", "description": "Alleen bestanden die niet aan een klus hangen (de fotodropbox)."},
+            alleen_algemeen={"type": "boolean", "description": "Alleen bestanden die niet aan een klus hangen."},
             **_PERIODE,
         ),
         "functie": zoek_bestanden,

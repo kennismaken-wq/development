@@ -62,7 +62,7 @@ def _tool_aanroepen(params):
         return {"content": [{"type": "text", "text": str(fout)}], "isError": True}
     except Exception:
         log.exception("Claude-koppeling: %s faalde", naam)
-        return {"content": [{"type": "text", "text": "Er ging iets mis in de klusapp. Probeer het later opnieuw."}], "isError": True}
+        return {"content": [{"type": "text", "text": "Er ging iets mis. Probeer het later opnieuw."}], "isError": True}
     if isinstance(uitkomst, list):
         return {"content": uitkomst}
     return {
@@ -134,13 +134,18 @@ def eindpunt(request):
     except (ValueError, UnicodeDecodeError):
         return JsonResponse(_fout(None, -32700, "Geen geldige JSON."), status=400)
 
-    if isinstance(bericht, list):
-        if not bericht:
-            return JsonResponse(_fout(None, -32600, "Lege lijst."), status=400)
-        antwoorden = [a for a in map(_verwerk, bericht) if a is not None]
-        return JsonResponse(antwoorden, safe=False) if antwoorden else HttpResponse(status=202)
-
-    antwoord = _verwerk(bericht)
+    try:
+        if isinstance(bericht, list):
+            if not bericht:
+                return JsonResponse(_fout(None, -32600, "Lege lijst."), status=400)
+            antwoorden = [a for a in map(_verwerk, bericht) if a is not None]
+            return JsonResponse(antwoorden, safe=False) if antwoorden else HttpResponse(status=202)
+        antwoord = _verwerk(bericht)
+    except Exception:
+        # Nooit een foutpagina of traceback richting Claude: daar staan
+        # bestandsnamen en regels code in.
+        log.exception("Claude-koppeling: verzoek faalde")
+        return JsonResponse(_fout(None, -32603, "Er ging iets mis. Probeer het later opnieuw."), status=500)
     if antwoord is None:
         return HttpResponse(status=202)
     return JsonResponse(antwoord, json_dumps_params={"ensure_ascii": False})

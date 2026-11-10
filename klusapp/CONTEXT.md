@@ -200,7 +200,11 @@ als "waar was Henk gisteren?". Wat er staat:
   uit de offerte: klussen, opdrachtgevers, uren per medewerker en periode, werkplanning,
   aanwezigheid, notities, documenten en foto's. Medewerkers alleen met naam, functie, rol
   en werkdagen — **geen** telefoon, adres of noodcontact, want die staan niet in de
-  offerte. Medewerkers worden op naam gevonden; een dubbelzinnige naam geeft een fout met
+  offerte. **Alleen bedrijfsgegevens, niets over de app zelf** (eis Thijmen, 10-11-2026):
+  geen gebruikersnamen, rollen of rechten (wie een document mag zien), geen
+  bestandspaden of adressen in de app, geen foutdetails; het verborgen beheeraccount
+  heet in de uitvoer "HandigerAI". Elke tool zet veld voor veld neer wat eruit gaat;
+  `GeenLekTests` in `koppeling/tests.py` bewaakt dat. Medewerkers worden op naam gevonden; een dubbelzinnige naam geeft een fout met
   de kandidaten. `bekijk_bestand` geeft een foto als afbeelding (max 1568 px) en een
   pdf/docx/xlsx als tekst; een gescande pdf als plaatje van de eerste pagina's.
 - **OAuth 2.1** (`koppeling/oauth.py`), zelf geschreven want django-oauth-toolkit kent
