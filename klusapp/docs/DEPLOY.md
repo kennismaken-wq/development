@@ -83,9 +83,11 @@ Zonder `DATABASE_URL` valt `settings.py` terug op SQLite. Dat is prima lokaal,
 maar niet op de server: SQLite vergrendelt bij schrijven en zes man die 's avonds
 tegelijk hun uren invullen lopen dan tegen "database is locked" aan.
 
-Optioneel: `KLUSAPP_CLAUDE_REDIRECT_HOSTS` (standaard `claude.ai,claude.com`) — waar
-de koppeling met Claude na "Toestaan" naartoe terug mag (`koppeling/oauth.py`). Alleen
-aanpassen als Anthropic een ander terugadres gaat gebruiken.
+Optioneel: `KLUSAPP_CLAUDE_REDIRECT_URIS` (standaard
+`https://claude.ai/api/mcp/auth_callback,https://claude.com/api/mcp/auth_callback`) —
+de exacte adressen waar de koppeling met Claude na "Toestaan" naartoe terug mag
+(`koppeling/oauth.py`). Alleen aanpassen als Anthropic een ander terugadres gaat
+gebruiken; koppelen geeft dan "Deze koppeling werkt alleen met Claude".
 
 `DJANGO_DEBUG=0` staat er expliciet in. Laat dat zo: met `DEBUG=1` toont een
 foutpagina de secret key en de omgeving aan wie de fout veroorzaakt.

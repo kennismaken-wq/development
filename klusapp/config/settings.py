@@ -195,9 +195,12 @@ DATA_UPLOAD_MAX_NUMBER_FILES = 500
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 # Koppeling met Claude (koppeling/, offerte 2026-O01 onderdeel 2): waar Claude
-# na "Toestaan" naartoe terug mag. Alleen deze hosts (en localhost, voor
-# Claude Code en de desktop-app); zie koppeling.oauth.redirect_toegestaan.
-CLAUDE_REDIRECT_HOSTS = env_lijst("KLUSAPP_CLAUDE_REDIRECT_HOSTS", "claude.ai,claude.com")
+# na "Toestaan" naartoe terug mag. Precies deze adressen (en localhost, voor
+# Claude Code); zie koppeling.oauth.redirect_toegestaan.
+CLAUDE_REDIRECT_URIS = env_lijst(
+    "KLUSAPP_CLAUDE_REDIRECT_URIS",
+    "https://claude.ai/api/mcp/auth_callback,https://claude.com/api/mcp/auth_callback",
+)
 
 # Mail: de wekelijkse back-up van uren en aanwezigheid (uren/backup.py) en
 # "wachtwoord vergeten". Afzender is het SMTP-account zelf, op de server

@@ -22,6 +22,7 @@ helemaal te lezen.
 import base64
 import hashlib
 import json
+import re
 import secrets
 from datetime import timedelta
 from urllib.parse import urlencode, urlsplit
@@ -35,9 +36,21 @@ from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_GET, require_POST
 
-from .models import CODE_GELDIG, Autorisatiecode, Client, Koppeling, vingerafdruk
+from medewerkers.rem import ip_van
+
+from .models import CODE_GELDIG, HERGEBRUIK_MARGE, Autorisatiecode, Client, Koppeling, vingerafdruk
 
 SCOPE = "lezen"
+
+# PKCE: base64url zonder opvulling, 43-128 tekens (RFC 7636). Ook de
+# verifier; een "é" liet compare_digest eerder een 500 geven.
+PKCE_VORM = re.compile(r"^[A-Za-z0-9._~-]{43,128}$")
+# Aanmelden kan anoniem. Zonder grenzen schreef één verzoek 20 MB in de
+# database, en 500 verzoeken 500 rijen (stresstest 10-11-2026).
+MAX_AANMELDING = 8 * 1024
+MAX_URIS = 5
+MAX_AANMELDINGEN_PER_IP = 10      # per uur
+MAX_ONGEBRUIKT = 200              # aanmeldingen zonder koppeling, in totaal
 
 
 def basis_url(request):
@@ -105,24 +118,19 @@ def authorization_server(request):
 # ── registreren ───────────────────────────────────────────────────────────
 
 
+# Claude Code en de desktop-app vangen de code op met een tijdelijke server op
+# de eigen computer: http://localhost:<poort>/<pad>. Alleen gewone tekens, zodat
+# er geen ruimte is voor trucs met @, backslashes of procenttekens.
+LOKAAL = re.compile(r"^http://(localhost|127\.0\.0\.1)(:[0-9]{1,5})?(/[A-Za-z0-9/_.-]*)?$")
+
+
 def redirect_toegestaan(uri):
-    """Alleen terug naar Claude zelf: https op een host uit
-    KLUSAPP_CLAUDE_REDIRECT_HOSTS (standaard claude.ai en claude.com), of
-    localhost voor Claude Code en de desktop-app. Zo kan een nagemaakte
+    """Alleen terug naar Claude zelf: precies een van de terugadressen uit
+    KLUSAPP_CLAUDE_REDIRECT_URIS (claude.ai en claude.com), of localhost voor
+    Claude Code. Exact vergelijken, niet op host: zo kan een nagemaakte
     "Claude" de eigenaar niet naar een eigen site laten doorsturen met een
     geldige code in de hand."""
-    try:
-        delen = urlsplit(uri)
-    except ValueError:
-        return False
-    host = (delen.hostname or "").lower()
-    if delen.fragment or not host:
-        return False
-    if host in ("localhost", "127.0.0.1"):
-        return delen.scheme in ("http", "https")
-    if delen.scheme != "https":
-        return False
-    return any(host == toegestaan or host.endswith("." + toegestaan) for toegestaan in settings.CLAUDE_REDIRECT_HOSTS)
+    return uri in settings.CLAUDE_REDIRECT_URIS or bool(LOKAAL.match(uri))
 
 
 @csrf_exempt
@@ -130,25 +138,35 @@ def redirect_toegestaan(uri):
 def registreren(request):
     """RFC 7591. Aanmelden geeft geen toegang; het toestemmingsscherm wel."""
     try:
-        gegevens = json.loads(request.body or b"{}")
-    except (ValueError, UnicodeDecodeError):
+        lengte = int(request.META.get("CONTENT_LENGTH") or 0)
+    except ValueError:
+        lengte = 0
+    if lengte > MAX_AANMELDING:
+        return _fout("invalid_client_metadata", "Te groot.", status=413)
+    ip = ip_van(request)
+    nu = timezone.now()
+    if (ip and Client.objects.filter(ip=ip, aangemaakt_op__gte=nu - timedelta(hours=1)).count() >= MAX_AANMELDINGEN_PER_IP) or (
+        Client.objects.filter(koppelingen__isnull=True).count() >= MAX_ONGEBRUIKT
+    ):
+        return _fout("temporarily_unavailable", "Te veel aanmeldingen; probeer het later opnieuw.", status=429)
+    try:
+        gegevens = json.loads(request.body[: MAX_AANMELDING + 1] or b"{}")
+    except (ValueError, UnicodeDecodeError, RecursionError):
         return _fout("invalid_client_metadata", "Geen geldige JSON.")
     if not isinstance(gegevens, dict):
         return _fout("invalid_client_metadata", "Geen geldige JSON.")
     uris = gegevens.get("redirect_uris")
     if not isinstance(uris, list) or not uris or not all(isinstance(u, str) for u in uris):
         return _fout("invalid_redirect_uri", "redirect_uris ontbreekt.")
-    if len(uris) > 10 or not all(redirect_toegestaan(u) for u in uris):
+    if len(uris) > MAX_URIS or not all(len(u) <= 500 and redirect_toegestaan(u) for u in uris):
         return _fout("invalid_redirect_uri", "Deze koppeling werkt alleen met Claude.")
 
     # Een aanmelding zonder dat er ooit iemand toestemming gaf, is na een dag
     # niets meer waard. Opruimen hier houdt de tabel klein zonder cronjob.
-    Client.objects.filter(
-        aangemaakt_op__lt=timezone.now() - timedelta(days=1), koppelingen__isnull=True
-    ).delete()
+    Client.objects.filter(aangemaakt_op__lt=nu - timedelta(days=1), koppelingen__isnull=True).delete()
 
     naam = gegevens.get("client_name")
-    client = Client.objects.create(naam=naam[:120] if isinstance(naam, str) else "", redirect_uris=uris)
+    client = Client.objects.create(naam=naam[:120] if isinstance(naam, str) else "", redirect_uris=uris, ip=ip)
     return _json(
         {
             "client_id": client.client_id,
@@ -191,7 +209,7 @@ def toestaan(request):
     if p.get("response_type") != "code":
         return _terug(redirect_uri, error="unsupported_response_type", state=state)
     challenge = p.get("code_challenge", "")
-    if p.get("code_challenge_method") != "S256" or not 43 <= len(challenge) <= 128:
+    if p.get("code_challenge_method") != "S256" or not PKCE_VORM.match(challenge):
         return _terug(redirect_uri, error="invalid_request", error_description="PKCE (S256) is verplicht.", state=state)
 
     if not request.user.is_eigenaar:
@@ -230,7 +248,7 @@ def toestaan(request):
 
 
 def _pkce_klopt(verifier, challenge):
-    if not 43 <= len(verifier) <= 128:
+    if not PKCE_VORM.match(verifier):
         return False
     berekend = base64.urlsafe_b64encode(hashlib.sha256(verifier.encode()).digest()).rstrip(b"=").decode()
     return secrets.compare_digest(berekend, challenge)
@@ -284,20 +302,36 @@ def token(request):
 
     if soort == "refresh_token":
         with transaction.atomic():
+            sleutel = vingerafdruk(request.POST.get("refresh_token", ""))
             koppeling = (
                 Koppeling.objects.actief()
                 .select_for_update()
-                .filter(refresh_hash=vingerafdruk(request.POST.get("refresh_token", "")), client=client)
+                .filter(refresh_hash=sleutel, client=client)
                 .select_related("medewerker")
                 .first()
             )
-            if koppeling is None or not koppeling.mag_lezen():
+            if koppeling is None:
+                _hergebruik_afhandelen(sleutel, client)
+                return _fout("invalid_grant")
+            if not koppeling.mag_lezen() or koppeling.refresh_verloopt_op <= timezone.now():
                 return _fout("invalid_grant")
             access, refresh = koppeling.nieuwe_tokens()
-            koppeling.save(update_fields=["access_hash", "refresh_hash", "access_verloopt_op"])
+            koppeling.save(
+                update_fields=["access_hash", "refresh_hash", "access_verloopt_op", "refresh_verloopt_op", "vorige_refresh_hash", "geroteerd_op"]
+            )
         return _tokenantwoord(koppeling, access, refresh)
 
     return _fout("unsupported_grant_type")
+
+
+def _hergebruik_afhandelen(sleutel, client):
+    """Een refresh token die al eens is ingewisseld. Vlak na het wisselen is
+    dat een dubbel verzoek; later betekent het dat iemand anders hem heeft.
+    Dan gaat de hele koppeling dicht en moet de eigenaar opnieuw koppelen."""
+    oud = Koppeling.objects.actief().filter(vorige_refresh_hash=sleutel, client=client).first()
+    if oud and oud.geroteerd_op and timezone.now() - oud.geroteerd_op > HERGEBRUIK_MARGE:
+        oud.ingetrokken_op = timezone.now()
+        oud.save(update_fields=["ingetrokken_op"])
 
 
 def koppeling_bij_token(request):

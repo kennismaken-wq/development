@@ -22,6 +22,13 @@ from django.utils import timezone
 # nieuwe. Intrekken werkt hoe dan ook meteen (er wordt per verzoek gekeken),
 # dit beperkt alleen de schade van een token dat ergens in een log belandt.
 ACCESS_GELDIG = timedelta(hours=1)
+# Een refresh token die zo lang niet is gebruikt, vervalt: een vergeten
+# koppeling blijft niet eeuwig open. Bij elk gebruik schuift dit op.
+REFRESH_GELDIG = timedelta(days=90)
+# Twee keer tegelijk vernieuwen (een dubbele klik, een herhaald verzoek) is
+# onschuldig. Wie een oude refresh token pas later nog eens aanbiedt, heeft
+# hem ergens vandaan: dan trekken we de hele koppeling in (OAuth 2.1).
+HERGEBRUIK_MARGE = timedelta(seconds=60)
 # Een autorisatiecode is eenmalig en hoort binnen seconden te worden ingewisseld.
 CODE_GELDIG = timedelta(minutes=5)
 
@@ -43,6 +50,8 @@ class Client(models.Model):
     client_id = models.CharField(max_length=64, unique=True, default=nieuw_token)
     naam = models.CharField(max_length=120, blank=True)
     redirect_uris = models.JSONField(default=list)
+    # Voor de rem op aanmelden (oauth.registreren).
+    ip = models.GenericIPAddressField(null=True, blank=True)
     aangemaakt_op = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -89,6 +98,10 @@ class Koppeling(models.Model):
     # Wisselt bij elk gebruik (rotatie): een uitgelekte oude refresh token
     # doet daarna niets meer.
     refresh_hash = models.CharField(max_length=64, unique=True)
+    refresh_verloopt_op = models.DateTimeField()
+    # De refresh token van één ronde terug, om hergebruik te herkennen.
+    vorige_refresh_hash = models.CharField(max_length=64, blank=True, db_index=True)
+    geroteerd_op = models.DateTimeField(null=True, blank=True)
     aangemaakt_op = models.DateTimeField(auto_now_add=True)
     laatst_gebruikt_op = models.DateTimeField(null=True, blank=True)
     ingetrokken_op = models.DateTimeField(null=True, blank=True)
@@ -104,9 +117,14 @@ class Koppeling(models.Model):
     def nieuwe_tokens(self):
         """Zet een vers paar en geeft ze leesbaar terug, één keer. Slaat niet op."""
         access, refresh = nieuw_token(), nieuw_token()
+        nu = timezone.now()
+        if self.refresh_hash:
+            self.vorige_refresh_hash = self.refresh_hash
+            self.geroteerd_op = nu
         self.access_hash = vingerafdruk(access)
         self.refresh_hash = vingerafdruk(refresh)
-        self.access_verloopt_op = timezone.now() + ACCESS_GELDIG
+        self.access_verloopt_op = nu + ACCESS_GELDIG
+        self.refresh_verloopt_op = nu + REFRESH_GELDIG
         return access, refresh
 
     def mag_lezen(self):

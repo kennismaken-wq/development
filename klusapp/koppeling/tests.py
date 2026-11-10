@@ -79,7 +79,10 @@ class Basis(TestCase):
     def tool(self, token, naam, **argumenten):
         antwoord = self.mcp(token, "tools/call", {"name": naam, "arguments": argumenten})
         self.assertEqual(antwoord.status_code, 200, antwoord.content)
-        return antwoord.json()["result"]
+        resultaat = antwoord.json()["result"]
+        if not resultaat.get("isError") and resultaat["content"][0]["type"] == "text" and len(resultaat["content"]) == 1:
+            resultaat["structuredContent"] = json.loads(resultaat["content"][0]["text"])
+        return resultaat
 
 
 class MetadataTests(Basis):
@@ -355,6 +358,7 @@ class ToolTests(ToolData):
         uitkomst = self.tool(self.access, "uren", medewerker="henk", van="2026-11-09", tot="2026-11-09")["structuredContent"]
         self.assertEqual(uitkomst["totaal_uren"], 7.5)
         self.assertEqual([b["klus"] for b in uitkomst["uurblokken"]], ["Tuin Vermeer", "Parkonderhoud"])
+        self.assertEqual({k["klus"] for k in uitkomst["per_klus"]}, {"Tuin Vermeer", "Parkonderhoud"})
         self.assertEqual(uitkomst["uurblokken"][0]["extra_werk"], "3 palen")
 
     def test_uren_per_medewerker_over_periode(self):
@@ -381,6 +385,7 @@ class ToolTests(ToolData):
     def test_werkplanning(self):
         uitkomst = self.tool(self.access, "werkplanning", van="2026-11-10", tot="2026-11-16")["structuredContent"]
         per_dag = {d["datum"]: d for d in uitkomst["dagen"]}
+        self.assertEqual(per_dag["2026-11-12"]["klussen"][0]["klus"], "Tuin Vermeer")
         self.assertEqual(per_dag["2026-11-12"]["klussen"][0]["notitie"], "met kraan")
         self.assertEqual(per_dag["2026-11-12"]["klussen"][0]["ingepland"], ["Henk de Vries"])
         self.assertEqual(per_dag["2026-11-13"]["dagnotitie"], "op tijd weg")
@@ -526,6 +531,38 @@ class GeenLekTests(ToolData):
         notities = self.tool(self.access, "zoek_notities", zoekterm="hek")["structuredContent"]["notities"]
         self.assertEqual(notities[0]["door"], "HandigerAI")
 
+    def test_verkeerde_typen_krijgen_duidelijke_melding(self):
+        for argumenten, melding in [
+            ({"soort": {"a": 1}}, "'soort' moet tekst zijn"),
+            ({"soort": "snoeien"}, "een van deze"),
+            ({"onzin": 1}, "Onbekend argument"),
+            ({"zoekterm": "x" * 500}, "te lang"),
+        ]:
+            uitkomst = self.tool(self.access, "zoek_klussen", **argumenten)
+            self.assertTrue(uitkomst["isError"])
+            self.assertIn(melding, uitkomst["content"][0]["text"])
+        self.assertIn("geheel getal", self.tool(self.access, "klus_dossier", klus_id=True)["content"][0]["text"])
+        self.assertIn("verplicht", self.tool(self.access, "bekijk_bestand")["content"][0]["text"])
+        self.assertFalse(self.tool(self.access, "uren", medewerker=None).get("isError"))
+
+    def test_lange_lijsten_worden_ingekort_met_totalen_compleet(self):
+        from unittest.mock import patch
+
+        with patch("koppeling.gereedschap.LIJST_BUDGET", 10):
+            uitkomst = self.tool(self.access, "uren", van="2026-11-01", tot="2026-11-30")["structuredContent"]
+        self.assertTrue(uitkomst["afgekapt"])
+        self.assertEqual(uitkomst["uurblokken"], [])
+        self.assertEqual(uitkomst["totaal_uren"], 16.5)
+        self.assertIn("kortere periode", uitkomst["let_op"])
+
+    def test_te_groot_antwoord_vraagt_om_inperken(self):
+        from unittest.mock import patch
+
+        with patch("koppeling.mcp.MAX_ANTWOORD", 50):
+            uitkomst = self.tool(self.access, "zoek_klussen")
+        self.assertTrue(uitkomst["isError"])
+        self.assertIn("kortere periode", uitkomst["content"][0]["text"])
+
     def test_onverwachte_fout_geeft_geen_details(self):
         from unittest.mock import patch
 
@@ -538,3 +575,181 @@ class GeenLekTests(ToolData):
         tekst = json.dumps(self.mcp(self.access, "tools/list").json()).lower()
         for woord in ("dropbox", "django", "database", "server", "http", "model"):
             self.assertNotIn(woord, tekst)
+
+
+class StresstestTests(Basis):
+    """Regressies uit de stresstest van 10-11-2026 (zie CONTEXT.md)."""
+
+    def setUp(self):
+        self.access, self.refresh, self.client_id = self.koppel()
+
+    # ── namen ──
+    def test_verborgen_account_en_gebruikersnaam_nergens(self):
+        admin = Medewerker.objects.create_user("admin", rol=Medewerker.Rol.EIGENAAR, verborgen=True)
+        naamloos = Medewerker.objects.create_user("k.jansen_login")
+        klus = Klus.objects.create(naam="Tuin")
+        Uurblok.objects.create(medewerker=admin, klus=klus, datum=date(2026, 11, 9), begintijd=time(8), eindtijd=time(9))
+        Uurblok.objects.create(medewerker=naamloos, klus=klus, datum=date(2026, 11, 9), begintijd=time(9), eindtijd=time(10))
+        Inzet.objects.create(medewerker=admin, klus=klus, datum=date(2026, 11, 12))
+        teksten = [
+            self.tool(self.access, "uren", van="2026-11-09", tot="2026-11-09"),
+            self.tool(self.access, "klus_dossier", klus_id=klus.pk),
+            self.tool(self.access, "werkplanning", van="2026-11-10", tot="2026-11-16"),
+            self.tool(self.access, "medewerkers"),
+            self.tool(self.access, "aanwezigheid", van="2026-11-09", tot="2026-11-09"),
+            self.tool(self.access, "uren", medewerker="niemand"),
+        ]
+        for t in teksten:
+            tekst = json.dumps(t, ensure_ascii=False)
+            self.assertNotIn("admin", tekst)
+            self.assertNotIn("jansen_login", tekst)
+        self.assertIn("HandigerAI", json.dumps(teksten[0]))
+
+    def test_zoeken_op_gebruikersnaam_kan_niet(self):
+        Medewerker.objects.create_user("xq7", first_name="Joost")
+        self.assertTrue(self.tool(self.access, "uren", medewerker="xq7")["isError"])
+        self.assertFalse(self.tool(self.access, "uren", medewerker="Joost").get("isError"))
+
+    def test_datum_buiten_redelijke_grenzen(self):
+        self.assertIn("2100", self.tool(self.access, "werkplanning", van="9999-12-31", tot="9999-12-31")["content"][0]["text"])
+
+    # ── protocol ──
+    def post_ruw(self, body):
+        return self.client.post("/mcp", body, content_type="application/json", HTTP_AUTHORIZATION=f"Bearer {self.access}")
+
+    def test_lange_lijst_berichten_geweigerd(self):
+        lijst = [{"jsonrpc": "2.0", "id": i, "method": "ping"} for i in range(11)]
+        self.assertEqual(self.post_ruw(json.dumps(lijst)).status_code, 400)
+        self.assertEqual(self.post_ruw(json.dumps(lijst[:10])).status_code, 200)
+
+    def test_diep_genest_en_nan_en_groot(self):
+        self.assertEqual(self.post_ruw("[" * 60000).json()["error"]["code"], -32700)
+        self.assertEqual(self.post_ruw('{"jsonrpc":"2.0","id":NaN,"method":"ping"}').json()["error"]["code"], -32700)
+        self.assertEqual(self.post_ruw(json.dumps({"x": "a" * 70000})).status_code, 413)
+
+    def test_toolnaam_geen_tekst(self):
+        antwoord = self.mcp(self.access, "tools/call", {"name": ["uren"]})
+        self.assertEqual(antwoord.status_code, 200)
+        self.assertEqual(antwoord.json()["error"]["code"], -32602)
+
+    # ── aanmelden ──
+    def test_aanmelden_begrensd(self):
+        groot = json.dumps({"redirect_uris": ["https://claude.ai/api/mcp/auth_callback" + "a" * 9000]})
+        self.assertEqual(self.client.post(reverse("oauth_registreren"), groot, content_type="application/json").status_code, 413)
+        for _ in range(9):  # één is al gebruikt in setUp
+            self.assertEqual(self.registreer().status_code, 201)
+        self.assertEqual(self.registreer().status_code, 429)
+        self.assertEqual(self.registreer().json()["error"], "temporarily_unavailable")
+
+    def test_alleen_exacte_terugadressen(self):
+        for slecht in [
+            "https://evil.com\\@claude.ai/api/mcp/auth_callback",
+            "https://evil.com%2F.claude.ai/api/mcp/auth_callback",
+            "https://x.claude.ai/api/mcp/auth_callback",
+            "https://claude.ai/ander",
+            "https://claude.ai:8443/api/mcp/auth_callback",
+            "http://localhost@evil.com/cb",
+            "http://localhost:99/cb\\x",
+            "http://127.0.0.1.evil.com/cb",
+        ]:
+            self.assertEqual(self.registreer([slecht]).status_code, 400, slecht)
+
+    # ── pkce ──
+    def test_niet_ascii_challenge_geweigerd(self):
+        self.client.force_login(self.maarten)
+        antwoord = self.client.get(reverse("oauth_toestaan"), self.toestaan_parameters(self.client_id, code_challenge="é" * 43))
+        self.assertIn("error=invalid_request", antwoord["Location"])
+
+    def test_niet_ascii_verifier_geen_500(self):
+        antwoord = self.client.post(
+            reverse("oauth_token"),
+            {"grant_type": "authorization_code", "code": "x", "redirect_uri": TERUG, "client_id": self.client_id, "code_verifier": "é" * 50},
+        )
+        self.assertEqual(antwoord.status_code, 400)
+
+    # ── refresh ──
+    def vernieuw(self, refresh):
+        return self.client.post(reverse("oauth_token"), {"grant_type": "refresh_token", "refresh_token": refresh, "client_id": self.client_id})
+
+    def test_late_hergebruik_trekt_koppeling_in(self):
+        nieuw = self.vernieuw(self.refresh).json()
+        Koppeling.objects.update(geroteerd_op=timezone.now() - timedelta(minutes=5))
+        self.assertEqual(self.vernieuw(self.refresh).status_code, 400)
+        self.assertIsNotNone(Koppeling.objects.get().ingetrokken_op)
+        self.assertEqual(self.mcp(nieuw["access_token"], "ping").status_code, 401)
+
+    def test_direct_hergebruik_laat_koppeling_staan(self):
+        nieuw = self.vernieuw(self.refresh).json()
+        self.assertEqual(self.vernieuw(self.refresh).status_code, 400)
+        self.assertIsNone(Koppeling.objects.get().ingetrokken_op)
+        self.assertEqual(self.mcp(nieuw["access_token"], "ping").status_code, 200)
+
+    def test_refresh_verloopt(self):
+        Koppeling.objects.update(refresh_verloopt_op=timezone.now() - timedelta(seconds=1))
+        self.assertEqual(self.vernieuw(self.refresh).status_code, 400)
+
+    # ── toestemmingsscherm ──
+    def test_scherm_toont_geen_zelfgekozen_naam(self):
+        cid = self.client.post(
+            reverse("oauth_registreren"),
+            json.dumps({"client_name": "Officiële HandigerAI Beheer", "redirect_uris": [TERUG]}),
+            content_type="application/json",
+        ).json()["client_id"]
+        self.client.force_login(self.maarten)
+        antwoord = self.client.get(reverse("oauth_toestaan"), self.toestaan_parameters(cid))
+        self.assertNotContains(antwoord, "Officiële HandigerAI Beheer")
+        self.assertContains(antwoord, "Kreeg u deze link van iemand anders")
+
+
+@override_settings(MEDIA_ROOT=tempfile.mkdtemp())
+class BomTests(BestandTests):
+    """Bestanden die klein binnenkomen en in het geheugen ontploffen. Elk
+    moet een nette melding geven, snel en zonder het geheugen op te blazen."""
+
+    def snel_en_netjes(self, b, melding):
+        import resource
+        import time as klok
+
+        voor = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
+        begin = klok.time()
+        uitkomst = self.tool(self.access, "bekijk_bestand", bestand_id=b.pk)
+        self.assertLess(klok.time() - begin, 3)
+        self.assertLess(resource.getrusage(resource.RUSAGE_SELF).ru_maxrss - voor, 300_000)  # KB
+        self.assertTrue(uitkomst["isError"])
+        self.assertIn(melding, uitkomst["content"][0]["text"])
+
+    def test_docx_zipbom(self):
+        uit = io.BytesIO()
+        with zipfile.ZipFile(uit, "w", zipfile.ZIP_DEFLATED) as archief:
+            archief.writestr("word/document.xml", "<a>" + "x" * 200_000_000 + "</a>")
+        self.snel_en_netjes(self.bijlage("bom.docx", uit.getvalue()), "te groot")
+
+    def test_xlsx_zipbom(self):
+        uit = io.BytesIO()
+        with zipfile.ZipFile(uit, "w", zipfile.ZIP_DEFLATED) as archief:
+            archief.writestr("xl/sharedStrings.xml", "<sst>" + "<si><t>x</t></si>" * 3_000_000 + "</sst>")
+        self.snel_en_netjes(self.bijlage("bom.xlsx", uit.getvalue()), "te groot")
+
+    def test_reuzenafbeelding_als_document(self):
+        from PIL import Image
+
+        uit = io.BytesIO()
+        Image.new("1", (13300, 13300)).save(uit, "PNG")
+        self.snel_en_netjes(self.bijlage("tekening.png", uit.getvalue()), "te groot")
+
+    def test_pdf_met_reuzenpagina(self):
+        import pymupdf
+
+        pdf = pymupdf.open()
+        for _ in range(3):
+            pdf.new_page(width=11000, height=11000)
+        b = self.bijlage("plattegrond.pdf", pdf.tobytes())
+        uitkomst = self.tool(self.access, "bekijk_bestand", bestand_id=b.pk)
+        self.assertEqual([c["type"] for c in uitkomst["content"]], ["text", "text", "image", "image", "image"])
+
+    def test_te_groot_bestand(self):
+        from unittest.mock import patch
+
+        b = self.bijlage("groot.pdf", b"%PDF")
+        with patch("koppeling.gereedschap.MAX_BESTAND", 2):
+            self.snel_en_netjes(b, "te groot")

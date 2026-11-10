@@ -54,9 +54,12 @@ def _datum(waarde, standaard, veld):
     if waarde in (None, ""):
         return standaard
     try:
-        return date.fromisoformat(str(waarde))
+        d = date.fromisoformat(str(waarde))
     except ValueError:
         raise Fout(f"{veld} moet een datum zijn als JJJJ-MM-DD, niet {waarde!r}.")
+    if not 2000 <= d.year <= 2100:
+        raise Fout(f"{veld} moet tussen 2000 en 2100 liggen.")
+    return d
 
 
 def _periode(argumenten, van, tot, max_dagen):
@@ -82,16 +85,20 @@ def _tijd(t):
 
 
 def _naam(persoon):
-    # Het verborgen beheeraccount van HandigerAI heet intern "admin"; dat is
-    # een accountnaam en geen bedrijfsgegeven.
+    """De naam zoals die in de uitvoer staat. Niet `Medewerker.naam`: die
+    valt terug op de gebruikersnaam, en dat is een inloggegeven. Het
+    verborgen beheeraccount van HandigerAI heet intern "admin"; ook dat gaat
+    er niet uit."""
     if persoon is None:
         return "onbekend"
-    return "HandigerAI" if persoon.verborgen else persoon.naam
+    if persoon.verborgen:
+        return "HandigerAI"
+    return f"{persoon.first_name} {persoon.last_name}".strip() or "(naam niet ingevuld)"
 
 
 def _medewerker(naam):
-    """Op voornaam, achternaam, volle naam of gebruikersnaam. Precies één
-    treffer of een fout die de kandidaten noemt."""
+    """Op voornaam, achternaam of volle naam — niet op gebruikersnaam, dat is
+    een inloggegeven. Precies één treffer of een fout die de kandidaten noemt."""
     naam = " ".join(str(naam or "").split())
     if not naam:
         return None
@@ -100,16 +107,16 @@ def _medewerker(naam):
     exact = [
         m
         for m in iedereen
-        if sleutel in (m.naam.casefold(), m.username.casefold(), m.first_name.casefold(), m.last_name.casefold())
+        if sleutel in (_naam(m).casefold(), m.first_name.casefold(), m.last_name.casefold())
     ]
     if len(exact) == 1:
         return exact[0]
-    kandidaten = exact or [m for m in iedereen if sleutel in m.naam.casefold() or sleutel in m.username.casefold()]
+    kandidaten = exact or [m for m in iedereen if sleutel in _naam(m).casefold()]
     if len(kandidaten) == 1:
         return kandidaten[0]
     if not kandidaten:
-        raise Fout(f"Geen medewerker gevonden met de naam {naam!r}. Wel: {', '.join(m.naam for m in iedereen)}.")
-    raise Fout(f"{naam!r} kan meerdere mensen zijn: {', '.join(m.naam for m in kandidaten)}. Welke bedoelt u?")
+        raise Fout(f"Geen medewerker gevonden met de naam {naam!r}. Wel: {', '.join(_naam(m) for m in iedereen)}.")
+    raise Fout(f"{naam!r} kan meerdere mensen zijn: {', '.join(_naam(m) for m in kandidaten)}. Welke bedoelt u?")
 
 
 def _klus(klus_id):
@@ -144,6 +151,34 @@ def _bestand_kort(b):
         "klus": b.klus.naam if b.klus_id else "(algemeen, niet aan een klus gekoppeld)",
         "toegevoegd_door": _naam(b.toegevoegd_door),
     }
+
+
+# Wat één lijst in een antwoord mag beslaan (in tekens JSON). Samen met de
+# totalen blijft een antwoord zo onder MAX_ANTWOORD in mcp.py.
+LIJST_BUDGET = 60_000
+
+
+def _past(items, budget):
+    """Zoveel items als in `budget` tekens JSON passen, vanaf het begin."""
+    gebruikt, passend = 0, []
+    for item in items:
+        gebruikt += len(json.dumps(item, ensure_ascii=False, separators=(",", ":"))) + 1
+        if gebruikt > budget:
+            break
+        passend.append(item)
+    return passend
+
+
+def _binnen_budget(naam, items, totaal, uitleg, budget=None):
+    """{naam: zoveel items als passen} plus "afgekapt", en als er iets is
+    weggelaten een uitleg hoe Claude de rest opvraagt. Altijd vooraan
+    beginnen, zodat "afgekapt" betekent: het begin klopt, het eind ontbreekt."""
+    passend = _past(items, budget or LIJST_BUDGET)
+    uit = {"afgekapt": len(passend) < totaal, naam: passend}
+    if uit["afgekapt"]:
+        uit["getoond"] = len(passend)
+        uit["let_op"] = uitleg
+    return uit
 
 
 def _medewerkerfilter(argumenten):
@@ -202,12 +237,12 @@ def klus_dossier(argumenten):
     blokken = list(Uurblok.objects.filter(klus=klus).select_related("medewerker").order_by("-datum", "-begintijd"))
     per_persoon = defaultdict(int)
     for b in blokken:
-        per_persoon[b.medewerker.naam] += b.duur_minuten
+        per_persoon[_naam(b.medewerker)] += b.duur_minuten
 
     klusdagen = Klusdag.objects.filter(klus=klus)
     ingepland = defaultdict(list)
     for inzet in Inzet.objects.filter(klus=klus, datum__gte=nu).select_related("medewerker"):
-        ingepland[inzet.datum].append(inzet.medewerker.naam)
+        ingepland[inzet.datum].append(_naam(inzet.medewerker))
     gepland = sorted({kd.datum for kd in klusdagen.filter(datum__gte=nu)} | set(ingepland))
     notitie_per_dag = {kd.datum: kd.notitie for kd in klusdagen}
 
@@ -228,7 +263,7 @@ def klus_dossier(argumenten):
             "laatste_uurblokken": [
                 {
                     **_dag(b.datum),
-                    "medewerker": b.medewerker.naam,
+                    "medewerker": _naam(b.medewerker),
                     "van": _tijd(b.begintijd),
                     "tot": _tijd(b.eindtijd),
                     "uren": _uren(b.duur_minuten),
@@ -294,7 +329,7 @@ def medewerkers(argumenten):
     return {
         "medewerkers": [
             {
-                "naam": m.naam,
+                "naam": _naam(m),
                 "functie": m.functie,
                 "vaste_werkdagen": [DAGNAMEN[d] for d in sorted(m.vaste_werkdagen or [])],
                 "in_dienst_sinds": m.in_dienst_sinds.isoformat() if m.in_dienst_sinds else None,
@@ -324,10 +359,10 @@ def uren(argumenten):
     per_persoon = defaultdict(lambda: {"minuten": 0, "dagen": set()})
     per_klus = {}
     for b in blokken:
-        p = per_persoon[b.medewerker.naam]
+        p = per_persoon[_naam(b.medewerker)]
         p["minuten"] += b.duur_minuten
         p["dagen"].add(b.datum)
-        k = per_klus.setdefault(b.klus_id, {**_klus_kort(b.klus), "minuten": 0})
+        k = per_klus.setdefault(b.klus_id, {"klus_id": b.klus_id, "klus": b.klus.naam, "opdrachtgever": b.klus.opdrachtgever, "minuten": 0})
         k["minuten"] += b.duur_minuten
 
     return {
@@ -338,16 +373,17 @@ def uren(argumenten):
             {"medewerker": naam, "uren": _uren(p["minuten"]), "dagen_gewerkt": len(p["dagen"])}
             for naam, p in sorted(per_persoon.items())
         ],
-        "per_klus": [
+        # Meeste uren eerst; bij honderden klussen alleen de grootste.
+        "per_klus": (per_klus_lijst := _past([
             {**{k: v for k, v in rij.items() if k != "minuten"}, "uren": _uren(rij["minuten"])}
             for rij in sorted(per_klus.values(), key=lambda r: -r["minuten"])
-        ],
+        ], 25_000)),
+        "per_klus_volledig": len(per_klus_lijst) == len(per_klus),
         "aantal_uurblokken": len(blokken),
-        "afgekapt": len(blokken) > MAX_UURBLOKKEN,
-        "uurblokken": [
+        **_binnen_budget("uurblokken", [
             {
                 **_dag(b.datum),
-                "medewerker": b.medewerker.naam,
+                "medewerker": _naam(b.medewerker),
                 "klus_id": b.klus_id,
                 "klus": b.klus.naam,
                 "van": _tijd(b.begintijd),
@@ -357,7 +393,7 @@ def uren(argumenten):
                 "extra_werk": b.extra_werk,
             }
             for b in blokken[:MAX_UURBLOKKEN]
-        ],
+        ], len(blokken), "Vraag een kortere periode, of één medewerker of klus, voor alle losse uurblokken. De totalen hierboven zijn wel compleet."),
     }
 
 
@@ -378,10 +414,10 @@ def werkplanning(argumenten):
     per_dag = defaultdict(dict)
     if not persoon:
         for kd in klusdagen:
-            per_dag[kd.datum][kd.klus_id] = {**_klus_kort(kd.klus), "notitie": kd.notitie, "ingepland": []}
+            per_dag[kd.datum][kd.klus_id] = {"klus_id": kd.klus_id, "klus": kd.klus.naam, "notitie": kd.notitie, "ingepland": []}
     for i in inzet:
-        rij = per_dag[i.datum].setdefault(i.klus_id, {**_klus_kort(i.klus), "notitie": "", "ingepland": []})
-        rij["ingepland"].append(i.medewerker.naam)
+        rij = per_dag[i.datum].setdefault(i.klus_id, {"klus_id": i.klus_id, "klus": i.klus.naam, "notitie": "", "ingepland": []})
+        rij["ingepland"].append(_naam(i.medewerker))
     if persoon:
         for kd in klusdagen.filter(datum__in=list(per_dag)):
             if kd.klus_id in per_dag[kd.datum]:
@@ -405,9 +441,9 @@ def werkplanning(argumenten):
     return {
         "van": van.isoformat(),
         "tot": tot.isoformat(),
-        "medewerker": persoon.naam if persoon else None,
+        "medewerker": _naam(persoon) if persoon else None,
         "uitleg": "Alleen dagen waarop iets gepland staat. 'ingepland' = wie er die dag heen gaat.",
-        "dagen": dagen,
+        **_binnen_budget("dagen", dagen, len(dagen), "Niet alle dagen passen in één antwoord; vraag de rest op met een latere 'van'."),
     }
 
 
@@ -437,7 +473,7 @@ def aanwezigheid(argumenten):
             if c.klussen:
                 regel["klussen"] = [k.naam for k in c.klussen]
             regels.append(regel)
-        uitkomst.append({"medewerker": m.naam, "telling": dict(telling), "dagen": regels})
+        uitkomst.append({"medewerker": _naam(m), "telling": dict(telling), "dagen": regels})
     return {
         "van": van.isoformat(),
         "tot": tot.isoformat(),
@@ -510,10 +546,37 @@ MAX_PDF_PAGINAS = 40
 MAX_RIJEN = 300
 
 
+# Grenzen tegen bestanden die klein binnenkomen en in het geheugen ontploffen
+# (stresstest 10-11-2026): een docx van 1 MB werd 2 GB, een png van 0,7 MB
+# 2 GB, een pdf van een paar KB met reuzenpagina's 1,7 GB. Een medewerker kan
+# zoiets uploaden; het gaat af zodra Claude het opent.
+MAX_BESTAND = 30 * 1024 * 1024          # wat we überhaupt inlezen
+MAX_PIXELS = 40_000_000                 # 40 MP: ruim boven elke telefoonfoto
+MAX_UITGEPAKT = 20 * 1024 * 1024        # alle delen van een docx/xlsx samen
+MAX_ZIPDELEN = 2000
+MAX_BLADEN = 10
+MAX_KOLOMMEN = 50
+
+
 def _als_beeld(gegevens):
+    import warnings
+
     from PIL import Image, ImageOps
 
-    with Image.open(io.BytesIO(gegevens)) as plaatje:
+    try:
+        with warnings.catch_warnings():
+            warnings.simplefilter("error", Image.DecompressionBombWarning)
+            plaatje = Image.open(io.BytesIO(gegevens))
+    except (Image.DecompressionBombWarning, Image.DecompressionBombError):
+        raise Fout("Deze afbeelding is te groot om te bekijken.")
+    with plaatje:
+        # Image.open leest alleen de kop; de pixels pas hieronder. Dus eerst
+        # de maat controleren, dan pas uitpakken.
+        breed, hoog = plaatje.size
+        if breed * hoog > MAX_PIXELS:
+            raise Fout("Deze afbeelding is te groot om te bekijken.")
+        if plaatje.format == "JPEG":
+            plaatje.draft("RGB", (BEELD_ZIJDE, BEELD_ZIJDE))
         plaatje = ImageOps.exif_transpose(plaatje).convert("RGB")
         plaatje.thumbnail((BEELD_ZIJDE, BEELD_ZIJDE))
         uit = io.BytesIO()
@@ -539,32 +602,59 @@ def _pdf(gegevens):
         if len(tekst.split()) < 20 * min(len(pdf), 3):
             # Een scan of een tekening: weinig tekst, dus kijken in plaats van lezen.
             for i in range(min(len(pdf), 3)):
-                blokken.append(_als_beeld(pdf[i].get_pixmap(dpi=110).tobytes("png")))
+                rand = pdf[i].rect
+                langste = max(rand.width, rand.height)
+                if langste <= 0:
+                    continue
+                # Nooit groter renderen dan wat Claude toch ziet: een pagina
+                # van 11000 pt op 110 dpi was 280 megapixel.
+                zoom = min(110 / 72, BEELD_ZIJDE / langste)
+                blokken.append(_als_beeld(pdf[i].get_pixmap(matrix=pymupdf.Matrix(zoom, zoom)).tobytes("png")))
     return [{"type": "text", "text": _kap(tekst)}] + blokken
+
+
+def _zip_controleren(gegevens):
+    """Een docx of xlsx is een zip. Wat er uitgepakt in zit, staat in de
+    inhoudsopgave; die lezen we vóór er iets wordt uitgepakt."""
+    try:
+        archief = zipfile.ZipFile(io.BytesIO(gegevens))
+    except zipfile.BadZipFile:
+        raise Fout("Dit bestand kon niet worden gelezen; het is mogelijk beschadigd.")
+    delen = archief.infolist()
+    if len(delen) > MAX_ZIPDELEN or sum(d.file_size for d in delen) > MAX_UITGEPAKT:
+        archief.close()
+        raise Fout("Dit bestand is te groot om te lezen.")
+    return archief
 
 
 def _xlsx(gegevens):
     from openpyxl import load_workbook
 
+    _zip_controleren(gegevens).close()
     boek = load_workbook(io.BytesIO(gegevens), read_only=True, data_only=True)
     delen = []
-    for blad in boek.worksheets:
+    for blad in boek.worksheets[:MAX_BLADEN]:
         regels = []
-        for n, rij in enumerate(blad.iter_rows(values_only=True)):
+        for n, rij in enumerate(blad.iter_rows(max_row=MAX_RIJEN + 1, max_col=MAX_KOLOMMEN, values_only=True)):
             if n >= MAX_RIJEN:
                 regels.append(f"[… meer rijen dan {MAX_RIJEN}]")
                 break
             if any(cel not in (None, "") for cel in rij):
                 regels.append("\t".join("" if cel is None else str(cel) for cel in rij).rstrip())
         delen.append(f"--- blad {blad.title} ---\n" + "\n".join(regels))
+    if len(boek.worksheets) > MAX_BLADEN:
+        delen.append(f"[… alleen de eerste {MAX_BLADEN} van {len(boek.worksheets)} bladen]")
     boek.close()
     return [{"type": "text", "text": _kap("\n\n".join(delen))}]
 
 
 def _docx(gegevens):
     w = "{http://schemas.openxmlformats.org/wordprocessingml/2006/main}"
-    with zipfile.ZipFile(io.BytesIO(gegevens)) as archief:
-        boom = ElementTree.fromstring(archief.read("word/document.xml"))
+    with _zip_controleren(gegevens) as archief:
+        try:
+            boom = ElementTree.fromstring(archief.read("word/document.xml"))
+        except KeyError:
+            raise Fout("Dit bestand kon niet worden gelezen; het is mogelijk beschadigd.")
     alineas = ["".join(t.text or "" for t in p.iter(f"{w}t")) for p in boom.iter(f"{w}p")]
     return [{"type": "text", "text": _kap("\n".join(alineas))}]
 
@@ -578,10 +668,12 @@ def bekijk_bestand(argumenten):
     kop = {"type": "text", "text": json.dumps(_bestand_kort(bijlage), ensure_ascii=False, indent=1)}
     naam = (bijlage.originele_naam or bijlage.bestand.name).lower()
     try:
+        if bijlage.bestand.size > MAX_BESTAND:
+            raise Fout("Dit bestand is te groot om te lezen.")
         with bijlage.bestand.open("rb") as f:
             gegevens = f.read()
     except OSError:
-        raise Fout("Het bestand staat niet (meer) op de server.")
+        raise Fout("Dit bestand is niet meer beschikbaar.")
 
     try:
         if bijlage.weergave == "foto":
@@ -594,6 +686,8 @@ def bekijk_bestand(argumenten):
             return [kop, *_docx(gegevens)]
         if naam.endswith((".txt", ".csv", ".md")):
             return [kop, {"type": "text", "text": _kap(gegevens.decode("utf-8", errors="replace"))}]
+    except Fout:
+        raise
     except Exception:  # noqa: BLE001 — een kapot bestand mag de koppeling niet omgooien
         raise Fout("Dit bestand kon niet worden gelezen; het is mogelijk beschadigd.")
     raise Fout(f"De inhoud van een {bijlage.extensie or 'onbekend'}-bestand kan Claude niet lezen; alleen de gegevens hierboven.")

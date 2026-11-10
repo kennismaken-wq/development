@@ -22,6 +22,17 @@ from .oauth import basis_url, koppeling_bij_token
 
 log = logging.getLogger(__name__)
 
+# Ongeveer 25.000 tokens: wat Claude nog goed in één keer kan lezen.
+MAX_ANTWOORD = 100_000
+
+MAX_VERZOEK = 64 * 1024
+MAX_LIJST_BERICHTEN = 10
+
+
+def _geen_nan(waarde):
+    raise ValueError(f"{waarde} is geen geldige JSON")
+
+
 PROTOCOLVERSIES = ["2025-11-25", "2025-06-18", "2025-03-26", "2024-11-05"]
 
 INSTRUCTIES = (
@@ -48,14 +59,48 @@ def _niet_ingelogd(request):
     return antwoord
 
 
+_TYPEN = {
+    "string": (lambda w: isinstance(w, str), "tekst"),
+    # bool is in Python ook een int; True als klus_id is geen klus.
+    "integer": (lambda w: isinstance(w, int) and not isinstance(w, bool), "een geheel getal"),
+    "boolean": (lambda w: isinstance(w, bool), "true of false"),
+}
+
+
+def _controleer(schema, argumenten):
+    """De argumenten tegen het schema van de tool, vóór er iets draait. Zo
+    krijgt een tool alleen de vormen binnen waar hij op rekent, en Claude
+    een zin die zegt wat er mis is in plaats van "er ging iets mis"."""
+    velden = schema.get("properties", {})
+    for naam in schema.get("required", []):
+        if argumenten.get(naam) is None:
+            return f"'{naam}' is verplicht."
+    for naam, waarde in argumenten.items():
+        if naam not in velden:
+            return f"Onbekend argument '{naam}'. Mogelijk: {', '.join(velden) or 'geen'}."
+        if waarde is None:
+            continue
+        klopt, omschrijving = _TYPEN[velden[naam]["type"]]
+        if not klopt(waarde):
+            return f"'{naam}' moet {omschrijving} zijn."
+        if "enum" in velden[naam] and waarde not in velden[naam]["enum"]:
+            return f"'{naam}' moet een van deze zijn: {', '.join(velden[naam]['enum'])}."
+        if isinstance(waarde, str) and len(waarde) > 200:
+            return f"'{naam}' is te lang."
+    return None
+
+
 def _tool_aanroepen(params):
     naam = params.get("name")
-    tool = gereedschap.PER_NAAM.get(naam)
+    tool = gereedschap.PER_NAAM.get(naam) if isinstance(naam, str) else None
     if tool is None:
         return None
     argumenten = params.get("arguments") or {}
     if not isinstance(argumenten, dict):
         return {"content": [{"type": "text", "text": "De argumenten moeten een object zijn."}], "isError": True}
+    probleem = _controleer(tool["inputSchema"], argumenten)
+    if probleem:
+        return {"content": [{"type": "text", "text": probleem}], "isError": True}
     try:
         uitkomst = tool["functie"](argumenten)
     except gereedschap.Fout as fout:
@@ -65,10 +110,17 @@ def _tool_aanroepen(params):
         return {"content": [{"type": "text", "text": "Er ging iets mis. Probeer het later opnieuw."}], "isError": True}
     if isinstance(uitkomst, list):
         return {"content": uitkomst}
-    return {
-        "content": [{"type": "text", "text": json.dumps(uitkomst, ensure_ascii=False, indent=1)}],
-        "structuredContent": uitkomst,
-    }
+    # Compact en één keer: geen inspringing en geen tweede kopie als
+    # structuredContent. Een jaar uren was zo 367 KB, de helft dubbel.
+    tekst = json.dumps(uitkomst, ensure_ascii=False, separators=(",", ":"))
+    if len(tekst) > MAX_ANTWOORD:
+        # Liever een duidelijke vraag om in te perken dan een antwoord dat
+        # Claude halverwege afkapt en waar hij dan toch op gaat rekenen.
+        return {
+            "content": [{"type": "text", "text": "Dit zijn te veel gegevens voor één antwoord. Vraag een kortere periode, of filter op een medewerker of klus."}],
+            "isError": True,
+        }
+    return {"content": [{"type": "text", "text": tekst}]}
 
 
 def _verwerk(bericht):
@@ -78,6 +130,8 @@ def _verwerk(bericht):
     if "id" not in bericht:
         return None
     bericht_id = bericht["id"]
+    if not isinstance(bericht_id, (str, int)) or isinstance(bericht_id, bool):
+        return _fout(None, -32600, "Ongeldig id.")
     methode = bericht["method"]
     params = bericht.get("params") or {}
     if not isinstance(params, dict):
@@ -129,15 +183,27 @@ def eindpunt(request):
         koppeling.laatst_gebruikt_op = nu
         koppeling.save(update_fields=["laatst_gebruikt_op"])
 
+    # Een vraag van Claude is een paar honderd bytes. Groter is geen vraag.
     try:
-        bericht = json.loads(request.body)
-    except (ValueError, UnicodeDecodeError):
+        lengte = int(request.META.get("CONTENT_LENGTH") or 0)
+    except ValueError:
+        lengte = 0
+    if lengte > MAX_VERZOEK:
+        return JsonResponse(_fout(None, -32600, "Verzoek te groot."), status=413)
+    try:
+        bericht = json.loads(request.body[: MAX_VERZOEK + 1], parse_constant=_geen_nan)
+    except (ValueError, UnicodeDecodeError, RecursionError):
         return JsonResponse(_fout(None, -32700, "Geen geldige JSON."), status=400)
 
     try:
         if isinstance(bericht, list):
             if not bericht:
                 return JsonResponse(_fout(None, -32600, "Lege lijst."), status=400)
+            # Nieuwere protocolversies kennen geen lijsten meer; oudere
+            # sturen er hooguit een paar. Zonder plafond hield één verzoek
+            # met 5000 zware vragen een worker minutenlang bezig.
+            if len(bericht) > MAX_LIJST_BERICHTEN:
+                return JsonResponse(_fout(None, -32600, "Te veel berichten in één verzoek."), status=400)
             antwoorden = [a for a in map(_verwerk, bericht) if a is not None]
             return JsonResponse(antwoorden, safe=False) if antwoorden else HttpResponse(status=202)
         antwoord = _verwerk(bericht)

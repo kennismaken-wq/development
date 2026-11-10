@@ -212,7 +212,35 @@ als "waar was Henk gisteren?". Wat er staat:
   toestemmingsscherm `/oauth/toestaan/` (alleen voor de rol eigenaar; een medewerker krijgt
   uitleg en geen knop) en `/oauth/token/` met PKCE S256 en roterende refresh tokens.
   Tokens staan alleen als SHA-256 in de database. Terugsturen mag alleen naar claude.ai,
-  claude.com of localhost (`KLUSAPP_CLAUDE_REDIRECT_HOSTS`).
+  claude.com (precies hun callback-adres) of localhost (`KLUSAPP_CLAUDE_REDIRECT_URIS`).
+- **Stresstest 10-11-2026** (Thijmen: "dit mag echt niet fout gaan"). Tegen gunicorn
+  (3 workers) op Postgres met twee jaar data (10 man, 400 klussen, 12.000 uurblokken,
+  4.000 bestanden), plus een aparte aanvalsreview. Wat hield: alleen een eigenaar kan
+  koppelen, intrekken werkt meteen (0 van ~1000 vragen kwamen er na het intrekken nog
+  door), 10× tegelijk vernieuwen levert precies één nieuwe token op, 1200 vragen van 30
+  gelijktijdige gebruikers zonder fout (p95 < 1 s), 2000 kapotte verzoeken zonder één 500,
+  urentotalen kloppen tot op de minuut met de database. Wat is aangepast:
+  - **Bestanden die in het geheugen ontploffen.** Een docx van 1 MB werd 2 GB, een png van
+    0,7 MB ook, een pdf met reuzenpagina's 1,7 GB; een medewerker kan zo'n bestand
+    uploaden. Nu: zip-inhoud eerst controleren (max 20 MB uitgepakt), afbeeldingen max
+    40 MP vóór het uitpakken, pdf-pagina's nooit groter gerenderd dan 1568 px, max 30 MB
+    per bestand. `BomTests`.
+  - **Te grote antwoorden.** De werkplanning over 93 dagen was 2,7 MB. Nu compacte JSON,
+    lange lijsten ingekort met `afgekapt` en een uitleg, totalen altijd compleet, en een
+    harde grens van 100.000 tekens per antwoord (`MAX_ANTWOORD`).
+  - **Namen.** Het beheeraccount "admin" en gebruikersnamen lekten via uren, dossier en
+    planning (`Medewerker.naam` valt terug op de gebruikersnaam). Nu overal `_naam()`, en
+    zoeken op gebruikersnaam kan niet meer.
+  - **Argumenten** worden centraal tegen het schema van de tool gecontroleerd
+    (`mcp._controleer`); datums alleen tussen 2000 en 2100.
+  - **Protocol:** max 10 berichten per verzoek, max 64 KB, geen NaN, geen 500 bij diep
+    geneste JSON.
+  - **Aanmelden:** max 8 KB, 5 terugadressen, 10 per IP per uur, 200 ongebruikte in totaal.
+    Terugadres exact in plaats van op host.
+  - **Refresh tokens** verlopen na 90 dagen zonder gebruik; een oude die later dan een
+    minuut na het wisselen nog eens wordt aangeboden, trekt de hele koppeling in.
+  - **Toestemmingsscherm** toont altijd "Claude" (niet de naam die de aanmelder zelf
+    opgeeft) en zegt: alleen toestaan als u zelf net op Verbinden drukte.
 - **Intrekken**: Mijn profiel › Koppeling met Claude (`/claude/`), met het adres om te
   plakken, de installatiestappen en per koppeling een knop Intrekken. Werkt meteen: elk
   verzoek controleert of de koppeling nog actief is en of het account nog eigenaar is.

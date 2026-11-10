@@ -8,14 +8,16 @@
   {% elif geen_eigenaar %}
     <p class="uitleg">Alleen een account met de rol eigenaar kan Claude aan de klusapp koppelen. U bent ingelogd als {{ user.naam }}.</p>
   {% else %}
-    <p class="uitleg"><strong>{{ client.naam|default:"Claude" }}</strong> wil meelezen in de klusapp van De Groene M, met uw account ({{ user.naam }}).</p>
+    {% comment %} Altijd "Claude", nooit de naam die bij het aanmelden is opgegeven:
+       die kiest de aanmelder zelf. Het terugadres is wel gecontroleerd. {% endcomment %}
+    <p class="uitleg"><strong>Claude</strong> wil meelezen in de klusapp van De Groene M, met uw account ({{ user.first_name|default:user.naam }}).</p>
     <ul class="eisen">
       <li>Claude kan klussen, opdrachtgevers, uren, werkplanning, aanwezigheid, notities, foto's en documenten <em>lezen</em>.</li>
       <li>Claude kan niets toevoegen, wijzigen of verwijderen.</li>
       <li>Wat Claude opvraagt, gaat naar uw Claude-account bij Anthropic.</li>
       <li>U kunt dit altijd intrekken via Mijn profiel › Koppeling met Claude.</li>
     </ul>
-    <p class="uitleg" style="margin-top:1rem">Na Toestaan gaat u terug naar {{ terug_naar }}.</p>
+    <p class="uitleg" style="margin-top:1rem">Sta dit alleen toe als u zelf net in Claude op <em>Verbinden</em> heeft gedrukt. Kreeg u deze link van iemand anders, kies dan Niet toestaan. Na Toestaan gaat u terug naar {{ terug_naar }}.</p>
     <form method="post">
       {% csrf_token %}
       {% for naam, waarde in verborgen %}<input type="hidden" name="{{ naam }}" value="{{ waarde }}">{% endfor %}

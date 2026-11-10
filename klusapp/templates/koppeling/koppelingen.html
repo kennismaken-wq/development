@@ -25,7 +25,7 @@
         <li class="met-weg">
           <div class="mwregel">
             <span class="mwregel-tekst">
-              <span class="naam">{{ k.client.naam|default:"Claude" }}</span>
+              <span class="naam">Claude</span>
               <span class="meta">Door {{ k.medewerker.first_name|default:k.medewerker.naam }} · {{ k.aangemaakt_op|date:"d-m-Y" }}</span>
               <span class="meta">{% if k.laatst_gebruikt_op %}Laatst gebruikt {{ k.laatst_gebruikt_op|date:"d-m H:i" }}{% else %}Nog niet gebruikt{% endif %}</span>
             </span>
