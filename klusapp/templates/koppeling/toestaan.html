@@ -1,0 +1,26 @@
+{% extends "basis.html" %}
+{% block titel %}Claude koppelen{% endblock %}
+{% block kaartklasse %}inloggen{% endblock %}
+{% block kop %}Claude koppelen{% endblock %}
+{% block inhoud %}
+  {% if ongeldig %}
+    <p class="uitleg">Deze koppelingsaanvraag klopt niet of is verlopen. Begin opnieuw vanuit Claude, bij Instellingen › Connectors.</p>
+  {% elif geen_eigenaar %}
+    <p class="uitleg">Alleen een account met de rol eigenaar kan Claude aan de klusapp koppelen. U bent ingelogd als {{ user.naam }}.</p>
+  {% else %}
+    <p class="uitleg"><strong>{{ client.naam|default:"Claude" }}</strong> wil meelezen in de klusapp van De Groene M, met uw account ({{ user.naam }}).</p>
+    <ul class="eisen">
+      <li>Claude kan klussen, opdrachtgevers, uren, werkplanning, aanwezigheid, notities, foto's en documenten <em>lezen</em>.</li>
+      <li>Claude kan niets toevoegen, wijzigen of verwijderen.</li>
+      <li>Wat Claude opvraagt, gaat naar uw Claude-account bij Anthropic.</li>
+      <li>U kunt dit altijd intrekken via Mijn profiel › Koppeling met Claude.</li>
+    </ul>
+    <p class="uitleg" style="margin-top:1rem">Na Toestaan gaat u terug naar {{ terug_naar }}.</p>
+    <form method="post">
+      {% csrf_token %}
+      {% for naam, waarde in verborgen %}<input type="hidden" name="{{ naam }}" value="{{ waarde }}">{% endfor %}
+      <p style="margin-top:1.2rem"><button type="submit" name="actie" value="toestaan" class="knop">Toestaan</button></p>
+      <p style="margin-top:.8rem;text-align:center"><button type="submit" name="actie" value="weigeren" class="knop-stil">Niet toestaan</button></p>
+    </form>
+  {% endif %}
+{% endblock %}

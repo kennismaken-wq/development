@@ -186,6 +186,33 @@ serverzijdig gemeten speeltijd. Dat is een grens en geen bewijs. Powerups: imker
 de hoogte van elke collega een vlaggetje (`spel.scorebord.vlaggen`). Extra spelletjes zijn
 meerwerk (€ 120 per spel).
 
+**Bijgewerkt 10-11-2026: koppeling met Claude (offerte 2026-O01, onderdeel 2).**
+Een MCP-connector in `koppeling/`, zodat Maarten zijn eigen Claude vragen kan stellen
+als "waar was Henk gisteren?". Wat er staat:
+
+- **`/mcp`** (`koppeling/mcp.py`): JSON-RPC over HTTP, stateloos, gewone JSON-antwoorden
+  (geen SSE, geen sessies). Bewust zonder het `mcp`-pakket: dat is ASGI/Starlette en past
+  niet in gunicorn met Django. Getest met de officiële MCP-client (initialize, tools/list,
+  elke tool).
+- **Elf tools, allemaal alleen lezen** (`koppeling/gereedschap.py`): `vandaag`,
+  `zoek_klussen`, `klus_dossier`, `opdrachtgevers`, `medewerkers`, `uren`, `werkplanning`,
+  `aanwezigheid`, `zoek_notities`, `zoek_bestanden`, `bekijk_bestand`. Precies de lijst
+  uit de offerte: klussen, opdrachtgevers, uren per medewerker en periode, werkplanning,
+  aanwezigheid, notities, documenten en foto's. Medewerkers alleen met naam, functie, rol
+  en werkdagen — **geen** telefoon, adres of noodcontact, want die staan niet in de
+  offerte. Medewerkers worden op naam gevonden; een dubbelzinnige naam geeft een fout met
+  de kandidaten. `bekijk_bestand` geeft een foto als afbeelding (max 1568 px) en een
+  pdf/docx/xlsx als tekst; een gescande pdf als plaatje van de eerste pagina's.
+- **OAuth 2.1** (`koppeling/oauth.py`), zelf geschreven want django-oauth-toolkit kent
+  geen dynamische registratie: metadata op `/.well-known/…`, registreren, het
+  toestemmingsscherm `/oauth/toestaan/` (alleen voor de rol eigenaar; een medewerker krijgt
+  uitleg en geen knop) en `/oauth/token/` met PKCE S256 en roterende refresh tokens.
+  Tokens staan alleen als SHA-256 in de database. Terugsturen mag alleen naar claude.ai,
+  claude.com of localhost (`KLUSAPP_CLAUDE_REDIRECT_HOSTS`).
+- **Intrekken**: Mijn profiel › Koppeling met Claude (`/claude/`), met het adres om te
+  plakken, de installatiestappen en per koppeling een knop Intrekken. Werkt meteen: elk
+  verzoek controleert of de koppeling nog actief is en of het account nog eigenaar is.
+
 Vier dingen die bij diezelfde controle boven water kwamen en meteen zijn opgelost:
 
 1. **Het maandtotaal telde de rand-dagen mee.** `_maand_weergave` somde het hele
@@ -274,6 +301,7 @@ zet 'm in de `urls.py` van je eigen app, en haal de vlag `in_aanbouw` uit de teg
 | `/medewerkers/<pk>/dienst/` | `medewerker_dienst` | uit/in dienst zetten | ✅ af |
 | `/wachtwoord-vergeten/` (+ `/verstuurd/`, `/wachtwoord-herstellen/<uid>/<token>/`, `/wachtwoord-herstellen/klaar/`) | `wachtwoord_vergeten` e.a. | reset via mail naar het adres op het profiel; Django's eigen flow, link werkt 24 uur | ✅ af (30-09) |
 | `/spel/` (+ `/spel/start/`, `/spel/score/`) | `spel` e.a. | springspel met scorebord (meerwerk) | ✅ af |
+| `/claude/` (+ `/claude/<pk>/intrekken/`, `/mcp`, `/oauth/…`, `/.well-known/oauth-…`) | `claude_koppeling` e.a. | koppeling met Claude: MCP-eindpunt, OAuth, uitleg en intrekken (meerwerk) | ✅ af |
 | `/mijn-profiel/` | `mijn_profiel` | eigen gegevens + wachtwoord; een wachtwoord wijzigt ieder alleen zelf — het wachtwoordscherm voor de eigenaar is op 28-09-2026 weggehaald | ✅ af |
 
 ## 3. Werkafspraken

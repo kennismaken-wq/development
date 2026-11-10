@@ -55,6 +55,7 @@ INSTALLED_APPS = [
     "uren",
     "pushberichten",
     "spel",
+    "koppeling",
 ]
 
 MIDDLEWARE = [
@@ -192,6 +193,11 @@ DATA_UPLOAD_MAX_NUMBER_FIELDS = 10_000
 DATA_UPLOAD_MAX_NUMBER_FILES = 500
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+
+# Koppeling met Claude (koppeling/, offerte 2026-O01 onderdeel 2): waar Claude
+# na "Toestaan" naartoe terug mag. Alleen deze hosts (en localhost, voor
+# Claude Code en de desktop-app); zie koppeling.oauth.redirect_toegestaan.
+CLAUDE_REDIRECT_HOSTS = env_lijst("KLUSAPP_CLAUDE_REDIRECT_HOSTS", "claude.ai,claude.com")
 
 # Mail: de wekelijkse back-up van uren en aanwezigheid (uren/backup.py) en
 # "wachtwoord vergeten". Afzender is het SMTP-account zelf, op de server

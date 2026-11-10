@@ -31,6 +31,12 @@ artikel 2 én tegen het gespreksverslag met Maarten; de negen punten staan.
 in `spel/`, op `/spel/`, met een klein icoon rechtsboven op het startscherm.
 Zie CONTEXT.md §1.
 
+**Meerwerk (offerte 2026-O01, onderdeel 2):** de koppeling met Claude
+(MCP-connector) staat in `koppeling/`: het MCP-eindpunt op `/mcp`, OAuth-inlog
+waarbij alleen een eigenaar toestemming kan geven, en het scherm
+`/claude/` (via Mijn profiel) met uitleg en intrekken. Alleen lezen. Zie
+CONTEXT.md §1.
+
 Wat nog open staat, is geen contractpunt maar komt wel uit de contractreview
 (SPEC §8) en uit dat gesprek:
 

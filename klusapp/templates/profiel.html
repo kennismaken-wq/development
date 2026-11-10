@@ -39,6 +39,16 @@
   </details>
   {% endif %}
 
+  {% if user.is_eigenaar %}
+  <details class="vouw">
+    <summary>Koppeling met Claude</summary>
+    <form method="get" action="{% url 'claude_koppeling' %}">
+      <p class="eisen-blok">Laat uw eigen Claude vragen beantwoorden uit de klusapp. Alleen lezen; u kunt het altijd intrekken.</p>
+      <p style="margin-top:1.2rem"><button type="submit" class="knop">Koppeling instellen of intrekken</button></p>
+    </form>
+  </details>
+  {% endif %}
+
   <form method="post" action="{% url 'uitloggen' %}" style="margin-top:1.6rem">
     {% csrf_token %}
     <button type="submit" class="knop-stil">Uitloggen</button>

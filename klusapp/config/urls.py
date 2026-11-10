@@ -79,6 +79,7 @@ urlpatterns = [
     path("", include("klussen.urls")),
     path("", include("pushberichten.urls")),
     path("", include("spel.urls")),
+    path("", include("koppeling.urls")),
     *nog_te_bouwen,
     path("beheer/", admin.site.urls),
 ]

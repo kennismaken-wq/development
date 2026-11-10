@@ -1,0 +1,44 @@
+{% extends "basis.html" %}
+{% block titel %}Koppeling met Claude{% endblock %}
+{% block kop %}Koppeling met Claude{% endblock %}
+{% block sub %}<a href="{% url 'mijn_profiel' %}" style="color:rgba(255,255,255,0.6)">‹ Mijn profiel</a>{% endblock %}
+{% block inhoud %}
+  <p class="uitleg">Met deze koppeling beantwoordt uw eigen Claude vragen uit de klusapp, zoals "waar was Henk gisteren?" of "welke klussen deden we in Leiden?". Claude kan alleen lezen: klussen, opdrachtgevers, uren, werkplanning, aanwezigheid, notities, foto's en documenten. Toevoegen, wijzigen of verwijderen kan niet.</p>
+
+  <label for="mcp-adres">Adres van de koppeling</label>
+  <input id="mcp-adres" type="text" value="{{ adres }}" readonly onclick="this.select()">
+
+  <h2 class="sectiekop">Zo koppelt u Claude</h2>
+  <ol class="eisen">
+    <li>Open Claude op <em>claude.ai</em> of in de Claude-app op uw computer.</li>
+    <li>Ga naar <em>Instellingen › Connectors</em> en kies <em>Aangepaste connector toevoegen</em>.</li>
+    <li>Geef hem een naam, bijvoorbeeld <em>Klusapp</em>, en plak het adres hierboven.</li>
+    <li>Kies <em>Verbinden</em>. U komt dan hier in de klusapp uit: log in met uw eigen account en tik op <em>Toestaan</em>.</li>
+    <li>Klaar. In een nieuw gesprek staat de klusapp onder het <em>+</em>-menu bij de connectors; zet hem daar aan als Claude hem niet vanzelf gebruikt.</li>
+  </ol>
+  <p class="uitleg" style="margin-top:1rem">Alleen een account met de rol eigenaar kan koppelen. Wat Claude opvraagt, gaat naar uw Claude-account bij Anthropic.</p>
+
+  <h2 class="sectiekop">Gekoppeld</h2>
+  {% if koppelingen %}
+    <ul class="mwlijst">
+      {% for k in koppelingen %}
+        <li class="met-weg">
+          <div class="mwregel">
+            <span class="mwregel-tekst">
+              <span class="naam">{{ k.client.naam|default:"Claude" }}</span>
+              <span class="meta">Door {{ k.medewerker.first_name|default:k.medewerker.naam }} · {{ k.aangemaakt_op|date:"d-m-Y" }}</span>
+              <span class="meta">{% if k.laatst_gebruikt_op %}Laatst gebruikt {{ k.laatst_gebruikt_op|date:"d-m H:i" }}{% else %}Nog niet gebruikt{% endif %}</span>
+            </span>
+          </div>
+          <form method="post" action="{% url 'claude_intrekken' k.pk %}"
+                onsubmit="return confirm('Deze koppeling intrekken? Claude kan daarna niets meer uit de klusapp lezen, tot u opnieuw koppelt.');">
+            {% csrf_token %}
+            <button type="submit" class="knop-stil">Intrekken</button>
+          </form>
+        </li>
+      {% endfor %}
+    </ul>
+  {% else %}
+    <p class="leeg">Er is nu geen Claude gekoppeld.</p>
+  {% endif %}
+{% endblock %}
