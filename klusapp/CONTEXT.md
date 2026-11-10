@@ -241,6 +241,19 @@ als "waar was Henk gisteren?". Wat er staat:
     minuut na het wisselen nog eens wordt aangeboden, trekt de hele koppeling in.
   - **Toestemmingsscherm** toont altijd "Claude" (niet de naam die de aanmelder zelf
     opgeeft) en zegt: alleen toestaan als u zelf net op Verbinden drukte.
+- **Naast de app, zonder conflicten** (getest 10-11-2026 op Postgres). Elke toolvraag
+  draait in één transactie `REPEATABLE READ, READ ONLY` (`mcp._momentopname`): Claude ziet
+  de database zoals die was toen de vraag binnenkwam, dus totalen en lijsten kloppen met
+  elkaar ook als er intussen uren bij komen, en Postgres weigert zelf elke schrijfpoging.
+  Lezen houdt op Postgres geen sloten vast. Gemeten: app-schrijvers (uren, notities,
+  klussen, aanwezigheid, planning, foto's erbij en eraf) met en zonder Claude ernaast —
+  0 fouten, 0 deadlocks, traagste schrijfactie 27 ms. Met één Claude die vragen stelt geen
+  meetbaar verschil (app-pagina p50 72 vs 71 ms). Met 20 Claude-verbindingen non-stop
+  worden app-pagina's tot ~1 s traag: dan zijn de 3 gunicorn-workers bezet. Dat is geen
+  realistisch gebruik, maar wel de plek om te kijken als de app ooit traag aanvoelt terwijl
+  Claude bezig is. Een foto die wordt verwijderd terwijl Claude hem opent, geeft "Dit
+  bestand is niet meer beschikbaar". De migratie maakt alleen nieuwe tabellen aan en raakt
+  geen bestaande, dus deployen zet niets van de app op slot.
 - **Intrekken**: Mijn profiel › Koppeling met Claude (`/claude/`), met het adres om te
   plakken, de installatiestappen en per koppeling een knop Intrekken. Werkt meteen: elk
   verzoek controleert of de koppeling nog actief is en of het account nog eigenaar is.

@@ -13,6 +13,7 @@ Django een tweede webserver vragen. De drie methoden die er toe doen
 import json
 import logging
 
+from django.db import connection, transaction
 from django.http import HttpResponse, JsonResponse
 from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
@@ -90,6 +91,19 @@ def _controleer(schema, argumenten):
     return None
 
 
+def _momentopname():
+    """Eén vraag van Claude ziet de database zoals hij was op het moment dat
+    de vraag binnenkwam, ook als er intussen uren bij komen: het totaal en
+    de lijst eronder kloppen dan altijd met elkaar. READ ONLY laat Postgres
+    zelf elke schrijfpoging weigeren — een tweede slot naast "geen enkele
+    tool schrijft". Lezen houdt op Postgres geen sloten vast, dus de app
+    merkt hier niets van. SQLite (lokaal, tests) kent dit niet en heeft het
+    ook niet nodig: daar is maar één schrijver tegelijk."""
+    if connection.vendor == "postgresql":
+        with connection.cursor() as cursor:
+            cursor.execute("SET TRANSACTION ISOLATION LEVEL REPEATABLE READ, READ ONLY")
+
+
 def _tool_aanroepen(params):
     naam = params.get("name")
     tool = gereedschap.PER_NAAM.get(naam) if isinstance(naam, str) else None
@@ -102,7 +116,9 @@ def _tool_aanroepen(params):
     if probleem:
         return {"content": [{"type": "text", "text": probleem}], "isError": True}
     try:
-        uitkomst = tool["functie"](argumenten)
+        with transaction.atomic():
+            _momentopname()
+            uitkomst = tool["functie"](argumenten)
     except gereedschap.Fout as fout:
         return {"content": [{"type": "text", "text": str(fout)}], "isError": True}
     except Exception:
