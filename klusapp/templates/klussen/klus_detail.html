@@ -32,7 +32,7 @@
     <div class="regel betrokken-regel"><span class="lbl">Betrokken</span>
       <span class="betrokken-lijst">
         {% for persoon in betrokkenen %}
-          <a href="{% url 'team_persoon' persoon.pk %}" class="betrokken-persoon">{% include "_medewerkerbol.html" with persoon=persoon klasse="zv-bol" %}{{ persoon.first_name|default:persoon.naam }}{% if persoon.pk == user.pk %} (jij){% endif %}</a>
+          <a href="{% url 'team_persoon' persoon.pk %}" class="betrokken-persoon">{% include "_medewerkerbol.html" with persoon=persoon klasse="zv-bol" %}{{ persoon.first_name|default:"Collega" }}{% if persoon.pk == user.pk %} (jij){% endif %}</a>
         {% empty %}
           <span class="betrokken-leeg">Nog niemand</span>
         {% endfor %}

@@ -26,7 +26,7 @@
       <span class="chat-kop-vlek" style="background:linear-gradient(150deg, {{ klus|kleur_van }}D9, {{ klus|kleur_van }}73); border-color:{{ klus|kleur_van }}"></span>
       <span class="chat-kop-tekst">
         <span class="chat-kop-naam">{{ klus.naam }}</span>
-        <span class="chat-kop-wie">{% for persoon in betrokkenen %}{{ persoon.first_name|default:persoon.naam }}{% if not forloop.last %}, {% endif %}{% empty %}{{ klus.get_soort_display }}{% if klus.plaats %} · {{ klus.plaats }}{% endif %}{% endfor %}</span>
+        <span class="chat-kop-wie">{% for persoon in betrokkenen %}{{ persoon.first_name|default:"Collega" }}{% if not forloop.last %}, {% endif %}{% empty %}{{ klus.get_soort_display }}{% if klus.plaats %} · {{ klus.plaats }}{% endif %}{% endfor %}</span>
       </span>
     </a>
   </header>

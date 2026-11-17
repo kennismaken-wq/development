@@ -62,6 +62,19 @@ def betrokkenen(klus):
     return Medewerker.objects.filter(pk__in=ids, is_active=True, uit_dienst_sinds__isnull=True)
 
 
+def zichtbare_betrokkenen(klus):
+    """Wie er bij Betrokken in beeld staat: zonder het verborgen
+    beheeraccount (Klus.betrokkenen gebruikt de manager `alle`) en zonder
+    oud-collega's (stresstest 17-11-2026)."""
+    from django.db.models.functions import Lower
+
+    return list(
+        Medewerker.objects.filter(betrokken_klussen=klus, is_active=True, uit_dienst_sinds__isnull=True).order_by(
+            Lower("first_name"), Lower("last_name")
+        )
+    )
+
+
 def mijn_klus_ids(gebruiker):
     return {klus_id for _, klus_id in _mensen_bij(medewerker=gebruiker)}
 

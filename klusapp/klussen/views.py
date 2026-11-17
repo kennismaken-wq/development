@@ -595,13 +595,17 @@ def klus_detail(request, pk):
     # (?terug=...), dan brengt het terugpijltje je daar weer; anders naar de
     # klussenlijst.
     terugpijl = _terugpijl(request)
-    betrokkenen = list(klus.betrokkenen.all())
+    betrokkenen = gesprek.zichtbare_betrokkenen(klus)
     # De chat staat op een eigen scherm (klussen/chat.py); hier een kaartje
     # met de laatste berichten en hoeveel je er nog niet zag.
-    laatste_berichten = list(klus.notities.select_related("geschreven_door").order_by("-geschreven_op", "-pk")[:3])[::-1]
+    laatste_berichten = list(
+        klus.notities.select_related("geschreven_door")
+        .prefetch_related(Prefetch("fotos", queryset=Bijlage.objects.zichtbaar_voor(request.user)))
+        .order_by("-geschreven_op", "-pk")[:3]
+    )[::-1]
     for bericht in laatste_berichten:
         bericht.naam = gesprek.schrijversnaam(bericht.geschreven_door)
-        bericht.aantal_fotos = bericht.fotos.count()
+        bericht.aantal_fotos = len(bericht.fotos.all())
     ongelezen = gesprek.ongelezen_per_klus(request.user, [klus.pk]).get(klus.pk, 0)
     return render(
         request,
@@ -609,7 +613,7 @@ def klus_detail(request, pk):
         {
             "klus": klus,
             "betrokkenen": betrokkenen,
-            "doe_ik_mee": request.user in betrokkenen,
+            "doe_ik_mee": klus.betrokkenen.filter(pk=request.user.pk).exists(),
             "gewerkt": gewerkt,
             "alleen_eigen_uren": alleen_eigen_uren,
             "totaal": totalen.totaal_van(gewerkt),

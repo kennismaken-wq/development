@@ -77,7 +77,7 @@ def chat(request, pk):
             "klus": klus,
             "berichten": berichten,
             "eerdere": totaal - len(berichten),
-            "betrokkenen": list(klus.betrokkenen.all()),
+            "betrokkenen": gesprek.zichtbare_betrokkenen(klus),
             "laatste": max((b.pk for b in berichten), default=0),
             "sleutel": _nieuwe_sleutel(),
             "max_fotos": MAX_FOTOS,
@@ -141,8 +141,13 @@ def notitie_toevoegen(request, pk):
     # bereik). Geef het bestaande terug in plaats van een tweede.
     if sleutel:
         bestaand = Notitie.objects.filter(geschreven_door=request.user, sleutel=sleutel).first()
-        if bestaand:
+        if bestaand and bestaand.klus_id == klus.pk:
             return _gelukt(request, klus, bestaand)
+        if bestaand:
+            # Deze sleutel hoort bij een bericht in een ander gesprek (terug
+            # in de browser, formulier opnieuw verstuurd): niet hergebruiken,
+            # anders verdween dit bericht (stresstest 17-11-2026).
+            sleutel = ""
 
     if not tekst and not fotos:
         return _fout(request, klus, "Er staat nog niets in het bericht.")
@@ -166,8 +171,10 @@ def notitie_toevoegen(request, pk):
         if sleutel:
             # Nog een keer kijken, nu met het slot: twee verzoeken tegelijk.
             bestaand = Notitie.objects.filter(geschreven_door=request.user, sleutel=sleutel).first()
-            if bestaand:
+            if bestaand and bestaand.klus_id == klus.pk:
                 return _gelukt(request, klus, bestaand)
+            if bestaand:
+                sleutel = ""
         elif tekst and not fotos and Notitie.objects.filter(
             klus=klus, tekst=tekst, geschreven_door=request.user,
             geschreven_op__gte=timezone.now() - DUBBEL_BINNEN,

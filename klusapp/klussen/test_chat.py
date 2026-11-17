@@ -185,3 +185,38 @@ class StresstestTellerTests(ChatBasis):
     def test_melding_noemt_nooit_de_gebruikersnaam(self):
         zonder = Medewerker.objects.create_user("sam.inlog", password="x")
         self.assertEqual(gesprek.schrijversnaam(zonder), "Collega")
+
+
+class StresstestRechtenTests(ChatBasis):
+    """Stresstest rechten 17-11-2026 (tweede ronde)."""
+
+    def test_verborgen_account_en_inlognaam_niet_bij_betrokkenen(self):
+        beheer = Medewerker.objects.create_user("admin", password="x", rol=Medewerker.Rol.EIGENAAR)
+        Medewerker.alle.filter(pk=beheer.pk).update(verborgen=True)
+        zonder_naam = Medewerker.objects.create_user("j.devries.inlog", password="x")
+        self.klus.betrokkenen.add(beheer, zonder_naam)
+        for adres in (reverse("klus_chat", args=[self.klus.pk]), self.klus.get_absolute_url()):
+            html = self.client.get(adres).content.decode()
+            self.assertNotIn(">admin", html)
+            self.assertNotIn("j.devries.inlog", html)
+
+    def test_oud_collega_niet_bij_betrokkenen(self):
+        Medewerker.objects.filter(pk=self.lot.pk).update(is_active=False)
+        self.assertNotIn(self.lot, self.client.get(self.klus.get_absolute_url()).context["betrokkenen"])
+
+    def test_beheeraccount_ziet_zelf_niet_meer_meedoen(self):
+        beheer = Medewerker.objects.create_user("admin", password="x", rol=Medewerker.Rol.EIGENAAR)
+        Medewerker.alle.filter(pk=beheer.pk).update(verborgen=True)
+        self.klus.betrokkenen.add(beheer)
+        self.client.force_login(beheer)
+        self.assertContains(self.client.get(self.klus.get_absolute_url()), "Niet meer meedoen")
+
+    def test_zelfde_sleutel_op_andere_klus_is_een_nieuw_bericht(self):
+        andere = Klus.objects.create(naam="Vijver")
+        self.stuur(tekst="Eerste", sleutel="dezelfde-sleutel-1")
+        antwoord = self.client.post(reverse("notitie_toevoegen", args=[andere.pk]), {"tekst": "Tweede", "sleutel": "dezelfde-sleutel-1"}, **CHAT)
+        self.assertEqual(antwoord.status_code, 200)
+        self.assertEqual(Notitie.objects.get(klus=andere).tekst, "Tweede")
+        zonder_js = self.client.post(reverse("notitie_toevoegen", args=[andere.pk]), {"tekst": "Derde", "sleutel": "dezelfde-sleutel-1"})
+        self.assertEqual(zonder_js.status_code, 302)
+        self.assertTrue(Notitie.objects.filter(klus=andere, tekst="Derde").exists())
