@@ -330,9 +330,12 @@ class Notitie(models.Model):
         return f"Notitie bij {self.klus} van {self.geschreven_door or 'onbekend'}"
 
     def mag_verwijderen(self, gebruiker):
-        """Zelfde regel als bij een bijlage: je eigen notitie, of je bent de
-        eigenaar."""
-        return gebruiker.is_eigenaar or self.geschreven_door_id == gebruiker.pk
+        """Alleen je eigen bericht, ook de eigenaar haalt geen berichten van
+        een ander weg: in de chat moet je erop kunnen vertrouwen dat wat je
+        schreef blijft staan zoals je het schreef (Thijmen, 17-11-2026). Een
+        foto die bij het bericht hoort blijft in Media; die valt onder de
+        regel van Bijlage."""
+        return self.geschreven_door_id is not None and self.geschreven_door_id == gebruiker.pk
 
 
 class NotitieGelezen(models.Model):

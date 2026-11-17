@@ -8,7 +8,8 @@ Zonder javascript werkt het ook: dan is het een gewoon formulier dat de
 pagina opnieuw laadt.
 
 Wie wat mag: iedereen die de klus mag zien, mag meelezen en meeschrijven,
-net als bij de notities. Weghalen mag je eigen bericht, de eigenaar alles.
+net als bij de notities. Weghalen mag alleen je eigen bericht, ook voor de
+eigenaar (Notitie.mag_verwijderen).
 Wie een melding en een groen rondje krijgt, staat in klussen/gesprek.py.
 """
 

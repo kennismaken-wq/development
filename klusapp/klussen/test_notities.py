@@ -66,8 +66,17 @@ class NotitieTest(TestCase):
         self.client.post(reverse("notitie_verwijderen", args=[notitie.pk]))
         self.assertFalse(Notitie.objects.exists())
 
-    def test_eigenaar_verwijdert_elke_notitie(self):
+    def test_ook_eigenaar_verwijdert_alleen_eigen_berichten(self):
+        # Sinds 17-11-2026: alleen je eigen bericht, ook als eigenaar.
         notitie = Notitie.objects.create(klus=self.klus, tekst="Van Joep", geschreven_door=self.joep)
         self.client.force_login(self.maarten)
-        self.client.post(reverse("notitie_verwijderen", args=[notitie.pk]))
-        self.assertFalse(Notitie.objects.exists())
+        antwoord = self.client.post(reverse("notitie_verwijderen", args=[notitie.pk]))
+        self.assertEqual(antwoord.status_code, 404)
+        self.assertTrue(Notitie.objects.filter(pk=notitie.pk).exists())
+        html = self.client.get(reverse("klus_chat", args=[self.klus.pk])).content.decode()
+        self.assertNotIn(reverse("notitie_verwijderen", args=[notitie.pk]), html)
+
+    def test_bericht_zonder_schrijver_kan_niemand_weghalen(self):
+        notitie = Notitie.objects.create(klus=self.klus, tekst="Van niemand", geschreven_door=None)
+        self.client.force_login(self.maarten)
+        self.assertEqual(self.client.post(reverse("notitie_verwijderen", args=[notitie.pk])).status_code, 404)
