@@ -56,6 +56,7 @@ def _onderdelen_met_cijfers(gebruiker, vandaag, maandag, zondag, uren):
         "klussen": f"{actieve_klussen} lopend",
         "fotos": f"{fotos} foto's",
         "loonstrook": "bij Loondossier",
+        "team": f"{Medewerker.objects.filter(is_active=True, uit_dienst_sinds__isnull=True).count()} collega's",
     }
 
     if gebruiker.is_eigenaar:
@@ -93,6 +94,11 @@ def _onderdelen_met_cijfers(gebruiker, vandaag, maandag, zondag, uren):
     # niet in de navigatiebalk: je speelt het af en toe, je werkt er niet mee.
     onderdelen.append(
         {"titel": "Game", "icoon": "spel", "url_naam": "spel", "url": reverse("spel"), "extern": False}
+    )
+    # Ons team (fase 2): wie er werkt en werkte, met hun foto's, klussen en
+    # score. Naast de Game, want ook dit open je af en toe.
+    onderdelen.append(
+        {"titel": "Ons team", "icoon": "medewerkers", "url_naam": "team", "url": reverse("team"), "extern": False}
     )
 
     for onderdeel in onderdelen:

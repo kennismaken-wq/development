@@ -1,0 +1,66 @@
+{% extends "basis.html" %}
+{% load pictogrammen static %}
+{% block titel %}{{ persoon.naam }}{% endblock %}
+{% block kop %}{{ persoon.naam }}{% endblock %}
+{% block sub %}<a href="{% url 'team' %}" style="color:rgba(255,255,255,0.6)">‹ Ons team</a>{% endblock %}
+{% block inhoud %}
+  <div class="profielkop">
+    {% include "_medewerkerbol.html" with persoon=persoon klasse="grote-bol" %}
+    <span class="wie">
+      <span class="naam">{{ persoon.naam }}{% if is_ik %} (jij){% endif %}</span>
+      <span class="rol">{% if persoon.functie %}{{ persoon.functie }}{% else %}{{ persoon.get_rol_display }}{% endif %}{% if persoon.uit_dienst_sinds %} · tot {{ persoon.uit_dienst_sinds|date:"F Y" }}{% elif persoon.in_dienst_sinds %} · sinds {{ persoon.in_dienst_sinds|date:"F Y" }}{% endif %}</span>
+    </span>
+  </div>
+
+  <div class="teamcijfers">
+    {% if mag_uren_zien %}
+      <div class="teamcijfer"><b>{{ totaal_uren }}</b><span>uur gewerkt</span></div>
+    {% endif %}
+    <div class="teamcijfer"><b>{{ klussen|length }}</b><span>klus{{ klussen|length|pluralize:"sen" }}</span></div>
+    <div class="teamcijfer">
+      <b>{% if beste %}{{ beste.punten }}{% else %}–{% endif %}</b>
+      <span>{% if plaats %}De Groene Sprong · #{{ plaats }}{% else %}De Groene Sprong{% endif %}</span>
+    </div>
+  </div>
+
+  <div class="tabbladen">
+    <div class="tabbladen-kop">
+      <button type="button" class="tabblad actief" data-tab="media">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">{{ "fotos"|pictogram }}</svg>
+        Media{% if aantal_fotos %} · {{ aantal_fotos }}{% endif %}
+      </button>
+      <button type="button" class="tabblad" data-tab="klussen">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">{{ "klussen"|pictogram }}</svg>
+        Klussen
+      </button>
+    </div>
+
+    <div class="tabblad-paneel" data-tab="media">
+      {% include "klussen/_fotoraster.html" with toon_klus=True zonder_upload=True %}
+    </div>
+
+    <div class="tabblad-paneel" data-tab="klussen" hidden>
+      {% if klussen %}
+        <ul class="urenlijst teamklussen">
+          {% for rij in klussen %}
+            <li>
+              <span class="ur-bol" style="background:{{ rij.klus.kleur|default:'#95BF1D' }}"></span>
+              <a class="wie" href="{{ rij.klus.get_absolute_url }}">
+                {{ rij.klus.naam }}
+                <span class="functie">{{ rij.klus.get_soort_display }}{% if not rij.klus.actief %} · afgerond{% endif %}</span>
+              </a>
+              <span class="wanneer">
+                {{ rij.aantal_dagen }} dag{{ rij.aantal_dagen|pluralize:"en" }} ·
+                {{ rij.eerste_dag|date:"j b Y" }}{% if rij.eerste_dag != rij.laatste_dag %} – {{ rij.laatste_dag|date:"j b Y" }}{% endif %}
+              </span>
+              {% if mag_uren_zien %}<span class="uren">{{ rij.uren }} u</span>{% endif %}
+            </li>
+          {% endfor %}
+        </ul>
+      {% else %}
+        <p class="leeg">Nog op geen enkele klus uren geschreven.</p>
+      {% endif %}
+    </div>
+  </div>
+  <script src="{% static 'js/klustabs.js' %}"></script>
+{% endblock %}

@@ -1,0 +1,44 @@
+{% extends "basis.html" %}
+{% block titel %}Ons team{% endblock %}
+{% block kop %}Ons team{% endblock %}
+{% block sub %}<a href="{% url 'start' %}" style="color:rgba(255,255,255,0.6)">‹ Terug</a>{% endblock %}
+{% block inhoud %}
+  {% comment %} Iedereen ziet deze lijst. Alleen naam, functie en sinds wanneer:
+     contactgegevens staan op de persoonskaart bij Medewerkers, voor de
+     eigenaar. {% endcomment %}
+  {% if in_dienst %}
+    <ul class="mwlijst">
+      {% for mw in in_dienst %}
+        <li>
+          <a href="{% url 'team_persoon' mw.pk %}" class="mwregel">
+            {% include "_medewerkerbol.html" with persoon=mw klasse="mw-bol" %}
+            <span class="mwregel-tekst">
+              <span class="naam">{{ mw.naam }}{% if mw.pk == user.pk %} (jij){% endif %}</span>
+              <span class="meta">{% if mw.functie %}{{ mw.functie }}{% else %}{{ mw.get_rol_display }}{% endif %}{% if mw.in_dienst_sinds %} · sinds {{ mw.in_dienst_sinds|date:"Y" }}{% endif %}</span>
+            </span>
+            {% if mw.beste_score %}<span class="soort-badge stil" title="Beste score in De Groene Sprong">{{ mw.beste_score.punten }}</span>{% endif %}
+          </a>
+        </li>
+      {% endfor %}
+    </ul>
+  {% else %}
+    <p class="leeg">Nog niemand in het team.</p>
+  {% endif %}
+
+  {% if oud %}
+    <h2 class="sectiekop">Oud-collega's</h2>
+    <ul class="mwlijst">
+      {% for mw in oud %}
+        <li>
+          <a href="{% url 'team_persoon' mw.pk %}" class="mwregel afgerond">
+            {% include "_medewerkerbol.html" with persoon=mw klasse="mw-bol" %}
+            <span class="mwregel-tekst">
+              <span class="naam">{{ mw.naam }}</span>
+              <span class="meta">{% if mw.functie %}{{ mw.functie }} · {% endif %}tot {{ mw.uit_dienst_sinds|date:"F Y" }}</span>
+            </span>
+          </a>
+        </li>
+      {% endfor %}
+    </ul>
+  {% endif %}
+{% endblock %}

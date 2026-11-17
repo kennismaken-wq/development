@@ -32,9 +32,11 @@
    verder niets. {% endcomment %}
 <div class="fotoraster-resultaten">
   <div class="fotoraster">
+    {% if not zonder_upload %}
     <button type="button" class="fotokaart-nieuw" onclick="document.getElementById('foto-invoegen').showModal()" aria-label="{% if alleen_fotos %}Foto toevoegen{% else %}Foto of document toevoegen{% endif %}">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
     </button>
+    {% endif %}
     {% for post in foto_posts %}
       {% with eerste=post.0 aantal=post|length %}
       {% if aantal == 1 %}
@@ -119,7 +121,9 @@
   {% endif %}
 </div>
 
-{% include "klussen/_fotodialoog.html" with formulier=foto_formulier|default:formulier %}
+{% comment %} `zonder_upload`: alleen kijken, zonder plusknop en uploaddialoog —
+   op de persoonspagina van Ons team zou je anders een foto "van een ander" toevoegen. {% endcomment %}
+{% if not zonder_upload %}{% include "klussen/_fotodialoog.html" with formulier=foto_formulier|default:formulier %}{% endif %}
 {% comment %} Verdeelt de tegels hierboven over kolommen (masonry, zie de
    uitleg bij .fotoraster in app.css). Staat hier en niet los in elke pagina
    die dit include't, zodat 'm nooit vergeten wordt. Bij het live zoeken
