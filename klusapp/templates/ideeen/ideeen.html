@@ -1,0 +1,83 @@
+{% extends "basis.html" %}
+{% load static %}
+{% block titel %}Ideeënbus{% endblock %}
+{% block kop %}Ideeënbus{% endblock %}
+{% block sub %}<a href="{% url 'start' %}" style="color:rgba(255,255,255,0.6)">‹ Terug</a>{% endblock %}
+{% block inhoud %}
+  {% comment %} Fase 2 (ideeen/): idee intypen of inspreken, eventueel anoniem;
+     anderen liken; de eigenaar zet de stand en kan kort reageren. {% endcomment %}
+  <form method="post" action="{% url 'idee_nieuw' %}" class="idee-nieuw">
+    {% csrf_token %}
+    <textarea name="tekst" rows="3" maxlength="{{ max_lengte }}" required data-dicteer
+              placeholder="Wat kan er beter, handiger of leuker?" aria-label="Je idee"></textarea>
+    <div class="idee-nieuw-rij">
+      <label class="idee-anoniem"><input type="checkbox" name="anoniem" value="1"> Anoniem insturen</label>
+      <button type="submit" class="knop idee-insturen">Insturen</button>
+    </div>
+  </form>
+
+  <div class="keuzes idee-volgorde" role="group" aria-label="Volgorde">
+    <a class="keuzepil{% if volgorde == 'nieuw' %} gekozen{% endif %}" href="{% url 'ideeen' %}"{% if volgorde == 'nieuw' %} aria-current="true"{% endif %}><span class="vlak">Nieuwste</span></a>
+    <a class="keuzepil{% if volgorde == 'likes' %} gekozen{% endif %}" href="{% url 'ideeen' %}?op=likes"{% if volgorde == 'likes' %} aria-current="true"{% endif %}><span class="vlak">Meeste likes</span></a>
+  </div>
+
+  {% if ideeen %}
+    <ul class="ideelijst">
+      {% for idee in ideeen %}
+        <li class="idee" id="idee-{{ idee.pk }}">
+          <div class="idee-kop">
+            {% if idee.door %}
+              {% include "_medewerkerbol.html" with persoon=idee.door klasse="idee-bol" %}
+              <span class="idee-wie">{{ idee.door.first_name|default:"Collega" }}</span>
+            {% else %}
+              <span class="idee-bol leeg-bol" aria-hidden="true">?</span>
+              <span class="idee-wie">Anoniem</span>
+            {% endif %}
+            <span class="idee-wanneer">{{ idee.gemaakt_op|date:"j b" }}</span>
+            {% if idee.stand != "nieuw" %}<span class="soort-badge idee-stand stand-{{ idee.stand }}">{{ idee.get_stand_display }}</span>{% endif %}
+          </div>
+          <p class="idee-tekst">{{ idee.tekst|linebreaksbr }}</p>
+          {% if idee.reactie %}
+            <p class="idee-reactie"><b>Maarten:</b> {{ idee.reactie }}</p>
+          {% endif %}
+          <div class="idee-acties">
+            <form method="post" action="{% url 'idee_like' idee.pk %}" class="idee-like-form">
+              {% csrf_token %}
+              <button type="submit" class="idee-like{% if idee.door_mij_geliket %} geliket{% endif %}"
+                      aria-pressed="{% if idee.door_mij_geliket %}true{% else %}false{% endif %}"
+                      aria-label="Like, nu {{ idee.aantal_likes }}">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7 11v9H4a1 1 0 0 1-1-1v-7a1 1 0 0 1 1-1zM7 11l4-7a2 2 0 0 1 3 1.7V9h5.2a2 2 0 0 1 2 2.3l-1.2 7A2 2 0 0 1 18 20H7"/></svg>
+                <span class="idee-aantal">{{ idee.aantal_likes }}</span>
+              </button>
+            </form>
+            {% if user.is_eigenaar %}
+              <details class="idee-beheer">
+                <summary>Stand zetten</summary>
+                <form method="post" action="{% url 'idee_stand' idee.pk %}">
+                  {% csrf_token %}
+                  <div class="keuzes" role="radiogroup" aria-label="Stand">
+                    {% for waarde, label in standen %}
+                      <label class="keuzepil kies"><input type="radio" name="stand" value="{{ waarde }}"{% if idee.stand == waarde %} checked{% endif %}><span class="vlak">{{ label }}</span></label>
+                    {% endfor %}
+                  </div>
+                  <input type="text" name="reactie" maxlength="300" value="{{ idee.reactie }}" placeholder="Korte reactie (mag leeg)" aria-label="Reactie">
+                  <button type="submit" class="knop-stil">Opslaan</button>
+                </form>
+              </details>
+            {% endif %}
+            {% if idee.door_id == user.pk or user.is_eigenaar %}
+              <form method="post" action="{% url 'idee_verwijderen' idee.pk %}" class="nt-weg idee-weg" onsubmit="return confirm('Dit idee weghalen?');">
+                {% csrf_token %}
+                <button type="submit" title="Weghalen" aria-label="Idee weghalen">{% include "uren/_prullenbak.html" %}</button>
+              </form>
+            {% endif %}
+          </div>
+        </li>
+      {% endfor %}
+    </ul>
+  {% else %}
+    <p class="leeg">Nog geen ideeën. Jij mag de eerste!</p>
+  {% endif %}
+
+  <script src="{% static 'js/ideeen.js' %}" defer></script>
+{% endblock %}

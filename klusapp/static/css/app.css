@@ -3252,3 +3252,57 @@ h1{ letter-spacing:-0.015em; }
 .ongelezen-bol.los{ position:static; border-width:0; box-shadow:none; }
 .teaminfo a{ display:inline-block; padding:.35rem 0; }
 .teamklussen .soort-badge{ margin-left:.4rem; vertical-align:1px; }
+
+/* ══════════ IDEEËNBUS (ideeen/) ══════════ */
+.keuzepil.gekozen .vlak{ background:rgba(var(--accent-rgb),0.32); border-color:rgba(var(--accent-rgb),0.6); color:var(--hi); }
+a.keuzepil{ text-decoration:none; }
+.idee-nieuw{ display:grid; gap:.5rem; margin:0 0 1.1rem; }
+.idee-nieuw textarea{ width:100%; box-sizing:border-box; min-height:84px; padding:.7rem .9rem; line-height:1.45; }
+.idee-nieuw-rij{ display:flex; align-items:center; gap:.8rem; flex-wrap:wrap; }
+.idee-anoniem{
+  margin:0; display:inline-flex; align-items:center; gap:.45rem; min-height:44px;
+  font-size:13.5px; font-weight:500; text-transform:none; letter-spacing:normal; color:rgba(255,255,255,0.8);
+}
+.idee-insturen{ width:auto; margin-left:auto; min-height:44px; padding:.6rem 1.4rem; }
+.idee-volgorde{ margin:0 0 .9rem; }
+.ideelijst{ list-style:none; margin:0; padding:0; display:grid; gap:.55rem; }
+.idee{
+  padding:.8rem .95rem .6rem; border-radius:16px;
+  background:rgba(255,255,255,0.07); border:1px solid rgba(255,255,255,0.14);
+}
+.idee:target{ border-color:rgba(var(--accent-rgb),0.6); }
+.idee-kop{ display:flex; align-items:center; gap:.5rem; flex-wrap:wrap; }
+.idee-bol{
+  flex-shrink:0; width:26px; height:26px; border-radius:999px; border:1px solid;
+  display:flex; align-items:center; justify-content:center; overflow:hidden;
+  font-size:10px; font-weight:700; color:#fff;
+}
+.idee-bol.leeg-bol{ background:rgba(255,255,255,0.06); border:1px dashed rgba(255,255,255,0.35); color:rgba(255,255,255,0.6); }
+.idee-wie{ font-size:13px; font-weight:600; }
+.idee-wanneer{ font-size:12px; color:rgba(255,255,255,0.45); }
+.idee-stand{ margin-left:auto; }
+.idee-stand.stand-gedaan{ background:rgba(var(--accent-rgb),0.32); }
+.idee-stand.stand-niet{ background:rgba(224,123,95,0.22); border-color:rgba(224,123,95,0.5); color:#F6C7B6; }
+.idee-stand.stand-doen_we{ background:rgba(91,143,168,0.28); border-color:rgba(91,143,168,0.6); color:#CFE3EC; }
+.idee-tekst{ margin:.5rem 0 0; font-size:15px; line-height:1.5; overflow-wrap:anywhere; }
+.idee-reactie{
+  margin:.5rem 0 0; padding:.45rem .7rem; border-radius:10px; font-size:13.5px;
+  background:rgba(var(--accent-rgb),0.12); border-left:3px solid rgba(var(--accent-rgb),0.6);
+}
+.idee-acties{ display:flex; align-items:center; gap:.6rem; margin-top:.55rem; flex-wrap:wrap; }
+.idee-like-form{ margin:0; }
+.idee-like{
+  display:inline-flex; align-items:center; gap:.4rem; min-height:40px; padding:.35rem .85rem; cursor:pointer;
+  border-radius:999px; font:inherit; font-size:13px; font-weight:600;
+  background:rgba(255,255,255,0.07); border:1px solid rgba(255,255,255,0.18); color:rgba(255,255,255,0.8);
+  -webkit-tap-highlight-color:transparent;
+}
+.idee-like svg{ width:18px; height:18px; }
+.idee-like.geliket{ background:rgba(var(--accent-rgb),0.30); border-color:rgba(var(--accent-rgb),0.6); color:var(--hi); }
+.idee-like.geliket svg{ fill:currentColor; fill-opacity:.25; }
+.idee-like:active{ transform:scale(.95); }
+.idee-like:focus-visible{ outline:2px solid rgba(var(--accent-rgb),0.9); outline-offset:2px; }
+.idee-beheer{ font-size:13px; }
+.idee-beheer summary{ cursor:pointer; color:rgba(255,255,255,0.6); min-height:40px; display:flex; align-items:center; }
+.idee-beheer form{ display:grid; gap:.5rem; margin-top:.4rem; }
+.idee-weg{ margin-left:auto; }

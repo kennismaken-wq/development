@@ -68,6 +68,12 @@ PICTOGRAMMEN = {
         '<path d="M7 3h7l4 4v13a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z"/>'
         '<path d="M14 3v4h4"/>'
     ),
+    # een lampje: de ideeënbus
+    "idee": (
+        '<path d="M9 18h6"/>'
+        '<path d="M10 21h4"/>'
+        '<path d="M12 3a6 6 0 0 0-3.6 10.8c.6.5 1 1.2 1 2V16h5.2v-.2c0-.8.4-1.5 1-2A6 6 0 0 0 12 3z"/>'
+    ),
     "spel": (
         '<rect x="3" y="8" width="18" height="10" rx="5"/>'
         '<line x1="7" y1="11.5" x2="7" y2="14.5"/>'

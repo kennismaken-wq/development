@@ -57,6 +57,7 @@ INSTALLED_APPS = [
     "spel",
     "koppeling",
     "team",
+    "ideeen",
 ]
 
 MIDDLEWARE = [

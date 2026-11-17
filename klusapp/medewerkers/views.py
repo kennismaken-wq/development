@@ -99,6 +99,10 @@ def _onderdelen_met_cijfers(gebruiker, vandaag, maandag, zondag, uren):
     onderdelen.append(
         {"titel": "Ons team", "icoon": "medewerkers", "url_naam": "team", "url": reverse("team"), "extern": False}
     )
+    # Ideeënbus (fase 2): iedereen kan ideeën insturen en liken.
+    onderdelen.append(
+        {"titel": "Ideeënbus", "icoon": "idee", "url_naam": "ideeen", "url": reverse("ideeen"), "extern": False}
+    )
 
     for onderdeel in onderdelen:
         onderdeel["info"] = info.get(onderdeel.get("url_naam"), "")
