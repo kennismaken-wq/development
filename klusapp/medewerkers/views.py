@@ -89,6 +89,12 @@ def _onderdelen_met_cijfers(gebruiker, vandaag, maandag, zondag, uren):
              "url": reverse("planbord"), "extern": False},
         )
 
+    # Het springspel (meerwerk, offerte 2026-O01) staat achteraan bij de apps,
+    # niet in de navigatiebalk: je speelt het af en toe, je werkt er niet mee.
+    onderdelen.append(
+        {"titel": "Game", "icoon": "spel", "url_naam": "spel", "url": reverse("spel"), "extern": False}
+    )
+
     for onderdeel in onderdelen:
         onderdeel["info"] = info.get(onderdeel.get("url_naam"), "")
 

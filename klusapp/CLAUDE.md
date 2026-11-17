@@ -28,7 +28,7 @@ artikel 2 én tegen het gespreksverslag met Maarten; de negen punten staan.
 **Per contractpunt staat de stand in [CONTEXT.md](CONTEXT.md) §1.**
 
 **Meerwerk (offerte 2026-O01, onderdeel 3):** het springspel met scorebord staat
-in `spel/`, op `/spel/`, met een klein icoon rechtsboven op het startscherm.
+in `spel/`, op `/spel/`, met een tegel "Game" bij de apps op het startscherm.
 Zie CONTEXT.md §1.
 
 **Meerwerk (offerte 2026-O01, onderdeel 2):** de koppeling met Claude

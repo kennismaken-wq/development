@@ -183,7 +183,9 @@ speelveld vallen). Regels en tekenen in `static/js/springspel.js`. Het scorebord
 is. De score ontstaat op de telefoon; `spel.views.spel_score` begrenst hem op de
 serverzijdig gemeten speeltijd. Dat is een grens en geen bewijs. Powerups: imkerpak
 (vangt één steek op) en bladblazer (paar seconden omhoog). Tijdens het klimmen staat op
-de hoogte van elke collega een vlaggetje (`spel.scorebord.vlaggen`). Extra spelletjes zijn
+de hoogte van elke collega een vlaggetje (`spel.scorebord.vlaggen`). Sinds 17-11-2026 staat
+het als tegel "Game" bij de apps (was een icoon rechtsboven), en kun je na een potje je score
+delen via het deelmenu van de telefoon, bijvoorbeeld in WhatsApp. Extra spelletjes zijn
 meerwerk (€ 120 per spel).
 
 **Bijgewerkt 10-11-2026: koppeling met Claude (offerte 2026-O01, onderdeel 2).**

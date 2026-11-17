@@ -191,8 +191,16 @@ class VlaggenTest(SpelTestBasis):
 
 
 class IngangTest(SpelTestBasis):
-    def test_icoon_op_startscherm_buiten_de_navigatie(self):
-        html = self.client.get(reverse("start")).content.decode()
-        self.assertIn('class="spel-ingang"', html)
-        navigatie = html[html.index("<nav"):html.index("</nav>")]
-        self.assertNotIn(reverse("spel"), navigatie)
+    def test_tegel_bij_apps_en_niet_in_de_navigatie(self):
+        for persoon in (self.sam, self.maarten):
+            with self.subTest(persoon=persoon.username):
+                self.client.force_login(persoon)
+                html = self.client.get(reverse("start")).content.decode()
+                apps = html[html.index('class="appgrid"'):]
+                self.assertIn(f'class="apptegel" href="{reverse("spel")}"', apps)
+                self.assertIn(">Game<", apps)
+                navigatie = html[html.index("<nav"):html.index("</nav>")]
+                self.assertNotIn(reverse("spel"), navigatie)
+
+    def test_eindscherm_heeft_deelknop(self):
+        self.assertContains(self.client.get(reverse("spel")), 'id="spel-deel"')

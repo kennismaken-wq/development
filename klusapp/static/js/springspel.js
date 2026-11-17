@@ -269,6 +269,7 @@
   var status = document.getElementById("spel-status");
   var opnieuwOpslaan = document.getElementById("spel-opnieuw-opslaan");
   var besteVak = document.getElementById("spel-beste");
+  var deelKnop = document.getElementById("spel-deel");
   var scorebord = document.getElementById("scorebord");
 
   var vlaggen = JSON.parse(document.getElementById("spel-vlaggen").textContent);
@@ -1082,6 +1083,7 @@
     paneelStart.hidden = true;
     paneelEinde.hidden = false;
     eindscore.textContent = wereld.punten;
+    deelKnop.hidden = wereld.punten === 0;
     speelKnop.textContent = "Nog een keer";
     paneel.hidden = false;
     paneel.scrollTop = 0;
@@ -1164,6 +1166,19 @@
       if (localStorage.getItem("spel-besturing") === "kantelen") kiesBesturing("kantelen");
     } catch (e) {}
   }
+
+  /* Delen via het deelmenu van de telefoon (met WhatsApp erin). Waar dat
+     menu er niet is, opent WhatsApp zelf met de tekst klaar. */
+  function deelScore() {
+    var tekst = "Ik sprong " + wereld.punten.toLocaleString("nl-NL") +
+      " meter hoog in De Groene Sprong! \uD83C\uDF3F Wie doet beter? " + location.origin + location.pathname;
+    if (navigator.share) {
+      navigator.share({ text: tekst }).catch(function () {});
+    } else {
+      window.open("https://wa.me/?text=" + encodeURIComponent(tekst), "_blank", "noopener");
+    }
+  }
+  deelKnop.addEventListener("click", deelScore);
 
   speelKnop.addEventListener("click", function () {
     if (besturing !== "kantelen") return begin();
