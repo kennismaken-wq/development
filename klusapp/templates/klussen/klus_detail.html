@@ -37,10 +37,19 @@
      Weghalen mag met dezelfde regel als een bijlage (mag_weg). {% endcomment %}
   <section class="notities" id="notities">
     <span class="lbl">Notities</span>
-    <form method="post" action="{% url 'notitie_toevoegen' klus.pk %}{% if terugpijl %}?terug={{ terugpijl|urlencode }}{% endif %}" class="notitie-nieuw">
+    {% comment %} Fase 2: ook foto's meesturen. Ze komen bij de notitie én in Media
+       van de klus. Tekst mag leeg als er een foto bij zit; dat controleert
+       klussen.views.notitie_toevoegen. {% endcomment %}
+    <form method="post" action="{% url 'notitie_toevoegen' klus.pk %}{% if terugpijl %}?terug={{ terugpijl|urlencode }}{% endif %}" class="notitie-nieuw" enctype="multipart/form-data">
       {% csrf_token %}
-      <textarea name="tekst" rows="2" maxlength="2000" required data-dicteer
+      <textarea name="tekst" rows="2" maxlength="2000" data-dicteer
                 placeholder="Schrijf een notitie…" aria-label="Nieuwe notitie"></textarea>
+      <label class="nt-fotoknop" title="Foto toevoegen" aria-label="Foto toevoegen">
+        <input type="file" name="fotos" accept="image/*" multiple class="bestandsveld-verborgen"
+               onchange="var n=this.files.length, l=this.closest('label'); l.classList.toggle('gekozen', n>0); l.querySelector('.nt-aantal').textContent = n ? n : '';">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h3l2-2.5h6L17 8h3a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z"/><circle cx="12" cy="13" r="3.5"/></svg>
+        <span class="nt-aantal"></span>
+      </label>
       <button type="submit" class="knop-stil">Plaatsen</button>
     </form>
     {% if notities %}
@@ -57,7 +66,18 @@
                 {{ notitie.geschreven_door.naam|default:"onbekend" }}
                 <span class="wanneer">{{ notitie.geschreven_op|date:"j b · H:i" }}</span>
               </span>
-              <p>{{ notitie.tekst|linebreaksbr }}</p>
+              {% if notitie.tekst %}<p>{{ notitie.tekst|linebreaksbr }}</p>{% endif %}
+              {% with fotos=notitie.fotos.all %}
+                {% if fotos %}
+                  <div class="nt-fotos">
+                    {% for foto in fotos %}
+                      <button type="button" onclick="fotoPopupOpen('{% url 'media_bestand' foto.bestand.name %}', '{{ notitie.geschreven_door.naam|default:"Foto"|escapejs }}', '{{ notitie.geschreven_op|date:"j b · H:i" }}')">
+                        <img src="{% url 'media_bestand' foto.thumbnail.name|default:foto.bestand.name %}" alt="Foto bij de notitie" loading="lazy">
+                      </button>
+                    {% endfor %}
+                  </div>
+                {% endif %}
+              {% endwith %}
             </div>
             {% if notitie|mag_weg:user %}
               <form method="post" action="{% url 'notitie_verwijderen' notitie.pk %}{% if terugpijl %}?terug={{ terugpijl|urlencode }}{% endif %}" class="nt-weg"

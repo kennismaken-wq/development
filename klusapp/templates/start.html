@@ -63,6 +63,7 @@
     <div class="klussen-slider">
       {% for klus in klussen_recent %}
         <a href="{{ klus.get_absolute_url }}?terug={{ request.get_full_path|urlencode }}" class="klus-slide">
+          {% include "klussen/_ongelezen.html" %}
           <span class="soort-badge">{{ klus.get_soort_display }}</span>
           <span class="naam">{{ klus.naam }}</span>
           {% if klus.adres or klus.plaats %}

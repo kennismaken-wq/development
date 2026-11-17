@@ -14,7 +14,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
 
-from klussen import voorbeeld
+from klussen import gesprek, voorbeeld
 from klussen.models import Bijlage, Klus
 from uren.models import Uurblok
 from uren import backup, bezetting, totalen
@@ -141,6 +141,7 @@ def start(request):
     # Zelfde gewaaierde voorproefje als op het foto's-scherm (klussen/views.py:fotos).
     for klus in klussen_recent:
         klus.voorbeeld_items, klus.voorbeeld_meer = voorbeeld.items_voor_stapel(klus)
+    gesprek.zet_tellers(request.user, klussen_recent)
 
     uren_stats = totalen.totaal_en_week(request.user, maandag, zondag)
 

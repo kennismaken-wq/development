@@ -23,7 +23,7 @@ from uren import export as uren_export
 from uren import bezetting, totalen
 from uren.models import Klusdag
 
-from . import afbeeldingen, bestandstypen, kleuren, opdrachtgevers, pdf_thumbnails, voorbeeld
+from . import afbeeldingen, bestandstypen, gesprek, kleuren, opdrachtgevers, pdf_thumbnails, voorbeeld
 from .forms import AlleenFotosForm, BijlageForm, KlusForm, KlusFotoForm, NieuweKlusBijlagenForm, ZichtbaarheidForm
 from .fotoposts import groepeer_in_posts
 from .models import Bijlage, Klus, Notitie
@@ -524,6 +524,8 @@ def klus_lijst(request):
     )
     for klus in klussen:
         klus.voorbeeld_items, klus.voorbeeld_meer = voorbeeld.items_voor_stapel(klus)
+    # Het groene rondje: gemiste notities op de klussen waar jij bij hoort.
+    gesprek.zet_tellers(request.user, klussen)
     return render(
         request,
         "klussen/klussen.html",
@@ -592,6 +594,8 @@ def klus_detail(request, pk):
     # (?terug=...), dan brengt het terugpijltje je daar weer; anders naar de
     # klussenlijst.
     terugpijl = _terugpijl(request)
+    # Wie het dossier opent, heeft de notities gezien: het rondje gaat weg.
+    gesprek.markeer_gelezen(request.user, klus)
     return render(
         request,
         "klussen/klus_detail.html",
@@ -602,7 +606,9 @@ def klus_detail(request, pk):
             "totaal": totalen.totaal_van(gewerkt),
             "foto_posts": groepeer_in_posts(los for los in bijlagen if los.is_foto),
             "document_bijlagen": [los for los in bijlagen if not los.is_foto],
-            "notities": klus.notities.select_related("geschreven_door"),
+            "notities": klus.notities.select_related("geschreven_door").prefetch_related(
+                Prefetch("fotos", queryset=Bijlage.objects.zichtbaar_voor(request.user).order_by("pk"))
+            ),
             "formulier": BijlageForm(),
             # De dialoog achter het slotje alleen in de pagina als er iets te
             # wijzigen valt: hij noemt alle medewerkers bij naam, en een
@@ -618,31 +624,68 @@ def klus_detail(request, pk):
     )
 
 
+MAX_FOTOS_PER_NOTITIE = 10
+
+
 @login_required
 def notitie_toevoegen(request, pk):
     """Het tekstvak onder de kerngegevens in het klusdossier. Iedereen die het
-    dossier ziet mag er iets bij schrijven, net als bij foto's en documenten."""
+    dossier ziet mag er iets bij schrijven, net als bij foto's en documenten.
+
+    Sinds fase 2 ook met foto's (het gesprek dat de WhatsApp-groepen
+    vervangt): die hangen aan de notitie en aan de klus, dus ze staan ook in
+    Media. Een notitie met alleen foto's en geen tekst mag. Na het plaatsen
+    krijgt iedereen die bij de klus hoort een melding (klussen/gesprek.py)."""
     if request.method != "POST":
         return HttpResponseNotAllowed(["POST"])
     klus = get_object_or_404(Klus, pk=pk)
+    terug = f"{_met_terug(klus.get_absolute_url(), _terugpijl(request))}#notities"
     tekst = request.POST.get("tekst", "").strip()
+    fotos = zonder_lege_bestanden(request, "fotos").getlist("fotos")
     max_lengte = Notitie._meta.get_field("tekst").max_length
-    if not tekst:
+    if not tekst and not fotos:
         messages.error(request, "Er staat nog niets in de notitie.")
-    elif len(tekst) > max_lengte:
+        return redirect(terug)
+    if len(tekst) > max_lengte:
         messages.error(request, f"Een notitie mag hooguit {max_lengte} tekens zijn.")
-    else:
-        with transaction.atomic():
-            request.user.vergrendel()
-            # Dezelfde tekst van dezelfde persoon een paar seconden geleden is
-            # een dubbele tik, geen tweede notitie (stresstest 03-10-2026, B16).
-            al_geplaatst = Notitie.objects.filter(
-                klus=klus, tekst=tekst, geschreven_door=request.user,
-                geschreven_op__gte=timezone.now() - DUBBEL_BINNEN,
-            ).exists()
-            if not al_geplaatst:
-                Notitie.objects.create(klus=klus, tekst=tekst, geschreven_door=request.user)
-    return redirect(f"{_met_terug(klus.get_absolute_url(), _terugpijl(request))}#notities")
+        return redirect(terug)
+    if len(fotos) > MAX_FOTOS_PER_NOTITIE:
+        messages.error(request, f"Hooguit {MAX_FOTOS_PER_NOTITIE} foto's per bericht.")
+        return redirect(terug)
+    for foto in fotos:
+        if not afbeeldingen.lijkt_afbeelding(foto.name):
+            messages.error(request, f"{foto.name}: hier kan alleen een foto bij. Een document zet je bij Bestanden.")
+            return redirect(terug)
+
+    with transaction.atomic():
+        request.user.vergrendel()
+        # Dezelfde tekst van dezelfde persoon een paar seconden geleden is
+        # een dubbele tik, geen tweede notitie (stresstest 03-10-2026, B16).
+        al_geplaatst = tekst and not fotos and Notitie.objects.filter(
+            klus=klus, tekst=tekst, geschreven_door=request.user,
+            geschreven_op__gte=timezone.now() - DUBBEL_BINNEN,
+        ).exists()
+        if al_geplaatst:
+            return redirect(terug)
+        notitie = Notitie.objects.create(klus=klus, tekst=tekst, geschreven_door=request.user)
+        batch = batch_van_upload(fotos)
+        gelukt = 0
+        for foto in fotos:
+            try:
+                bijlage = bewaar_bijlage(foto, timezone.localdate(), "", klus, None, request.user, batch)
+            except afbeeldingen.BestandNietLeesbaar as probleem:
+                messages.error(request, f"{foto.name}: {probleem}")
+                continue
+            bijlage.notitie = notitie
+            bijlage.save(update_fields=["notitie"])
+            gelukt += 1
+        if not tekst and not gelukt:
+            # Alleen foto's, en geen enkele bleek leesbaar: dan is er geen bericht.
+            notitie.delete()
+            return redirect(terug)
+        gesprek.markeer_gelezen(request.user, klus)
+        gesprek.plan_melding(notitie)
+    return redirect(terug)
 
 
 @login_required

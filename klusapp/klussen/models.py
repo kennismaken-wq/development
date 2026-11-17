@@ -174,6 +174,17 @@ class Bijlage(models.Model):
         related_name="bijlagen",
     )
     toegevoegd_op = models.DateTimeField(auto_now_add=True)
+    # Een foto die in een notitie is meegestuurd (het gesprek per klus, fase
+    # 2). Hij hangt ook gewoon aan de klus, dus hij staat ook in Media en de
+    # Galerij, zonder tweede kopie. Haalt iemand de notitie weg, dan blijft de
+    # foto staan: een werkfoto verdwijnt niet omdat het berichtje erbij weg is.
+    notitie = models.ForeignKey(
+        "Notitie",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="fotos",
+    )
     # Gezet op alle bijlagen die uit dezelfde upload komen (zie
     # klussen.views.bewaar_bijlage), zodat het fotoraster ze als één post kan
     # tonen in plaats van los tussen andere foto's. Leeg bij een upload van
@@ -301,3 +312,26 @@ class Notitie(models.Model):
         """Zelfde regel als bij een bijlage: je eigen notitie, of je bent de
         eigenaar."""
         return gebruiker.is_eigenaar or self.geschreven_door_id == gebruiker.pk
+
+
+class NotitieGelezen(models.Model):
+    """Tot wanneer iemand de notities van een klus heeft gezien: het groene
+    rondje met het aantal gemiste berichten telt de notities van anderen die
+    daarna kwamen. Eén rij per persoon per klus in plaats van een rij per
+    bericht, en bijgewerkt zodra je het klusdossier opent."""
+
+    klus = models.ForeignKey(Klus, on_delete=models.CASCADE, related_name="notities_gelezen")
+    medewerker = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="notities_gelezen"
+    )
+    tijdstip = models.DateTimeField()
+
+    class Meta:
+        verbose_name = "notities gelezen"
+        verbose_name_plural = "notities gelezen"
+        constraints = [
+            models.UniqueConstraint(fields=["klus", "medewerker"], name="notities_gelezen_een_per_klus")
+        ]
+
+    def __str__(self):
+        return f"{self.medewerker} las {self.klus} tot {self.tijdstip:%d-%m %H:%M}"
