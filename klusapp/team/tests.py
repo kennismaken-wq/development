@@ -141,3 +141,31 @@ class OnsTeamMediaTests(TestCase):
         prive.zichtbaar_voor.add(self.sam)
         self.client.force_login(self.lot)
         self.assertNotContains(self.client.get(reverse("team_persoon", args=[self.sam.pk])), "offerte met prijzen")
+
+
+class OnsTeamStresstestTests(OnsTeamTests):
+    """Stresstest rechten 17-11-2026."""
+
+    def test_collega_ziet_klussen_maar_geen_dagen_of_periode(self):
+        self.client.force_login(self.lot)
+        antwoord = self.client.get(reverse("team_persoon", args=[self.sam.pk]))
+        self.assertContains(antwoord, "Tuin Vermeer")
+        self.assertNotContains(antwoord, 'class="wanneer"')
+        self.assertNotContains(antwoord, "2 nov 2026")
+
+    def test_oud_collega_zonder_nummer_en_verjaardag(self):
+        Medewerker.objects.filter(pk=self.oud.pk).update(telefoon="0687654321", geboortedatum=date(1990, 5, 5))
+        self.client.force_login(self.lot)
+        antwoord = self.client.get(reverse("team_persoon", args=[self.oud.pk]))
+        self.assertNotContains(antwoord, "0687654321")
+        self.assertNotContains(antwoord, "5 mei")
+
+    def test_geboortedatum_in_de_toekomst_mag_niet(self):
+        from medewerkers.forms import _geboortedatum_controleren
+        from django import forms as djforms
+
+        class Nep:
+            cleaned_data = {"geboortedatum": date(2999, 1, 1)}
+
+        with self.assertRaises(djforms.ValidationError):
+            _geboortedatum_controleren(Nep())

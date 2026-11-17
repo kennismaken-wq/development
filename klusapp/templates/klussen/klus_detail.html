@@ -26,71 +26,49 @@
     {% if klus.adres or klus.plaats %}
       <p class="regel"><span class="lbl">Adres</span>{{ klus.adres }}{% if klus.adres and klus.plaats %}, {% endif %}{{ klus.plaats }}</p>
     {% endif %}
+    {% comment %} Wie er bij de klus hoort (Klus.betrokkenen). Wie er niet bij
+       staat, kan zelf meedoen; dan staat de klus bij Jouw klussen en krijg je
+       de meldingen van de notities. Zie klussen.views.klus_meedoen. {% endcomment %}
+    <div class="regel betrokken-regel"><span class="lbl">Betrokken</span>
+      <span class="betrokken-lijst">
+        {% for persoon in betrokkenen %}
+          <a href="{% url 'team_persoon' persoon.pk %}" class="betrokken-persoon">{% include "_medewerkerbol.html" with persoon=persoon klasse="zv-bol" %}{{ persoon.first_name|default:persoon.naam }}{% if persoon.pk == user.pk %} (jij){% endif %}</a>
+        {% empty %}
+          <span class="betrokken-leeg">Nog niemand</span>
+        {% endfor %}
+      </span>
+    </div>
+    {% if klus.actief or doe_ik_mee %}
+      <form method="post" action="{% url 'klus_meedoen' klus.pk %}{% if terugpijl %}?terug={{ terugpijl|urlencode }}{% endif %}" class="meedoen">
+        {% csrf_token %}
+        {% if doe_ik_mee %}
+          <input type="hidden" name="doe" value="stop">
+          <button type="submit" class="knop-stil meedoen-stop">Niet meer meedoen</button>
+        {% else %}
+          <button type="submit" class="knop">Meedoen met klus</button>
+        {% endif %}
+      </form>
+    {% endif %}
     {% if klus.beschrijving %}
       <p class="beschrijving">{{ klus.beschrijving|linebreaksbr }}</p>
     {% endif %}
   </div>
 
-  {% comment %} Notities (01-10-2026): een logboek per klus, nieuwste bovenaan.
-     De lijst heeft een vaste maximale hoogte en scrolt daarbinnen, zodat een
-     klus met veertig notities de tabbladen eronder niet van het scherm duwt.
-     Weghalen mag met dezelfde regel als een bijlage (mag_weg). {% endcomment %}
-  <section class="notities" id="notities">
-    <span class="lbl">Notities</span>
-    {% comment %} Fase 2: ook foto's meesturen. Ze komen bij de notitie én in Media
-       van de klus. Tekst mag leeg als er een foto bij zit; dat controleert
-       klussen.views.notitie_toevoegen. {% endcomment %}
-    <form method="post" action="{% url 'notitie_toevoegen' klus.pk %}{% if terugpijl %}?terug={{ terugpijl|urlencode }}{% endif %}" class="notitie-nieuw" enctype="multipart/form-data">
-      {% csrf_token %}
-      <textarea name="tekst" rows="2" maxlength="2000" data-dicteer
-                placeholder="Schrijf een notitie…" aria-label="Nieuwe notitie"></textarea>
-      <label class="nt-fotoknop" title="Foto toevoegen" aria-label="Foto toevoegen">
-        <input type="file" name="fotos" accept="image/*" multiple class="bestandsveld-verborgen"
-               onchange="var n=this.files.length, l=this.closest('label'); l.classList.toggle('gekozen', n>0); l.querySelector('.nt-aantal').textContent = n ? n : '';">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h3l2-2.5h6L17 8h3a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z"/><circle cx="12" cy="13" r="3.5"/></svg>
-        <span class="nt-aantal"></span>
-      </label>
-      <button type="submit" class="knop-stil">Plaatsen</button>
-    </form>
-    {% if notities %}
-      <ol class="notitielijst">
-        {% for notitie in notities %}
-          <li>
-            {% if notitie.geschreven_door %}
-              {% include "_medewerkerbol.html" with persoon=notitie.geschreven_door klasse="nt-bol" %}
-            {% else %}
-              <span class="nt-bol leeg-bol"></span>
-            {% endif %}
-            <div class="nt-inhoud">
-              <span class="wie">
-                {{ notitie.geschreven_door.naam|default:"onbekend" }}
-                <span class="wanneer">{{ notitie.geschreven_op|date:"j b · H:i" }}</span>
-              </span>
-              {% if notitie.tekst %}<p>{{ notitie.tekst|linebreaksbr }}</p>{% endif %}
-              {% with fotos=notitie.fotos.all %}
-                {% if fotos %}
-                  <div class="nt-fotos">
-                    {% for foto in fotos %}
-                      <button type="button" onclick="fotoPopupOpen('{% url 'media_bestand' foto.bestand.name %}', '{{ notitie.geschreven_door.naam|default:"Foto"|escapejs }}', '{{ notitie.geschreven_op|date:"j b · H:i" }}')">
-                        <img src="{% url 'media_bestand' foto.thumbnail.name|default:foto.bestand.name %}" alt="Foto bij de notitie" loading="lazy">
-                      </button>
-                    {% endfor %}
-                  </div>
-                {% endif %}
-              {% endwith %}
-            </div>
-            {% if notitie|mag_weg:user %}
-              <form method="post" action="{% url 'notitie_verwijderen' notitie.pk %}{% if terugpijl %}?terug={{ terugpijl|urlencode }}{% endif %}" class="nt-weg"
-                    onsubmit="return confirm('Deze notitie verwijderen?');">
-                {% csrf_token %}
-                <button type="submit" title="Verwijderen" aria-label="Notitie verwijderen">{% include "uren/_prullenbak.html" %}</button>
-              </form>
-            {% endif %}
-          </li>
-        {% endfor %}
-      </ol>
-    {% endif %}
-  </section>
+  {% comment %} De chat van de klus (fase 2, vroeger "Notities"): hier een kaartje
+     met de laatste drie berichten en hoeveel je er nog niet zag; het gesprek
+     zelf staat op een eigen scherm, zoals WhatsApp (klussen/chat.py). {% endcomment %}
+  <a class="chat-kaart" id="notities" href="{% url 'klus_chat' klus.pk %}">
+    <span class="chat-kaart-kop">
+      <span class="lbl">Chat</span>
+      {% if ongelezen %}<span class="ongelezen-bol los" aria-label="{{ ongelezen }} nieuwe bericht{{ ongelezen|pluralize:"en" }}">{% if ongelezen > 9 %}9+{% else %}{{ ongelezen }}{% endif %}</span>{% endif %}
+      <span class="chat-kaart-open">{% if aantal_berichten %}Open de chat{% else %}Begin de chat{% endif %} ›</span>
+    </span>
+    {% for bericht in laatste_berichten %}
+      <span class="chat-kaart-regel"><b>{{ bericht.naam }}</b> {% if bericht.aantal_fotos %}📷 {% endif %}{{ bericht.tekst|default:"Foto"|truncatechars:90 }}<span class="wanneer">{{ bericht.geschreven_op|date:"j b · H:i" }}</span></span>
+    {% empty %}
+      <span class="chat-kaart-leeg">Nog geen berichten. Iedereen die bij deze klus hoort, krijgt een melding van wat je hier schrijft.</span>
+    {% endfor %}
+  </a>
 
   {% comment %} Drie tabbladen (29-09-2026):
      - Bestanden: alles wat inhoudelijk bij de klus hoort, foto of document,

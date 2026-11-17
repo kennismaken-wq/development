@@ -1,6 +1,6 @@
 from django.urls import path, re_path
 
-from . import views
+from . import chat, views
 
 urlpatterns = [
     path("klussen/", views.klus_lijst, name="klussen"),
@@ -8,8 +8,11 @@ urlpatterns = [
     path("klussen/<int:pk>/", views.klus_detail, name="klus_detail"),
     path("klussen/<int:pk>/bewerken/", views.klus_bewerken, name="klus_bewerken"),
     path("klussen/<int:pk>/uren-export/", views.klus_uren_export, name="klus_uren_export"),
-    path("klussen/<int:pk>/notities/", views.notitie_toevoegen, name="notitie_toevoegen"),
-    path("notities/<int:pk>/verwijderen/", views.notitie_verwijderen, name="notitie_verwijderen"),
+    path("klussen/<int:pk>/chat/", chat.chat, name="klus_chat"),
+    path("klussen/<int:pk>/chat/nieuw/", chat.chat_nieuw, name="klus_chat_nieuw"),
+    path("klussen/<int:pk>/notities/", chat.notitie_toevoegen, name="notitie_toevoegen"),
+    path("klussen/<int:pk>/meedoen/", views.klus_meedoen, name="klus_meedoen"),
+    path("notities/<int:pk>/verwijderen/", chat.notitie_verwijderen, name="notitie_verwijderen"),
     path("fotos/", views.fotos, name="fotos"),
     path("bijlagen/toevoegen/", views.bijlage_toevoegen, name="bijlage_toevoegen"),
     path("bijlagen/<int:pk>/verwijderen/", views.bijlage_verwijderen, name="bijlage_verwijderen"),

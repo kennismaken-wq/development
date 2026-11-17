@@ -62,10 +62,12 @@ class OngelezenTests(GesprekBasis):
         self.schrijf(self.maarten)
         self.assertEqual(gesprek.ongelezen_per_klus(self.buiten, [self.klus.pk]), {})
 
-    def test_dossier_openen_zet_teller_op_nul(self):
+    def test_chat_openen_zet_teller_op_nul(self):
         self.schrijf(self.maarten)
         self.client.force_login(self.sam)
         self.client.get(self.klus.get_absolute_url())
+        self.assertEqual(gesprek.ongelezen_per_klus(self.sam, [self.klus.pk]), {self.klus.pk: 1})
+        self.client.get(reverse("klus_chat", args=[self.klus.pk]))
         self.assertEqual(gesprek.ongelezen_per_klus(self.sam, [self.klus.pk]), {})
         nieuw = self.schrijf(self.lot, "Nog iets")
         Notitie.objects.filter(pk=nieuw.pk).update(geschreven_op=timezone.now() + timedelta(seconds=5))
@@ -109,7 +111,7 @@ class MeldingTests(GesprekBasis):
         abonnement, titel, tekst, url = stuur.call_args.args
         self.assertEqual(titel, "Sam · Tuin Vermeer")
         self.assertEqual(tekst, "Haag is klaar")
-        self.assertTrue(url.endswith("#notities"))
+        self.assertEqual(url, reverse("klus_chat", args=[self.klus.pk]))
 
     def test_fout_bij_versturen_laat_niets_crashen(self):
         notitie = self.schrijf(self.maarten)
@@ -137,7 +139,7 @@ class FotoInNotitieTests(GesprekBasis):
         notitie = Notitie.objects.get()
         self.assertEqual(notitie.fotos.count(), 2)
         self.assertEqual(Bijlage.objects.filter(klus=self.klus, soort=Bijlage.Soort.FOTO).count(), 2)
-        self.assertContains(self.client.get(self.klus.get_absolute_url()), 'class="nt-fotos"')
+        self.assertContains(self.client.get(reverse("klus_chat", args=[self.klus.pk])), "chat-fotos aantal-2")
 
     def test_alleen_een_foto_mag(self):
         self.plaats(tekst="", fotos=[upload()])
@@ -165,6 +167,7 @@ class BeginstandTests(TestCase):
         # De unieke regel per klus en persoon houdt update_or_create eerlijk.
         mw = Medewerker.objects.create_user("a", password="x")
         klus = Klus.objects.create(naam="K")
-        gesprek.markeer_gelezen(mw, klus)
-        gesprek.markeer_gelezen(mw, klus)
+        self.client.force_login(mw)
+        self.client.get(reverse("klus_chat", args=[klus.pk]))
+        self.client.get(reverse("klus_chat", args=[klus.pk]))
         self.assertEqual(NotitieGelezen.objects.count(), 1)

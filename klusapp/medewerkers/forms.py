@@ -1,3 +1,4 @@
+from datetime import date
 from django import forms
 from django.contrib.auth.forms import AuthenticationForm, PasswordResetForm, SetPasswordForm
 from django.contrib.auth.password_validation import validate_password
@@ -88,6 +89,15 @@ class WerkdagenWidget(forms.CheckboxSelectMultiple):
     medewerkers/templates/medewerkers/widgets/werkdagen.html."""
 
     template_name = "medewerkers/widgets/werkdagen.html"
+
+
+def _geboortedatum_controleren(formulier):
+    """Een tikfout (1850, of een datum in de toekomst) staat anders als
+    verjaardag bij iedereen in beeld (stresstest 17-11-2026)."""
+    datum = formulier.cleaned_data.get("geboortedatum")
+    if datum and not (date(1920, 1, 1) <= datum <= date.today()):
+        raise forms.ValidationError("Dit lijkt geen geboortedatum. Kijk het jaar even na.")
+    return datum
 
 
 class MedewerkerForm(VersieMixin, RijbewijzenMixin, ProfielfotoMixin, forms.ModelForm):
@@ -196,6 +206,9 @@ class MedewerkerForm(VersieMixin, RijbewijzenMixin, ProfielfotoMixin, forms.Mode
             raise forms.ValidationError("Er bestaat al een gebruiker met deze gebruikersnaam.")
         return naam
 
+    def clean_geboortedatum(self):
+        return _geboortedatum_controleren(self)
+
     def clean_vaste_werkdagen(self):
         return sorted(set(self.cleaned_data["vaste_werkdagen"]))
 
@@ -280,6 +293,9 @@ class EigenGegevensForm(VersieMixin, RijbewijzenMixin, ProfielfotoMixin, forms.M
     ]
 
     groepen = MedewerkerForm.groepen
+
+    def clean_geboortedatum(self):
+        return _geboortedatum_controleren(self)
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)

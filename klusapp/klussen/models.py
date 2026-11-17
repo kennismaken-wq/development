@@ -60,6 +60,15 @@ class Klus(models.Model):
     # om een kleur uit het palet pas na een tijdje vrij te geven voor een
     # nieuwe klus — zie klussen.kleuren.volgende_kleur.
     afgerond_op = models.DateField(null=True, blank=True)
+    # Wie er bij deze klus hoort (fase 2), door de eigenaar gekozen bij het
+    # aanmaken of later bij het bewerken. Zij staan in het klusdossier en
+    # krijgen de meldingen en het groene rondje van het gesprek, naast wie
+    # er is ingepland of uren schreef (klussen/gesprek.py).
+    betrokkenen = models.ManyToManyField(
+        settings.AUTH_USER_MODEL,
+        blank=True,
+        related_name="betrokken_klussen",
+    )
     aangemaakt_op = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -299,11 +308,23 @@ class Notitie(models.Model):
         related_name="notities",
     )
     geschreven_op = models.DateTimeField(auto_now_add=True)
+    # Een willekeurige sleutel die de telefoon per bericht meestuurt. Wordt
+    # hetzelfde bericht bij slecht bereik nog eens verstuurd (opnieuw tikken,
+    # of de browser die het herhaalt), dan is het dezelfde sleutel en blijft
+    # het één bericht, ook met foto's erbij (stresstest 17-11-2026).
+    sleutel = models.CharField(max_length=40, blank=True, default="", editable=False)
 
     class Meta:
         verbose_name = "notitie"
         verbose_name_plural = "notities"
         ordering = ["-geschreven_op"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["geschreven_door", "sleutel"],
+                condition=~models.Q(sleutel=""),
+                name="notitie_een_per_sleutel",
+            )
+        ]
 
     def __str__(self):
         return f"Notitie bij {self.klus} van {self.geschreven_door or 'onbekend'}"

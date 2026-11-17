@@ -106,6 +106,10 @@
     {{ formulier.beschrijving }}
     {% for fout in formulier.beschrijving.errors %}<p class="fout">{{ fout }}</p>{% endfor %}
 
+    {% comment %} Wie er bij deze klus hoort: zij krijgen de meldingen van het
+       gesprek. Zelfde keuzepillen met gezicht als "Alleen zichtbaar voor". {% endcomment %}
+    {% include "klussen/_zichtbaarvoor.html" with veld=formulier.betrokkenen kop="Betrokken" %}
+
     {% comment %} Verborgen bij een nieuwe klus (de kleur wordt dan automatisch bepaald),
        een kleurkiezer bij het bewerken. Zie forms.KlusForm.__init__. {% endcomment %}
     {% if formulier.kleur.is_hidden %}

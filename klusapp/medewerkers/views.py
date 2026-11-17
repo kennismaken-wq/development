@@ -7,7 +7,7 @@ from django.contrib.auth.decorators import login_required
 from django.views.decorators.http import require_POST
 from django.db import IntegrityError, transaction
 from django.core.files.storage import default_storage
-from django.db.models import Case, Count, IntegerField, Max, Prefetch, Q, Value, When
+from django.db.models import Case, Count, F, IntegerField, Max, Prefetch, Q, Value, When
 from django.db.models.functions import Lower
 from django.http import Http404
 from django.shortcuts import get_object_or_404, redirect, render
@@ -56,7 +56,6 @@ def _onderdelen_met_cijfers(gebruiker, vandaag, maandag, zondag, uren):
         "klussen": f"{actieve_klussen} lopend",
         "fotos": f"{fotos} foto's",
         "loonstrook": "bij Loondossier",
-        "team": f"{Medewerker.objects.filter(is_active=True, uit_dienst_sinds__isnull=True).count()} collega's",
     }
 
     if gebruiker.is_eigenaar:
@@ -124,11 +123,15 @@ def start(request):
     # Niet beperkt tot deze week: de klus waar je het laatst aan werkte staat
     # vooraan, ook als dat vorige week was. Alleen actieve klussen: een
     # afgeronde klus hoort niet meer bovenaan het startscherm.
+    # Ook de klussen waar je bij betrokken bent maar nog geen uren op hebt
+    # (de eigenaar zette je erbij, of je tikte zelf "Meedoen"): die komen
+    # achteraan, na je klussen met uren.
     klussen_recent = list(
         Klus.objects.annotate(
             laatste_uur=Max("uurblokken__datum", filter=Q(uurblokken__medewerker=request.user))
         )
-        .filter(laatste_uur__isnull=False, actief=True)
+        .filter(Q(laatste_uur__isnull=False) | Q(betrokkenen=request.user), actief=True)
+        .distinct()
         .prefetch_related(
             Prefetch(
                 "bijlagen",
@@ -136,7 +139,7 @@ def start(request):
                 to_attr="voorbeeld_bijlagen",
             )
         )
-        .order_by("-laatste_uur")[:10]
+        .order_by(F("laatste_uur").desc(nulls_last=True), "naam")[:10]
     )
     # Zelfde gewaaierde voorproefje als op het foto's-scherm (klussen/views.py:fotos).
     for klus in klussen_recent:

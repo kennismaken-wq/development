@@ -17,6 +17,7 @@ from django.utils.formats import date_format
 from django.utils.http import url_has_allowed_host_and_scheme
 from django.utils.text import slugify
 from django.views.decorators.clickjacking import xframe_options_sameorigin
+from django.views.decorators.http import require_POST
 
 from medewerkers.rechten import alleen_eigenaar
 from uren import export as uren_export
@@ -594,21 +595,29 @@ def klus_detail(request, pk):
     # (?terug=...), dan brengt het terugpijltje je daar weer; anders naar de
     # klussenlijst.
     terugpijl = _terugpijl(request)
-    # Wie het dossier opent, heeft de notities gezien: het rondje gaat weg.
-    gesprek.markeer_gelezen(request.user, klus)
+    betrokkenen = list(klus.betrokkenen.all())
+    # De chat staat op een eigen scherm (klussen/chat.py); hier een kaartje
+    # met de laatste berichten en hoeveel je er nog niet zag.
+    laatste_berichten = list(klus.notities.select_related("geschreven_door").order_by("-geschreven_op", "-pk")[:3])[::-1]
+    for bericht in laatste_berichten:
+        bericht.naam = gesprek.schrijversnaam(bericht.geschreven_door)
+        bericht.aantal_fotos = bericht.fotos.count()
+    ongelezen = gesprek.ongelezen_per_klus(request.user, [klus.pk]).get(klus.pk, 0)
     return render(
         request,
         "klussen/klus_detail.html",
         {
             "klus": klus,
+            "betrokkenen": betrokkenen,
+            "doe_ik_mee": request.user in betrokkenen,
             "gewerkt": gewerkt,
             "alleen_eigen_uren": alleen_eigen_uren,
             "totaal": totalen.totaal_van(gewerkt),
             "foto_posts": groepeer_in_posts(los for los in bijlagen if los.is_foto),
             "document_bijlagen": [los for los in bijlagen if not los.is_foto],
-            "notities": klus.notities.select_related("geschreven_door").prefetch_related(
-                Prefetch("fotos", queryset=Bijlage.objects.zichtbaar_voor(request.user).order_by("pk"))
-            ),
+            "laatste_berichten": laatste_berichten,
+            "aantal_berichten": klus.notities.count(),
+            "ongelezen": ongelezen,
             "formulier": BijlageForm(),
             # De dialoog achter het slotje alleen in de pagina als er iets te
             # wijzigen valt: hij noemt alle medewerkers bij naam, en een
@@ -624,79 +633,21 @@ def klus_detail(request, pk):
     )
 
 
-MAX_FOTOS_PER_NOTITIE = 10
-
-
 @login_required
-def notitie_toevoegen(request, pk):
-    """Het tekstvak onder de kerngegevens in het klusdossier. Iedereen die het
-    dossier ziet mag er iets bij schrijven, net als bij foto's en documenten.
-
-    Sinds fase 2 ook met foto's (het gesprek dat de WhatsApp-groepen
-    vervangt): die hangen aan de notitie en aan de klus, dus ze staan ook in
-    Media. Een notitie met alleen foto's en geen tekst mag. Na het plaatsen
-    krijgt iedereen die bij de klus hoort een melding (klussen/gesprek.py)."""
-    if request.method != "POST":
-        return HttpResponseNotAllowed(["POST"])
+@require_POST
+def klus_meedoen(request, pk):
+    """Zelf meedoen met een klus, of er weer mee stoppen (fase 2). Je komt
+    dan bij de betrokkenen: de klus staat bij Jouw klussen op het
+    startscherm, bovenaan bij uren schrijven, en je krijgt de meldingen van
+    het gesprek. Alleen voor een lopende klus; stoppen mag altijd."""
     klus = get_object_or_404(Klus, pk=pk)
-    terug = f"{_met_terug(klus.get_absolute_url(), _terugpijl(request))}#notities"
-    tekst = request.POST.get("tekst", "").strip()
-    fotos = zonder_lege_bestanden(request, "fotos").getlist("fotos")
-    max_lengte = Notitie._meta.get_field("tekst").max_length
-    if not tekst and not fotos:
-        messages.error(request, "Er staat nog niets in de notitie.")
-        return redirect(terug)
-    if len(tekst) > max_lengte:
-        messages.error(request, f"Een notitie mag hooguit {max_lengte} tekens zijn.")
-        return redirect(terug)
-    if len(fotos) > MAX_FOTOS_PER_NOTITIE:
-        messages.error(request, f"Hooguit {MAX_FOTOS_PER_NOTITIE} foto's per bericht.")
-        return redirect(terug)
-    for foto in fotos:
-        if not afbeeldingen.lijkt_afbeelding(foto.name):
-            messages.error(request, f"{foto.name}: hier kan alleen een foto bij. Een document zet je bij Bestanden.")
-            return redirect(terug)
-
-    with transaction.atomic():
-        request.user.vergrendel()
-        # Dezelfde tekst van dezelfde persoon een paar seconden geleden is
-        # een dubbele tik, geen tweede notitie (stresstest 03-10-2026, B16).
-        al_geplaatst = tekst and not fotos and Notitie.objects.filter(
-            klus=klus, tekst=tekst, geschreven_door=request.user,
-            geschreven_op__gte=timezone.now() - DUBBEL_BINNEN,
-        ).exists()
-        if al_geplaatst:
-            return redirect(terug)
-        notitie = Notitie.objects.create(klus=klus, tekst=tekst, geschreven_door=request.user)
-        batch = batch_van_upload(fotos)
-        gelukt = 0
-        for foto in fotos:
-            try:
-                bijlage = bewaar_bijlage(foto, timezone.localdate(), "", klus, None, request.user, batch)
-            except afbeeldingen.BestandNietLeesbaar as probleem:
-                messages.error(request, f"{foto.name}: {probleem}")
-                continue
-            bijlage.notitie = notitie
-            bijlage.save(update_fields=["notitie"])
-            gelukt += 1
-        if not tekst and not gelukt:
-            # Alleen foto's, en geen enkele bleek leesbaar: dan is er geen bericht.
-            notitie.delete()
-            return redirect(terug)
-        gesprek.markeer_gelezen(request.user, klus)
-        gesprek.plan_melding(notitie)
-    return redirect(terug)
-
-
-@login_required
-def notitie_verwijderen(request, pk):
-    if request.method != "POST":
-        return HttpResponseNotAllowed(["POST"])
-    notitie = get_object_or_404(Notitie, pk=pk)
-    if not notitie.mag_verwijderen(request.user):
-        raise Http404
-    notitie.delete()
-    return redirect(f"{_met_terug(notitie.klus.get_absolute_url(), _terugpijl(request))}#notities")
+    if request.POST.get("doe") == "stop":
+        klus.betrokkenen.remove(request.user)
+        messages.success(request, f"Je doet niet meer mee met {klus.naam}.")
+    elif klus.actief:
+        klus.betrokkenen.add(request.user)
+        messages.success(request, f"Je doet mee met {klus.naam}. Hij staat nu bij jouw klussen.")
+    return redirect(_met_terug(klus.get_absolute_url(), _terugpijl(request)))
 
 
 @alleen_eigenaar
@@ -792,6 +743,7 @@ def klus_nieuw(request):
             # gelden als iemand het verborgen veld zelf zou aanpassen.
             klus.kleur = kleuren.volgende_kleur()
             klus.save()
+            formulier.save_m2m()
             ingepland, _ = plan_werkdagen(klus, formulier.cleaned_data.get("aantal_werkdagen"))
 
         datum = bijlagenformulier.cleaned_data["datum"] or timezone.localdate()

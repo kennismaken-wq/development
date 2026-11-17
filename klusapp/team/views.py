@@ -7,6 +7,8 @@ dienst. Adres en noodcontact staan hier bewust niet; die zijn voor de
 eigenaar en staan op de persoonskaart bij Medewerkers.
 """
 
+from datetime import date
+
 from django.contrib.auth.decorators import login_required
 from django.db.models import Min, Sum
 from django.shortcuts import get_object_or_404, render
@@ -32,7 +34,13 @@ def team(request):
         "team/lijst.html",
         {
             "in_dienst": [m for m in mensen if m.is_active and not m.uit_dienst_sinds],
-            "oud": sorted((m for m in mensen if m.uit_dienst_sinds), key=lambda m: m.uit_dienst_sinds, reverse=True),
+            # Ook een account dat op inactief staat zonder datum (kan via
+            # /beheer/): anders stond hij in geen van beide lijsten.
+            "oud": sorted(
+                (m for m in mensen if m.uit_dienst_sinds or not m.is_active),
+                key=lambda m: m.uit_dienst_sinds or date.min,
+                reverse=True,
+            ),
         },
     )
 
@@ -68,8 +76,9 @@ def persoon(request, pk):
 
     # Uren van een ander zijn voor de eigenaar: een medewerker ziet alleen
     # zijn eigen uren, ook in het klusdossier (SPEC §2). Dus het totaal en de
-    # uren per klus alleen voor de eigenaar en voor jezelf. Op welke klussen
-    # iemand werkte, zie je wel: dat staat ook in elk klusdossier.
+    # uren per klus alleen voor de eigenaar en voor jezelf; dat geldt ook voor
+    # het aantal dagen en de periode per klus. Collega's zien alleen op welke
+    # klussen iemand werkte (zo gevraagd door Thijmen, 17-11-2026).
     mag_uren_zien = request.user.is_eigenaar or request.user.pk == persoon.pk
 
     # "Uur gewerkt" telt alles wat er in de app staat, dus vanaf de eerste

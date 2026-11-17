@@ -1,4 +1,5 @@
 from django import forms
+from django.db.models import Q
 from django.db.models.functions import Lower
 from django.utils import timezone
 
@@ -94,7 +95,7 @@ class KlusForm(VersieMixin, forms.ModelForm):
 
     class Meta:
         model = Klus
-        fields = ["soort", "opdrachtgever", "email", "adres", "plaats", "naam", "startdatum", "beschrijving", "kleur", "actief"]
+        fields = ["soort", "opdrachtgever", "email", "adres", "plaats", "naam", "startdatum", "beschrijving", "betrokkenen", "kleur", "actief"]
         widgets = {
             # Twee keuzepillen in plaats van een <select>: dit is de keuze die
             # bepaalt wat de rest van het formulier betekent, en die hoort er
@@ -121,8 +122,10 @@ class KlusForm(VersieMixin, forms.ModelForm):
             "plaats": forms.TextInput(attrs={"autocapitalize": "words", "autocomplete": "off"}),
             "beschrijving": forms.Textarea(attrs={"rows": 4}),
             "kleur": forms.TextInput(attrs={"type": "color"}),
+            "betrokkenen": forms.CheckboxSelectMultiple,
         }
         labels = {
+            "betrokkenen": "Betrokken",
             "naam": "Naam",
             "soort": "Soort",
             "startdatum": "Startdatum",
@@ -145,6 +148,13 @@ class KlusForm(VersieMixin, forms.ModelForm):
         # Niet via required=True maar in clean(): bij Van Ee staat het veld niet
         # in beeld en vult de server de opdrachtgever zelf in.
         self.fields["opdrachtgever"].required = False
+        # Iedereen die nu in dienst is, de eigenaar ook. Wie al betrokken was
+        # en inmiddels uit dienst is, blijft kiesbaar: anders verdwijnt hij
+        # stilletjes uit de klus zodra iemand het formulier opslaat.
+        al_betrokken = self.instance.betrokkenen.values("pk") if self.instance.pk else []
+        self.fields["betrokkenen"].queryset = Medewerker.objects.filter(
+            Q(is_active=True, uit_dienst_sinds__isnull=True) | Q(pk__in=al_betrokken)
+        ).order_by(Lower("first_name"), Lower("last_name"))
         if not self.instance.pk:
             # Nieuwe klus: de kleur wordt automatisch toegewezen (zie
             # klussen.views.klus_nieuw / klussen.kleuren.volgende_kleur), dus

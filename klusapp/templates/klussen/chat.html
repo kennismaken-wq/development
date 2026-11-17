@@ -1,0 +1,81 @@
+{% load static kleuren %}<!doctype html>
+{% comment %} De chat van een klus, als WhatsApp (klussen/chat.py,
+   static/js/chat.js). Een eigen pagina zonder basis.html: de navigatiebalk
+   onderaan zou over de typbalk vallen, en een chat vult het hele scherm.
+   Kop vast bovenaan, berichten ertussen, typbalk vast onderin. {% endcomment %}
+<html lang="nl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content">
+  <meta name="theme-color" content="#1D1D1B">
+  <title>{{ klus.naam }} · Chat · De Groene M</title>
+  <link rel="icon" href="{% static 'img/favicon.png' %}" sizes="32x32">
+  <link rel="manifest" href="{% url 'manifest' %}">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <link rel="stylesheet" href="{% static 'css/app.css' %}">
+  <link rel="stylesheet" href="{% static 'css/chat.css' %}">
+  <script src="{% static 'js/beweging.js' %}"></script>
+</head>
+<body class="chatpagina">
+  <header class="chat-kop">
+    <a class="chat-terug" href="{{ klus.get_absolute_url }}" aria-label="Terug naar de klus">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg>
+    </a>
+    <a class="chat-kop-klus" href="{{ klus.get_absolute_url }}">
+      <span class="chat-kop-vlek" style="background:linear-gradient(150deg, {{ klus|kleur_van }}D9, {{ klus|kleur_van }}73); border-color:{{ klus|kleur_van }}"></span>
+      <span class="chat-kop-tekst">
+        <span class="chat-kop-naam">{{ klus.naam }}</span>
+        <span class="chat-kop-wie">{% for persoon in betrokkenen %}{{ persoon.first_name|default:persoon.naam }}{% if not forloop.last %}, {% endif %}{% empty %}{{ klus.get_soort_display }}{% if klus.plaats %} · {{ klus.plaats }}{% endif %}{% endfor %}</span>
+      </span>
+    </a>
+  </header>
+
+  {% if gewisseld_van %}<p class="chat-wissel">Je kijkt mee als {{ user.naam }}. Wat je hier leest, telt niet als gelezen.</p>{% endif %}
+
+  <main class="chat-berichten" id="chat-berichten"
+        data-nieuw-url="{% url 'klus_chat_nieuw' klus.pk %}"
+        data-laatste="{{ laatste }}">
+    {% if eerdere %}
+      <p class="chat-eerder"><a href="?alles=1">{{ eerdere }} eerdere bericht{{ eerdere|pluralize:"en" }} laden</a></p>
+    {% endif %}
+    {% if not berichten %}
+      <p class="chat-leeg" id="chat-leeg">Nog geen berichten. Schrijf het eerste: iedereen die bij deze klus hoort, krijgt een melding.</p>
+    {% endif %}
+    <div id="chat-lijst">{% include "klussen/_chatberichten.html" %}</div>
+    <div id="onder"></div>
+  </main>
+
+  <button type="button" class="chat-naar-onder" id="chat-naar-onder" hidden aria-label="Naar het nieuwste bericht">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+    <span class="chat-nieuw-aantal" id="chat-nieuw-aantal"></span>
+  </button>
+
+  <form class="chat-invoer" id="chat-invoer" method="post" action="{% url 'notitie_toevoegen' klus.pk %}" enctype="multipart/form-data" data-max-fotos="{{ max_fotos }}">
+    {% csrf_token %}
+    <input type="hidden" name="sleutel" value="{{ sleutel }}">
+    <div class="chat-voorbeeld" id="chat-voorbeeld" hidden></div>
+    <div class="chat-balk">
+      <label class="chat-knop chat-fotoknop" title="Foto toevoegen" aria-label="Foto toevoegen">
+        <input type="file" name="fotos" accept="image/*" multiple class="bestandsveld-verborgen" id="chat-fotos">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h3l2-2.5h6L17 8h3a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z"/><circle cx="12" cy="13" r="3.5"/></svg>
+      </label>
+      <textarea name="tekst" id="chat-tekst" rows="1" maxlength="2000" data-dicteer placeholder="Bericht" aria-label="Bericht"></textarea>
+      <button type="submit" class="chat-knop chat-stuur" aria-label="Versturen">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M3.4 20.4l17.45-7.48a1 1 0 0 0 0-1.84L3.4 3.6a.99.99 0 0 0-1.39.91L2 9.12c0 .5.37.93.87.99L17 12 2.87 13.88c-.5.07-.87.5-.87 1l.01 4.61c0 .71.73 1.2 1.39.91z"/></svg>
+      </button>
+    </div>
+  </form>
+
+  {% if messages %}
+    <ul class="meldingen" role="status" aria-live="polite">
+      {% for melding in messages %}<li class="melding {{ melding.tags }}">{{ melding }}</li>{% endfor %}
+    </ul>
+    <script src="{% static 'js/meldingen.js' %}"></script>
+  {% endif %}
+
+  {% include "klussen/_fotopopup.html" %}
+  <script src="{% static 'js/dicteren.js' %}" defer></script>
+  <script src="{% static 'js/chat.js' %}" defer></script>
+</body>
+</html>

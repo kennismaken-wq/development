@@ -34,7 +34,16 @@ class VersieMixin:
         self.initial["versie"] = self._versie_nu
 
     def _versie_van(self, instance):
-        waarden = [repr(getattr(instance, naam, None)) for naam in self._meta.fields]
+        waarden = []
+        for naam in self._meta.fields:
+            veld = next((v for v in instance._meta.get_fields() if v.name == naam), None)
+            if veld is not None and veld.many_to_many:
+                # Een veel-op-veel-veld (Klus.betrokkenen) is een manager; de
+                # repr daarvan bevat een geheugenadres en verschilt dus per
+                # verzoek. Wat telt zijn de gekozen pk's.
+                waarden.append(repr(sorted(getattr(instance, naam).values_list("pk", flat=True))))
+            else:
+                waarden.append(repr(getattr(instance, naam, None)))
         return hashlib.sha256("|".join(waarden).encode()).hexdigest()[:20]
 
     def clean(self):

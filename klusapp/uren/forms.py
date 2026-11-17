@@ -142,12 +142,20 @@ class UurblokForm(forms.ModelForm):
             )
         laatst = Uurblok.objects.filter(medewerker=self.medewerker).order_by("-datum", "-eindtijd")
         recent = [pk for pk in dict.fromkeys(laatst.values_list("klus_id", flat=True)[:40]) if pk not in ingepland][:5]
+        # Klussen waar je bij betrokken bent (gezet door de eigenaar of zelf
+        # "Meedoen" getikt) staan na de ingeplande en recente.
+        betrokken = set(
+            self.medewerker.betrokken_klussen.filter(actief=True).values_list("pk", flat=True)
+        ) - ingepland - set(recent)
         self.fields["klus"].widget.hints = {
+            **{pk: "Jouw klus" for pk in betrokken},
             **{pk: "Laatst gebruikt" for pk in recent},
             **{pk: "Ingepland" for pk in ingepland},
         }
         return klussen.annotate(
-            volgorde=Case(When(pk__in=ingepland, then=0), When(pk__in=recent, then=1), default=2)
+            volgorde=Case(
+                When(pk__in=ingepland, then=0), When(pk__in=recent, then=1), When(pk__in=betrokken, then=2), default=3
+            )
         ).order_by("volgorde", "-actief", "naam")
 
     def clean(self):

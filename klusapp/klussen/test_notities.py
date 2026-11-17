@@ -26,7 +26,7 @@ class NotitieTest(TestCase):
         antwoord = self.client.post(
             reverse("notitie_toevoegen", args=[self.klus.pk]), {"tekst": "  Hek staat open  "}
         )
-        self.assertRedirects(antwoord, self.klus.get_absolute_url() + "#notities", fetch_redirect_response=False)
+        self.assertRedirects(antwoord, reverse("klus_chat", args=[self.klus.pk]) + "#onder", fetch_redirect_response=False)
         notitie = Notitie.objects.get()
         self.assertEqual(notitie.tekst, "Hek staat open")
         self.assertEqual(notitie.geschreven_door, self.sam)
@@ -48,11 +48,12 @@ class NotitieTest(TestCase):
         self.assertEqual(antwoord.status_code, 302)
         self.assertFalse(Notitie.objects.exists())
 
-    def test_nieuwste_bovenaan_in_dossier(self):
+    def test_nieuwste_onderaan_in_de_chat(self):
+        # Sinds 17-11-2026 een chat zoals WhatsApp: oudste boven, nieuwste onder.
         Notitie.objects.create(klus=self.klus, tekst="Eerste", geschreven_door=self.sam)
         Notitie.objects.create(klus=self.klus, tekst="Tweede", geschreven_door=self.joep)
-        html = self.client.get(self.klus.get_absolute_url()).content.decode()
-        self.assertLess(html.index("Tweede"), html.index("Eerste"))
+        html = self.client.get(reverse("klus_chat", args=[self.klus.pk])).content.decode()
+        self.assertLess(html.index("Eerste"), html.index("Tweede"))
 
     def test_andermans_notitie_niet_verwijderen(self):
         notitie = Notitie.objects.create(klus=self.klus, tekst="Van Joep", geschreven_door=self.joep)

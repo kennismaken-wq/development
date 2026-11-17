@@ -1,0 +1,32 @@
+{% load kleuren bijlagen %}{% comment %} Ballonnetjes in de chat (klussen/chat.py). Elk bericht heeft zijn
+   velden uit gesprek.voorbereid: eigen (rechts, groen), nieuwe_dag (een
+   datumkop erboven), doorloop (zelfde persoon kort na elkaar: geen naam en
+   rondje opnieuw), naam en dagnaam. Ook gebruikt bij het bijladen door
+   static/js/chat.js; die laat een dubbele datumkop weg. {% endcomment %}{% for bericht in berichten %}{% if bericht.nieuwe_dag %}
+<div class="chat-dag" data-dag="{{ bericht.dag|date:'Y-m-d' }}"><span>{% if bericht.dagnaam %}{{ bericht.dagnaam }}{% else %}{{ bericht.dag|date:"l j F" }}{% endif %}</span></div>{% endif %}
+<div class="chat-bericht{% if bericht.eigen %} eigen{% endif %}{% if bericht.doorloop %} doorloop{% endif %}" id="bericht-{{ bericht.pk }}" data-pk="{{ bericht.pk }}">
+  {% if not bericht.eigen %}
+    {% if bericht.doorloop %}<span class="chat-bol-plek"></span>{% elif bericht.geschreven_door %}{% include "_medewerkerbol.html" with persoon=bericht.geschreven_door klasse="chat-bol" %}{% else %}<span class="chat-bol leeg-bol"></span>{% endif %}
+  {% endif %}
+  <div class="ballon">
+    {% if not bericht.eigen and not bericht.doorloop %}<span class="chat-naam"{% if bericht.geschreven_door %} style="color:{{ bericht.geschreven_door|medewerker_kleur }}"{% endif %}>{{ bericht.naam }}</span>{% endif %}
+    {% with fotos=bericht.fotos.all %}{% if fotos %}
+      <div class="chat-fotos aantal-{% if fotos|length > 4 %}4{% else %}{{ fotos|length }}{% endif %}">
+        {% for foto in fotos|slice:":4" %}
+          <button type="button" onclick="fotoPopupOpenGalerij([{% for item in fotos %}{src:'{% url 'media_bestand' item.bestand.name %}', titel:'{{ bericht.naam|escapejs }}', meta:'{{ bericht.geschreven_op|date:"j b · H:i" }} · {{ forloop.counter }}/{{ fotos|length }}'}{% if not forloop.last %}, {% endif %}{% endfor %}], {{ forloop.counter0 }})">
+            <img src="{% url 'media_bestand' foto.thumbnail.name|default:foto.bestand.name %}" alt="Foto van {{ bericht.naam }}" loading="lazy">
+            {% if forloop.last and fotos|length > 4 %}<span class="chat-meer">+{{ fotos|length|add:"-4" }}</span>{% endif %}
+          </button>
+        {% endfor %}
+      </div>
+    {% endif %}{% endwith %}
+    {% if bericht.tekst %}<p class="chat-tekst">{{ bericht.tekst|urlize|linebreaksbr }}</p>{% elif not bericht.fotos.all %}<p class="chat-tekst chat-weggehaald">Foto is weggehaald</p>{% endif %}
+    <span class="chat-tijd">{{ bericht.geschreven_op|time:"H:i" }}{% if bericht.eigen %} <svg class="chat-vink" viewBox="0 0 16 11" aria-label="Verstuurd"><path d="M1 5.5l3.5 3.5L11 1.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>{% endif %}</span>
+  </div>
+  {% if bericht|mag_weg:user %}
+    <form method="post" action="{% url 'notitie_verwijderen' bericht.pk %}" class="chat-weg" onsubmit="return confirm('Dit bericht verwijderen?');">
+      {% csrf_token %}
+      <button type="submit" aria-label="Bericht verwijderen">Verwijderen</button>
+    </form>
+  {% endif %}
+</div>{% endfor %}

@@ -1,7 +1,7 @@
 {% extends "basis.html" %}
 {% load pictogrammen static %}
 {% block titel %}{{ persoon.naam }}{% endblock %}
-{% block kop %}{{ persoon.naam }}{% endblock %}
+{% block kop %}Ons team{% endblock %}
 {% block sub %}<a href="{% url 'team' %}" style="color:rgba(255,255,255,0.6)">‹ Ons team</a>{% endblock %}
 {% block inhoud %}
   <div class="profielkop">
@@ -27,9 +27,18 @@
      jaar) en sinds wanneer iemand er werkt. Adres en noodcontact blijven op
      de persoonskaart bij Medewerkers, voor de eigenaar. {% endcomment %}
   <div class="klusinfo teaminfo">
-    <p class="regel"><span class="lbl">Mobiel</span>{% if persoon.telefoon %}<a href="tel:{{ persoon.telefoon }}">{{ persoon.telefoon }}</a>{% else %}—{% endif %}</p>
-    <p class="regel"><span class="lbl">Verjaardag</span>{% if persoon.geboortedatum %}{{ persoon.geboortedatum|date:"j F" }}{% else %}—{% endif %}</p>
-    <p class="regel"><span class="lbl">In dienst</span>{% if persoon.in_dienst_sinds %}sinds {{ persoon.in_dienst_sinds|date:"j F Y" }}{% else %}—{% endif %}{% if persoon.uit_dienst_sinds %} · tot {{ persoon.uit_dienst_sinds|date:"j F Y" }}{% endif %}</p>
+    {% if not persoon.uit_dienst_sinds and persoon.telefoon %}
+      <p class="regel"><span class="lbl">Mobiel</span><a href="tel:{{ persoon.telefoon }}">{{ persoon.telefoon }}</a></p>
+    {% endif %}
+    {% if not persoon.uit_dienst_sinds and persoon.geboortedatum %}
+      <p class="regel"><span class="lbl">Verjaardag</span>{{ persoon.geboortedatum|date:"j F" }}</p>
+    {% endif %}
+    {% if persoon.in_dienst_sinds or persoon.uit_dienst_sinds %}
+      <p class="regel"><span class="lbl">In dienst</span>{% if persoon.in_dienst_sinds %}sinds {{ persoon.in_dienst_sinds|date:"j F Y" }}{% endif %}{% if persoon.uit_dienst_sinds %}{% if persoon.in_dienst_sinds %} · {% endif %}tot {{ persoon.uit_dienst_sinds|date:"j F Y" }}{% endif %}</p>
+    {% endif %}
+    {% if user.is_eigenaar %}
+      <p class="regel"><a href="{% url 'medewerker_bewerken' persoon.pk %}">Gegevens aanvullen of wijzigen ›</a></p>
+    {% endif %}
   </div>
 
   <div class="tabbladen">
@@ -40,7 +49,7 @@
       </button>
       <button type="button" class="tabblad" data-tab="klussen">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">{{ "klussen"|pictogram }}</svg>
-        Klussen
+        Klussen{% if klussen %} · {{ klussen|length }}{% endif %}
       </button>
     </div>
 
@@ -56,13 +65,18 @@
               <span class="ur-bol" style="background:{{ rij.klus.kleur|default:'#95BF1D' }}"></span>
               <a class="wie" href="{{ rij.klus.get_absolute_url }}">
                 {{ rij.klus.naam }}
-                <span class="functie">{{ rij.klus.get_soort_display }}{% if not rij.klus.actief %} · afgerond{% endif %}</span>
+                <span class="soort-badge">{{ rij.klus.get_soort_display }}</span>{% if not rij.klus.actief %}<span class="soort-badge afgerond-badge">Afgerond</span>{% endif %}
               </a>
-              <span class="wanneer">
-                {{ rij.aantal_dagen }} dag{{ rij.aantal_dagen|pluralize:"en" }} ·
-                {{ rij.eerste_dag|date:"j b Y" }}{% if rij.eerste_dag != rij.laatste_dag %} – {{ rij.laatste_dag|date:"j b Y" }}{% endif %}
-              </span>
-              {% if mag_uren_zien %}<span class="uren">{{ rij.uren }} u</span>{% endif %}
+              {% comment %} Dagen en periode zeggen hoeveel iemand werkte; dat is
+                 net als de uren alleen voor de eigenaar en jezelf (SPEC §5,
+                 stresstest 17-11-2026). Collega's zien alleen de klus. {% endcomment %}
+              {% if mag_uren_zien %}
+                <span class="wanneer">
+                  {{ rij.aantal_dagen }} dag{{ rij.aantal_dagen|pluralize:"en" }} ·
+                  {{ rij.eerste_dag|date:"j b Y" }}{% if rij.eerste_dag != rij.laatste_dag %} – {{ rij.laatste_dag|date:"j b Y" }}{% endif %}
+                </span>
+                <span class="uren">{{ rij.uren }} u</span>
+              {% endif %}
             </li>
           {% endfor %}
         </ul>

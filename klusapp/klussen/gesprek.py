@@ -11,13 +11,14 @@ import logging
 import threading
 from datetime import timedelta
 
-from django.db import close_old_connections, transaction
+from django.db import close_old_connections, connection, transaction
+from django.urls import reverse
 from django.utils import timezone
 
 from medewerkers.models import Medewerker
 from uren.models import Inzet, Uurblok
 
-from .models import Notitie, NotitieGelezen
+from .models import Klus, Notitie, NotitieGelezen
 
 log = logging.getLogger(__name__)
 
@@ -41,6 +42,13 @@ def _mensen_bij(klus_ids=None, medewerker=None):
     paren = set(inzet.values_list("medewerker_id", "klus_id"))
     paren |= set(uren.values_list("medewerker_id", "klus_id"))
     paren |= set(berichten.values_list("geschreven_door_id", "klus_id"))
+    # En wie de eigenaar zelf bij de klus heeft gezet (Klus.betrokkenen).
+    gekozen = Klus.betrokkenen.through.objects.all()
+    if klus_ids is not None:
+        gekozen = gekozen.filter(klus_id__in=klus_ids)
+    if medewerker is not None:
+        gekozen = gekozen.filter(medewerker=medewerker)
+    paren |= set(gekozen.values_list("medewerker_id", "klus_id"))
     return paren
 
 
@@ -64,9 +72,16 @@ def ongelezen_per_klus(gebruiker, klus_ids):
     gelezen = dict(
         NotitieGelezen.objects.filter(medewerker=gebruiker, klus_id__in=klus_ids).values_list("klus_id", "tijdstip")
     )
+    # Wie de chat van een klus nog nooit opende (net ingepland op een oude
+    # klus, nieuw in dienst), telt alleen de berichten van de laatste TERUG
+    # dagen, niet de hele geschiedenis. Ouder dan dat telt nooit: het rondje
+    # toont boven de 9 toch "9+" (stresstest 17-11-2026).
+    ondergrens = timezone.now() - TERUG
     tellers = {}
     for klus_id, geschreven_op in (
-        Notitie.objects.filter(klus_id__in=klus_ids).exclude(geschreven_door=gebruiker).values_list("klus_id", "geschreven_op")
+        Notitie.objects.filter(klus_id__in=klus_ids, geschreven_op__gte=ondergrens)
+        .exclude(geschreven_door=gebruiker)
+        .values_list("klus_id", "geschreven_op")
     ):
         grens = gelezen.get(klus_id)
         if grens is None or geschreven_op > grens:
@@ -81,8 +96,53 @@ def zet_tellers(gebruiker, klussen):
         klus.ongelezen = tellers.get(klus.pk, 0)
 
 
-def markeer_gelezen(gebruiker, klus):
-    NotitieGelezen.objects.update_or_create(klus=klus, medewerker=gebruiker, defaults={"tijdstip": timezone.now()})
+def markeer_gelezen(request, klus):
+    """De chat is bekeken. Niet als de eigenaar meekijkt als medewerker
+    (TESTFUNCTIES): dan zou hij het rondje van die medewerker wissen."""
+    from medewerkers.views import SESSIE_WISSEL
+
+    if SESSIE_WISSEL in request.session:
+        return
+    NotitieGelezen.objects.update_or_create(
+        klus=klus, medewerker=request.user, defaults={"tijdstip": timezone.now()}
+    )
+
+
+def schrijversnaam(medewerker):
+    """Voornaam, en nooit de gebruikersnaam (die is een inlognaam)."""
+    if medewerker is None:
+        return "Iemand"
+    return medewerker.first_name or medewerker.last_name or "Collega"
+
+
+def voorbereid(berichten, gebruiker, vorige=None):
+    """Zet op elk bericht wat de chat nodig heeft om het als WhatsApp te
+    tonen: van jou of niet, een datumkop als er een nieuwe dag begint, en of
+    het aan het vorige bericht van dezelfde persoon vastzit (dan geen naam
+    en rondje opnieuw). `vorige` is het laatste bericht dat al op het
+    scherm staat, bij het bijladen."""
+    berichten = list(berichten)
+    vandaag = timezone.localdate()
+    for bericht in berichten:
+        dag = timezone.localdate(bericht.geschreven_op)
+        bericht.eigen = bericht.geschreven_door_id == gebruiker.pk
+        bericht.dag = dag
+        bericht.nieuwe_dag = vorige is None or timezone.localdate(vorige.geschreven_op) != dag
+        bericht.doorloop = (
+            not bericht.nieuwe_dag
+            and vorige is not None
+            and vorige.geschreven_door_id == bericht.geschreven_door_id
+            and (bericht.geschreven_op - vorige.geschreven_op) < timedelta(minutes=10)
+        )
+        if dag == vandaag:
+            bericht.dagnaam = "Vandaag"
+        elif dag == vandaag - timedelta(days=1):
+            bericht.dagnaam = "Gisteren"
+        else:
+            bericht.dagnaam = None
+        bericht.naam = schrijversnaam(bericht.geschreven_door)
+        vorige = bericht
+    return berichten
 
 
 def _melding_tekst(notitie, aantal_fotos):
@@ -107,10 +167,9 @@ def meld(notitie_pk):
         if notitie is None:  # binnen een tel weer weggehaald
             return 0
         ontvangers = betrokkenen(notitie.klus).exclude(pk=notitie.geschreven_door_id)
-        schrijver = notitie.geschreven_door
-        titel = f"{schrijver.first_name or schrijver.naam} · {notitie.klus.naam}" if schrijver else notitie.klus.naam
+        titel = f"{schrijversnaam(notitie.geschreven_door)} · {notitie.klus.naam}"
         tekst = _melding_tekst(notitie, notitie.fotos.count())
-        url = f"{notitie.klus.get_absolute_url()}#notities"
+        url = reverse("klus_chat", args=[notitie.klus_id])
         verstuurd = 0
         for abonnement in Abonnement.objects.filter(medewerker__in=ontvangers):
             verstuurd += bool(versturen.stuur(abonnement, titel, tekst, url))
@@ -119,7 +178,11 @@ def meld(notitie_pk):
         log.exception("Melding bij notitie %s mislukt", notitie_pk)
         return 0
     finally:
-        close_old_connections()
+        # Deze thread heeft zijn eigen verbinding; met CONN_MAX_AGE sluit
+        # close_old_connections die niet, dus hier expliciet dicht. (Niet
+        # binnen een transactie: dan draaien we in een test, niet in een thread.)
+        if not connection.in_atomic_block:
+            connection.close()
 
 
 def plan_melding(notitie):

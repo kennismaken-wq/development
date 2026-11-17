@@ -3168,7 +3168,7 @@ h1{ letter-spacing:-0.015em; }
 
 /* Ons team (team/): drie cijfers bovenaan de persoonspagina — uren (alleen
    voor de eigenaar en jezelf), klussen en de beste score in het springspel. */
-.teamcijfers{ display:grid; grid-template-columns:repeat(auto-fit, minmax(96px, 1fr)); gap:.5rem; margin:0 0 1.2rem; }
+.teamcijfers{ display:grid; grid-template-columns:repeat(auto-fit, minmax(84px, 1fr)); gap:.5rem; margin:0 0 1.2rem; }
 .teamcijfer{
   display:grid; gap:.2rem; padding:.75rem .9rem; border-radius:14px;
   background:rgba(255,255,255,0.07); border:1px solid rgba(255,255,255,0.14);
@@ -3215,5 +3215,40 @@ h1{ letter-spacing:-0.015em; }
 /* De slider op het startscherm knipt alles af wat erboven uitsteekt
    (overflow-x:auto maakt ook de y-as scrollend). Ruimte boven en rechts, zodat
    het rondje erin past, met een negatieve marge zodat de rest niet verschuift. */
-.klussen-slider{ padding-top:8px; margin-top:-8px; padding-right:8px; }
+.klussen-slider{ padding-top:12px; margin-top:-12px; padding-right:12px; }
+.klus-slide .ongelezen-bol{ top:-10px; right:-10px; }
 .teaminfo{ margin:0 0 1.2rem; }
+
+/* Betrokken op het klusdossier: rondje met gezicht en voornaam, klikbaar naar
+   Ons team. Breekt netjes af op een smal scherm. */
+.betrokken-regel{ display:flex; align-items:flex-start; gap:0; }
+.betrokken-lijst{ display:flex; flex-wrap:wrap; gap:.35rem .8rem; min-width:0; }
+.betrokken-persoon{ display:inline-flex; align-items:center; gap:.4rem; color:inherit; text-decoration:none; min-height:28px; }
+.betrokken-regel .lbl{ flex-shrink:0; padding-top:.35rem; }
+.betrokken-persoon .zv-bol{
+  flex-shrink:0; width:24px; height:24px; border-radius:999px; border:1px solid;
+  display:flex; align-items:center; justify-content:center;
+  font-size:9.5px; font-weight:700; color:#fff; letter-spacing:.02em;
+}
+.betrokken-leeg{ padding-top:.3rem; color:rgba(255,255,255,0.45); font-size:13px; }
+.meedoen{ margin:.5rem 0 0; }
+.meedoen .meedoen-stop{ font-size:12.5px; min-height:36px; }
+
+/* De chatkaart in het klusdossier (fase 2): de laatste berichten, en een tik
+   brengt je naar de chat zelf (templates/klussen/chat.html). */
+.chat-kaart{
+  display:grid; gap:.35rem; margin:0 0 1.4rem; padding:.8rem .95rem; border-radius:16px;
+  background:rgba(255,255,255,0.07); border:1px solid rgba(255,255,255,0.14);
+  color:#fff; text-decoration:none; transition:background .12s;
+}
+@media (hover:hover){ .chat-kaart:hover{ background:rgba(255,255,255,0.12); } }
+.chat-kaart-kop{ display:flex; align-items:center; gap:.5rem; }
+.chat-kaart-kop .lbl{ font-size:10.5px; font-weight:600; letter-spacing:.05em; text-transform:uppercase; color:rgba(255,255,255,0.45); }
+.chat-kaart-open{ margin-left:auto; font-size:13px; font-weight:600; color:var(--hi); }
+.chat-kaart-regel{ font-size:13.5px; line-height:1.4; color:rgba(255,255,255,0.85); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.chat-kaart-regel b{ font-weight:600; color:#fff; }
+.chat-kaart-regel .wanneer{ margin-left:.4rem; font-size:11.5px; color:rgba(255,255,255,0.4); }
+.chat-kaart-leeg{ font-size:13px; color:rgba(255,255,255,0.55); }
+.ongelezen-bol.los{ position:static; border-width:0; box-shadow:none; }
+.teaminfo a{ display:inline-block; padding:.35rem 0; }
+.teamklussen .soort-badge{ margin-left:.4rem; vertical-align:1px; }
