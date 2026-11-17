@@ -1,3 +1,3 @@
 {% comment %} Het groene rondje op een klustegel: hoeveel notities van anderen je
    nog niet zag, op een klus waar jij bij hoort (klussen/gesprek.py zet
-   klus.ongelezen). Bij meer dan 9 staat er 9+. {% endcomment %}{% if klus.ongelezen %}<span class="ongelezen-bol" role="img" aria-label="{{ klus.ongelezen }} nieuwe notitie{{ klus.ongelezen|pluralize:"s" }}">{% if klus.ongelezen > 9 %}9+{% else %}{{ klus.ongelezen }}{% endif %}</span>{% endif %}
+   klus.ongelezen). Bij meer dan 9 staat er 9+. {% endcomment %}{% if klus.ongelezen %}<span class="ongelezen-bol" role="img" aria-label="{{ klus.ongelezen }} nieuwe bericht{{ klus.ongelezen|pluralize:"en" }}">{% if klus.ongelezen > 9 %}9+{% else %}{{ klus.ongelezen }}{% endif %}</span>{% endif %}

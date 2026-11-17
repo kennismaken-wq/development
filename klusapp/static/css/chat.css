@@ -43,9 +43,9 @@ body.chatpagina{
 }
 #chat-lijst{ display:flex; flex-direction:column; gap:2px; }
 .chat-eerder, .chat-leeg{ text-align:center; font-size:13px; color:rgba(255,255,255,0.55); margin:.6rem 1rem 1rem; }
-.chat-eerder a{ color:var(--hi); }
+.chat-eerder a{ color:var(--hi); display:inline-block; padding:.7rem .5rem; }
 
-.chat-dag{ display:flex; justify-content:center; margin:.9rem 0 .5rem; }
+.chat-dag{ display:flex; justify-content:center; margin:.9rem 0 .5rem; position:sticky; top:.3rem; z-index:2; }
 .chat-dag span{
   font-size:12px; font-weight:600; color:rgba(255,255,255,0.75);
   background:rgba(255,255,255,0.10); border-radius:8px; padding:.3rem .7rem;
@@ -77,7 +77,9 @@ body.chatpagina{
   background:rgba(var(--accent-rgb),0.30); border-color:rgba(var(--accent-rgb),0.40);
 }
 .chat-bericht.eigen:not(.doorloop) .ballon{ border-top-right-radius:4px; }
-.chat-naam{ display:block; font-size:12.5px; font-weight:700; margin-bottom:.1rem; }
+/* De kleur van de persoon, lichter gemengd: drie paletkleuren haalden op de
+   ballon geen leesbaar contrast (stresstest 17-11-2026). */
+.chat-naam{ display:block; font-size:12.5px; font-weight:700; margin-bottom:.1rem; color:color-mix(in srgb, var(--wie, #fff) 62%, #fff); }
 .chat-tekst{ margin:0; font-size:15px; line-height:1.4; color:#fff; white-space:normal; }
 .chat-tekst a{ color:var(--hi); }
 /* De tijd rechtsonder in de ballon; de tekst laat er ruimte voor. */
@@ -92,7 +94,7 @@ body.chatpagina{
 .chat-vink{ width:14px; height:10px; color:var(--hi); }
 
 /* Foto's in een ballon: één groot, of een raster van twee/vier zoals WhatsApp. */
-.chat-fotos{ display:grid; gap:3px; margin:.15rem -.35rem .3rem; border-radius:10px; overflow:hidden; width:min(64vw, 280px); }
+.chat-fotos{ display:grid; gap:3px; margin:.15rem -.35rem .3rem; border-radius:10px; overflow:hidden; width:auto; min-width:min(64vw, 280px); }
 .chat-fotos.aantal-2{ grid-template-columns:1fr 1fr; }
 .chat-fotos.aantal-3, .chat-fotos.aantal-4{ grid-template-columns:1fr 1fr; }
 .chat-fotos.aantal-3 > :first-child{ grid-column:1 / -1; }
@@ -111,14 +113,17 @@ body.chatpagina{
 .chat-bericht.geweigerd .ballon{ border-color:rgba(224,123,95,0.7); opacity:.8; }
 
 /* Weghalen: tik op je eigen bericht (of hover op een computer). */
-.chat-weg{ display:none; margin:0; align-self:center; order:-1; }
+/* Boven de ballon zwevend, niet als flex-item: anders kromp de ballon en
+   sprong de tekst, en stond de knop bij een lang bericht ver uit beeld. */
+.chat-weg{ display:none; margin:0; position:absolute; top:-.4rem; z-index:3; }
+.chat-bericht.eigen .chat-weg{ left:0; }
 .chat-bericht.gekozen .chat-weg{ display:block; }
 @media (hover:hover){ .chat-bericht:hover .chat-weg{ display:block; } }
 .chat-weg button{
-  font:inherit; font-size:12px; padding:.35rem .7rem; min-height:32px; border-radius:999px; cursor:pointer;
+  font:inherit; font-size:12.5px; padding:.4rem .9rem; min-height:44px; border-radius:999px; cursor:pointer;
   background:rgba(224,123,95,0.18); color:#F2A48E; border:1px solid rgba(224,123,95,0.45);
 }
-.chat-bericht:not(.eigen) .chat-weg{ order:3; }
+.chat-bericht:not(.eigen) .chat-weg{ right:0; }
 
 /* ---- Naar beneden ---- */
 .chat-naar-onder{
@@ -165,20 +170,30 @@ body.chatpagina{
 .chat-stuur svg{ width:20px; height:20px; margin-left:2px; }
 .chat-stuur:active{ transform:scale(.94); }
 
-.chat-voorbeeld{ display:flex; align-items:center; gap:.4rem; padding:0 .2rem .45rem; overflow-x:auto; }
+/* Aantal en waarschuwing links, kruisje rechts: allebei altijd in beeld, de
+   foto's ertussen scrollen (stresstest 17-11-2026: bij veel foto's stonden
+   die buiten beeld). */
+.chat-voorbeeld{ display:flex; align-items:center; gap:.4rem; padding:0 .2rem .45rem; }
+.chat-voorbeeld-fotos{ display:flex; gap:.4rem; overflow-x:auto; min-width:0; flex:1; }
 .chat-voorbeeld[hidden]{ display:none; }
 .chat-voorbeeld img{ width:52px; height:52px; object-fit:cover; border-radius:8px; flex-shrink:0; }
-.chat-voorbeeld-tekst{ font-size:12.5px; color:rgba(255,255,255,0.7); white-space:nowrap; }
+.chat-voorbeeld-tekst{ font-size:12.5px; color:rgba(255,255,255,0.75); flex-shrink:0; max-width:40%; }
+.chat-voorbeeld-tekst.waarschuwing{ color:#F6C7B6; }
 .chat-voorbeeld-weg{
   margin-left:auto; flex-shrink:0; width:32px; height:32px; border-radius:50%; cursor:pointer;
   background:rgba(255,255,255,0.10); color:#fff; border:1px solid rgba(255,255,255,0.18); font-size:18px; line-height:1;
 }
 
-.chatpagina .meldingen{ bottom:calc(5.5rem + env(safe-area-inset-bottom)); }
+.chat-invoer{ position:relative; }
+.chat-invoer .chat-naar-onder{ position:absolute; bottom:calc(100% + .6rem); right:1rem; }
+.chatpagina .meldingen{ bottom:calc(var(--invoer-hoogte, 5.5rem) + .6rem); }
 
 @media (min-width:760px){
   .chatpagina > .chat-berichten, .chatpagina > .chat-invoer, .chatpagina > .chat-kop{
     border-left:1px solid rgba(255,255,255,0.08); border-right:1px solid rgba(255,255,255,0.08);
   }
 }
-.chat-weggehaald{ font-style:italic; color:rgba(255,255,255,0.5); }
+.chat-weggehaald{ font-style:italic; color:rgba(255,255,255,0.6); }
+.chat-bericht.eigen .chat-weggehaald{ color:rgba(255,255,255,0.7); }
+.chat-bericht.eigen .chat-tijd{ color:rgba(255,255,255,0.7); }
+.chat-bericht.geweigerd{ cursor:pointer; }

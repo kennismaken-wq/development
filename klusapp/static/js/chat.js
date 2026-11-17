@@ -210,7 +210,8 @@
   function weigeren(el, tekst) {
     el.classList.remove("bezig");
     el.classList.add("geweigerd");
-    el.querySelector(".chat-tijd").textContent = tekst;
+    el.querySelector(".chat-tijd").textContent = tekst + " · tik om weg te halen";
+    el.onclick = function () { ruimFotosOp(el); el.remove(); };
   }
 
   // De voorbeeldjes van een verstuurd bericht uit het geheugen halen (een
@@ -261,11 +262,24 @@
 
   /* ---- Typbalk groeit mee, tot ongeveer vijf regels ---- */
 
+  // Onderaan blijven als het berichtenvak kleiner wordt (toetsenbord open,
+  // typbalk groeit), zoals WhatsApp; anders schoven de nieuwste berichten
+  // uit beeld (stresstest 17-11-2026).
+  function pinOnder() { vak.scrollTop = vak.scrollHeight; }
   function pasHoogteAan() {
+    var was = onderaan();
     tekstveld.style.height = "auto";
     tekstveld.style.height = Math.min(tekstveld.scrollHeight, 132) + "px";
+    document.body.style.setProperty("--invoer-hoogte", formulier.offsetHeight + "px");
+    if (was) pinOnder();
   }
   tekstveld.addEventListener("input", pasHoogteAan);
+  tekstveld.addEventListener("focus", function () { if (onderaan()) setTimeout(pinOnder, 300); });
+  if (window.visualViewport) {
+    var wasOnder = true;
+    vak.addEventListener("scroll", function () { wasOnder = onderaan(); });
+    window.visualViewport.addEventListener("resize", function () { if (wasOnder) pinOnder(); });
+  }
 
   /* ---- Gekozen foto's als voorbeeldje ---- */
 
@@ -274,19 +288,22 @@
     voorbeeld.querySelectorAll("img").forEach(function (img) { URL.revokeObjectURL(img.src); });
     voorbeeld.innerHTML = "";
     voorbeeld.hidden = !bestanden.length;
-    if (!bestanden.length) return;
+    if (!bestanden.length) { pasHoogteAan(); return; }
+    var tekst = document.createElement("span");
+    tekst.className = "chat-voorbeeld-tekst" + (bestanden.length > maxFotos ? " waarschuwing" : "");
+    tekst.textContent = bestanden.length > maxFotos
+      ? "Alleen de eerste " + maxFotos + " gaan mee"
+      : bestanden.length + (bestanden.length === 1 ? " foto" : " foto's");
+    voorbeeld.appendChild(tekst);
+    var fotos = document.createElement("div");
+    fotos.className = "chat-voorbeeld-fotos";
     bestanden.slice(0, maxFotos).forEach(function (bestand) {
       var img = document.createElement("img");
       img.src = URL.createObjectURL(bestand);
       img.alt = "";
-      voorbeeld.appendChild(img);
+      fotos.appendChild(img);
     });
-    var tekst = document.createElement("span");
-    tekst.className = "chat-voorbeeld-tekst";
-    tekst.textContent = bestanden.length > maxFotos
-      ? "Alleen de eerste " + maxFotos + " foto's gaan mee"
-      : bestanden.length + (bestanden.length === 1 ? " foto" : " foto's");
-    voorbeeld.appendChild(tekst);
+    voorbeeld.appendChild(fotos);
     var weg = document.createElement("button");
     weg.type = "button";
     weg.className = "chat-voorbeeld-weg";
@@ -294,6 +311,7 @@
     weg.textContent = "×";
     weg.onclick = function () { fotoveld.value = ""; toonVoorbeeld(); };
     voorbeeld.appendChild(weg);
+    pasHoogteAan();
   }
   fotoveld.addEventListener("change", function () {
     toonVoorbeeld();
@@ -359,6 +377,7 @@
           ruimDagenOp();
         }
         if (data.html) {
+          stilSinds = Date.now();
           var wasOnder = onderaan();
           var voor = lijst.querySelectorAll(".chat-bericht[data-pk]").length;
           voegToe(data.html);
@@ -375,7 +394,19 @@
       .catch(function () {})
       .then(function () { bezigMetOphalen = false; });
   }
-  setInterval(haalNieuwe, POLL);
+  // Elke 4 seconden zolang er wat gebeurt; na twee stille minuten om de 15
+  // seconden (scheelt data en accu in de bus). Iets nieuws, of zelf iets
+  // doen, zet het tempo weer terug.
+  var stilSinds = Date.now();
+  var volgendeRonde = 0;
+  function tik() {
+    var tempo = Date.now() - stilSinds > 120000 ? 15000 : POLL;
+    if (Date.now() >= volgendeRonde) { volgendeRonde = Date.now() + tempo; haalNieuwe(); }
+  }
+  setInterval(tik, 1000);
+  ["input", "submit"].forEach(function (soort) {
+    formulier.addEventListener(soort, function () { stilSinds = Date.now(); });
+  });
   document.addEventListener("visibilitychange", function () { if (!document.hidden) haalNieuwe(); });
   window.addEventListener("online", haalNieuwe);
 })();

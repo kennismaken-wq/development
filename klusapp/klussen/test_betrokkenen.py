@@ -133,3 +133,16 @@ class VersieMetBetrokkenenTests(TestCase):
         })
         self.assertEqual(antwoord.status_code, 200)
         self.assertIn(sam, klus.betrokkenen.all())
+
+
+class MeedoenKnopTests(TestCase):
+    def test_geen_meedoen_knop_als_je_er_al_bij_hoort(self):
+        from datetime import time as tijd
+
+        sam = Medewerker.objects.create_user("sam", password="x", first_name="Sam")
+        klus = Klus.objects.create(naam="Vijver")
+        Uurblok.objects.create(medewerker=sam, klus=klus, datum=timezone.localdate(), begintijd=tijd(8), eindtijd=tijd(9))
+        self.client.force_login(sam)
+        antwoord = self.client.get(klus.get_absolute_url())
+        self.assertNotContains(antwoord, "Meedoen met klus")
+        self.assertContains(antwoord, "Sam (jij)")

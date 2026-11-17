@@ -342,7 +342,7 @@ class NotitieGelezen(models.Model):
     """Tot wanneer iemand de notities van een klus heeft gezien: het groene
     rondje met het aantal gemiste berichten telt de notities van anderen die
     daarna kwamen. Eén rij per persoon per klus in plaats van een rij per
-    bericht, en bijgewerkt zodra je het klusdossier opent."""
+    bericht, en bijgewerkt zodra je de chat opent of bijlaadt (klussen/chat.py)."""
 
     klus = models.ForeignKey(Klus, on_delete=models.CASCADE, related_name="notities_gelezen")
     medewerker = models.ForeignKey(

@@ -81,7 +81,7 @@ class OngelezenTests(GesprekBasis):
         for adres in (reverse("klussen"), reverse("start")):
             antwoord = self.client.get(adres)
             self.assertContains(antwoord, 'class="ongelezen-bol"', count=1)
-            self.assertContains(antwoord, "2 nieuwe notities")
+            self.assertContains(antwoord, "2 nieuwe berichten")
 
     def test_meer_dan_negen(self):
         for i in range(12):

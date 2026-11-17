@@ -26,19 +26,21 @@
     {% if klus.adres or klus.plaats %}
       <p class="regel"><span class="lbl">Adres</span>{{ klus.adres }}{% if klus.adres and klus.plaats %}, {% endif %}{{ klus.plaats }}</p>
     {% endif %}
-    {% comment %} Wie er bij de klus hoort (Klus.betrokkenen). Wie er niet bij
-       staat, kan zelf meedoen; dan staat de klus bij Jouw klussen en krijg je
-       de meldingen van de notities. Zie klussen.views.klus_meedoen. {% endcomment %}
+    {% comment %} Wie er bij de klus hoort: wie de meldingen van de chat krijgt
+       (klussen/gesprek.py). Hoor je er nog niet bij, dan kun je zelf meedoen;
+       de klus staat dan bij Jouw klussen. Zie klussen.views.klus_meedoen.
+       Meer dan zes: de rest als "+N", zodat de chat niet onder de vouw zakt. {% endcomment %}
     <div class="regel betrokken-regel"><span class="lbl">Betrokken</span>
       <span class="betrokken-lijst">
-        {% for persoon in betrokkenen %}
+        {% for persoon in betrokkenen|slice:":6" %}
           <a href="{% url 'team_persoon' persoon.pk %}" class="betrokken-persoon">{% include "_medewerkerbol.html" with persoon=persoon klasse="zv-bol" %}{{ persoon.first_name|default:"Collega" }}{% if persoon.pk == user.pk %} (jij){% endif %}</a>
         {% empty %}
           <span class="betrokken-leeg">Nog niemand</span>
         {% endfor %}
+        {% if betrokkenen|length > 6 %}<span class="betrokken-meer">+{{ betrokkenen|length|add:"-6" }}</span>{% endif %}
       </span>
     </div>
-    {% if klus.actief or doe_ik_mee %}
+    {% if doe_ik_mee or klus.actief and not ik_hoor_erbij %}
       <form method="post" action="{% url 'klus_meedoen' klus.pk %}{% if terugpijl %}?terug={{ terugpijl|urlencode }}{% endif %}" class="meedoen">
         {% csrf_token %}
         {% if doe_ik_mee %}
@@ -60,11 +62,11 @@
   <a class="chat-kaart" id="notities" href="{% url 'klus_chat' klus.pk %}">
     <span class="chat-kaart-kop">
       <span class="lbl">Chat</span>
-      {% if ongelezen %}<span class="ongelezen-bol los" aria-label="{{ ongelezen }} nieuwe bericht{{ ongelezen|pluralize:"en" }}">{% if ongelezen > 9 %}9+{% else %}{{ ongelezen }}{% endif %}</span>{% endif %}
+      {% if ongelezen %}<span class="ongelezen-bol los" role="img" aria-label="{{ ongelezen }} nieuwe bericht{{ ongelezen|pluralize:"en" }}">{% if ongelezen > 9 %}9+{% else %}{{ ongelezen }}{% endif %}</span>{% endif %}
       <span class="chat-kaart-open">{% if aantal_berichten %}Open de chat{% else %}Begin de chat{% endif %} ›</span>
     </span>
     {% for bericht in laatste_berichten %}
-      <span class="chat-kaart-regel"><b>{{ bericht.naam }}</b> {% if bericht.aantal_fotos %}📷 {% endif %}{{ bericht.tekst|default:"Foto"|truncatechars:90 }}<span class="wanneer">{{ bericht.geschreven_op|date:"j b · H:i" }}</span></span>
+      <span class="chat-kaart-regel"><span class="tekst"><b>{{ bericht.naam }}</b> {% if bericht.aantal_fotos %}📷 {% endif %}{{ bericht.tekst|default:"Foto"|truncatechars:90 }}</span><span class="wanneer">{{ bericht.geschreven_op|date:"j b · H:i" }}</span></span>
     {% empty %}
       <span class="chat-kaart-leeg">Nog geen berichten. Iedereen die bij deze klus hoort, krijgt een melding van wat je hier schrijft.</span>
     {% endfor %}

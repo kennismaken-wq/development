@@ -9,7 +9,7 @@
     {% if bericht.doorloop %}<span class="chat-bol-plek"></span>{% elif bericht.geschreven_door %}{% include "_medewerkerbol.html" with persoon=bericht.geschreven_door klasse="chat-bol" %}{% else %}<span class="chat-bol leeg-bol"></span>{% endif %}
   {% endif %}
   <div class="ballon">
-    {% if not bericht.eigen and not bericht.doorloop %}<span class="chat-naam"{% if bericht.geschreven_door %} style="color:{{ bericht.geschreven_door|medewerker_kleur }}"{% endif %}>{{ bericht.naam }}</span>{% endif %}
+    {% if not bericht.eigen and not bericht.doorloop %}<span class="chat-naam"{% if bericht.geschreven_door %} style="--wie:{{ bericht.geschreven_door|medewerker_kleur }}"{% endif %}>{{ bericht.naam }}</span>{% endif %}
     {% with fotos=bericht.fotos.all %}{% if fotos %}
       <div class="chat-fotos aantal-{% if fotos|length > 4 %}4{% else %}{{ fotos|length }}{% endif %}">
         {% for foto in fotos|slice:":4" %}

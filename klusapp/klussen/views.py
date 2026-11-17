@@ -620,6 +620,9 @@ def klus_detail(request, pk):
             "klus": klus,
             "betrokkenen": betrokkenen,
             "doe_ik_mee": klus.betrokkenen.filter(pk=request.user.pk).exists(),
+            # Al betrokken via inzet, uren of de chat: dan geen "Meedoen"-knop,
+            # want je krijgt de meldingen al.
+            "ik_hoor_erbij": any(persoon.pk == request.user.pk for persoon in betrokkenen),
             "gewerkt": gewerkt,
             "alleen_eigen_uren": alleen_eigen_uren,
             "totaal": totalen.totaal_van(gewerkt),
