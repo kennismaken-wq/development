@@ -37,7 +37,7 @@
         data-nieuw-url="{% url 'klus_chat_nieuw' klus.pk %}"
         data-laatste="{{ laatste }}">
     {% if eerdere %}
-      <p class="chat-eerder"><a href="?alles=1">{{ eerdere }} eerdere bericht{{ eerdere|pluralize:"en" }} laden</a></p>
+      <p class="chat-eerder"><a href="?aantal={{ meer }}">Eerdere berichten laden ({{ eerdere }})</a></p>
     {% endif %}
     {% if not berichten %}
       <p class="chat-leeg" id="chat-leeg">Nog geen berichten. Schrijf het eerste: iedereen die bij deze klus hoort, krijgt een melding.</p>

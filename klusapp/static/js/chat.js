@@ -70,9 +70,11 @@
   lijst.querySelectorAll("img").forEach(function (img) {
     if (!img.complete) img.addEventListener("load", function () { if (onderaan() || !gemist) scrollNaarOnder(false); }, { once: true });
   });
-  // Lazy: dan laadt een foto pas als hij in beeld komt; hier willen we de
-  // onderste meteen.
-  lijst.querySelectorAll("img[loading=lazy]").forEach(function (img) { img.loading = "eager"; });
+  // Lazy: dan laadt een foto pas als hij in beeld komt. Alleen de foto's van
+  // de onderste berichten meteen, zodat de scrollpositie klopt; niet alles,
+  // dat waren bij een fotorijke chat honderden verzoeken (stresstest 17-11).
+  var luie = lijst.querySelectorAll("img[loading=lazy]");
+  Array.prototype.slice.call(luie, -8).forEach(function (img) { img.loading = "eager"; });
 
   vak.addEventListener("scroll", function () {
     if (onderaan()) { gemist = 0; naarOnder.hidden = true; }
@@ -164,6 +166,8 @@
       credentials: "same-origin",
     })
       .then(function (antwoord) {
+        // Doorgestuurd naar het inlogscherm (sessie verlopen): geen JSON.
+        if (antwoord.redirected) return { status: 0, uitgelogd: true, data: {} };
         return antwoord.json().then(function (data) { return { ok: antwoord.ok, status: antwoord.status, data: data }; },
           function () { return { ok: false, status: antwoord.status, data: {} }; });
       })
@@ -181,20 +185,38 @@
               nieuw.querySelectorAll("form.chat-weg").forEach(koppelWeg);
             });
           }
-          laatste = Math.max(laatste, uitkomst.data.pk);
+          // `laatste` niet hier ophogen: een bericht van een collega dat net
+          // vóór dit bericht binnenkwam, haalt de volgende ronde dan nog op
+          // (stresstest 17-11-2026). Dit bericht zelf komt niet dubbel.
           (uitkomst.data.meldingen || []).forEach(toonMelding);
+          ruimFotosOp(el);
           scrollNaarOnder(false);
+        } else if (uitkomst.uitgelogd || uitkomst.status === 401 || uitkomst.status === 403) {
+          weigeren(el, "Je bent uitgelogd. Log opnieuw in en stuur het nog eens.");
+          setTimeout(function () { window.location.reload(); }, 2500);
+        } else if (uitkomst.status === 413) {
+          weigeren(el, "Te veel of te grote foto's. Stuur ze in een paar berichten.");
         } else if (uitkomst.status >= 400 && uitkomst.status < 500 && uitkomst.data.fout) {
           // De server wil dit bericht niet (te lang, verkeerd bestand): niet
           // opnieuw proberen, wel zeggen waarom.
-          el.classList.remove("bezig");
-          el.classList.add("geweigerd");
-          el.querySelector(".chat-tijd").textContent = uitkomst.data.fout;
+          weigeren(el, uitkomst.data.fout);
         } else {
           mislukt(gegevens, el);
         }
       })
       .catch(function () { mislukt(gegevens, el); });
+  }
+
+  function weigeren(el, tekst) {
+    el.classList.remove("bezig");
+    el.classList.add("geweigerd");
+    el.querySelector(".chat-tijd").textContent = tekst;
+  }
+
+  // De voorbeeldjes van een verstuurd bericht uit het geheugen halen (een
+  // lange chat met veel foto's liet de tab op een iPhone anders vollopen).
+  function ruimFotosOp(el) {
+    el.querySelectorAll("img[src^='blob:']").forEach(function (img) { URL.revokeObjectURL(img.src); });
   }
 
   function mislukt(gegevens, el) {
@@ -213,6 +235,11 @@
     var tekst = tekstveld.value.trim();
     var fotos = Array.prototype.slice.call(fotoveld.files || []);
     if (!tekst && !fotos.length) { tekstveld.focus(); return; }
+    var omvang = fotos.reduce(function (som, f) { return som + f.size; }, 0);
+    if (omvang > 45 * 1024 * 1024) {
+      toonMelding("Deze foto's zijn samen te groot om in één keer te sturen. Stuur ze in een paar berichten.");
+      return;
+    }
     var gegevens = new FormData(formulier);
     gegevens.set("tekst", tekst);
     gegevens.set("sleutel", sleutel());
@@ -244,6 +271,7 @@
 
   function toonVoorbeeld() {
     var bestanden = Array.prototype.slice.call(fotoveld.files || []);
+    voorbeeld.querySelectorAll("img").forEach(function (img) { URL.revokeObjectURL(img.src); });
     voorbeeld.innerHTML = "";
     voorbeeld.hidden = !bestanden.length;
     if (!bestanden.length) return;
@@ -312,14 +340,21 @@
     var eerste = nummers.length ? Math.min.apply(null, nummers) : 0;
     var url = nieuwUrl + "?na=" + laatste + "&zichtbaar=1" + (eerste ? "&van=" + eerste : "");
     fetch(url, { credentials: "same-origin", headers: { "X-Chat": "1" } })
-      .then(function (antwoord) { return antwoord.ok ? antwoord.json() : null; })
+      .then(function (antwoord) {
+        if (antwoord.redirected) { window.location.reload(); return null; }
+        return antwoord.ok ? antwoord.json() : null;
+      })
       .then(function (data) {
         if (!data) return;
         if (data.nog_er && data.nog_er.length && eerste) {
           var er = {};
+          var hoogste = Math.max.apply(null, data.nog_er);
           data.nog_er.forEach(function (pk) { er[pk] = true; });
+          // Alleen weghalen wat binnen deze momentopname valt: een bericht
+          // dat net daarna is verstuurd (je eigen!), blijft staan.
           lijst.querySelectorAll(".chat-bericht[data-pk]").forEach(function (el) {
-            if (!er[el.dataset.pk]) el.remove();
+            var pk = parseInt(el.dataset.pk, 10);
+            if (pk <= hoogste && !er[pk]) el.remove();
           });
           ruimDagenOp();
         }

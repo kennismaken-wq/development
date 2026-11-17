@@ -19,7 +19,7 @@ import uuid
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.db import transaction
-from django.db.models import Prefetch
+from django.db.models import Max, Prefetch
 from django.http import Http404, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.template.loader import render_to_string
@@ -64,12 +64,15 @@ def chat(request, pk):
     klus = get_object_or_404(Klus, pk=pk)
     alles = _berichten(klus, request.user)
     totaal = alles.count()
-    if request.GET.get("alles") == "1":
-        getoond = list(alles)
-    else:
-        getoond = list(alles[max(0, totaal - OP_HET_SCHERM):])
+    # "Eerdere berichten" laadt er telkens OP_HET_SCHERM bij, niet alles in
+    # één keer: 2000 berichten met foto's was een pagina van een megabyte
+    # (stresstest 17-11-2026).
+    aantal = request.GET.get("aantal", "")
+    aantal = min(int(aantal), 5000) if aantal.isdigit() and len(aantal) < 6 else OP_HET_SCHERM
+    getoond = list(alles[max(0, totaal - aantal):])
     berichten = gesprek.voorbereid(getoond, request.user)
-    gesprek.markeer_gelezen(request, klus)
+    if berichten:
+        gesprek.markeer_gelezen(request, klus, tot=berichten[-1].geschreven_op)
     return render(
         request,
         "klussen/chat.html",
@@ -77,6 +80,7 @@ def chat(request, pk):
             "klus": klus,
             "berichten": berichten,
             "eerdere": totaal - len(berichten),
+            "meer": len(berichten) + OP_HET_SCHERM,
             "betrokkenen": gesprek.zichtbare_betrokkenen(klus),
             "laatste": max((b.pk for b in berichten), default=0),
             "sleutel": _nieuwe_sleutel(),
@@ -104,14 +108,27 @@ def chat_nieuw(request, pk):
     van = int(van) if van.isdigit() and len(van) < 12 else 0
     berichten = _berichten(klus, request.user)
     nieuw = list(berichten.filter(pk__gt=na))
-    vorige = berichten.filter(pk__lte=na).last() if na else None
+    vorige = (
+        klus.notities.select_related("geschreven_door").filter(pk__lte=na).order_by("geschreven_op", "pk").last()
+        if na else None
+    )
     nieuw = gesprek.voorbereid(nieuw, request.user, vorige=vorige)
-    if request.GET.get("zichtbaar") == "1":
-        gesprek.markeer_gelezen(request, klus)
+    laatste = max([na] + [b.pk for b in nieuw])
+    if request.GET.get("zichtbaar") == "1" and laatste:
+        # Gelezen tot het laatste bericht dat nu op het scherm staat, niet tot
+        # "nu": een bericht dat net wordt opgeslagen (foto's!) maar nog niet
+        # zichtbaar is, telt anders nooit als ongelezen (stresstest 17-11-2026).
+        tot = klus.notities.filter(pk__lte=laatste).aggregate(m=Max("geschreven_op"))["m"]
+        if tot:
+            gesprek.markeer_gelezen(request, klus, tot=tot)
     return JsonResponse(
         {
             "html": _html(request, nieuw) if nieuw else "",
-            "laatste": nieuw[-1].pk if nieuw else na,
+            "laatste": laatste,
+            # Welke berichten er vanaf ?van nog zijn. chat.js haalt alleen
+            # weg wat hier ontbreekt en niet hoger is dan het hoogste nummer
+            # in deze lijst: een bericht dat net na deze momentopname is
+            # verstuurd, blijft staan.
             "nog_er": list(klus.notities.filter(pk__gte=van).order_by("pk").values_list("pk", flat=True)) if van else [],
         }
     )
@@ -133,7 +150,8 @@ def notitie_toevoegen(request, pk):
     klus = get_object_or_404(Klus, pk=pk)
     tekst = request.POST.get("tekst", "").strip()
     sleutel = request.POST.get("sleutel", "")
-    sleutel = sleutel if SLEUTEL_VORM.match(sleutel) else ""
+    if sleutel and not SLEUTEL_VORM.match(sleutel):
+        return _fout(request, klus, "Dit bericht kon niet worden verstuurd. Laad de chat opnieuw.")
     # Lege bestanden (0 bytes) zelf eruit, met de uitleg in het antwoord van
     # de chat; zonder_lege_bestanden zet die in messages, en die verscheen
     # dan pas op het volgende scherm (stresstest 17-11-2026).
@@ -146,12 +164,13 @@ def notitie_toevoegen(request, pk):
     # bereik). Geef het bestaande terug in plaats van een tweede.
     if sleutel:
         bestaand = Notitie.objects.filter(geschreven_door=request.user, sleutel=sleutel).first()
-        if bestaand and bestaand.klus_id == klus.pk:
+        if bestaand and bestaand.klus_id == klus.pk and bestaand.tekst == tekst:
             return _gelukt(request, klus, bestaand)
         if bestaand:
-            # Deze sleutel hoort bij een bericht in een ander gesprek (terug
-            # in de browser, formulier opnieuw verstuurd): niet hergebruiken,
-            # anders verdween dit bericht (stresstest 17-11-2026).
+            # Deze sleutel hoort bij een ander bericht (ander gesprek, of
+            # zonder javascript terug in de browser en iets anders getypt):
+            # niet hergebruiken, anders verdween dit bericht (stresstest
+            # 17-11-2026).
             sleutel = ""
 
     if not tekst and not fotos:
@@ -176,7 +195,7 @@ def notitie_toevoegen(request, pk):
         if sleutel:
             # Nog een keer kijken, nu met het slot: twee verzoeken tegelijk.
             bestaand = Notitie.objects.filter(geschreven_door=request.user, sleutel=sleutel).first()
-            if bestaand and bestaand.klus_id == klus.pk:
+            if bestaand and bestaand.klus_id == klus.pk and bestaand.tekst == tekst:
                 return _gelukt(request, klus, bestaand)
             if bestaand:
                 sleutel = ""
@@ -214,7 +233,7 @@ def notitie_toevoegen(request, pk):
             return _fout(request, klus, " ".join(problemen) or "Geen van de foto's was te lezen.")
         gesprek.plan_melding(notitie)
     # Buiten de transactie: een botsing daarin mag het bericht niet kosten.
-    gesprek.markeer_gelezen(request, klus)
+    gesprek.markeer_gelezen(request, klus, tot=notitie.geschreven_op)
     if te_veel:
         problemen.append(f"Er kunnen hooguit {MAX_FOTOS} foto's in één bericht; de eerste {MAX_FOTOS} zijn meegegaan.")
     return _gelukt(request, klus, notitie, problemen)

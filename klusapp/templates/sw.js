@@ -87,6 +87,9 @@ self.addEventListener("push", function (event) {
       body: bericht.tekst || "",
       icon: "{{ icoon|escapejs }}",
       data: { url: bericht.url || "/" },
+      // Eén melding per klus die zich vervangt, zoals WhatsApp per groep.
+      tag: bericht.tag || undefined,
+      renotify: !!bericht.tag,
     })
   );
 });

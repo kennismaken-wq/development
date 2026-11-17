@@ -32,9 +32,13 @@ def sleutelpaar():
     )
 
 
-def stuur(abonnement, titel, tekst, url="/"):
+def stuur(abonnement, titel, tekst, url="/", tag="", ttl=300):
     """Eén melding naar één toestel. Geeft False als het niet lukte. Heeft het
-    toestel het abonnement opgezegd (404/410), dan gooien we het hier weg."""
+    toestel het abonnement opgezegd (404/410), dan gooien we het hier weg.
+
+    `tag`: meldingen met dezelfde tag vervangen elkaar op de telefoon (één
+    melding per klus, zoals WhatsApp per groep). `ttl`: hoe lang de
+    pushdienst het bewaart als de telefoon uit staat."""
     paar = sleutelpaar()
     try:
         webpush(
@@ -42,10 +46,12 @@ def stuur(abonnement, titel, tekst, url="/"):
                 "endpoint": abonnement.endpoint,
                 "keys": {"p256dh": abonnement.p256dh, "auth": abonnement.auth},
             },
-            data=json.dumps({"titel": titel, "tekst": tekst, "url": url}),
+            data=json.dumps({"titel": titel, "tekst": tekst, "url": url, "tag": tag}),
             vapid_private_key=Vapid02.from_pem(paar.prive_pem.encode()),
             vapid_claims={"sub": "mailto:klusapp@handigerai.nl"},
-            ttl=300,
+            ttl=ttl,
+            # Een trage pushdienst mag de thread niet eindeloos vasthouden.
+            timeout=10,
         )
         return True
     except WebPushException as fout:

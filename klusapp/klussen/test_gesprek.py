@@ -167,6 +167,7 @@ class BeginstandTests(TestCase):
         # De unieke regel per klus en persoon houdt update_or_create eerlijk.
         mw = Medewerker.objects.create_user("a", password="x")
         klus = Klus.objects.create(naam="K")
+        Notitie.objects.create(klus=klus, tekst="x", geschreven_door=None)
         self.client.force_login(mw)
         self.client.get(reverse("klus_chat", args=[klus.pk]))
         self.client.get(reverse("klus_chat", args=[klus.pk]))

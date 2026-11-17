@@ -16,6 +16,7 @@ import threading
 from datetime import timedelta
 
 from django.db import IntegrityError, close_old_connections, connection, transaction
+from django.db.models import Count, F, OuterRef, Q, Subquery
 from django.urls import reverse
 from django.utils import timezone
 
@@ -83,24 +84,24 @@ def ongelezen_per_klus(gebruiker, klus_ids):
     klus_ids = set(klus_ids) & mijn_klus_ids(gebruiker)
     if not klus_ids:
         return {}
-    gelezen = dict(
-        NotitieGelezen.objects.filter(medewerker=gebruiker, klus_id__in=klus_ids).values_list("klus_id", "tijdstip")
-    )
     # Wie de chat van een klus nog nooit opende (net ingepland op een oude
     # klus, nieuw in dienst), telt alleen de berichten van de laatste TERUG
     # dagen, niet de hele geschiedenis. Ouder dan dat telt nooit: het rondje
     # toont boven de 9 toch "9+" (stresstest 17-11-2026).
+    # Eén query met GROUP BY, in de database geteld (stresstest 17-11-2026:
+    # eerst kwam er een rij per bericht naar Python).
     ondergrens = timezone.now() - TERUG
-    tellers = {}
-    for klus_id, geschreven_op in (
+    grens = NotitieGelezen.objects.filter(klus=OuterRef("klus_id"), medewerker=gebruiker).values("tijdstip")[:1]
+    rijen = (
         Notitie.objects.filter(klus_id__in=klus_ids, geschreven_op__gte=ondergrens)
         .exclude(geschreven_door=gebruiker)
-        .values_list("klus_id", "geschreven_op")
-    ):
-        grens = gelezen.get(klus_id)
-        if grens is None or geschreven_op > grens:
-            tellers[klus_id] = tellers.get(klus_id, 0) + 1
-    return tellers
+        .annotate(grens=Subquery(grens))
+        .filter(Q(grens__isnull=True) | Q(geschreven_op__gt=F("grens")))
+        .order_by()
+        .values("klus_id")
+        .annotate(aantal=Count("pk"))
+    )
+    return {rij["klus_id"]: rij["aantal"] for rij in rijen}
 
 
 def zet_tellers(gebruiker, klussen):
@@ -110,21 +111,26 @@ def zet_tellers(gebruiker, klussen):
         klus.ongelezen = tellers.get(klus.pk, 0)
 
 
-def markeer_gelezen(request, klus):
-    """De chat is bekeken. Niet als de eigenaar meekijkt als medewerker
-    (TESTFUNCTIES): dan zou hij het rondje van die medewerker wissen."""
+def markeer_gelezen(request, klus, tot):
+    """De chat is bekeken, tot en met het bericht met geschreven_op `tot`
+    (het laatste dat op het scherm staat). Schuift alleen vooruit, en
+    schrijft niets als er niets nieuws gezien is: de chat vraagt elke paar
+    seconden om nieuwe berichten. Niet als de eigenaar meekijkt als
+    medewerker (TESTFUNCTIES): dan zou hij het rondje van die medewerker
+    wissen."""
     from medewerkers.views import SESSIE_WISSEL
 
     if SESSIE_WISSEL in request.session:
         return
+    bijgewerkt = NotitieGelezen.objects.filter(klus=klus, medewerker=request.user, tijdstip__lt=tot).update(tijdstip=tot)
+    if bijgewerkt or NotitieGelezen.objects.filter(klus=klus, medewerker=request.user).exists():
+        return
     try:
         with transaction.atomic():
-            NotitieGelezen.objects.update_or_create(
-                klus=klus, medewerker=request.user, defaults={"tijdstip": timezone.now()}
-            )
+            NotitieGelezen.objects.create(klus=klus, medewerker=request.user, tijdstip=tot)
     except IntegrityError:
         # Twee tabs tegelijk maakten de rij; de ander heeft hem al gezet.
-        NotitieGelezen.objects.filter(klus=klus, medewerker=request.user).update(tijdstip=timezone.now())
+        NotitieGelezen.objects.filter(klus=klus, medewerker=request.user, tijdstip__lt=tot).update(tijdstip=tot)
 
 
 def schrijversnaam(medewerker):
@@ -191,7 +197,7 @@ def meld(notitie_pk):
         url = reverse("klus_chat", args=[notitie.klus_id])
         verstuurd = 0
         for abonnement in Abonnement.objects.filter(medewerker__in=ontvangers):
-            verstuurd += bool(versturen.stuur(abonnement, titel, tekst, url))
+            verstuurd += bool(versturen.stuur(abonnement, titel, tekst, url, tag=f"klus-{notitie.klus_id}", ttl=86400))
         return verstuurd
     except Exception:  # een melding mag nooit het bericht zelf laten mislukken
         log.exception("Melding bij notitie %s mislukt", notitie_pk)

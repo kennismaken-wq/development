@@ -239,3 +239,67 @@ class StresstestRegressieTests(ChatBasis):
         piet = Medewerker.objects.create_user("piet", password="x", first_name="Piet")
         Inzet.objects.create(medewerker=piet, klus=self.klus, datum=timezone.localdate())
         self.assertIn(piet, self.client.get(self.klus.get_absolute_url()).context["betrokkenen"])
+
+
+class StresstestChatTests(ChatBasis):
+    """Stresstest chat 17-11-2026."""
+
+    def test_bericht_dat_tijdens_het_lezen_wordt_opgeslagen_blijft_ongelezen(self):
+        nu = timezone.now()
+        gezien = Notitie.objects.create(klus=self.klus, tekst="al gezien", geschreven_door=self.lot)
+        Notitie.objects.filter(pk=gezien.pk).update(geschreven_op=nu - timedelta(minutes=5))
+        # Sam kijkt nu; hij ziet alleen "al gezien".
+        self.client.get(reverse("klus_chat_nieuw", args=[self.klus.pk]), {"na": 0, "zichtbaar": "1"})
+        # Lot was intussen al bezig met een bericht met foto's: het kreeg zijn
+        # tijdstip vóór Sam keek, maar werd pas daarna zichtbaar.
+        bezig = Notitie.objects.create(klus=self.klus, tekst="met foto's", geschreven_door=self.lot)
+        Notitie.objects.filter(pk=bezig.pk).update(geschreven_op=nu - timedelta(minutes=1))
+        self.assertEqual(gesprek.ongelezen_per_klus(self.sam, [self.klus.pk]), {self.klus.pk: 1})
+
+    def test_lege_poll_schrijft_niets(self):
+        n = Notitie.objects.create(klus=self.klus, tekst="x", geschreven_door=self.lot)
+        url = reverse("klus_chat_nieuw", args=[self.klus.pk])
+        self.client.get(url, {"na": 0, "zichtbaar": "1"})
+        from django.db import connection
+        from django.test.utils import CaptureQueriesContext
+
+        with CaptureQueriesContext(connection) as vastgelegd:
+            self.client.get(url, {"na": n.pk, "van": n.pk, "zichtbaar": "1"})
+        schrijven = [q["sql"] for q in vastgelegd.captured_queries if "notitiegelezen" in q["sql"].lower() and q["sql"].lstrip().upper().startswith(("UPDATE", "INSERT"))]
+        self.assertTrue(all("tijdstip\" <" in s or "tijdstip` <" in s or "< " in s for s in schrijven))
+
+    def test_ongeldige_sleutel_geeft_400(self):
+        antwoord = self.stuur(tekst="hoi", sleutel="<script>")
+        self.assertEqual(antwoord.status_code, 400)
+        self.assertFalse(Notitie.objects.exists())
+
+    def test_zelfde_sleutel_andere_tekst_is_nieuw_bericht(self):
+        self.client.post(reverse("notitie_toevoegen", args=[self.klus.pk]), {"tekst": "eerste", "sleutel": "formulier-sleutel-1"})
+        self.client.post(reverse("notitie_toevoegen", args=[self.klus.pk]), {"tekst": "tweede", "sleutel": "formulier-sleutel-1"})
+        self.assertEqual(sorted(Notitie.objects.values_list("tekst", flat=True)), ["eerste", "tweede"])
+
+    def test_eerdere_berichten_in_blokken(self):
+        from . import chat as chatmodule
+
+        Notitie.objects.bulk_create([Notitie(klus=self.klus, tekst=f"b{i}", geschreven_door=self.lot) for i in range(chatmodule.OP_HET_SCHERM + 20)])
+        antwoord = self.client.get(reverse("klus_chat", args=[self.klus.pk]))
+        self.assertEqual(len(antwoord.context["berichten"]), chatmodule.OP_HET_SCHERM)
+        self.assertContains(antwoord, f"?aantal={2 * chatmodule.OP_HET_SCHERM}")
+        meer = self.client.get(reverse("klus_chat", args=[self.klus.pk]), {"aantal": 2 * chatmodule.OP_HET_SCHERM})
+        self.assertEqual(len(meer.context["berichten"]), chatmodule.OP_HET_SCHERM + 20)
+
+    def test_teller_is_een_query(self):
+        for _ in range(5):
+            Notitie.objects.create(klus=self.klus, tekst="x", geschreven_door=self.lot)
+        with self.assertNumQueries(5):
+            # mijn_klus_ids (4) + de telling zelf (1)
+            self.assertEqual(gesprek.ongelezen_per_klus(self.sam, [self.klus.pk]), {self.klus.pk: 5})
+
+    def test_melding_vervangt_zich_per_klus(self):
+        from pushberichten.models import Abonnement
+
+        Abonnement.objects.create(medewerker=self.lot, endpoint="https://push.example/lot", p256dh="p", auth="a")
+        notitie = Notitie.objects.create(klus=self.klus, tekst="hoi", geschreven_door=self.sam)
+        with patch("pushberichten.versturen.stuur", return_value=True) as stuur:
+            gesprek.meld(notitie.pk)
+        self.assertEqual(stuur.call_args.kwargs["tag"], f"klus-{self.klus.pk}")

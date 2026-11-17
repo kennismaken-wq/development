@@ -342,6 +342,12 @@ def media_bestand(request, pad):
         )
     if bestandstypen.suffix(pad) != ".pdf":
         antwoord["Content-Security-Policy"] = "default-src 'none'; img-src 'self'; style-src 'unsafe-inline'; sandbox"
+    # De opslagnamen zijn uuid's: een bestand op dit adres verandert nooit.
+    # Een dag in de browser bewaren scheelt bij een chat vol foto's honderden
+    # verzoeken per keer openen (stresstest 17-11-2026). "private": nooit in
+    # een gedeelde cache, en na een dag vraagt de browser het opnieuw, dus
+    # een afgeschermd document is hooguit een dag nog bij wie het al zag.
+    antwoord["Cache-Control"] = "private, max-age=86400"
     return antwoord
 
 
