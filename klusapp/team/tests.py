@@ -19,7 +19,10 @@ class OnsTeamTests(TestCase):
         cls.maarten = Medewerker.objects.create_user(
             "maarten", password="x", first_name="Maarten", rol=Medewerker.Rol.EIGENAAR
         )
-        cls.sam = Medewerker.objects.create_user("sam", password="x", first_name="Sam", functie="Hovenier")
+        cls.sam = Medewerker.objects.create_user(
+            "sam", password="x", first_name="Sam", functie="Hovenier", telefoon="0612345678",
+            geboortedatum=date(1994, 3, 14), in_dienst_sinds=date(2021, 3, 1), adres="Dijkweg 12",
+        )
         cls.lot = Medewerker.objects.create_user("lot", password="x", first_name="Lot")
         cls.oud = Medewerker.objects.create_user(
             "piet", password="x", first_name="Piet", uit_dienst_sinds=date(2025, 6, 1), is_active=False
@@ -68,6 +71,26 @@ class OnsTeamTests(TestCase):
             antwoord = self.client.get(reverse("team_persoon", args=[self.sam.pk]))
             self.assertContains(antwoord, "uur gewerkt")
             self.assertContains(antwoord, "12,5")
+
+    def test_mobiel_verjaardag_en_startdatum_zonder_adres_of_geboortejaar(self):
+        self.client.force_login(self.lot)
+        antwoord = self.client.get(reverse("team_persoon", args=[self.sam.pk]))
+        self.assertContains(antwoord, 'href="tel:0612345678"')
+        self.assertContains(antwoord, "14 maart")
+        self.assertNotContains(antwoord, "1994")
+        self.assertContains(antwoord, "sinds 1 maart 2021")
+        self.assertNotContains(antwoord, "Dijkweg 12")
+
+    def test_uren_sinds_eerste_invoer(self):
+        self.client.force_login(self.sam)
+        antwoord = self.client.get(reverse("team_persoon", args=[self.sam.pk]))
+        self.assertEqual(antwoord.context["uren_sinds"], date(2026, 11, 2))
+        self.assertContains(antwoord, "uur gewerkt sinds 2 nov 2026")
+
+    def test_geboortedatum_invullen_op_eigen_profiel_en_door_eigenaar(self):
+        from medewerkers.forms import EigenGegevensForm, MedewerkerForm
+        self.assertIn("geboortedatum", EigenGegevensForm.base_fields)
+        self.assertIn("geboortedatum", MedewerkerForm.base_fields)
 
     def test_oud_collega_heeft_een_pagina(self):
         self.client.force_login(self.lot)

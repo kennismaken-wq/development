@@ -108,6 +108,9 @@ class Medewerker(AbstractUser):
     # wat daarvan afwijkt wordt als Aanwezigheid opgeslagen. Een lege lijst is
     # een oproep- of seizoenskracht: die staat alleen op dagen die je zelf zet.
     vaste_werkdagen = models.JSONField(default=standaard_werkdagen, blank=True)
+    # Voor Ons team: daar ziet het team je verjaardag (dag en maand, niet het
+    # jaar). Invullen doet de eigenaar of jijzelf op je profiel.
+    geboortedatum = models.DateField(null=True, blank=True)
     in_dienst_sinds = models.DateField(null=True, blank=True)
     uit_dienst_sinds = models.DateField(
         null=True,

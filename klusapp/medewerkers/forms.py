@@ -102,7 +102,7 @@ class MedewerkerForm(VersieMixin, RijbewijzenMixin, ProfielfotoMixin, forms.Mode
         model = Medewerker
         fields = [
             "profielfoto",
-            "first_name", "last_name", "username", "functie", "rol",
+            "first_name", "last_name", "username", "functie", "rol", "geboortedatum",
             "telefoon", "email", "adres", "postcode", "woonplaats",
             "noodcontact_naam", "noodcontact_relatie", "noodcontact_telefoon",
             "rijbewijzen",
@@ -113,6 +113,7 @@ class MedewerkerForm(VersieMixin, RijbewijzenMixin, ProfielfotoMixin, forms.Mode
             # Django een bestaande datum in het Nederlandse formaat en toont de
             # browser een leeg veld.
             "in_dienst_sinds": forms.DateInput(attrs={"type": "date"}, format="%Y-%m-%d"),
+            "geboortedatum": forms.DateInput(attrs={"type": "date"}, format="%Y-%m-%d"),
             "kleur": forms.TextInput(attrs={"type": "color"}),
             # inputmode/type zorgen dat een telefoon meteen het juiste
             # toetsenbord opent
@@ -138,6 +139,7 @@ class MedewerkerForm(VersieMixin, RijbewijzenMixin, ProfielfotoMixin, forms.Mode
             "noodcontact_telefoon": "Telefoon",
             "kleur": "Kleur",
             "in_dienst_sinds": "In dienst sinds",
+            "geboortedatum": "Geboortedatum",
         }
         # Geen uitleg bij de velden: ze spreken voor zich (ook "Relatie" — het
         # voorbeeld "partner, moeder" is op 29-09-2026 weggehaald).
@@ -147,7 +149,7 @@ class MedewerkerForm(VersieMixin, RijbewijzenMixin, ProfielfotoMixin, forms.Mode
     GROEPEN = [
         # De kleur (van je rondje en je blokjes op het weekoverzicht) staat
         # bij je naam; een eigen kopje "In de app" voor één veld was te veel.
-        ("", ["first_name", "last_name", "username", "functie", "rol", "kleur"]),
+        ("", ["first_name", "last_name", "username", "functie", "rol", "geboortedatum", "kleur"]),
         ("Contact", ["telefoon", "email", "adres", "postcode", "woonplaats"]),
         ("Bij nood bellen", ["noodcontact_naam", "noodcontact_relatie", "noodcontact_telefoon"]),
         ("Rijbewijs", ["rijbewijzen"]),
@@ -258,7 +260,7 @@ class EigenGegevensForm(VersieMixin, RijbewijzenMixin, ProfielfotoMixin, forms.M
         model = Medewerker
         fields = [
             "profielfoto",
-            "first_name", "last_name",
+            "first_name", "last_name", "geboortedatum",
             "telefoon", "email", "adres", "postcode", "woonplaats",
             "noodcontact_naam", "noodcontact_relatie", "noodcontact_telefoon",
             "rijbewijzen", "kleur",
@@ -271,7 +273,7 @@ class EigenGegevensForm(VersieMixin, RijbewijzenMixin, ProfielfotoMixin, forms.M
     BUITEN_GROEPEN = frozenset({"profielfoto", "versie"})
 
     GROEPEN = [
-        ("", ["first_name", "last_name", "kleur"]),
+        ("", ["first_name", "last_name", "geboortedatum", "kleur"]),
         ("Contact", ["telefoon", "email", "adres", "postcode", "woonplaats"]),
         ("Bij nood bellen", ["noodcontact_naam", "noodcontact_relatie", "noodcontact_telefoon"]),
         ("Rijbewijs", ["rijbewijzen"]),

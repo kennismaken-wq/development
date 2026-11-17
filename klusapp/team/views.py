@@ -2,12 +2,13 @@
 zijn foto's, zijn klussen, zijn uren en zijn beste score in het springspel.
 
 Geen eigen model: alles komt uit wat er al is (Uurblok, Bijlage, BesteScore).
-Privégegevens (adres, telefoon, noodcontact) staan hier bewust niet; die zijn
-voor de eigenaar en staan op de persoonskaart bij Medewerkers.
+Collega's zien elkaars mobiele nummer, verjaardag (zonder jaar) en datum in
+dienst. Adres en noodcontact staan hier bewust niet; die zijn voor de
+eigenaar en staan op de persoonskaart bij Medewerkers.
 """
 
 from django.contrib.auth.decorators import login_required
-from django.db.models import Sum
+from django.db.models import Min, Sum
 from django.shortcuts import get_object_or_404, render
 
 from klussen.models import Bijlage
@@ -71,9 +72,10 @@ def persoon(request, pk):
     # iemand werkte, zie je wel: dat staat ook in elk klusdossier.
     mag_uren_zien = request.user.is_eigenaar or request.user.pk == persoon.pk
 
-    totaal_minuten = (
-        Uurblok.objects.filter(medewerker=persoon).aggregate(minuten=Sum(DUUR_IN_MINUTEN))["minuten"] or 0
-    )
+    # "Uur gewerkt" telt alles wat er in de app staat, dus vanaf de eerste
+    # dag dat iemand uren schreef: oudere uren (uit de Excel) zitten er niet in.
+    uren = Uurblok.objects.filter(medewerker=persoon).aggregate(minuten=Sum(DUUR_IN_MINUTEN), eerste=Min("datum"))
+    totaal_minuten = uren["minuten"] or 0
 
     beste = BesteScore.objects.filter(medewerker=persoon).first()
     plaats = None
@@ -99,6 +101,7 @@ def persoon(request, pk):
             "is_ik": request.user.pk == persoon.pk,
             "mag_uren_zien": mag_uren_zien,
             "totaal_uren": als_uren(totaal_minuten),
+            "uren_sinds": uren["eerste"],
             "klussen": _klussen_van(persoon),
             "beste": beste,
             "plaats": plaats,

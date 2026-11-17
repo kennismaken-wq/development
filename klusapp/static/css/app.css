@@ -3216,3 +3216,4 @@ h1{ letter-spacing:-0.015em; }
    (overflow-x:auto maakt ook de y-as scrollend). Ruimte boven en rechts, zodat
    het rondje erin past, met een negatieve marge zodat de rest niet verschuift. */
 .klussen-slider{ padding-top:8px; margin-top:-8px; padding-right:8px; }
+.teaminfo{ margin:0 0 1.2rem; }

@@ -8,19 +8,28 @@
     {% include "_medewerkerbol.html" with persoon=persoon klasse="grote-bol" %}
     <span class="wie">
       <span class="naam">{{ persoon.naam }}{% if is_ik %} (jij){% endif %}</span>
-      <span class="rol">{% if persoon.functie %}{{ persoon.functie }}{% else %}{{ persoon.get_rol_display }}{% endif %}{% if persoon.uit_dienst_sinds %} · tot {{ persoon.uit_dienst_sinds|date:"F Y" }}{% elif persoon.in_dienst_sinds %} · sinds {{ persoon.in_dienst_sinds|date:"F Y" }}{% endif %}</span>
+      <span class="rol">{% if persoon.functie %}{{ persoon.functie }}{% else %}{{ persoon.get_rol_display }}{% endif %}</span>
     </span>
   </div>
 
   <div class="teamcijfers">
     {% if mag_uren_zien %}
-      <div class="teamcijfer"><b>{{ totaal_uren }}</b><span>uur gewerkt</span></div>
+      <div class="teamcijfer"><b>{{ totaal_uren }}</b><span>uur gewerkt{% if uren_sinds %} sinds {{ uren_sinds|date:"j b Y" }}{% endif %}</span></div>
     {% endif %}
     <div class="teamcijfer"><b>{{ klussen|length }}</b><span>klus{{ klussen|length|pluralize:"sen" }}</span></div>
     <div class="teamcijfer">
       <b>{% if beste %}{{ beste.punten }}{% else %}–{% endif %}</b>
       <span>{% if plaats %}De Groene Sprong · #{{ plaats }}{% else %}De Groene Sprong{% endif %}</span>
     </div>
+  </div>
+
+  {% comment %} Wat collega's van elkaar mogen weten: bellen, verjaardag (zonder
+     jaar) en sinds wanneer iemand er werkt. Adres en noodcontact blijven op
+     de persoonskaart bij Medewerkers, voor de eigenaar. {% endcomment %}
+  <div class="klusinfo teaminfo">
+    <p class="regel"><span class="lbl">Mobiel</span>{% if persoon.telefoon %}<a href="tel:{{ persoon.telefoon }}">{{ persoon.telefoon }}</a>{% else %}—{% endif %}</p>
+    <p class="regel"><span class="lbl">Verjaardag</span>{% if persoon.geboortedatum %}{{ persoon.geboortedatum|date:"j F" }}{% else %}—{% endif %}</p>
+    <p class="regel"><span class="lbl">In dienst</span>{% if persoon.in_dienst_sinds %}sinds {{ persoon.in_dienst_sinds|date:"j F Y" }}{% else %}—{% endif %}{% if persoon.uit_dienst_sinds %} · tot {{ persoon.uit_dienst_sinds|date:"j F Y" }}{% endif %}</p>
   </div>
 
   <div class="tabbladen">

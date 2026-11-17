@@ -28,6 +28,7 @@
   <div class="klusinfo">
     <p class="regel"><span class="lbl">Mobiel</span>{% if persoon.telefoon %}<a href="tel:{{ persoon.telefoon }}">{{ persoon.telefoon }}</a>{% else %}—{% endif %}</p>
     <p class="regel"><span class="lbl">E-mail</span>{% if persoon.email %}<a href="mailto:{{ persoon.email }}">{{ persoon.email }}</a>{% else %}—{% endif %}</p>
+    <p class="regel"><span class="lbl">Geboren</span>{% if persoon.geboortedatum %}{{ persoon.geboortedatum|date:"j F Y" }}{% else %}—{% endif %}</p>
     <p class="regel"><span class="lbl">Adres</span>{% if persoon.adres or persoon.woonplaats %}{{ persoon.adres }}{% if persoon.adres and persoon.woonplaats %}, {% endif %}{{ persoon.postcode }} {{ persoon.woonplaats }}{% else %}—{% endif %}</p>
   </div>
 
