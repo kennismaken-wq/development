@@ -5,6 +5,10 @@ berichten heb je gemist, en de melding op je telefoon bij een nieuw bericht.
 binnenkort mee bezig bent: ingepland in de werkplanning (Inzet), er uren op
 geschreven, of er zelf iets in geschreven. Alleen daar krijg je een teller en
 een melding. Meelezen kan op elke klus, net als nu.
+
+Ook de eigenaar krijgt alleen meldingen van klussen waar hij bij betrokken is,
+niet van alles (besluit Thijmen 17-11-2026, docs/VRAGEN-MAARTEN.md vraag 11).
+Wie een klus wil volgen, tikt op "Meedoen met klus".
 """
 
 import logging

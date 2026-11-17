@@ -213,6 +213,24 @@ kan nog niet: verwijderen en opnieuw toevoegen. Zie `Bijlage.zichtbaar_voor`.
 
 ---
 
+## 11. Wil jij een melding van elk chatbericht, of alleen van je eigen klussen?
+
+**Vraag:** De chat per klus vervangt per 1 januari de WhatsApp-groepen. Krijg jij als
+eigenaar een melding van elk bericht op elke klus, of alleen van de klussen waar je
+zelf bij betrokken bent?
+
+**Waarom het uitmaakt:** in de WhatsApp-groepen zat je overal in. Bij 40 lopende
+klussen is een melding van alles veel; alleen je eigen klussen kan betekenen dat je
+iets mist.
+
+**Besluit (17-11-2026, Thijmen):** alleen de klussen waar je bij betrokken bent, net
+als iedereen. Betrokken ben je als je bij **Betrokken** op de klus staat, er met
+**Meedoen met klus** bij bent gekomen, de afgelopen 30 dagen (of de komende 60) bent
+ingepland, er uren op schreef, of er zelf in de chat schreef. Wil je een klus volgen,
+tik dan op Meedoen. Meelezen kan op elke klus. Zie `klussen/gesprek.py`.
+
+---
+
 ## Niet vragen, wel vertellen
 
 - **Back-ups gaan off-site.** De verwerkersovereenkomst belooft dagelijkse back-ups maar
