@@ -18,7 +18,8 @@ def beginstand(apps, schema_editor):
     NotitieGelezen.objects.bulk_create(
         [
             NotitieGelezen(klus_id=klus_id, medewerker_id=medewerker_id, tijdstip=nu)
-            for medewerker_id in Medewerker.objects.values_list("pk", flat=True)
+            # _default_manager is `alle`: ook het verborgen beheeraccount.
+            for medewerker_id in Medewerker._default_manager.values_list("pk", flat=True)
             for klus_id in klus_ids
         ],
         ignore_conflicts=True,

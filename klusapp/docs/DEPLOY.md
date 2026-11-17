@@ -213,6 +213,25 @@ komen.
 bedoeld zijn: als eigenaar meekijken als medewerker, en een eigenaar die vanzelf
 in `/beheer/` mag.
 
+**Meldingen van de chat** staan los daarvan: `KLUSAPP_PUSHMELDINGEN=1` in de
+`.env` van degroenem zet ze aan (standaard volgt het TESTFUNCTIES, dus daar uit).
+Zonder die regel werkt de chat gewoon, maar krijgt niemand een melding op zijn
+telefoon. Na het aanzetten `systemctl restart degroenem.service`.
+
+**Terug naar de vorige versie** als een deploy misgaat. Het script toont de oude
+commit (`OUD`) en zet de dump daarvan klaar:
+
+```
+git -C /srv/handigerai/degroenem reset --hard <OUD>
+gunzip -c /srv/backups/degroenem/voor-deploy-<OUD>.sql.gz | sudo -u postgres psql degroenem
+systemctl restart degroenem.service
+```
+
+De dump bevat alleen de database, geen foto's (die blijven gewoon staan). Wat je
+dan kwijt bent van na de deploy: leesstanden van de chat, betrokkenen, ideeën en
+Claude-koppelingen (Maarten moet Claude dan opnieuw verbinden). Getest op een
+kopie (stresstest 17-11-2026).
+
 **HandigerAI kijkt mee met een verborgen account** (`manage.py maak_beheerder
 admin`, vraagt zelf om een wachtwoord). Dat is eigenaar én superuser, dus het
 ziet alles en komt in `/beheer/`, maar het staat in geen enkele lijst, telling,

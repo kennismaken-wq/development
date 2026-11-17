@@ -1,5 +1,6 @@
 from datetime import date
 from django import forms
+from django.utils import timezone
 from django.contrib.auth.forms import AuthenticationForm, PasswordResetForm, SetPasswordForm
 from django.contrib.auth.password_validation import validate_password
 from django.core.files.uploadedfile import UploadedFile
@@ -95,7 +96,7 @@ def _geboortedatum_controleren(formulier):
     """Een tikfout (1850, of een datum in de toekomst) staat anders als
     verjaardag bij iedereen in beeld (stresstest 17-11-2026)."""
     datum = formulier.cleaned_data.get("geboortedatum")
-    if datum and not (date(1920, 1, 1) <= datum <= date.today()):
+    if datum and not (date(1920, 1, 1) <= datum <= timezone.localdate()):
         raise forms.ValidationError("Dit lijkt geen geboortedatum. Kijk het jaar even na.")
     return datum
 

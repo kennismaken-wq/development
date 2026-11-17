@@ -1,5 +1,6 @@
-"""TIJDELIJK / TEST: meldingen aanzetten en de app dicht/open melden. Alles
-geeft 404 als settings.TESTFUNCTIES uit staat (Maartens omgeving)."""
+"""Meldingen aanzetten en de app dicht/open melden. Alles geeft 404 als
+settings.PUSHMELDINGEN uit staat. De testmelding een minuut na het sluiten
+komt alleen met TESTFUNCTIES (develop)."""
 import json
 
 from django.conf import settings
@@ -13,7 +14,7 @@ from .models import Abonnement
 
 
 def _alleen_test():
-    if not settings.TESTFUNCTIES:
+    if not settings.PUSHMELDINGEN:
         raise Http404
 
 
@@ -58,7 +59,8 @@ def status(request):
     if request.POST.get("stand") == "dicht":
         abonnement.gesloten_om = nu
         abonnement.save(update_fields=["gesloten_om"])
-        versturen.plan_na_sluiten(abonnement)
+        if settings.TESTFUNCTIES:
+            versturen.plan_na_sluiten(abonnement)
     else:
         abonnement.geopend_om = nu
         abonnement.save(update_fields=["geopend_om"])

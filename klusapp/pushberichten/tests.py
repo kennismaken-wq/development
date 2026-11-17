@@ -59,8 +59,8 @@ class AanmeldenTest(PushTestBasis):
         self.client.logout()
         self.assertEqual(self.client.get(reverse("push_sleutel")).status_code, 302)
 
-    @override_settings(TESTFUNCTIES=False)
-    def test_uit_op_maartens_omgeving(self):
+    @override_settings(PUSHMELDINGEN=False)
+    def test_uit_als_pushmeldingen_uit_staan(self):
         self.assertEqual(self.client.get(reverse("push_sleutel")).status_code, 404)
         html = self.client.get(reverse("start")).content.decode()
         self.assertNotIn('id="testmelding"', html)
@@ -159,3 +159,19 @@ class NaEenMinuutTest(PushTestBasis):
         abo = self.abonnement(gesloten_om=dicht)
         self.assertFalse(versturen.stuur_als_nog_dicht(abo.pk, dicht))
         self.assertFalse(Abonnement.objects.exists())
+
+
+class PushZonderTestfunctiesTest(PushTestBasis):
+    """Maartens omgeving met KLUSAPP_PUSHMELDINGEN=1: aanmelden kan, maar de
+    testmelding na het sluiten komt er niet (stresstest 17-11-2026)."""
+
+    @override_settings(TESTFUNCTIES=False, PUSHMELDINGEN=True)
+    def test_aanmelden_wel_testmelding_niet(self):
+        from unittest.mock import patch
+
+        self.assertEqual(self.client.get(reverse("push_sleutel")).status_code, 200)
+        self.assertIn("pushmelding.js", self.client.get(reverse("start")).content.decode())
+        Abonnement.objects.create(medewerker=self.sam, endpoint="https://push.example/x", p256dh="p", auth="a")
+        with patch("pushberichten.versturen.plan_na_sluiten") as plan:
+            self.client.post(reverse("push_status"), {"endpoint": "https://push.example/x", "stand": "dicht"})
+        plan.assert_not_called()

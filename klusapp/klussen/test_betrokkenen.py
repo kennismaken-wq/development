@@ -113,3 +113,23 @@ class MeedoenTests(TestCase):
 
     def test_alleen_post(self):
         self.assertEqual(self.client.get(reverse("klus_meedoen", args=[self.klus.pk])).status_code, 405)
+
+
+class VersieMetBetrokkenenTests(TestCase):
+    """VersieMixin met een veel-op-veel-veld: iemand die intussen "Meedoen"
+    tikt, betekent dat het formulier van de eigenaar verouderd is."""
+
+    def test_gelijktijdig_meedoen_wordt_betrapt(self):
+        maarten = Medewerker.objects.create_user("maarten", password="x", first_name="Maarten", rol=Medewerker.Rol.EIGENAAR)
+        sam = Medewerker.objects.create_user("sam", password="x", first_name="Sam")
+        klus = Klus.objects.create(naam="Tuin", opdrachtgever="Fam.", startdatum=date(2026, 9, 14))
+        self.client.force_login(maarten)
+        adres = reverse("klus_bewerken", args=[klus.pk])
+        versie = self.client.get(adres).context["formulier"].initial["versie"]
+        klus.betrokkenen.add(sam)
+        antwoord = self.client.post(adres, {
+            "naam": "Tuin", "soort": Klus.Soort.AANLEG, "startdatum": "2026-09-14", "opdrachtgever": "Fam.",
+            "kleur": "#95BF1D", "actief": "True", "versie": versie,
+        })
+        self.assertEqual(antwoord.status_code, 200)
+        self.assertIn(sam, klus.betrokkenen.all())

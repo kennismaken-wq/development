@@ -34,6 +34,12 @@ TESTFUNCTIES = os.environ.get("KLUSAPP_TESTFUNCTIES", "1") == "1"
 # gewoon installeerbaar (manifest, service worker, iconen).
 INSTALLEERBALK = os.environ.get("KLUSAPP_INSTALLEERBALK", "1" if TESTFUNCTIES else "0") == "1"
 
+# Meldingen op de telefoon (pushberichten/), voor de chat per klus. Los van
+# TESTFUNCTIES, zodat ze ook op Maartens omgeving aan kunnen: daar
+# KLUSAPP_PUSHMELDINGEN=1 in de .env zetten (docs/DEPLOY.md). De testmelding
+# "een minuut na sluiten" blijft wel alleen voor TESTFUNCTIES.
+PUSHMELDINGEN = os.environ.get("KLUSAPP_PUSHMELDINGEN", "1" if TESTFUNCTIES else "0") == "1"
+
 # In productie moet de sleutel uit de omgeving komen; lokaal mag een vaste
 # ontwikkelsleutel, zodat je niet elke keer opnieuw hoeft in te loggen.
 SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY", "" if not DEBUG else "ontwikkel-sleutel-niet-voor-productie")

@@ -15,7 +15,7 @@ import logging
 import threading
 from datetime import timedelta
 
-from django.db import close_old_connections, connection, transaction
+from django.db import IntegrityError, close_old_connections, connection, transaction
 from django.urls import reverse
 from django.utils import timezone
 
@@ -63,16 +63,13 @@ def betrokkenen(klus):
 
 
 def zichtbare_betrokkenen(klus):
-    """Wie er bij Betrokken in beeld staat: zonder het verborgen
-    beheeraccount (Klus.betrokkenen gebruikt de manager `alle`) en zonder
+    """Wie er bij Betrokken in beeld staat: precies wie de meldingen van de
+    chat krijgt (betrokkenen hierboven: gekozen, meegedaan, ingepland, uren
+    of zelf geschreven). Zonder het verborgen beheeraccount en zonder
     oud-collega's (stresstest 17-11-2026)."""
     from django.db.models.functions import Lower
 
-    return list(
-        Medewerker.objects.filter(betrokken_klussen=klus, is_active=True, uit_dienst_sinds__isnull=True).order_by(
-            Lower("first_name"), Lower("last_name")
-        )
-    )
+    return list(betrokkenen(klus).order_by(Lower("first_name"), Lower("last_name")))
 
 
 def mijn_klus_ids(gebruiker):
@@ -120,9 +117,14 @@ def markeer_gelezen(request, klus):
 
     if SESSIE_WISSEL in request.session:
         return
-    NotitieGelezen.objects.update_or_create(
-        klus=klus, medewerker=request.user, defaults={"tijdstip": timezone.now()}
-    )
+    try:
+        with transaction.atomic():
+            NotitieGelezen.objects.update_or_create(
+                klus=klus, medewerker=request.user, defaults={"tijdstip": timezone.now()}
+            )
+    except IntegrityError:
+        # Twee tabs tegelijk maakten de rij; de ander heeft hem al gezet.
+        NotitieGelezen.objects.filter(klus=klus, medewerker=request.user).update(tijdstip=timezone.now())
 
 
 def schrijversnaam(medewerker):

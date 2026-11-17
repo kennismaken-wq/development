@@ -29,7 +29,7 @@ from django.views.decorators.http import require_GET, require_POST
 
 from . import afbeeldingen, gesprek
 from .models import Bijlage, Klus, Notitie
-from .views import DUBBEL_BINNEN, batch_van_upload, bewaar_bijlage, zonder_lege_bestanden
+from .views import DUBBEL_BINNEN, batch_van_upload, bewaar_bijlage
 
 MAX_FOTOS = 10
 # Zoveel berichten bij het openen; de rest met "Eerdere berichten".
@@ -134,7 +134,12 @@ def notitie_toevoegen(request, pk):
     tekst = request.POST.get("tekst", "").strip()
     sleutel = request.POST.get("sleutel", "")
     sleutel = sleutel if SLEUTEL_VORM.match(sleutel) else ""
-    fotos = zonder_lege_bestanden(request, "fotos").getlist("fotos")
+    # Lege bestanden (0 bytes) zelf eruit, met de uitleg in het antwoord van
+    # de chat; zonder_lege_bestanden zet die in messages, en die verscheen
+    # dan pas op het volgende scherm (stresstest 17-11-2026).
+    gekozen = request.FILES.getlist("fotos")
+    fotos = [foto for foto in gekozen if foto.size]
+    leeg = [f"{foto.name} is leeg (0 bytes) en is niet meegestuurd." for foto in gekozen if not foto.size]
     max_lengte = Notitie._meta.get_field("tekst").max_length
 
     # Zelfde sleutel: dit bericht staat er al (opnieuw verstuurd bij slecht
@@ -150,7 +155,7 @@ def notitie_toevoegen(request, pk):
             sleutel = ""
 
     if not tekst and not fotos:
-        return _fout(request, klus, "Er staat nog niets in het bericht.")
+        return _fout(request, klus, " ".join(leeg) or "Er staat nog niets in het bericht.")
     if len(tekst) > max_lengte:
         return _fout(request, klus, f"Een bericht mag hooguit {max_lengte} tekens zijn.")
     for foto in fotos:
@@ -165,7 +170,7 @@ def notitie_toevoegen(request, pk):
     te_veel = len(fotos) > MAX_FOTOS
     fotos = fotos[:MAX_FOTOS]
 
-    problemen = []
+    problemen = list(leeg)
     with transaction.atomic():
         request.user.vergrendel()
         if sleutel:
@@ -207,8 +212,9 @@ def notitie_toevoegen(request, pk):
         if not tekst and not opgeslagen:
             notitie.delete()
             return _fout(request, klus, " ".join(problemen) or "Geen van de foto's was te lezen.")
-        gesprek.markeer_gelezen(request, klus)
         gesprek.plan_melding(notitie)
+    # Buiten de transactie: een botsing daarin mag het bericht niet kosten.
+    gesprek.markeer_gelezen(request, klus)
     if te_veel:
         problemen.append(f"Er kunnen hooguit {MAX_FOTOS} foto's in één bericht; de eerste {MAX_FOTOS} zijn meegegaan.")
     return _gelukt(request, klus, notitie, problemen)

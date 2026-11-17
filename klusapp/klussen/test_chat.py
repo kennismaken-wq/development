@@ -220,3 +220,22 @@ class StresstestRechtenTests(ChatBasis):
         zonder_js = self.client.post(reverse("notitie_toevoegen", args=[andere.pk]), {"tekst": "Derde", "sleutel": "dezelfde-sleutel-1"})
         self.assertEqual(zonder_js.status_code, 302)
         self.assertTrue(Notitie.objects.filter(klus=andere, tekst="Derde").exists())
+
+
+class StresstestRegressieTests(ChatBasis):
+    def test_leeg_bestand_uitleg_in_de_chat_zelf(self):
+        data = self.stuur(tekst="Met een kapotte foto", fotos=[upload("kapot.jpg", b"")], sleutel="sleutel-leeg-1").json()
+        self.assertTrue(any("kapot.jpg is leeg" in m for m in data["meldingen"]))
+        self.assertNotContains(self.client.get(reverse("start")), "kapot.jpg is leeg")
+
+    def test_alleen_leeg_bestand_is_een_fout(self):
+        antwoord = self.stuur(tekst="", fotos=[upload("kapot.jpg", b"")], sleutel="sleutel-leeg-2")
+        self.assertEqual(antwoord.status_code, 400)
+        self.assertIn("kapot.jpg is leeg", antwoord.json()["fout"])
+
+    def test_betrokken_regel_toont_wie_de_meldingen_krijgt(self):
+        from uren.models import Inzet
+
+        piet = Medewerker.objects.create_user("piet", password="x", first_name="Piet")
+        Inzet.objects.create(medewerker=piet, klus=self.klus, datum=timezone.localdate())
+        self.assertIn(piet, self.client.get(self.klus.get_absolute_url()).context["betrokkenen"])
